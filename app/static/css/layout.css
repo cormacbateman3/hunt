@@ -1,0 +1,26 @@
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+.site-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: var(--forest-green);
+}
+.site-nav a { color: var(--parchment); text-decoration: none; margin-left: 0.8rem; }
+.brand { font-family: Georgia, serif; font-size: 1.4rem; }
+.site-footer {
+  margin-top: 2rem;
+  background: var(--bark-brown);
+  color: var(--parchment);
+  padding: 1rem;
+  text-align: center;
+}
+.page-shell {
+  background: var(--parchment);
+  border-radius: 10px;
+  padding: 1.25rem;
+}

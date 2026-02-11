@@ -1,0 +1,9 @@
+.flash-stack { list-style: none; padding: 0; }
+.flash {
+  margin-bottom: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 6px;
+}
+.flash-info { background: #e8eef8; }
+.flash-success { background: #dff4e7; }
+.flash-error { background: #fae0df; }

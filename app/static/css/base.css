@@ -1,0 +1,19 @@
+:root {
+  --forest-green: #2c4a1e;
+  --aged-amber: #8b5e0a;
+  --hunting-rust: #a0391a;
+  --parchment: #f5ecd7;
+  --bark-brown: #5c3d2e;
+  --cream-white: #fafaf5;
+  --near-black: #1a1a1a;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--cream-white);
+  color: var(--near-black);
+  font-family: Calibri, system-ui, -apple-system, sans-serif;
+}
+h1, h2, h3 { font-family: Georgia, 'Times New Roman', serif; color: var(--forest-green); }
+a { color: var(--aged-amber); }
