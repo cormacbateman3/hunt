@@ -1,19 +1,101 @@
 :root {
-  --forest-green: #2c4a1e;
-  --aged-amber: #8b5e0a;
-  --hunting-rust: #a0391a;
-  --parchment: #f5ecd7;
-  --bark-brown: #5c3d2e;
-  --cream-white: #fafaf5;
-  --near-black: #1a1a1a;
+  --pine-900: #1b2b22;
+  --pine-700: #2f4a3b;
+  --moss-500: #5f7a48;
+  --amber-500: #b7802e;
+  --amber-400: #c6964c;
+  --paper-100: #f7f2e7;
+  --paper-200: #efe4cf;
+  --ink-900: #131815;
+  --ink-700: #34413a;
+  --line: #d6ccb8;
+  --danger-100: #f7d9d3;
+  --success-100: #d8eedf;
+  --info-100: #dbe8f7;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --shadow-soft: 0 14px 34px rgba(24, 36, 29, 0.12);
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
+
+html,
 body {
   margin: 0;
-  background: var(--cream-white);
-  color: var(--near-black);
-  font-family: Calibri, system-ui, -apple-system, sans-serif;
+  padding: 0;
 }
-h1, h2, h3 { font-family: Georgia, 'Times New Roman', serif; color: var(--forest-green); }
-a { color: var(--aged-amber); }
+
+body {
+  background:
+    radial-gradient(circle at 12% -10%, rgba(183, 128, 46, 0.16), transparent 40%),
+    radial-gradient(circle at 88% 10%, rgba(95, 122, 72, 0.2), transparent 45%),
+    linear-gradient(180deg, var(--paper-100), #f5efe1 45%, #f9f5eb);
+  color: var(--ink-900);
+  font-family: "Manrope", "Segoe UI", "Trebuchet MS", sans-serif;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: "Alegreya", "Palatino Linotype", Georgia, serif;
+  color: var(--pine-900);
+  line-height: 1.15;
+  margin-top: 0;
+}
+
+h1 {
+  font-size: clamp(1.9rem, 4.4vw, 3rem);
+}
+
+h2 {
+  font-size: clamp(1.4rem, 3vw, 2rem);
+}
+
+p {
+  margin: 0 0 1rem;
+  color: var(--ink-700);
+}
+
+a {
+  color: var(--pine-700);
+  text-decoration-color: rgba(47, 74, 59, 0.45);
+  text-underline-offset: 2px;
+}
+
+a:hover {
+  color: var(--pine-900);
+}
+
+ul {
+  padding-left: 1.1rem;
+}
+
+input,
+select,
+button {
+  font: inherit;
+}
+
+.reveal-on-scroll {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.reveal-on-scroll.revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-on-scroll {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+}

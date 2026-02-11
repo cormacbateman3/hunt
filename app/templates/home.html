@@ -3,16 +3,65 @@
 {% block title %}KeystoneBid | Pennsylvania Antique Hunting License Marketplace{% endblock %}
 
 {% block content %}
-<section class="page-shell">
-    <h1>Welcome to KeystoneBid</h1>
-    <p>
-        This foundation release establishes the modular architecture for the Pennsylvania
-        antique hunting license marketplace.
+<section class="hero reveal-on-scroll">
+    <p class="eyebrow">Pennsylvania License Archive Marketplace</p>
+    <h1>Discover, verify, and bid on historic hunting licenses.</h1>
+    <p class="hero-copy">
+        KeystoneBid connects collectors with authenticated Pennsylvania game license artifacts,
+        complete with provenance notes, bid tracking, and educational references.
     </p>
-    <ul>
-        <li>Flask app factory + extension registry</li>
-        <li>Blueprint-first module boundaries</li>
-        <li>Core data model scaffolding for marketplace, education, and collector features</li>
+    <div class="hero-actions">
+        <a class="button" href="{{ url_for('listings.index') }}">Browse Listings</a>
+        <a class="button button-secondary" href="{{ url_for('collector.index') }}">Collector Tools</a>
+    </div>
+    <div class="stats-grid">
+        <article class="stat-card">
+            <h2>214</h2>
+            <p>Active listings</p>
+        </article>
+        <article class="stat-card">
+            <h2>89%</h2>
+            <p>Items with full provenance</p>
+        </article>
+        <article class="stat-card">
+            <h2>37</h2>
+            <p>New bidders this week</p>
+        </article>
+    </div>
+</section>
+
+<section class="section reveal-on-scroll">
+    <div class="section-head">
+        <h2>Start where you hunt for value</h2>
+        <a href="{{ url_for('search.index') }}">Open advanced search</a>
+    </div>
+    <div class="card-grid card-grid-3">
+        <article class="card">
+            <h3>Pre-war Rarity Feed</h3>
+            <p>Surface 1900-1945 licenses with low circulation scores and active bidding windows.</p>
+            <a href="{{ url_for('listings.index') }}">View feed</a>
+        </article>
+        <article class="card">
+            <h3>Collector Confidence</h3>
+            <p>Compare watermark, signature, and county issue markers in one verification panel.</p>
+            <a href="{{ url_for('collector.index') }}">Open panel</a>
+        </article>
+        <article class="card">
+            <h3>Auction Timing</h3>
+            <p>Track closing windows and receive digest alerts before peak bidder activity.</p>
+            <a href="{{ url_for('bids.index') }}">See live bids</a>
+        </article>
+    </div>
+</section>
+
+<section class="section reveal-on-scroll">
+    <div class="section-head">
+        <h2>Project foundation in this branch</h2>
+    </div>
+    <ul class="feature-list">
+        <li>Flask app factory and extension registry are wired and ready for production configuration.</li>
+        <li>Blueprint-first boundaries isolate listings, education, collector workflows, and payments.</li>
+        <li>Template and CSS system now provide reusable layout, cards, forms, and data presentation.</li>
     </ul>
 </section>
 {% endblock %}

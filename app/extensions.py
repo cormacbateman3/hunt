@@ -1,5 +1,6 @@
 """Application extension instances."""
 
+from authlib.integrations.flask_client import OAuth
 from flask_bcrypt import Bcrypt
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -15,3 +16,4 @@ login_manager = LoginManager()
 bcrypt = Bcrypt()
 mail = Mail()
 limiter = Limiter(key_func=get_remote_address)
+oauth = OAuth()
