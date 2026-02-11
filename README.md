@@ -1,1 +1,1 @@
-# hunt licenses app
+# hunt app

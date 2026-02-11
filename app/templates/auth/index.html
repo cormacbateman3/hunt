@@ -3,8 +3,13 @@
 {% block title %}Auth | KeystoneBid{% endblock %}
 
 {% block content %}
-<section class="page-shell">
-    <h1>Auth</h1>
-    <p>This module has been scaffolded and is ready for feature implementation.</p>
+<section class="section reveal-on-scroll">
+    <h1>Authentication</h1>
+    <p>Secure account access for bidders and collectors across web and AWS deployment environments.</p>
+    <div class="auth-actions">
+        <a class="button" href="{{ url_for('auth.login') }}">Sign In</a>
+        <a class="button button-secondary" href="{{ url_for('auth.register') }}">Create Account</a>
+    </div>
+    <p class="muted-text">Social login availability: Google {{ "enabled" if google_enabled else "pending" }}, Apple {{ "enabled" if apple_enabled else "pending" }}.</p>
 </section>
 {% endblock %}

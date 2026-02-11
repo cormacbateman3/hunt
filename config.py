@@ -11,6 +11,13 @@ load_dotenv()
 class BaseConfig:
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_SAMESITE = "Lax"
+    PREFERRED_URL_SCHEME = "https"
+
+    TRUSTED_PROXY_COUNT = int(os.getenv("TRUSTED_PROXY_COUNT", "1"))
 
     MAIL_SERVER = os.getenv("MAIL_SERVER", "localhost")
     MAIL_PORT = int(os.getenv("MAIL_PORT", "1025"))
@@ -21,9 +28,15 @@ class BaseConfig:
 
     RATELIMIT_DEFAULT = "200 per day;50 per hour"
 
+    OAUTH_GOOGLE_CLIENT_ID = os.getenv("OAUTH_GOOGLE_CLIENT_ID")
+    OAUTH_GOOGLE_CLIENT_SECRET = os.getenv("OAUTH_GOOGLE_CLIENT_SECRET")
+    OAUTH_APPLE_CLIENT_ID = os.getenv("OAUTH_APPLE_CLIENT_ID")
+    OAUTH_APPLE_CLIENT_SECRET = os.getenv("OAUTH_APPLE_CLIENT_SECRET")
+
 
 class DevelopmentConfig(BaseConfig):
     DEBUG = True
+    PREFERRED_URL_SCHEME = "http"
     SQLALCHEMY_DATABASE_URI = os.getenv("DEV_DATABASE_URL", "sqlite:///keystonebid-dev.db")
 
 
@@ -31,8 +44,11 @@ class TestingConfig(BaseConfig):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = os.getenv("TEST_DATABASE_URL", "sqlite:///keystonebid-test.db")
     WTF_CSRF_ENABLED = False
+    RATELIMIT_ENABLED = False
 
 
 class ProductionConfig(BaseConfig):
     DEBUG = False
     SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL")
+    SESSION_COOKIE_SECURE = True
+    REMEMBER_COOKIE_SECURE = True

@@ -12,6 +12,8 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False, index=True)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(256), nullable=False)
+    oauth_provider = db.Column(db.String(20))
+    oauth_sub = db.Column(db.String(255), unique=True, index=True)
     display_name = db.Column(db.String(100))
     bio = db.Column(db.Text)
     avatar_url = db.Column(db.String(500))
@@ -27,3 +29,11 @@ class User(UserMixin, db.Model):
 
     listings = relationship("Listing", back_populates="seller", lazy="dynamic")
     bids = relationship("Bid", back_populates="bidder", lazy="dynamic")
+
+    def set_password(self, plaintext_password: str, bcrypt) -> None:
+        self.password_hash = bcrypt.generate_password_hash(plaintext_password).decode("utf-8")
+
+    def check_password(self, plaintext_password: str, bcrypt) -> bool:
+        if not self.password_hash:
+            return False
+        return bcrypt.check_password_hash(self.password_hash, plaintext_password)

@@ -3,8 +3,45 @@
 {% block title %}Listings | KeystoneBid{% endblock %}
 
 {% block content %}
-<section class="page-shell">
-    <h1>Listings</h1>
-    <p>This module has been scaffolded and is ready for feature implementation.</p>
+<section class="section reveal-on-scroll">
+    <div class="section-head">
+        <h1>Listings</h1>
+        <a class="button button-secondary" href="{{ url_for('search.index') }}">Filter Listings</a>
+    </div>
+    <p>Active auctions for Pennsylvania hunting license artifacts, grouped by era and county.</p>
 </section>
+
+<section class="card-grid card-grid-3 reveal-on-scroll">
+    <article class="card listing-card">
+        <p class="pill">1910s</p>
+        <h2>Allegheny Resident License - 1917</h2>
+        <p>Embossed seal intact, registrar signature legible, archive certificate included.</p>
+        <div class="card-meta">
+            <span>Current bid: $420</span>
+            <span data-countdown="2026-03-01T19:00:00">Closing soon</span>
+        </div>
+    </article>
+    <article class="card listing-card">
+        <p class="pill">1930s</p>
+        <h2>Clearfield Non-Resident License - 1934</h2>
+        <p>Original perforation pattern preserved, minor fold marks, provenance chain verified.</p>
+        <div class="card-meta">
+            <span>Current bid: $305</span>
+            <span data-countdown="2026-03-05T17:00:00">Closing soon</span>
+        </div>
+    </article>
+    <article class="card listing-card">
+        <p class="pill">1950s</p>
+        <h2>Tioga Junior License - 1952</h2>
+        <p>Rare educational issue variant with county game commission annotation.</p>
+        <div class="card-meta">
+            <span>Current bid: $188</span>
+            <span data-countdown="2026-02-28T21:00:00">Closing soon</span>
+        </div>
+    </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/countdown.js') }}" defer></script>
 {% endblock %}

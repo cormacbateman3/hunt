@@ -4,13 +4,17 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}KeystoneBid{% endblock %}</title>
+    <meta name="description" content="Pennsylvania antique hunting license marketplace and collector community.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@500;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
 </head>
 <body>
     {% include "components/nav.html" %}
-    <main class="container">
+    <main class="container site-main">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <ul class="flash-stack">
@@ -23,6 +27,17 @@
 
         {% block content %}{% endblock %}
     </main>
-    <footer class="site-footer">KeystoneBid • Honoring Pennsylvania hunting history.</footer>
+    <footer class="site-footer">
+        <div class="container footer-inner">
+            <p>KeystoneBid &middot; Honoring Pennsylvania hunting history.</p>
+            <p class="footer-links">
+                <a href="{{ url_for('education.index') }}">Education</a>
+                <a href="{{ url_for('stories.index') }}">Stories</a>
+                <a href="{{ url_for('api.index') }}">API</a>
+            </p>
+        </div>
+    </footer>
+    <script src="{{ url_for('static', filename='js/site.js') }}" defer></script>
+    {% block scripts %}{% endblock %}
 </body>
 </html>
