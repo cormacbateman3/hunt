@@ -1,11 +1,13 @@
 """Flask application factory for KeystoneBid."""
 
 from importlib import import_module
+from typing import Optional
 
 from flask import Flask
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from app.extensions import bcrypt, db, limiter, login_manager, mail, migrate, oauth
+from config import resolve_config_path
 
 BLUEPRINTS = [
     "auth",
@@ -22,16 +24,18 @@ BLUEPRINTS = [
 ]
 
 
-def create_app(config_object: str = "config.DevelopmentConfig") -> Flask:
+def create_app(config_object: Optional[str] = None) -> Flask:
     app = Flask(__name__)
-    app.config.from_object(config_object)
-    app.wsgi_app = ProxyFix(  # type: ignore[assignment]
-        app.wsgi_app,
-        x_for=app.config.get("TRUSTED_PROXY_COUNT", 1),
-        x_proto=app.config.get("TRUSTED_PROXY_COUNT", 1),
-        x_host=app.config.get("TRUSTED_PROXY_COUNT", 1),
-        x_port=app.config.get("TRUSTED_PROXY_COUNT", 1),
-    )
+    app.config.from_object(config_object or resolve_config_path())
+    trusted_proxy_count = app.config.get("TRUSTED_PROXY_COUNT", 0)
+    if trusted_proxy_count > 0:
+        app.wsgi_app = ProxyFix(  # type: ignore[assignment]
+            app.wsgi_app,
+            x_for=trusted_proxy_count,
+            x_proto=trusted_proxy_count,
+            x_host=trusted_proxy_count,
+            x_port=trusted_proxy_count,
+        )
 
     _register_extensions(app)
     _configure_oauth(app)
