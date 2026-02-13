@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard | KeystoneBid{% endblock %}
+
+{% block content %}
+<section class="card">
+    <h1 style="margin-bottom: 0.75rem;">Welcome, {{ user.username }}</h1>
+    <p style="color: var(--color-muted); margin-bottom: 1rem;">
+        Your collector dashboard is ready. Listings and bids modules will populate this page as you use the platform.
+    </p>
+    {% if user.profile.email_verified %}
+        <span class="badge badge-active">Email verified</span>
+    {% else %}
+        <span class="badge badge-expired">Email not verified</span>
+    {% endif %}
+</section>
+{% endblock %}

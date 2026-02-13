@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Profile | KeystoneBid{% endblock %}
+
+{% block content %}
+<section class="card" style="max-width: 640px; margin: 0 auto;">
+    <h1 style="margin-bottom: 1rem;">Edit profile</h1>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div style="display: grid; gap: 0.85rem;">
+            <div>
+                <label class="form-label" for="{{ form.display_name.id_for_label }}">Display name</label>
+                {{ form.display_name }}
+                {{ form.display_name.errors }}
+            </div>
+            <div>
+                <label class="form-label" for="{{ form.county.id_for_label }}">County</label>
+                {{ form.county }}
+                {{ form.county.errors }}
+            </div>
+            <div>
+                <label class="form-label" for="{{ form.bio.id_for_label }}">Bio</label>
+                {{ form.bio }}
+                {{ form.bio.errors }}
+            </div>
+            <div>
+                <label class="form-label" for="{{ form.avatar.id_for_label }}">Avatar</label>
+                {{ form.avatar }}
+                {{ form.avatar.errors }}
+            </div>
+        </div>
+
+        <div style="margin-top: 1.2rem;">
+            <button type="submit" class="btn-primary">Save changes</button>
+            <a href="{% url 'accounts:profile' user.username %}" style="margin-left: 0.75rem; color: var(--color-aged-amber);">
+                Cancel
+            </a>
+        </div>
+    </form>
+</section>
+{% endblock %}

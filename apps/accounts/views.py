@@ -1,60 +1,65 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
 from django.conf import settings
-from .forms import UserRegistrationForm, UserLoginForm, UserProfileForm
+from django.urls import reverse
+from .forms import UserRegistrationForm, UserProfileForm
 from .models import UserProfile
 
 
 def register(request):
     """User registration view with email verification"""
     if request.user.is_authenticated:
-        return redirect('dashboard')
+        return redirect('accounts:dashboard')
 
     if request.method == 'POST':
         form = UserRegistrationForm(request.POST)
         if form.is_valid():
-            user = form.save(commit=False)
-            user.is_active = True  # Change to False when email verification is implemented
+            user = form.save()
+            user.is_active = False
             user.save()
 
-            # Send verification email (simplified for MVP)
-            # TODO: Implement email verification with token
+            verification_url = request.build_absolute_uri(
+                reverse(
+                    'accounts:verify_email',
+                    kwargs={'token': user.profile.email_verification_token},
+                )
+            )
+            email_context = {
+                'user': user,
+                'verification_url': verification_url,
+            }
+            subject = 'Verify your KeystoneBid account'
+            text_body = render_to_string(
+                'accounts/emails/verify_email.txt',
+                email_context,
+            )
+            html_body = render_to_string(
+                'accounts/emails/verify_email.html',
+                email_context,
+            )
+            send_mail(
+                subject=subject,
+                message=text_body,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                html_message=html_body,
+                fail_silently=False,
+            )
 
-            messages.success(request, 'Account created successfully! Please log in.')
+            messages.success(
+                request,
+                'Account created. Check your email for a verification link before logging in.',
+            )
             return redirect('accounts:login')
     else:
         form = UserRegistrationForm()
 
     return render(request, 'accounts/register.html', {'form': form})
-
-
-def user_login(request):
-    """User login view"""
-    if request.user.is_authenticated:
-        return redirect('dashboard')
-
-    if request.method == 'POST':
-        form = UserLoginForm(request, data=request.POST)
-        if form.is_valid():
-            username = form.cleaned_data.get('username')
-            password = form.cleaned_data.get('password')
-            user = authenticate(username=username, password=password)
-            if user is not None:
-                login(request, user)
-                messages.success(request, f'Welcome back, {username}!')
-                next_url = request.GET.get('next', 'dashboard')
-                return redirect(next_url)
-    else:
-        form = UserLoginForm()
-
-    return render(request, 'accounts/login.html', {'form': form})
 
 
 @login_required
@@ -112,6 +117,8 @@ def verify_email(request, token):
         if not profile.email_verified:
             profile.email_verified = True
             profile.save()
+            profile.user.is_active = True
+            profile.user.save(update_fields=['is_active'])
             messages.success(request, 'Email verified successfully!')
         else:
             messages.info(request, 'Email already verified.')

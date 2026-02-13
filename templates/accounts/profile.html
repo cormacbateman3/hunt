@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ profile_user.username }} | KeystoneBid{% endblock %}
+
+{% block content %}
+<section class="card" style="max-width: 700px;">
+    <h1 style="margin-bottom: 0.5rem;">{{ profile.get_display_name }}</h1>
+    <p style="color: var(--color-muted); margin-bottom: 0.75rem;">@{{ profile_user.username }}</p>
+    {% if profile.county %}
+        <p style="margin-bottom: 0.5rem;"><strong>County:</strong> {{ profile.county }}</p>
+    {% endif %}
+    {% if profile.bio %}
+        <p>{{ profile.bio }}</p>
+    {% else %}
+        <p style="color: var(--color-muted);">No bio provided yet.</p>
+    {% endif %}
+
+    {% if user.is_authenticated and user.username == profile_user.username %}
+        <div style="margin-top: 1rem;">
+            <a href="{% url 'accounts:profile_edit' %}" class="btn-secondary">Edit profile</a>
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

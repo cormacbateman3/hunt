@@ -17,9 +17,6 @@ urlpatterns = [
     path('bids/', include('apps.bids.urls')),
     path('payments/', include('apps.payments.urls')),
 
-    # Dashboard
-    path('dashboard/', include('django.contrib.auth.urls')),  # For password reset, etc.
-
     # Homepage
     path('', TemplateView.as_view(template_name='home.html'), name='home'),
 ]

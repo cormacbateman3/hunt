@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}Login | KeystoneBid{% endblock %}
+
+{% block content %}
+<section class="card" style="max-width: 520px; margin: 0 auto;">
+    <h1 style="margin-bottom: 0.75rem;">Sign in</h1>
+    <p style="margin-bottom: 1.2rem; color: var(--color-muted);">
+        Access your collector account.
+    </p>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="alert alert-error" style="margin-bottom: 1rem;">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <div style="display: grid; gap: 0.85rem;">
+            <div>
+                <label class="form-label" for="{{ form.username.id_for_label }}">Username</label>
+                {{ form.username }}
+                {{ form.username.errors }}
+            </div>
+            <div>
+                <label class="form-label" for="{{ form.password.id_for_label }}">Password</label>
+                {{ form.password }}
+                {{ form.password.errors }}
+            </div>
+        </div>
+
+        <div style="margin-top: 1.25rem;">
+            <button type="submit" class="btn-primary">Sign in</button>
+            <a href="{% url 'accounts:password_reset' %}" style="margin-left: 0.75rem; color: var(--color-aged-amber);">
+                Forgot password?
+            </a>
+        </div>
+    </form>
+</section>
+{% endblock %}
