@@ -8,7 +8,7 @@ A Django-powered auction marketplace for antique and vintage Pennsylvania huntin
 
 - **Auction Listings**: Create, browse, and bid on antique PA hunting licenses
 - **User Accounts**: Registration, email verification, and user profiles
-- **Live Bidding**: Real-time bid updates with HTMX
+- **Live Bidding**: Real-time bid updates via lightweight JSON polling
 - **Payment Processing**: Stripe integration for secure payments
 - **Email Notifications**: Automated notifications for bids, auctions, and payments
 - **Admin Panel**: Django's built-in admin for content moderation
@@ -17,8 +17,8 @@ A Django-powered auction marketplace for antique and vintage Pennsylvania huntin
 
 - **Framework**: Django 5.0
 - **Database**: SQLite (dev) / PostgreSQL (prod)
-- **Frontend**: Django Templates + Tailwind CSS (CDN)
-- **Dynamic UI**: HTMX + Alpine.js (via CDN)
+- **Frontend**: Django Templates + modular custom CSS
+- **Dynamic UI**: Vanilla JavaScript (ES6+) + JSON endpoints
 - **Payments**: Stripe Checkout
 - **Email**: Django email backend / AWS SES (prod)
 - **Deployment**: AWS EC2 + Gunicorn + Nginx

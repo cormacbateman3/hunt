@@ -3,12 +3,12 @@ Django production settings for KeystoneBid project.
 """
 
 from .base import *
-from decouple import config
+import os
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='').split(',')
+ALLOWED_HOSTS = [host for host in os.getenv('ALLOWED_HOSTS', '').split(',') if host]
 
 
 # Database
@@ -17,22 +17,22 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='').split(',')
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432'),
+        'NAME': os.getenv('DB_NAME', ''),
+        'USER': os.getenv('DB_USER', ''),
+        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
 
 
 # Email backend for production (AWS SES)
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = config('EMAIL_HOST', default='email-smtp.us-east-1.amazonaws.com')
-EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'email-smtp.us-east-1.amazonaws.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 
 
 # Security settings for production
@@ -46,10 +46,10 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 
 
 # Static and Media files (S3 - uncomment when ready to use S3)
-# AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
-# AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
-# AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
-# AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='us-east-1')
+# AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+# AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+# AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
+# AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'us-east-1')
 # AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
 #
 # # Static files storage

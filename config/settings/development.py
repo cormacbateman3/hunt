@@ -24,13 +24,6 @@ DATABASES = {
 # Email backend for development (console output)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-
-# Development-only apps
-INSTALLED_APPS += [
-    'django_extensions',
-]
-
-
 # Django Debug Toolbar (optional - uncomment if you want to use it)
 # INSTALLED_APPS += ['debug_toolbar']
 # MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE

@@ -1,7 +1,7 @@
 # Base requirements for KeystoneBid
 
 # Django
-Django==5.0.1
+Django==5.0
 
 # Database
 psycopg2-binary==2.9.9
@@ -10,13 +10,10 @@ psycopg2-binary==2.9.9
 Pillow==10.2.0
 
 # Environment variables
-python-decouple==3.8
+python-dotenv==1.0.0
 
 # Payment processing
-stripe==8.4.0
+stripe==8.0.0
 
 # Static file serving
 whitenoise==6.6.0
-
-# Development utilities
-django-extensions==3.2.3

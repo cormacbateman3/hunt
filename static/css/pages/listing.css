@@ -1,0 +1,11 @@
+.listing-detail {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--space-3);
+}
+
+@media (max-width: 900px) {
+    .listing-detail {
+        grid-template-columns: 1fr;
+    }
+}

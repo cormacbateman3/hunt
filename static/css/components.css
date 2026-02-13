@@ -1,0 +1,114 @@
+.card {
+    background: var(--color-parchment);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: 0 10px 24px var(--color-shadow);
+    padding: var(--space-3);
+}
+
+.btn-primary,
+.btn-secondary {
+    display: inline-block;
+    border: 0;
+    border-radius: var(--radius-sm);
+    padding: 0.55rem 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.btn-primary {
+    background: var(--color-forest-green);
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: var(--color-aged-amber);
+}
+
+.btn-secondary {
+    background: #e5e8e1;
+    color: #1e2418;
+}
+
+.btn-secondary:hover {
+    background: #d2d8cc;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: var(--color-muted);
+    font-size: 0.92rem;
+    font-weight: 600;
+}
+
+.form-input,
+.form-select {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: #fff;
+}
+
+.form-input:focus,
+.form-select:focus {
+    outline: 2px solid rgba(139, 94, 10, 0.35);
+    border-color: var(--color-aged-amber);
+}
+
+.badge {
+    display: inline-block;
+    border-radius: 999px;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.badge-active {
+    background: #deebda;
+    color: #1f5722;
+}
+
+.badge-sold {
+    background: #dfebf8;
+    color: #184a7a;
+}
+
+.badge-expired {
+    background: #e6e6e6;
+    color: #505050;
+}
+
+.alert {
+    border-radius: var(--radius-sm);
+    padding: 0.7rem 0.85rem;
+    border: 1px solid transparent;
+}
+
+.alert-success {
+    background: #e8f5e3;
+    border-color: #b5ddb0;
+    color: #2a6d2b;
+}
+
+.alert-error {
+    background: #fbe7e3;
+    border-color: #f0b9aa;
+    color: #8f2c19;
+}
+
+.alert-warning {
+    background: #fff4e1;
+    border-color: #f1d69e;
+    color: #7a5a13;
+}
+
+.alert-info {
+    background: #e8f1fb;
+    border-color: #bed5ef;
+    color: #1b4f7f;
+}

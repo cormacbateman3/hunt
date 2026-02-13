@@ -5,14 +5,15 @@ This file contains settings common to all environments.
 
 import os
 from pathlib import Path
-from decouple import config
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+load_dotenv(BASE_DIR / '.env')
 
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-production')
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-me-in-production')
 
 # Application definition
 
@@ -23,9 +24,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
-    # Third-party apps
-    'django_extensions',
 
     # KeystoneBid apps
     'apps.accounts',
@@ -123,14 +121,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Email configuration (base - will be overridden in environment-specific settings)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@keystonebid.com')
-SERVER_EMAIL = config('SERVER_EMAIL', default='admin@keystonebid.com')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@keystonebid.com')
+SERVER_EMAIL = os.getenv('SERVER_EMAIL', 'admin@keystonebid.com')
 
 
 # Stripe configuration
-STRIPE_PUBLISHABLE_KEY = config('STRIPE_PUBLISHABLE_KEY', default='')
-STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY', default='')
-STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET', default='')
+STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', '')
+STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
+STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
 
 
 # Authentication URLs

@@ -9,6 +9,7 @@ class ListingForm(forms.ModelForm):
 
     duration_days = forms.ChoiceField(
         choices=[
+            (1, '1 days'),
             (3, '3 days'),
             (5, '5 days'),
             (7, '7 days'),

@@ -1,0 +1,56 @@
+.hero {
+    text-align: center;
+    padding: var(--space-4) 0 var(--space-3);
+}
+
+.hero h1 {
+    font-size: clamp(2rem, 5vw, 3.1rem);
+    margin-bottom: var(--space-1);
+}
+
+.hero-subtitle {
+    color: var(--color-muted);
+    font-size: 1.1rem;
+}
+
+.feature-grid {
+    margin-top: var(--space-4);
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-3);
+}
+
+.feature-card {
+    text-align: left;
+    display: grid;
+    gap: var(--space-2);
+}
+
+.feature-card h3 {
+    font-size: 1.5rem;
+}
+
+.feature-card p {
+    color: #394232;
+}
+
+.recent-listings {
+    text-align: center;
+    margin-top: var(--space-5);
+    display: grid;
+    gap: var(--space-1);
+}
+
+.recent-listings h2 {
+    font-size: 2rem;
+}
+
+.recent-listings p {
+    color: var(--color-muted);
+}
+
+@media (max-width: 960px) {
+    .feature-grid {
+        grid-template-columns: 1fr;
+    }
+}

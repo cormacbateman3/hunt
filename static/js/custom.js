@@ -1,35 +1,91 @@
-// Custom JavaScript for KeystoneBid
+// Vanilla JavaScript utilities for KeystoneBid.
 
-// Initialize tooltips, modals, or other interactive elements here
-
-// Example: Auto-hide messages after 5 seconds
-document.addEventListener('DOMContentLoaded', function() {
+function fadeOutMessages() {
     const messages = document.querySelectorAll('[role="alert"]');
-    messages.forEach(function(message) {
-        setTimeout(function() {
-            message.style.transition = 'opacity 0.5s';
+    messages.forEach((message) => {
+        setTimeout(() => {
+            message.style.transition = 'opacity 0.4s ease';
             message.style.opacity = '0';
-            setTimeout(function() {
-                message.remove();
-            }, 500);
+            setTimeout(() => message.remove(), 400);
         }, 5000);
     });
-});
+}
 
-// Countdown timer for auctions (will be enhanced later)
-function updateCountdown(endDate, elementId) {
-    const now = new Date().getTime();
-    const distance = new Date(endDate).getTime() - now;
+function formatDuration(ms) {
+    if (ms <= 0) {
+        return 'EXPIRED';
+    }
 
-    if (distance < 0) {
-        document.getElementById(elementId).innerHTML = "EXPIRED";
+    const totalSeconds = Math.floor(ms / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+}
+
+function startCountdown(element) {
+    const endDate = element.dataset.auctionEnd;
+    if (!endDate) {
         return;
     }
 
-    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+    const tick = () => {
+        const distance = new Date(endDate).getTime() - Date.now();
+        element.textContent = formatDuration(distance);
+    };
 
-    document.getElementById(elementId).innerHTML = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+    tick();
+    setInterval(tick, 1000);
 }
+
+async function pollJson(endpoint, callback, intervalMs = 10000) {
+    const run = async () => {
+        try {
+            const response = await fetch(endpoint, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            if (!response.ok) {
+                return;
+            }
+            const payload = await response.json();
+            callback(payload);
+        } catch (error) {
+            // Keep polling even when intermittent requests fail.
+            console.error('Polling failed:', error);
+        }
+    };
+
+    await run();
+    return setInterval(run, intervalMs);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    fadeOutMessages();
+    document.querySelectorAll('[data-auction-end]').forEach(startCountdown);
+
+    document.querySelectorAll('[data-poll-url]').forEach((element) => {
+        const endpoint = element.dataset.pollUrl;
+        const bidTargetSelector = element.dataset.bidTarget;
+        const countTargetSelector = element.dataset.bidCountTarget;
+        if (!endpoint) {
+            return;
+        }
+
+        pollJson(endpoint, (payload) => {
+            if (bidTargetSelector) {
+                const bidTarget = document.querySelector(bidTargetSelector);
+                if (bidTarget && payload.current_bid) {
+                    bidTarget.textContent = payload.current_bid;
+                }
+            }
+
+            if (countTargetSelector) {
+                const countTarget = document.querySelector(countTargetSelector);
+                if (countTarget && typeof payload.bid_count !== 'undefined') {
+                    countTarget.textContent = payload.bid_count;
+                }
+            }
+        });
+    });
+});

@@ -1,0 +1,11 @@
+.browse-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: var(--space-3);
+}
+
+@media (max-width: 900px) {
+    .browse-layout {
+        grid-template-columns: 1fr;
+    }
+}

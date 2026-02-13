@@ -1,0 +1,23 @@
+:root {
+    --color-forest-green: #2c4a1e;
+    --color-aged-amber: #8b5e0a;
+    --color-hunting-rust: #a0391a;
+    --color-parchment: #f5ecd7;
+    --color-cream-white: #fafaf5;
+    --color-ink: #1d2617;
+    --color-border: #d6ccb5;
+    --color-muted: #5e664f;
+    --color-shadow: rgba(44, 74, 30, 0.12);
+
+    --font-heading: Georgia, "Times New Roman", serif;
+    --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+    --space-1: 0.5rem;
+    --space-2: 1rem;
+    --space-3: 1.5rem;
+    --space-4: 2rem;
+    --space-5: 3rem;
+
+    --radius-sm: 0.4rem;
+    --radius-md: 0.75rem;
+}

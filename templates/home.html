@@ -3,61 +3,59 @@
 {% block title %}KeystoneBid - Pennsylvania Antique Hunting License Marketplace{% endblock %}
 
 {% block content %}
-<div class="text-center py-12">
-    <h1 class="text-5xl font-serif font-bold text-forest-green mb-4">Welcome to KeystoneBid</h1>
-    <p class="text-xl text-gray-700 mb-8">
+<section class="hero">
+    <h1>Welcome to KeystoneBid</h1>
+    <p class="hero-subtitle">
         The premier marketplace for antique Pennsylvania hunting licenses
     </p>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto mt-12">
-        <div class="bg-parchment p-6 rounded-lg shadow-md">
-            <h3 class="text-2xl font-serif text-forest-green mb-3">Browse Auctions</h3>
-            <p class="text-gray-700 mb-4">
+    <div class="feature-grid">
+        <article class="card feature-card">
+            <h3>Browse Auctions</h3>
+            <p>
                 Discover authentic Pennsylvania hunting licenses from collectors across the state.
             </p>
-            <a href="{% url 'listings:list' %}" class="inline-block bg-forest-green text-white px-6 py-2 rounded hover:bg-aged-amber transition">
+            <a href="{% url 'listings:list' %}" class="btn-primary">
                 Browse Now
             </a>
-        </div>
+        </article>
 
-        <div class="bg-parchment p-6 rounded-lg shadow-md">
-            <h3 class="text-2xl font-serif text-forest-green mb-3">Sell Your Collection</h3>
-            <p class="text-gray-700 mb-4">
+        <article class="card feature-card">
+            <h3>Sell Your Collection</h3>
+            <p>
                 List your antique licenses and connect with serious collectors.
             </p>
             {% if user.is_authenticated %}
-                <a href="{% url 'listings:create' %}" class="inline-block bg-forest-green text-white px-6 py-2 rounded hover:bg-aged-amber transition">
+                <a href="{% url 'listings:create' %}" class="btn-primary">
                     Create Listing
                 </a>
             {% else %}
-                <a href="{% url 'accounts:register' %}" class="inline-block bg-forest-green text-white px-6 py-2 rounded hover:bg-aged-amber transition">
+                <a href="{% url 'accounts:register' %}" class="btn-primary">
                     Get Started
                 </a>
             {% endif %}
-        </div>
+        </article>
 
-        <div class="bg-parchment p-6 rounded-lg shadow-md">
-            <h3 class="text-2xl font-serif text-forest-green mb-3">Join the Community</h3>
-            <p class="text-gray-700 mb-4">
+        <article class="card feature-card">
+            <h3>Join the Community</h3>
+            <p>
                 Connect with fellow collectors who share your passion for PA hunting heritage.
             </p>
             {% if user.is_authenticated %}
-                <a href="{% url 'accounts:dashboard' %}" class="inline-block bg-forest-green text-white px-6 py-2 rounded hover:bg-aged-amber transition">
+                <a href="{% url 'accounts:dashboard' %}" class="btn-primary">
                     Dashboard
                 </a>
             {% else %}
-                <a href="{% url 'accounts:register' %}" class="inline-block bg-forest-green text-white px-6 py-2 rounded hover:bg-aged-amber transition">
+                <a href="{% url 'accounts:register' %}" class="btn-primary">
                     Register
                 </a>
             {% endif %}
-        </div>
+        </article>
     </div>
-</div>
+</section>
 
-<!-- Recent Listings Preview -->
-<div class="mt-16">
-    <h2 class="text-3xl font-serif text-forest-green mb-6 text-center">Recently Listed</h2>
-    <p class="text-center text-gray-600 mb-8">Check back soon for active auctions</p>
-    <!-- This will be populated with actual listings later -->
-</div>
+<section class="recent-listings">
+    <h2>Recently Listed</h2>
+    <p>Check back soon for active auctions</p>
+</section>
 {% endblock %}

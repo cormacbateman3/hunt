@@ -53,13 +53,14 @@ def my_bids(request):
 
 
 def bid_status(request, listing_id):
-    """HTMX endpoint for live bid updates"""
+    """JSON endpoint for live bid status polling."""
     listing = get_object_or_404(Listing, pk=listing_id)
     latest_bid = listing.bids.filter(is_winning=True).first()
 
-    context = {
-        'listing': listing,
-        'latest_bid': latest_bid,
-    }
-
-    return render(request, 'bids/bid_status_partial.html', context)
+    return JsonResponse({
+        'listing_id': listing.id,
+        'current_bid': str(listing.current_price()),
+        'bid_count': listing.bids.count(),
+        'auction_status': listing.status,
+        'latest_bidder': latest_bid.bidder.username if latest_bid else None,
+    })
