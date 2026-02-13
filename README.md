@@ -1,6 +1,6 @@
 # KeystoneBid
 
-**Pennsylvania Antique Hunting License Marketplace**
+**PA Antique Hunting License Marketplace**
 
 A Django-powered auction marketplace for antique and vintage Pennsylvania hunting licenses.
 
@@ -13,7 +13,7 @@ A Django-powered auction marketplace for antique and vintage Pennsylvania huntin
 - **Email Notifications**: Automated notifications for bids, auctions, and payments
 - **Admin Panel**: Django's built-in admin for content moderation
 
-## Technology Stack
+## Stack
 
 - **Framework**: Django 5.0
 - **Database**: SQLite (dev) / PostgreSQL (prod)
@@ -138,7 +138,7 @@ python manage.py send_notifications
 
 ## Contributing
 
-See the development plan PDF for detailed implementation guidelines.
+Don't. but you can use the base.
 
 ## License
 
