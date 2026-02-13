@@ -14,7 +14,7 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 
 @login_required
 def create_checkout_session(request, transaction_id):
-    """Create a Stripe Checkout session for payment"""
+    """Create a Stripe Checkout session for the winning buyer."""
     transaction = get_object_or_404(
         Transaction,
         pk=transaction_id,
@@ -39,16 +39,21 @@ def create_checkout_session(request, transaction_id):
                 'quantity': 1,
             }],
             mode='payment',
-            success_url=request.build_absolute_uri(f'/payments/success/{transaction.pk}/'),
-            cancel_url=request.build_absolute_uri(f'/payments/cancel/{transaction.pk}/'),
+            success_url=f"{settings.SITE_URL.rstrip('/')}/payments/success/{transaction.pk}/",
+            cancel_url=f"{settings.SITE_URL.rstrip('/')}/payments/cancel/{transaction.pk}/",
             metadata={
-                'transaction_id': transaction.pk,
-            }
+                'transaction_id': str(transaction.pk),
+            },
+            payment_intent_data={
+                'metadata': {
+                    'transaction_id': str(transaction.pk),
+                }
+            },
         )
 
         # Save the session ID
         transaction.stripe_session_id = checkout_session.id
-        transaction.save()
+        transaction.save(update_fields=['stripe_session_id', 'updated_at'])
 
         return redirect(checkout_session.url)
 
@@ -103,37 +108,58 @@ def stripe_webhook(request):
     except stripe.error.SignatureVerificationError:
         return HttpResponse(status=400)
 
-    # Handle the checkout.session.completed event
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
         handle_checkout_session_completed(session)
+    elif event['type'] == 'payment_intent.succeeded':
+        payment_intent = event['data']['object']
+        handle_payment_intent_succeeded(payment_intent)
 
     return HttpResponse(status=200)
 
 
 def handle_checkout_session_completed(session):
-    """Handle successful payment"""
-    transaction_id = session['metadata']['transaction_id']
+    """Persist payment intent id from checkout completion when available."""
+    metadata = session.get('metadata') or {}
+    transaction_id = metadata.get('transaction_id')
+    payment_intent_id = session.get('payment_intent')
+
+    if not transaction_id or not payment_intent_id:
+        return
 
     try:
         transaction = Transaction.objects.get(pk=transaction_id)
-        transaction.status = 'paid'
-        transaction.stripe_payment_id = session['payment_intent']
-        transaction.save()
+        if not transaction.stripe_payment_id:
+            transaction.stripe_payment_id = payment_intent_id
+            transaction.save(update_fields=['stripe_payment_id', 'updated_at'])
+    except Transaction.DoesNotExist:
+        return
 
-        # Notify seller
+
+def handle_payment_intent_succeeded(payment_intent):
+    """Mark transaction as paid and notify seller when Stripe confirms payment."""
+    metadata = payment_intent.get('metadata') or {}
+    transaction_id = metadata.get('transaction_id')
+
+    if transaction_id:
+        transaction = Transaction.objects.filter(pk=transaction_id).first()
+    else:
+        transaction = Transaction.objects.filter(stripe_payment_id=payment_intent.get('id')).first()
+
+    if not transaction:
+        return
+
+    already_paid = transaction.status == 'paid'
+    transaction.status = 'paid'
+    transaction.stripe_payment_id = payment_intent.get('id', '')
+    transaction.save(update_fields=['status', 'stripe_payment_id', 'updated_at'])
+
+    if not already_paid:
         Notification.objects.create(
             user=transaction.seller,
             notification_type='payment_received',
-            message=f'Payment received for "{transaction.listing.title}"! Amount: ${transaction.sale_amount:.2f}'
+            message=(
+                f'Payment received for "{transaction.listing.title}" '
+                f'from {transaction.buyer.username}. Amount: ${transaction.sale_amount:.2f}.'
+            )
         )
-
-        # Notify buyer
-        Notification.objects.create(
-            user=transaction.buyer,
-            notification_type='payment_confirmed',
-            message=f'Payment confirmed for "{transaction.listing.title}"! The seller will ship your item soon.'
-        )
-
-    except Transaction.DoesNotExist:
-        pass  # Log this error
