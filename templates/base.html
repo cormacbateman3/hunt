@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>{% block title %}KeystoneBid - Pennsylvania Antique Hunting License Marketplace{% endblock %}</title>
+
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- HTMX via CDN -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Alpine.js via CDN -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- Custom Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'forest-green': '#2C4A1E',
+                        'aged-amber': '#8B5E0A',
+                        'hunting-rust': '#A0391A',
+                        'parchment': '#F5ECD7',
+                        'cream-white': '#FAFAF5',
+                    },
+                    fontFamily: {
+                        'serif': ['Georgia', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Custom CSS -->
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}">
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-cream-white font-sans">
+    <!-- Navigation -->
+    <nav class="bg-forest-green text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div>
+                    <a href="{% url 'home' %}" class="text-2xl font-serif font-bold">KeystoneBid</a>
+                    <span class="text-sm ml-2 text-gray-300">Pennsylvania Hunting Heritage</span>
+                </div>
+                <div class="flex space-x-6">
+                    <a href="{% url 'listings:list' %}" class="hover:text-aged-amber transition">Browse Listings</a>
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'listings:create' %}" class="hover:text-aged-amber transition">Create Listing</a>
+                        <a href="{% url 'accounts:dashboard' %}" class="hover:text-aged-amber transition">Dashboard</a>
+                        <a href="{% url 'accounts:profile' user.username %}" class="hover:text-aged-amber transition">Profile</a>
+                        <a href="{% url 'accounts:logout' %}" class="hover:text-aged-amber transition">Logout</a>
+                    {% else %}
+                        <a href="{% url 'accounts:login' %}" class="hover:text-aged-amber transition">Login</a>
+                        <a href="{% url 'accounts:register' %}" class="hover:text-aged-amber transition">Register</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Messages -->
+    {% if messages %}
+        <div class="container mx-auto px-4 mt-4">
+            {% for message in messages %}
+                <div class="p-4 mb-4 rounded-lg {% if message.tags == 'error' %}bg-red-100 text-red-700{% elif message.tags == 'success' %}bg-green-100 text-green-700{% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-forest-green text-white mt-12 py-8">
+        <div class="container mx-auto px-4 text-center">
+            <p class="font-serif text-lg mb-2">KeystoneBid</p>
+            <p class="text-sm text-gray-300">Preserving Pennsylvania's Hunting Heritage</p>
+            <p class="text-xs text-gray-400 mt-4">&copy; {% now "Y" %} KeystoneBid. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Custom JS -->
+    <script src="{% static 'js/custom.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
