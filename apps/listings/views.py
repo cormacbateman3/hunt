@@ -1,59 +1,61 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.core.paginator import Paginator
 from django.db.models import Q
+from django.views.generic import ListView
 from .models import Listing
 from .forms import ListingForm, ListingImageFormSet
 
 
-def listing_list(request):
-    """Browse all active listings with filters"""
-    listings = Listing.objects.filter(status='active').select_related('seller')
+class ListingListView(ListView):
+    """Browse active listings with dynamic GET filtering."""
 
-    # Filtering
-    county = request.GET.get('county')
-    year_min = request.GET.get('year_min')
-    year_max = request.GET.get('year_max')
-    condition = request.GET.get('condition')
-    search = request.GET.get('search')
+    model = Listing
+    template_name = 'listings/listing_list.html'
+    context_object_name = 'listings'
+    paginate_by = 24
 
-    if county:
-        listings = listings.filter(county__iexact=county)
+    def get_queryset(self):
+        queryset = Listing.objects.filter(status='active').select_related('seller')
 
-    if year_min:
-        listings = listings.filter(license_year__gte=year_min)
+        county = self.request.GET.get('county')
+        year_min = self.request.GET.get('year_min')
+        year_max = self.request.GET.get('year_max')
+        condition = self.request.GET.get('condition')
+        search = self.request.GET.get('search')
 
-    if year_max:
-        listings = listings.filter(license_year__lte=year_max)
+        if county:
+            queryset = queryset.filter(county__iexact=county)
+        if year_min:
+            queryset = queryset.filter(license_year__gte=year_min)
+        if year_max:
+            queryset = queryset.filter(license_year__lte=year_max)
+        if condition:
+            queryset = queryset.filter(condition_grade=condition)
+        if search:
+            queryset = queryset.filter(
+                Q(title__icontains=search)
+                | Q(description__icontains=search)
+                | Q(county__icontains=search)
+            )
 
-    if condition:
-        listings = listings.filter(condition_grade=condition)
+        return queryset
 
-    if search:
-        listings = listings.filter(
-            Q(title__icontains=search) |
-            Q(description__icontains=search) |
-            Q(county__icontains=search)
-        )
-
-    # Pagination
-    paginator = Paginator(listings, 24)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
-    context = {
-        'page_obj': page_obj,
-        'filters': {
-            'county': county,
-            'year_min': year_min,
-            'year_max': year_max,
-            'condition': condition,
-            'search': search,
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['filters'] = {
+            'county': self.request.GET.get('county', ''),
+            'year_min': self.request.GET.get('year_min', ''),
+            'year_max': self.request.GET.get('year_max', ''),
+            'condition': self.request.GET.get('condition', ''),
+            'search': self.request.GET.get('search', ''),
         }
-    }
 
-    return render(request, 'listings/listing_list.html', context)
+        query_params = self.request.GET.copy()
+        query_params.pop('page', None)
+        context['query_string'] = query_params.urlencode()
+
+        return context
 
 
 def listing_detail(request, pk):
