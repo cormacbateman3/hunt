@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Your Auction Expired</title>
+</head>
+<body style="font-family: Georgia, serif; color: #1d2617; line-height: 1.5;">
+    <h2 style="color: #2c4a1e;">Auction expired</h2>
+    <p>Hello {{ user.username }},</p>
+    <p>{{ notification.message }}</p>
+    <p><a href="{{ site_url }}/listings/create/">Create a new listing</a></p>
+</body>
+</html>

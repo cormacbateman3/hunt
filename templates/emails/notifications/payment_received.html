@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Payment Received</title>
+</head>
+<body style="font-family: Georgia, serif; color: #1d2617; line-height: 1.5;">
+    <h2 style="color: #2c4a1e;">Payment received</h2>
+    <p>Hello {{ user.username }},</p>
+    <p>{{ notification.message }}</p>
+    <p><a href="{{ site_url }}/accounts/dashboard/">Review transaction</a></p>
+</body>
+</html>

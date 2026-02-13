@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>You Won an Auction</title>
+</head>
+<body style="font-family: Georgia, serif; color: #1d2617; line-height: 1.5;">
+    <h2 style="color: #2c4a1e;">Congratulations, you won</h2>
+    <p>Hello {{ user.username }},</p>
+    <p>{{ notification.message }}</p>
+    {% if action_url %}
+        <p><a href="{{ action_url }}">Complete payment</a></p>
+    {% else %}
+        <p><a href="{{ site_url }}/accounts/dashboard/">Go to dashboard</a></p>
+    {% endif %}
+</body>
+</html>

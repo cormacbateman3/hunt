@@ -1,10 +1,19 @@
 """
 Notification services for sending emails
 """
+import logging
+import re
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
 from .models import Notification
+
+logger = logging.getLogger(__name__)
+
+
+def _extract_first_url(text):
+    match = re.search(r'https?://\S+', text or '')
+    return match.group(0) if match else None
 
 
 def send_notification_email(notification):
@@ -18,13 +27,23 @@ def send_notification_email(notification):
         'payment_received': 'Payment received',
         'payment_confirmed': 'Payment confirmed',
     }
+    template_map = {
+        'outbid': 'emails/notifications/outbid.html',
+        'auction_won': 'emails/notifications/auction_won.html',
+        'auction_sold': 'emails/notifications/auction_sold.html',
+        'auction_expired': 'emails/notifications/auction_expired.html',
+        'payment_received': 'emails/notifications/payment_received.html',
+        'payment_confirmed': 'emails/notifications/payment_confirmed.html',
+    }
 
     subject = subject_map.get(notification.notification_type, 'KeystoneBid Notification')
+    template_name = template_map.get(notification.notification_type, 'emails/notification.html')
 
-    # Render email template
-    html_message = render_to_string('emails/notification.html', {
+    html_message = render_to_string(template_name, {
         'notification': notification,
         'user': notification.user,
+        'action_url': _extract_first_url(notification.message),
+        'site_url': settings.SITE_URL.rstrip('/'),
     })
 
     try:
@@ -38,21 +57,25 @@ def send_notification_email(notification):
         )
 
         notification.sent = True
-        notification.save()
+        notification.save(update_fields=['sent'])
         return True
 
-    except Exception as e:
-        print(f"Failed to send notification email: {e}")
+    except Exception:
+        logger.exception('Failed to send notification email for notification_id=%s', notification.pk)
         return False
 
 
-def send_pending_notifications():
-    """Send all pending notifications"""
-    pending = Notification.objects.filter(sent=False).select_related('user')
+def send_pending_notifications(limit=None):
+    """Send queued unsent notifications."""
+    pending = Notification.objects.filter(sent=False).select_related('user').order_by('created_at')
+    if limit:
+        pending = pending[:limit]
 
     sent_count = 0
+    attempted_count = 0
     for notification in pending:
+        attempted_count += 1
         if send_notification_email(notification):
             sent_count += 1
 
-    return sent_count
+    return sent_count, attempted_count
