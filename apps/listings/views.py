@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
-from .models import Listing, ListingImage
+from .models import Listing
 from .forms import ListingForm, ListingImageFormSet
 
 
@@ -78,27 +78,36 @@ def listing_detail(request, pk):
 @login_required
 def listing_create(request):
     """Create a new auction listing"""
+    image_formset = ListingImageFormSet(request.POST or None, request.FILES or None)
+
     if request.method == 'POST':
         form = ListingForm(request.POST, request.FILES)
-        image_formset = ListingImageFormSet(request.POST, request.FILES)
 
         if form.is_valid() and image_formset.is_valid():
             listing = form.save(commit=False)
             listing.seller = request.user
             listing.save()
 
-            # Save additional images
-            images = image_formset.save(commit=False)
-            for idx, image in enumerate(images):
-                image.listing = listing
-                image.sort_order = idx
-                image.save()
+            # Re-bind as inline formset to save FK automatically.
+            image_formset = ListingImageFormSet(
+                request.POST,
+                request.FILES,
+                instance=listing,
+            )
+            if image_formset.is_valid():
+                image_formset.save()
+            else:
+                listing.delete()
+                return render(
+                    request,
+                    'listings/listing_create.html',
+                    {'form': form, 'image_formset': image_formset},
+                )
 
             messages.success(request, 'Listing created successfully!')
             return redirect('listings:detail', pk=listing.pk)
     else:
         form = ListingForm()
-        image_formset = ListingImageFormSet()
 
     context = {
         'form': form,

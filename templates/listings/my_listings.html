@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}My Listings | KeystoneBid{% endblock %}
+
+{% block content %}
+<section>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h1>My Listings</h1>
+        <a class="btn-primary" href="{% url 'listings:create' %}">Create listing</a>
+    </div>
+
+    <div style="display: grid; gap: 0.8rem;">
+        {% for listing in listings %}
+            <article class="card">
+                <h2 style="font-size: 1.15rem; margin-bottom: 0.35rem;">
+                    <a href="{% url 'listings:detail' listing.pk %}">{{ listing.title }}</a>
+                </h2>
+                <p style="color: var(--color-muted); margin-bottom: 0.45rem;">
+                    {{ listing.county }} • {{ listing.license_year }} • Ends {{ listing.auction_end|date:"M j, Y" }}
+                </p>
+                <a class="btn-secondary" href="{% url 'listings:edit' listing.pk %}">Edit</a>
+            </article>
+        {% empty %}
+            <article class="card">
+                <p>You have not created any listings yet.</p>
+            </article>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

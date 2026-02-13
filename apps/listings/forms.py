@@ -9,14 +9,15 @@ class ListingForm(forms.ModelForm):
 
     duration_days = forms.ChoiceField(
         choices=[
-            (1, '1 days'),
+            (1, '1 day'),
             (3, '3 days'),
             (5, '5 days'),
             (7, '7 days'),
             (10, '10 days'),
         ],
         initial=7,
-        help_text="How long should the auction run?"
+        help_text="How long should the auction run?",
+        widget=forms.Select(attrs={'class': 'form-select'})
     )
 
     class Meta:
@@ -90,5 +91,6 @@ ListingImageFormSet = forms.inlineformset_factory(
     form=ListingImageForm,
     extra=4,
     max_num=4,
+    validate_max=True,
     can_delete=True
 )

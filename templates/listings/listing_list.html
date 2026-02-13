@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Browse Listings | KeystoneBid{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/browse.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="browse-layout">
+    <aside class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.8rem;">Filters</h2>
+        <form method="get" style="display: grid; gap: 0.75rem;">
+            <div>
+                <label class="form-label" for="search">Search</label>
+                <input class="form-input" id="search" name="search" value="{{ filters.search|default:'' }}">
+            </div>
+            <div>
+                <label class="form-label" for="county">County</label>
+                <input class="form-input" id="county" name="county" value="{{ filters.county|default:'' }}">
+            </div>
+            <div>
+                <label class="form-label" for="year_min">Year from</label>
+                <input class="form-input" id="year_min" type="number" name="year_min" value="{{ filters.year_min|default:'' }}">
+            </div>
+            <div>
+                <label class="form-label" for="year_max">Year to</label>
+                <input class="form-input" id="year_max" type="number" name="year_max" value="{{ filters.year_max|default:'' }}">
+            </div>
+            <div>
+                <label class="form-label" for="condition">Condition</label>
+                <select class="form-select" id="condition" name="condition">
+                    <option value="">Any</option>
+                    <option value="poor" {% if filters.condition == 'poor' %}selected{% endif %}>Poor</option>
+                    <option value="fair" {% if filters.condition == 'fair' %}selected{% endif %}>Fair</option>
+                    <option value="good" {% if filters.condition == 'good' %}selected{% endif %}>Good</option>
+                    <option value="very_good" {% if filters.condition == 'very_good' %}selected{% endif %}>Very Good</option>
+                    <option value="excellent" {% if filters.condition == 'excellent' %}selected{% endif %}>Excellent</option>
+                    <option value="mint" {% if filters.condition == 'mint' %}selected{% endif %}>Mint</option>
+                </select>
+            </div>
+            <button class="btn-primary" type="submit">Apply filters</button>
+        </form>
+    </aside>
+
+    <section>
+        <div style="display: grid; gap: 0.8rem;">
+            {% for listing in page_obj %}
+                <article class="card">
+                    <h3 style="font-size: 1.2rem; margin-bottom: 0.45rem;">
+                        <a href="{% url 'listings:detail' listing.pk %}">{{ listing.title }}</a>
+                    </h3>
+                    <p style="color: var(--color-muted); margin-bottom: 0.5rem;">
+                        {{ listing.county }} County • {{ listing.license_year }} • {{ listing.get_condition_grade_display }}
+                    </p>
+                    <p style="margin-bottom: 0.5rem;">Current price: ${{ listing.current_price }}</p>
+                    <a class="btn-secondary" href="{% url 'listings:detail' listing.pk %}">View details</a>
+                </article>
+            {% empty %}
+                <div class="card">
+                    <p>No active listings found.</p>
+                </div>
+            {% endfor %}
+        </div>
+
+        {% if page_obj.paginator.num_pages > 1 %}
+            <nav style="margin-top: 1rem; display: flex; gap: 0.75rem; align-items: center;">
+                {% if page_obj.has_previous %}
+                    <a class="btn-secondary" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                {% endif %}
+                <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                {% if page_obj.has_next %}
+                    <a class="btn-secondary" href="?page={{ page_obj.next_page_number }}">Next</a>
+                {% endif %}
+            </nav>
+        {% endif %}
+    </section>
+</section>
+{% endblock %}
