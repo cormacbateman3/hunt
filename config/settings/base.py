@@ -129,6 +129,7 @@ SERVER_EMAIL = os.getenv('SERVER_EMAIL', 'admin@keystonebid.com')
 STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', '')
 STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
+SITE_URL = os.getenv('SITE_URL', 'http://localhost:8000')
 
 
 # Authentication URLs

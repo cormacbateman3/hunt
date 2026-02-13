@@ -3,15 +3,82 @@
 {% block title %}Dashboard | KeystoneBid{% endblock %}
 
 {% block content %}
-<section class="card">
-    <h1 style="margin-bottom: 0.75rem;">Welcome, {{ user.username }}</h1>
-    <p style="color: var(--color-muted); margin-bottom: 1rem;">
-        Your collector dashboard is ready. Listings and bids modules will populate this page as you use the platform.
-    </p>
-    {% if user.profile.email_verified %}
-        <span class="badge badge-active">Email verified</span>
-    {% else %}
-        <span class="badge badge-expired">Email not verified</span>
-    {% endif %}
+<section style="display: grid; gap: 1rem;">
+    <article class="card">
+        <h1 style="margin-bottom: 0.5rem;">Welcome, {{ user.username }}</h1>
+        <p style="color: var(--color-muted); margin-bottom: 0.75rem;">
+            Active listings: {{ active_listings_count }} | Active winning bids: {{ winning_bids_count }}
+        </p>
+        {% if user.profile.email_verified %}
+            <span class="badge badge-active">Email verified</span>
+        {% else %}
+            <span class="badge badge-expired">Email not verified</span>
+        {% endif %}
+    </article>
+
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Pending Payments</h2>
+        {% for txn in pending_payments %}
+            <p style="margin-bottom: 0.45rem;">
+                {{ txn.listing.title }} - ${{ txn.sale_amount }}
+                <a href="{% url 'payments:checkout' txn.id %}" style="color: var(--color-aged-amber);">Pay now</a>
+            </p>
+        {% empty %}
+            <p>No pending payments.</p>
+        {% endfor %}
+    </article>
+
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">My Listings</h2>
+        {% for listing in my_listings %}
+            <p style="margin-bottom: 0.45rem;">
+                <a href="{% url 'listings:detail' listing.id %}">{{ listing.title }}</a>
+                ({{ listing.get_status_display }})
+            </p>
+        {% empty %}
+            <p>No listings yet.</p>
+        {% endfor %}
+        <a href="{% url 'listings:my_listings' %}" style="color: var(--color-aged-amber);">View all listings</a>
+    </article>
+
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Recent Bids</h2>
+        {% for bid in my_bids %}
+            <p style="margin-bottom: 0.45rem;">
+                <a href="{% url 'listings:detail' bid.listing.id %}">{{ bid.listing.title }}</a> - ${{ bid.amount }}
+                {% if bid.is_winning %}<strong>(winning)</strong>{% endif %}
+            </p>
+        {% empty %}
+            <p>No bids yet.</p>
+        {% endfor %}
+        <a href="{% url 'bids:my_bids' %}" style="color: var(--color-aged-amber);">View all bids</a>
+    </article>
+
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Recent Notifications</h2>
+        {% for note in recent_notifications %}
+            <p style="margin-bottom: 0.45rem;">{{ note.message }}</p>
+        {% empty %}
+            <p>No notifications.</p>
+        {% endfor %}
+    </article>
+
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Recent Purchases</h2>
+        {% for txn in recent_purchases %}
+            <p style="margin-bottom: 0.45rem;">{{ txn.listing.title }} - ${{ txn.sale_amount }} ({{ txn.get_status_display }})</p>
+        {% empty %}
+            <p>No purchases yet.</p>
+        {% endfor %}
+    </article>
+
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Recent Sales</h2>
+        {% for txn in recent_sales %}
+            <p style="margin-bottom: 0.45rem;">{{ txn.listing.title }} - ${{ txn.sale_amount }} ({{ txn.get_status_display }})</p>
+        {% empty %}
+            <p>No sales yet.</p>
+        {% endfor %}
+    </article>
 </section>
 {% endblock %}

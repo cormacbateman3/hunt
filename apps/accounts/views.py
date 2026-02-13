@@ -9,6 +9,10 @@ from django.conf import settings
 from django.urls import reverse
 from .forms import UserRegistrationForm, UserProfileForm
 from .models import UserProfile
+from apps.listings.models import Listing
+from apps.bids.models import Bid
+from apps.payments.models import Transaction
+from apps.notifications.models import Notification
 
 
 def register(request):
@@ -102,10 +106,35 @@ def profile_view(request, username):
 
 @login_required
 def dashboard(request):
-    """User dashboard showing active bids and listings"""
-    # This will be enhanced with actual bid and listing data
+    """User dashboard with listings, bids, payments, and notifications."""
+    my_listings = Listing.objects.filter(seller=request.user).order_by('-created_at')[:8]
+    active_listings = Listing.objects.filter(seller=request.user, status='active').count()
+
+    my_bids = Bid.objects.filter(bidder=request.user).select_related('listing').order_by('-placed_at')[:8]
+    winning_bids = Bid.objects.filter(bidder=request.user, is_winning=True, listing__status='active').count()
+
+    pending_payments = Transaction.objects.filter(
+        buyer=request.user,
+        status='pending'
+    ).select_related('listing').order_by('-created_at')
+    recent_purchases = Transaction.objects.filter(
+        buyer=request.user
+    ).select_related('listing').order_by('-created_at')[:6]
+    recent_sales = Transaction.objects.filter(
+        seller=request.user
+    ).select_related('listing').order_by('-created_at')[:6]
+
+    recent_notifications = Notification.objects.filter(user=request.user).order_by('-created_at')[:10]
+
     context = {
-        'user': request.user,
+        'active_listings_count': active_listings,
+        'my_listings': my_listings,
+        'my_bids': my_bids,
+        'winning_bids_count': winning_bids,
+        'pending_payments': pending_payments,
+        'recent_purchases': recent_purchases,
+        'recent_sales': recent_sales,
+        'recent_notifications': recent_notifications,
     }
     return render(request, 'accounts/dashboard.html', context)
 
