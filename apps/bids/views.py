@@ -56,11 +56,15 @@ def bid_status(request, listing_id):
     """JSON endpoint for live bid status polling."""
     listing = get_object_or_404(Listing, pk=listing_id)
     latest_bid = listing.bids.filter(is_winning=True).first()
+    minimum_bid = (listing.current_bid or listing.starting_price) + 1
 
     return JsonResponse({
         'listing_id': listing.id,
         'current_bid': str(listing.current_price()),
         'bid_count': listing.bids.count(),
         'auction_status': listing.status,
+        'auction_end': listing.auction_end.isoformat(),
+        'minimum_bid': str(minimum_bid),
+        'is_active': listing.is_active(),
         'latest_bidder': latest_bid.bidder.username if latest_bid else None,
     })

@@ -11,36 +11,114 @@
 <article class="listing-detail">
     <section class="card">
         <h1 style="margin-bottom: 0.75rem;">{{ listing.title }}</h1>
+
         {% if listing.featured_image %}
-            <img src="{{ listing.featured_image.url }}" alt="{{ listing.title }}" style="border-radius: 8px; margin-bottom: 1rem;">
+            <img
+                id="gallery-main"
+                data-gallery-main
+                src="{{ listing.featured_image.url }}"
+                alt="{{ listing.title }}"
+                style="border-radius: 8px; margin-bottom: 0.6rem; width: 100%; max-height: 460px; object-fit: contain; background: #f0eadb;"
+            >
         {% endif %}
-        <p style="margin-bottom: 1rem;">{{ listing.description }}</p>
 
         {% if listing.additional_images.all %}
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;">
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 1rem;">
+                {% if listing.featured_image %}
+                    <button type="button" class="btn-secondary" style="padding: 0;" data-gallery-thumb data-full-src="{{ listing.featured_image.url }}">
+                        <img src="{{ listing.featured_image.url }}" alt="Featured image thumbnail" style="width: 100%; border-radius: 6px;">
+                    </button>
+                {% endif %}
                 {% for image in listing.additional_images.all %}
-                    <img src="{{ image.image.url }}" alt="Additional image {{ forloop.counter }}" style="border-radius: 6px;">
+                    <button type="button" class="btn-secondary" style="padding: 0;" data-gallery-thumb data-full-src="{{ image.image.url }}">
+                        <img src="{{ image.image.url }}" alt="Additional image {{ forloop.counter }}" style="width: 100%; border-radius: 6px;">
+                    </button>
                 {% endfor %}
             </div>
         {% endif %}
+
+        <p style="margin-bottom: 1rem;">{{ listing.description }}</p>
+
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <button type="button" class="btn-secondary" data-gallery-prev>Previous image</button>
+            <button type="button" class="btn-secondary" data-gallery-next>Next image</button>
+            <button type="button" class="btn-secondary" data-gallery-zoom>Zoom</button>
+        </div>
     </section>
 
-    <aside class="card">
+    <aside
+        class="card"
+        data-poll-url="{% url 'listings:bid_status' listing.id %}"
+        data-bid-target="#current-bid-value"
+        data-bid-count-target="#bid-count-value"
+        data-min-bid-target="#min-bid-value"
+        data-auction-end-target="#countdown-value"
+    >
         <h2 style="font-size: 1.2rem; margin-bottom: 0.75rem;">Auction details</h2>
-        <p><strong>Current price:</strong> ${{ listing.current_price }}</p>
-        <p><strong>Starting price:</strong> ${{ listing.starting_price }}</p>
+        <p><strong>Current price:</strong> $<span id="current-bid-value">{{ listing.current_price }}</span></p>
+        <p><strong>Minimum next bid:</strong> $<span id="min-bid-value">{{ minimum_bid }}</span></p>
+        <p><strong>Total bids:</strong> <span id="bid-count-value">{{ bid_count }}</span></p>
+        <p>
+            <strong>Time remaining:</strong>
+            <span id="countdown-value" data-auction-end="{{ listing.auction_end|date:'c' }}">
+                --
+            </span>
+        </p>
         <p><strong>County:</strong> {{ listing.county }}</p>
         <p><strong>Year:</strong> {{ listing.license_year }}</p>
         <p><strong>Type:</strong> {{ listing.license_type }}</p>
         <p><strong>Condition:</strong> {{ listing.get_condition_grade_display }}</p>
-        <p><strong>Auction ends:</strong> {{ listing.auction_end|date:"M j, Y, g:i a" }}</p>
         <p><strong>Status:</strong> {{ listing.get_status_display }}</p>
+        <p><strong>Auction ends:</strong> {{ listing.auction_end|date:"M j, Y, g:i a" }}</p>
 
         {% if user.is_authenticated and listing.seller_id == user.id %}
             <div style="margin-top: 1rem;">
                 <a class="btn-secondary" href="{% url 'listings:edit' listing.pk %}">Edit listing</a>
             </div>
+        {% elif user.is_authenticated %}
+            <hr style="margin: 1rem 0; border: 0; border-top: 1px solid var(--color-border);">
+            <h3 style="font-size: 1.05rem; margin-bottom: 0.75rem;">Place bid</h3>
+            {% if user.profile.email_verified %}
+                <form method="post" action="{% url 'bids:create' listing.id %}" data-bid-form>
+                    {% csrf_token %}
+                    <label class="form-label" for="{{ bid_form.amount.id_for_label }}">Bid amount ($)</label>
+                    {{ bid_form.amount }}
+                    <small style="color: var(--color-muted);">Minimum: $<span id="min-bid-helper">{{ minimum_bid }}</span></small>
+                    <div style="margin-top: 0.75rem;">
+                        <button type="submit" class="btn-primary">Submit bid</button>
+                    </div>
+                </form>
+            {% else %}
+                <p style="color: var(--color-hunting-rust);">
+                    Verify your email before placing bids.
+                </p>
+            {% endif %}
+            {% if user_bid %}
+                <p style="margin-top: 0.8rem; color: var(--color-muted);">
+                    Your highest bid: ${{ user_bid.amount }}
+                </p>
+            {% endif %}
+        {% else %}
+            <p style="margin-top: 1rem;">
+                <a class="btn-primary" href="{% url 'accounts:login' %}?next={{ request.path }}">Login to bid</a>
+            </p>
         {% endif %}
     </aside>
 </article>
+
+<section class="card" style="margin-top: 1rem;">
+    <h2 style="font-size: 1.2rem; margin-bottom: 0.75rem;">Recent bids</h2>
+    {% if recent_bids %}
+        <div style="display: grid; gap: 0.45rem;">
+            {% for bid in recent_bids %}
+                <p>
+                    ${{ bid.amount }} by {{ bid.bidder.username }} on {{ bid.placed_at|date:"M j, Y g:i a" }}
+                    {% if bid.is_winning %}<strong>(winning)</strong>{% endif %}
+                </p>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No bids yet.</p>
+    {% endif %}
+</section>
 {% endblock %}

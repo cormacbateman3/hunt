@@ -5,6 +5,8 @@ from django.db.models import Q
 from django.views.generic import ListView
 from .models import Listing
 from .forms import ListingForm, ListingImageFormSet
+from apps.bids.forms import BidForm
+from apps.bids.services import get_user_bid_on_listing, get_winning_bid
 
 
 class ListingListView(ListView):
@@ -66,12 +68,29 @@ def listing_detail(request, pk):
         pk=pk
     )
 
-    # Get bid information (will be implemented when bids app is ready)
-    # current_bid = listing.bids.filter(is_winning=True).first()
+    winning_bid = get_winning_bid(listing)
+    bid_count = listing.bids.count()
+    recent_bids = listing.bids.select_related('bidder').order_by('-placed_at')[:10]
+    minimum_bid = (listing.current_bid or listing.starting_price) + 1
+    bid_form = None
+    user_bid = None
+
+    if request.user.is_authenticated:
+        user_bid = get_user_bid_on_listing(request.user, listing)
+        bid_form = BidForm(
+            listing=listing,
+            bidder=request.user,
+            initial={'amount': minimum_bid},
+        )
 
     context = {
         'listing': listing,
-        # 'current_bid': current_bid,
+        'winning_bid': winning_bid,
+        'bid_count': bid_count,
+        'recent_bids': recent_bids,
+        'minimum_bid': minimum_bid,
+        'bid_form': bid_form,
+        'user_bid': user_bid,
     }
 
     return render(request, 'listings/listing_detail.html', context)

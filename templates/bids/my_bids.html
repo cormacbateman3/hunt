@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block title %}My Bids | KeystoneBid{% endblock %}
+
+{% block content %}
+<section>
+    <h1 style="margin-bottom: 1rem;">My Bids</h1>
+    <div style="display: grid; gap: 0.8rem;">
+        {% for bid in bids %}
+            <article class="card">
+                <h2 style="font-size: 1.15rem; margin-bottom: 0.35rem;">
+                    <a href="{% url 'listings:detail' bid.listing.id %}">{{ bid.listing.title }}</a>
+                </h2>
+                <p style="color: var(--color-muted); margin-bottom: 0.35rem;">
+                    Bid placed {{ bid.placed_at|date:"M j, Y g:i a" }}
+                </p>
+                <p><strong>Amount:</strong> ${{ bid.amount }}</p>
+                {% if bid.is_winning %}
+                    <span class="badge badge-active" style="margin-top: 0.4rem;">Winning</span>
+                {% endif %}
+            </article>
+        {% empty %}
+            <article class="card">
+                <p>You have not placed any bids yet.</p>
+            </article>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
