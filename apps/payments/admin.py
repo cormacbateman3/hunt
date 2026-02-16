@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Transaction
+from .models import Transaction, PaymentTransaction
 
 
 @admin.register(Transaction)
@@ -24,5 +24,13 @@ class TransactionAdmin(admin.ModelAdmin):
     )
 
     def has_add_permission(self, request):
-        # Transactions should only be created through the auction close process
         return False
+
+
+@admin.register(PaymentTransaction)
+class PaymentTransactionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'order', 'status', 'stripe_payment_intent_id', 'created_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('order__listing__title', 'stripe_payment_intent_id', 'stripe_checkout_session_id')
+    readonly_fields = ('created_at', 'updated_at')
+    date_hierarchy = 'created_at'

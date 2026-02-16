@@ -56,8 +56,8 @@ def send_notification_email(notification):
             fail_silently=False,
         )
 
-        notification.sent = True
-        notification.save(update_fields=['sent'])
+        notification.sent_email = True
+        notification.save(update_fields=['sent_email'])
         return True
 
     except Exception:
@@ -67,7 +67,7 @@ def send_notification_email(notification):
 
 def send_pending_notifications(limit=None):
     """Send queued unsent notifications."""
-    pending = Notification.objects.filter(sent=False).select_related('user').order_by('created_at')
+    pending = Notification.objects.filter(sent_email=False).select_related('user').order_by('created_at')
     if limit:
         pending = pending[:limit]
 

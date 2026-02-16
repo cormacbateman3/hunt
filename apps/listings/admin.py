@@ -10,8 +10,8 @@ class ListingImageInline(admin.TabularInline):
 
 @admin.register(Listing)
 class ListingAdmin(admin.ModelAdmin):
-    list_display = ('title', 'seller', 'license_year', 'county', 'current_price', 'status', 'auction_end', 'created_at')
-    list_filter = ('status', 'condition_grade', 'county', 'license_year', 'created_at')
+    list_display = ('title', 'listing_type', 'seller', 'license_year', 'county', 'current_price', 'status', 'auction_end', 'created_at')
+    list_filter = ('listing_type', 'status', 'condition_grade', 'county', 'license_year', 'created_at')
     search_fields = ('title', 'description', 'county', 'seller__username')
     readonly_fields = ('created_at', 'updated_at', 'current_bid')
     inlines = [ListingImageInline]
@@ -19,13 +19,21 @@ class ListingAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Listing Information', {
-            'fields': ('seller', 'title', 'description', 'featured_image')
+            'fields': ('seller', 'listing_type', 'title', 'description', 'featured_image', 'source_collection_item')
         }),
         ('License Details', {
-            'fields': ('license_year', 'county', 'license_type', 'condition_grade')
+            'fields': ('license_year', 'county', 'county_ref', 'license_type', 'license_type_ref', 'condition_grade')
         }),
-        ('Pricing', {
-            'fields': ('starting_price', 'current_bid')
+        ('Auction Pricing', {
+            'fields': ('starting_price', 'current_bid', 'reserve_price')
+        }),
+        ('Buy Now', {
+            'fields': ('buy_now_price',),
+            'classes': ('collapse',)
+        }),
+        ('Trade', {
+            'fields': ('trade_notes', 'allow_cash'),
+            'classes': ('collapse',)
         }),
         ('Auction', {
             'fields': ('auction_end', 'status')
@@ -37,7 +45,8 @@ class ListingAdmin(admin.ModelAdmin):
     )
 
     def current_price(self, obj):
-        return f"${obj.current_price():.2f}"
+        price = obj.current_price()
+        return f"${price:.2f}" if price else '-'
     current_price.short_description = 'Current Price'
 
 

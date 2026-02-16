@@ -26,11 +26,18 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # KeystoneBid apps
+    'apps.core',
     'apps.accounts',
     'apps.listings',
     'apps.bids',
     'apps.payments',
     'apps.notifications',
+    'apps.collections',
+    'apps.orders',
+    'apps.shipping',
+    'apps.trades',
+    'apps.favorites',
+    'apps.enforcement',
 ]
 
 MIDDLEWARE = [

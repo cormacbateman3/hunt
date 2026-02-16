@@ -1,14 +1,14 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
-from .models import UserProfile
+from .models import UserProfile, Address
 
 
 class UserProfileInline(admin.StackedInline):
     model = UserProfile
     can_delete = False
     verbose_name_plural = 'Profile'
-    fields = ('display_name', 'bio', 'county', 'avatar', 'email_verified', 'stripe_customer_id')
+    fields = ('display_name', 'bio', 'county', 'avatar', 'email_verified', 'phone_verified', 'stripe_customer_id', 'shipping_address')
     readonly_fields = ('email_verification_token', 'created_at', 'updated_at')
 
 
@@ -26,8 +26,8 @@ admin.site.register(User, UserAdmin)
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'display_name', 'county', 'email_verified', 'created_at')
-    list_filter = ('email_verified', 'county', 'created_at')
+    list_display = ('user', 'display_name', 'county', 'email_verified', 'phone_verified', 'created_at')
+    list_filter = ('email_verified', 'phone_verified', 'county', 'created_at')
     search_fields = ('user__username', 'user__email', 'display_name', 'county')
     readonly_fields = ('email_verification_token', 'created_at', 'updated_at')
     fieldsets = (
@@ -35,10 +35,10 @@ class UserProfileAdmin(admin.ModelAdmin):
             'fields': ('user', 'display_name', 'bio', 'avatar')
         }),
         ('Location', {
-            'fields': ('county',)
+            'fields': ('county', 'shipping_address')
         }),
         ('Verification', {
-            'fields': ('email_verified', 'email_verification_token')
+            'fields': ('email_verified', 'email_verification_token', 'phone_verified')
         }),
         ('Payment', {
             'fields': ('stripe_customer_id',)
@@ -47,3 +47,11 @@ class UserProfileAdmin(admin.ModelAdmin):
             'fields': ('created_at', 'updated_at')
         }),
     )
+
+
+@admin.register(Address)
+class AddressAdmin(admin.ModelAdmin):
+    list_display = ('user', 'full_name', 'city', 'state', 'postal_code', 'is_default')
+    list_filter = ('state', 'is_default')
+    search_fields = ('user__username', 'full_name', 'city', 'postal_code')
+    readonly_fields = ('created_at', 'updated_at')

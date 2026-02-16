@@ -17,6 +17,7 @@ class Bid(models.Model):
         ordering = ['-placed_at']
         indexes = [
             models.Index(fields=['listing', '-amount']),
+            models.Index(fields=['listing', '-amount', 'placed_at']),
             models.Index(fields=['bidder', '-placed_at']),
         ]
 
