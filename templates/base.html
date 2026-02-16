@@ -20,7 +20,15 @@
     <nav class="site-nav">
         <div class="container nav-inner">
             <div class="brand-wrap">
-                <a href="{% url 'home' %}" class="brand-name">KeystoneBid</a>
+                <a href="{% url 'home' %}" class="brand-link">
+                    <img
+                        src="{% static 'img/keystonebid-logo.png' %}"
+                        alt="KeystoneBid logo"
+                        class="brand-logo"
+                        onerror="this.style.display='none';"
+                    >
+                    <span class="brand-name">KeystoneBid</span>
+                </a>
                 <span class="brand-tagline">Pennsylvania Hunting Heritage</span>
             </div>
             <div class="nav-links">

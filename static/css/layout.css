@@ -23,8 +23,23 @@
 
 .brand-wrap {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: var(--space-1);
+}
+
+.brand-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.brand-logo {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .brand-name {
@@ -85,6 +100,12 @@
 
     .brand-wrap {
         flex-direction: column;
-        gap: 0.2rem;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+
+    .brand-logo {
+        width: 28px;
+        height: 28px;
     }
 }

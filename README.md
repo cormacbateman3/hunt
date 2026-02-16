@@ -1,145 +1,102 @@
 # KeystoneBid
 
-**PA Antique Hunting License Marketplace**
+Pennsylvania antique hunting license marketplace built with Django.
 
-A Django-powered auction marketplace for antique and vintage Pennsylvania hunting licenses.
+## Current Status (Alpha)
 
-## Features
+The platform now supports three marketplace paths:
 
-- **Auction Listings**: Create, browse, and bid on antique PA hunting licenses
-- **User Accounts**: Registration, email verification, and user profiles
-- **Live Bidding**: Real-time bid updates via lightweight JSON polling
-- **Payment Processing**: Stripe integration for secure payments
-- **Email Notifications**: Automated notifications for bids, auctions, and payments
-- **Admin Panel**: Django's built-in admin for content moderation
+- The Auction House: bid -> win -> pay -> ship -> receive
+- The General Store: buy now -> pay -> ship -> receive
+- The Trading Block: offer/counter -> accept -> dual ship -> confirm
+
+Core Alpha systems are included:
+
+- Orders + payment spine (`Order` + `PaymentTransaction`)
+- Shipping + tracking integration (Shippo wrapper, webhook + polling fallback)
+- Collections and wanted list
+- Trade offers and dual-shipment lifecycle
+- Enforcement (strikes, restrictions, excuse handshake)
+- In-app notifications center
+- Auction enhancements (reserve handling, Q&A)
+- Favorites (listings + public collection items)
 
 ## Stack
 
-- **Framework**: Django 5.0
-- **Database**: SQLite (dev) / PostgreSQL (prod)
-- **Frontend**: Django Templates + modular custom CSS
-- **Dynamic UI**: Vanilla JavaScript (ES6+) + JSON endpoints
-- **Payments**: Stripe Checkout
-- **Email**: Django email backend / AWS SES (prod)
-- **Deployment**: AWS EC2 + Gunicorn + Nginx
+- Django 5.x
+- SQLite (development), PostgreSQL-ready for production
+- Django templates + modular CSS + vanilla JS
+- Stripe Checkout + webhook flow
+- Shippo API integration for shipping/tracking
 
 ## Project Structure
 
-```
-keystonebid/
-├── manage.py
-├── config/                 # Project configuration
-│   ├── settings/           # Settings split by environment
-│   ├── urls.py
-│   ├── wsgi.py
-│   └── asgi.py
-├── apps/                   # Django apps
-│   ├── accounts/           # User authentication & profiles
-│   ├── listings/           # Auction listings
-│   ├── bids/               # Bidding system
-│   ├── payments/           # Stripe integration
-│   └── notifications/      # Email notifications
-├── templates/              # Global templates
-├── static/                 # CSS, JS, images
-├── media/                  # User uploads
-└── requirements/           # Dependencies
-```
-
-## Setup Instructions
-
-### 1. Clone the Repository
-
-```bash
-git clone <repository-url>
-cd repo
+```text
+repo/
+  manage.py
+  config/
+    settings/
+      base.py
+      development.py
+      production.py
+    urls.py
+  apps/
+    accounts/
+    core/
+    collections/
+    listings/
+    bids/
+    orders/
+    payments/
+    shipping/
+    trades/
+    favorites/
+    enforcement/
+    notifications/
+  templates/
+  static/
+  media/
 ```
 
-### 2. Create Virtual Environment
+## Local Setup
 
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-### 3. Install Dependencies
+1. Create and activate a virtual environment.
+2. Install dependencies:
 
 ```bash
 pip install -r requirements/development.txt
 ```
 
-### 4. Environment Variables
-
-Copy `.env.example` to `.env` and configure:
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` with your settings (database, Stripe keys, etc.)
-
-### 5. Run Migrations
+3. Configure `.env` (copy from `.env.example` if needed).
+4. Run migrations:
 
 ```bash
-python manage.py migrate
+py manage.py migrate
 ```
 
-### 6. Create Superuser
+5. Create a superuser:
 
 ```bash
-python manage.py createsuperuser
+py manage.py createsuperuser
 ```
 
-### 7. Run Development Server
+6. Start the server:
 
 ```bash
-python manage.py runserver
+py manage.py runserver
 ```
 
-Visit `http://localhost:8000`
-
-## Management Commands
-
-### Close Expired Auctions
+## Useful Management Commands
 
 ```bash
-python manage.py close_auctions
+py manage.py close_auctions
+py manage.py release_stale_buy_now --timeout-minutes 30
+py manage.py poll_shipments --limit 200
+py manage.py expire_trade_offers --limit 500
+py manage.py poll_trade_shipments --limit 200
+py manage.py auto_complete_orders --grace-days 3
+py manage.py auto_complete_trades --grace-days 3
+py manage.py enforce_policies
+py manage.py enqueue_operational_notifications
+py manage.py send_notifications --limit 200
 ```
-
-### Send Pending Notifications
-
-```bash
-python manage.py send_notifications
-```
-
-## Development
-
-- **Settings**: Use `config.settings.development` (default)
-- **Database**: SQLite (no setup required)
-- **Email**: Console backend (prints to terminal)
-- **Static Files**: Served by Django development server
-
-## Production Deployment
-
-1. Update `config/settings/production.py` with production settings
-2. Set `DJANGO_SETTINGS_MODULE=config.settings.production`
-3. Configure PostgreSQL database
-4. Configure AWS SES for email
-5. Set up Gunicorn + Nginx
-6. Configure SSL with Let's Encrypt
-7. Set up cron jobs for management commands
-
-## Django Apps
-
-- **accounts**: User registration, login, profiles, email verification
-- **listings**: Auction listings, image uploads, browse/filter
-- **bids**: Bidding logic, auction close, winner determination
-- **payments**: Stripe checkout, webhooks, transaction tracking
-- **notifications**: Email queue and delivery system
-
-## Contributing
-
-Don't. but you can use the base.
-
-## License
-
-Private project - All rights reserved
