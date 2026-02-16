@@ -24,6 +24,8 @@ class Notification(models.Model):
         ('trade_offer_declined', 'Trade Offer Declined'),
         ('trade_offer_countered', 'Trade Offer Countered'),
         ('trade_offer_expired', 'Trade Offer Expired'),
+        ('listing_question_received', 'Listing Question Received'),
+        ('listing_question_answered', 'Listing Question Answered'),
         ('order_ship_reminder', 'Order Ship Reminder'),
         ('receipt_confirmation_pending', 'Receipt Confirmation Pending'),
         ('trade_ship_reminder', 'Trade Ship Reminder'),

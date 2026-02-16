@@ -92,5 +92,25 @@
             <p>No sales yet.</p>
         {% endfor %}
     </article>
+
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Favorites</h2>
+        {% for favorite in recent_favorites %}
+            <p style="margin-bottom: 0.45rem;">
+                {% if favorite.listing %}
+                    <a href="{% url 'listings:detail' favorite.listing.pk %}">{{ favorite.listing.title }}</a>
+                    ({{ favorite.listing.get_listing_type_display }})
+                {% elif favorite.collection_item %}
+                    {{ favorite.collection_item.title }} by
+                    <a href="{% url 'accounts:profile' favorite.collection_item.owner.username %}">
+                        {{ favorite.collection_item.owner.username }}
+                    </a>
+                {% endif %}
+            </p>
+        {% empty %}
+            <p>No favorites yet.</p>
+        {% endfor %}
+        <a href="{% url 'favorites:list' %}" style="color: var(--color-aged-amber);">Open favorites</a>
+    </article>
 </section>
 {% endblock %}

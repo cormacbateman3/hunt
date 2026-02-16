@@ -57,6 +57,13 @@
                     {{ form.license_type_ref.errors }}
                 </div>
                 <div>
+                    <label class="form-label" for="{{ form.resident_status.id_for_label }}">Resident status</label>
+                    {{ form.resident_status }}
+                    {{ form.resident_status.errors }}
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+                <div>
                     <label class="form-label" for="{{ form.condition_grade.id_for_label }}">Condition grade</label>
                     {{ form.condition_grade }}
                     {{ form.condition_grade.errors }}
@@ -109,13 +116,17 @@
         {{ image_formset.management_form }}
         <div style="display: grid; gap: 0.75rem;">
             {% for image_form in image_formset %}
-                <div style="display: grid; gap: 0.45rem;">
+                <div style="display: grid; gap: 0.45rem; border: 1px solid var(--color-border); border-radius: 6px; padding: 0.55rem;" data-image-row draggable="true">
                     {{ image_form.id }}
                     {{ image_form.sort_order }}
                     {{ image_form.image }}
                     {% if image_form.instance.image %}
                         <img src="{{ image_form.instance.image.url }}" alt="Existing listing image" style="max-width: 180px; border-radius: 6px;">
                     {% endif %}
+                    <div style="display: flex; gap: 0.45rem;">
+                        <button type="button" class="btn-secondary" data-move-up>Move up</button>
+                        <button type="button" class="btn-secondary" data-move-down>Move down</button>
+                    </div>
                     {% if image_form.DELETE %}
                         <label class="form-label">Delete {{ image_form.DELETE }}</label>
                     {% endif %}
@@ -149,6 +160,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
     listingType.addEventListener('change', togglePanels);
     togglePanels();
+
+    const rows = () => Array.from(document.querySelectorAll('[data-image-row]'));
+    const applySort = () => {
+        rows().forEach((row, index) => {
+            const input = row.querySelector('input[name$="-sort_order"]');
+            if (input) input.value = index;
+        });
+    };
+    document.querySelectorAll('[data-move-up]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const row = btn.closest('[data-image-row]');
+            const prev = row.previousElementSibling;
+            if (prev) row.parentNode.insertBefore(row, prev);
+            applySort();
+        });
+    });
+    document.querySelectorAll('[data-move-down]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const row = btn.closest('[data-image-row]');
+            const next = row.nextElementSibling;
+            if (next) row.parentNode.insertBefore(next, row);
+            applySort();
+        });
+    });
+    let dragged = null;
+    rows().forEach((row) => {
+        row.addEventListener('dragstart', () => { dragged = row; });
+        row.addEventListener('dragover', (event) => event.preventDefault());
+        row.addEventListener('drop', () => {
+            if (!dragged || dragged === row) return;
+            row.parentNode.insertBefore(dragged, row);
+            applySort();
+        });
+    });
+    applySort();
 });
 </script>
 {% endblock %}

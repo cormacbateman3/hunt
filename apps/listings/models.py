@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.urls import reverse
+from apps.core.constants import RESIDENT_STATUS_CHOICES
 
 
 class Listing(models.Model):
@@ -59,6 +60,9 @@ class Listing(models.Model):
         related_name='listings', help_text="License type reference"
     )
     condition_grade = models.CharField(max_length=20, choices=CONDITION_CHOICES)
+    resident_status = models.CharField(
+        max_length=20, choices=RESIDENT_STATUS_CHOICES, default='unknown'
+    )
 
     # Auction pricing
     starting_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -142,3 +146,23 @@ class ListingImage(models.Model):
 
     def __str__(self):
         return f"Image for {self.listing.title}"
+
+
+class ListingQuestion(models.Model):
+    """Simple listing Q&A for buyer questions and seller answers."""
+
+    listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name='questions')
+    asker = models.ForeignKey(User, on_delete=models.CASCADE, related_name='listing_questions')
+    question = models.TextField()
+    seller_answer = models.TextField(blank=True)
+    answered_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Listing Question'
+        verbose_name_plural = 'Listing Questions'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Q on {self.listing.title} by {self.asker.username}"

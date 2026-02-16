@@ -21,6 +21,7 @@ urlpatterns = [
     path('notifications/', include('apps.notifications.urls')),
     path('shipping/', include('apps.shipping.urls')),
     path('trades/', include('apps.trades.urls')),
+    path('favorites/', include('apps.favorites.urls')),
 
     # Homepage
     path('', TemplateView.as_view(template_name='home.html'), name='home'),

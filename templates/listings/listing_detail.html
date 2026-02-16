@@ -77,6 +77,7 @@
         <p><strong>County:</strong> {% if listing.county_ref %}{{ listing.county_ref.name }}{% else %}{{ listing.county }}{% endif %}</p>
         <p><strong>Year:</strong> {{ listing.license_year }}</p>
         <p><strong>Type:</strong> {% if listing.license_type_ref %}{{ listing.license_type_ref.name }}{% else %}{{ listing.license_type }}{% endif %}</p>
+        <p><strong>Resident status:</strong> {{ listing.get_resident_status_display }}</p>
         <p><strong>Condition:</strong> {{ listing.get_condition_grade_display }}</p>
         <p><strong>Status:</strong> {{ listing.get_status_display }}</p>
         {% if is_auction %}
@@ -105,6 +106,13 @@
                     Verify your email before placing bids.
                 </p>
             {% endif %}
+            <form method="post" action="{% url 'favorites:toggle_listing' listing.pk %}" style="margin-top: 0.8rem;">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" class="btn-secondary">
+                    {% if is_favorited_listing %}Unfavorite{% else %}Favorite{% endif %}
+                </button>
+            </form>
             {% if user_bid %}
                 <p style="margin-top: 0.8rem; color: var(--color-muted);">
                     Your highest bid: ${{ user_bid.amount }}
@@ -115,6 +123,13 @@
                 <form method="post" action="{% url 'listings:buy_now_checkout_start' listing.pk %}" style="margin-top: 1rem;">
                     {% csrf_token %}
                     <button type="submit" class="btn-primary">Buy now</button>
+                </form>
+                <form method="post" action="{% url 'favorites:toggle_listing' listing.pk %}" style="margin-top: 0.6rem;">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
+                    <button type="submit" class="btn-secondary">
+                        {% if is_favorited_listing %}Unfavorite{% else %}Favorite{% endif %}
+                    </button>
                 </form>
             {% elif can_resume_buy_now %}
                 <p style="margin-top: 1rem; color: var(--color-muted);">You already started checkout for this listing.</p>
@@ -149,6 +164,13 @@
                     <a class="btn-primary" href="{% url 'trades:propose' listing_id=listing.id %}" style="margin-top: 1rem; display:inline-block;">
                         Propose trade
                     </a>
+                    <form method="post" action="{% url 'favorites:toggle_listing' listing.pk %}" style="margin-top: 0.6rem;">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button type="submit" class="btn-secondary">
+                            {% if is_favorited_listing %}Unfavorite{% else %}Favorite{% endif %}
+                        </button>
+                    </form>
                 {% elif trade_restriction_reason %}
                     <p style="margin-top: 1rem; color: var(--color-hunting-rust);">
                         {{ trade_restriction_reason }}
@@ -170,6 +192,40 @@
         {% endif %}
     </aside>
 </article>
+
+{% if is_auction %}
+<section class="card" style="margin-top: 1rem;">
+    <h2 style="font-size: 1.2rem; margin-bottom: 0.75rem;">Q&A</h2>
+    {% if user.is_authenticated and user.id != listing.seller_id %}
+        <form method="post" action="{% url 'listings:ask_question' listing.pk %}" style="display: grid; gap: 0.45rem; margin-bottom: 0.8rem;">
+            {% csrf_token %}
+            <textarea class="form-input" name="question" rows="3" placeholder="Ask the seller a question..." required></textarea>
+            <div><button type="submit" class="btn-secondary">Ask question</button></div>
+        </form>
+    {% endif %}
+    <div style="display: grid; gap: 0.65rem;">
+        {% for q in questions %}
+            <article style="padding: 0.65rem; border: 1px solid var(--color-border); border-radius: 8px;">
+                <p><strong>{{ q.asker.username }} asked:</strong> {{ q.question }}</p>
+                <p style="color: var(--color-muted);">{{ q.created_at|date:"M j, Y g:i a" }}</p>
+                {% if q.seller_answer %}
+                    <p style="margin-top: 0.45rem;"><strong>Seller:</strong> {{ q.seller_answer }}</p>
+                {% elif user.is_authenticated and user.id == listing.seller_id %}
+                    <form method="post" action="{% url 'listings:answer_question' listing.pk q.pk %}" style="display: grid; gap: 0.45rem; margin-top: 0.55rem;">
+                        {% csrf_token %}
+                        <textarea class="form-input" name="seller_answer" rows="2" placeholder="Post an answer..." required></textarea>
+                        <div><button type="submit" class="btn-secondary">Post answer</button></div>
+                    </form>
+                {% else %}
+                    <p style="margin-top: 0.45rem; color: var(--color-muted);">Awaiting seller response.</p>
+                {% endif %}
+            </article>
+        {% empty %}
+            <p>No questions yet.</p>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
 
 {% if is_auction %}
 <section class="card" style="margin-top: 1rem;">

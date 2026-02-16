@@ -14,6 +14,7 @@ from apps.bids.models import Bid
 from apps.orders.models import Order
 from apps.notifications.models import Notification
 from apps.collections.models import CollectionItem, WantedItem
+from apps.favorites.models import Favorite
 
 
 def register(request):
@@ -112,6 +113,12 @@ def profile_view(request, username):
         .select_related('county', 'license_type')
         .order_by('-created_at')[:8]
     )
+    favorite_collection_ids = set()
+    if request.user.is_authenticated:
+        favorite_collection_ids = set(
+            Favorite.objects.filter(user=request.user, collection_item__isnull=False)
+            .values_list('collection_item_id', flat=True)
+        )
 
     context = {
         'profile_user': user,
@@ -119,6 +126,7 @@ def profile_view(request, username):
         'collection_items': collection_items,
         'wanted_items': wanted_items,
         'is_owner': is_owner,
+        'favorite_collection_ids': favorite_collection_ids,
     }
 
     return render(request, 'accounts/profile.html', context)
@@ -143,6 +151,11 @@ def dashboard(request):
     recent_sales = Order.objects.filter(
         seller=request.user
     ).select_related('listing').order_by('-created_at')[:6]
+    recent_favorites = (
+        Favorite.objects.filter(user=request.user)
+        .select_related('listing', 'collection_item', 'collection_item__owner')
+        .order_by('-created_at')[:8]
+    )
 
     recent_notifications = Notification.objects.filter(user=request.user).order_by('-created_at')[:10]
 
@@ -155,6 +168,7 @@ def dashboard(request):
         'recent_purchases': recent_purchases,
         'recent_sales': recent_sales,
         'recent_notifications': recent_notifications,
+        'recent_favorites': recent_favorites,
     }
     return render(request, 'accounts/dashboard.html', context)
 

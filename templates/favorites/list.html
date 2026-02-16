@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}Favorites | KeystoneBid{% endblock %}
+
+{% block content %}
+<section style="display: grid; gap: 1rem;">
+    <article class="card">
+        <h1 style="margin-bottom: 0.5rem;">My Favorites</h1>
+        <p style="color: var(--color-muted);">Track listings and public collection items you want to revisit.</p>
+    </article>
+
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Favorited Listings</h2>
+        {% for favorite in listing_favorites %}
+            <p style="margin-bottom: 0.45rem;">
+                <a href="{% url 'listings:detail' favorite.listing.pk %}">{{ favorite.listing.title }}</a>
+                ({{ favorite.listing.get_listing_type_display }})
+            </p>
+        {% empty %}
+            <p>No favorited listings yet.</p>
+        {% endfor %}
+    </article>
+
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Favorited Collection Items</h2>
+        {% for favorite in collection_favorites %}
+            <p style="margin-bottom: 0.45rem;">
+                {{ favorite.collection_item.title }} by
+                <a href="{% url 'accounts:profile' favorite.collection_item.owner.username %}">
+                    {{ favorite.collection_item.owner.username }}
+                </a>
+            </p>
+        {% empty %}
+            <p>No favorited collection items yet.</p>
+        {% endfor %}
+    </article>
+</section>
+{% endblock %}
+

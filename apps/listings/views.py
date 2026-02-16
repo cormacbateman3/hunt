@@ -4,7 +4,8 @@ from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q
 from django.views.generic import ListView
-from .models import Listing
+from django.utils import timezone
+from .models import Listing, ListingQuestion
 from .forms import ListingForm, ListingImageFormSet
 from apps.bids.forms import BidForm
 from apps.bids.services import get_user_bid_on_listing, get_winning_bid
@@ -15,6 +16,7 @@ from apps.payments.models import PaymentTransaction
 from apps.trades.models import TradeOffer
 from apps.enforcement.services import enforce_capability
 from apps.notifications.services import create_notification
+from apps.favorites.models import Favorite
 
 
 def _prefill_from_collection_item(collection_item):
@@ -25,6 +27,7 @@ def _prefill_from_collection_item(collection_item):
         'license_year': collection_item.license_year,
         'county_ref': collection_item.county_id,
         'license_type_ref': collection_item.license_type_id,
+        'resident_status': collection_item.resident_status or 'unknown',
         'condition_grade': collection_item.condition_grade or '',
     }
 
@@ -43,6 +46,13 @@ def _copy_collection_images_to_listing(listing):
         return
     for idx, image in enumerate(source_images[1:], start=1):
         listing.additional_images.create(image=image.image, sort_order=idx)
+
+
+def _normalize_listing_image_sort_order(listing):
+    for idx, image in enumerate(listing.additional_images.order_by('sort_order', 'uploaded_at'), start=0):
+        if image.sort_order != idx:
+            image.sort_order = idx
+            image.save(update_fields=['sort_order'])
 
 
 class BaseListingListView(ListView):
@@ -149,7 +159,7 @@ def listing_detail(request, pk):
     """View a single listing with full details"""
     listing = get_object_or_404(
         Listing.objects.select_related('seller__profile', 'county_ref', 'license_type_ref')
-                       .prefetch_related('additional_images'),
+                       .prefetch_related('additional_images', 'questions__asker'),
         pk=pk
     )
 
@@ -186,6 +196,11 @@ def listing_detail(request, pk):
         'is_auction': is_auction,
         'is_buy_now': listing.listing_type == 'buy_now',
         'is_trade': listing.listing_type == 'trade',
+        'questions': listing.questions.select_related('asker').all(),
+        'is_favorited_listing': (
+            request.user.is_authenticated
+            and Favorite.objects.filter(user=request.user, listing=listing).exists()
+        ),
     }
     if listing.listing_type == 'buy_now':
         buy_now_order = Order.objects.filter(listing=listing).first()
@@ -265,6 +280,7 @@ def listing_create(request):
             if image_formset.is_valid():
                 image_formset.save()
                 _copy_collection_images_to_listing(listing)
+                _normalize_listing_image_sort_order(listing)
             else:
                 listing.delete()
                 return render(
@@ -307,6 +323,7 @@ def listing_edit(request, pk):
             form.save()
             image_formset.save()
             _copy_collection_images_to_listing(listing)
+            _normalize_listing_image_sort_order(listing)
             messages.success(request, 'Listing updated successfully!')
             return redirect('listings:detail', pk=listing.pk)
     else:
@@ -416,3 +433,67 @@ def buy_now_checkout_start(request, pk):
         dedupe_window_hours=1,
     )
     return redirect('payments:checkout', order_id=order.pk)
+
+
+@login_required
+def ask_question(request, pk):
+    listing = get_object_or_404(Listing, pk=pk)
+    if request.method != 'POST':
+        return redirect('listings:detail', pk=pk)
+    if request.user.id == listing.seller_id:
+        messages.error(request, 'Sellers cannot ask questions on their own listing.')
+        return redirect('listings:detail', pk=pk)
+
+    question = (request.POST.get('question') or '').strip()
+    if len(question) < 5:
+        messages.error(request, 'Question must be at least 5 characters.')
+        return redirect('listings:detail', pk=pk)
+
+    q = ListingQuestion.objects.create(
+        listing=listing,
+        asker=request.user,
+        question=question,
+    )
+    create_notification(
+        user=listing.seller,
+        notification_type='listing_question_received',
+        message=f'New question on "{listing.title}" from {request.user.username}.',
+        link_url=f'/listings/{listing.pk}/',
+        dedupe_window_hours=1,
+    )
+    messages.success(request, 'Question submitted.')
+    return redirect('listings:detail', pk=listing.pk)
+
+
+@login_required
+def answer_question(request, pk, question_id):
+    listing = get_object_or_404(Listing, pk=pk)
+    question = get_object_or_404(ListingQuestion, pk=question_id, listing=listing)
+    if request.method != 'POST':
+        return redirect('listings:detail', pk=pk)
+    if request.user.id != listing.seller_id:
+        messages.error(request, 'Only the listing seller can answer questions.')
+        return redirect('listings:detail', pk=pk)
+
+    answer = (request.POST.get('seller_answer') or '').strip()
+    if len(answer) < 2:
+        messages.error(request, 'Answer cannot be empty.')
+        return redirect('listings:detail', pk=pk)
+    question.seller_answer = answer
+    question.answered_at = timezone.now()
+    question.save(update_fields=['seller_answer', 'answered_at', 'updated_at'])
+    create_notification(
+        user=question.asker,
+        notification_type='listing_question_answered',
+        message=f'Seller answered your question on "{listing.title}".',
+        link_url=f'/listings/{listing.pk}/',
+        dedupe_window_hours=1,
+    )
+    messages.success(request, 'Answer posted.')
+    return redirect('listings:detail', pk=pk)
+    if listing.listing_type != 'auction':
+        messages.error(request, 'Q&A is available for auction listings only.')
+        return redirect('listings:detail', pk=pk)
+    if listing.listing_type != 'auction':
+        messages.error(request, 'Q&A is available for auction listings only.')
+        return redirect('listings:detail', pk=pk)

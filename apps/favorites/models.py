@@ -27,6 +27,16 @@ class Favorite(models.Model):
                 ),
                 name='favorite_xor_listing_collection',
             ),
+            models.UniqueConstraint(
+                fields=['user', 'listing'],
+                condition=models.Q(listing__isnull=False),
+                name='favorite_unique_user_listing',
+            ),
+            models.UniqueConstraint(
+                fields=['user', 'collection_item'],
+                condition=models.Q(collection_item__isnull=False),
+                name='favorite_unique_user_collection_item',
+            ),
         ]
         indexes = [
             models.Index(fields=['user', '-created_at']),
