@@ -126,10 +126,20 @@
     {% if is_buyer %}
     <article class="card">
         <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Buyer Action</h2>
-        <form method="post" action="{% url 'orders:confirm_receipt' order.pk %}">
-            {% csrf_token %}
-            <button class="btn-primary" type="submit">Confirm receipt</button>
-        </form>
+        {% if order.status == 'paid' or order.status == 'label_created' or order.status == 'in_transit' or order.status == 'delivered' %}
+            <form method="post" action="{% url 'orders:confirm_receipt' order.pk %}">
+                {% csrf_token %}
+                <button class="btn-primary" type="submit">Confirm receipt</button>
+            </form>
+        {% else %}
+            <p style="color: var(--color-muted);">No receipt action required for current order status.</p>
+        {% endif %}
+        {% if order.status == 'completed' %}
+            <form method="post" action="{% url 'collections:add_from_order' order.pk %}" style="margin-top: 0.65rem;">
+                {% csrf_token %}
+                <button class="btn-secondary" type="submit">Add purchase to collection</button>
+            </form>
+        {% endif %}
     </article>
     {% endif %}
 </section>

@@ -3,6 +3,7 @@ from django.utils import timezone
 from datetime import timedelta
 from .models import Listing, ListingImage
 from apps.core.models import County, LicenseType
+from apps.collections.models import CollectionItem
 
 
 class ListingForm(forms.ModelForm):
@@ -34,12 +35,27 @@ class ListingForm(forms.ModelForm):
         empty_label='Select license type',
         widget=forms.Select(attrs={'class': 'form-select'}),
     )
+    source_collection_item = forms.ModelChoiceField(
+        queryset=CollectionItem.objects.none(),
+        required=False,
+        empty_label='None',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        help_text='Prefill safe fields from an item in your collection.',
+    )
 
     def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         self.fields['county_ref'].queryset = County.objects.order_by('name')
         self.fields['license_type_ref'].queryset = LicenseType.objects.order_by('name')
+        self.fields['source_collection_item'].queryset = CollectionItem.objects.none()
         self.fields['duration_days'].required = False
+        self.fields['featured_image'].required = False
+
+        if user and user.is_authenticated:
+            self.fields['source_collection_item'].queryset = CollectionItem.objects.filter(
+                owner=user
+            ).order_by('-created_at')
 
         if self.instance and self.instance.pk:
             self.fields['duration_days'].initial = 7
@@ -48,6 +64,7 @@ class ListingForm(forms.ModelForm):
         model = Listing
         fields = [
             'listing_type',
+            'source_collection_item',
             'title',
             'description',
             'license_year',
@@ -115,6 +132,8 @@ class ListingForm(forms.ModelForm):
         buy_now_price = cleaned_data.get('buy_now_price')
         trade_notes = (cleaned_data.get('trade_notes') or '').strip()
         duration_days = cleaned_data.get('duration_days')
+        source_collection_item = cleaned_data.get('source_collection_item')
+        featured_image = cleaned_data.get('featured_image') or getattr(self.instance, 'featured_image', None)
 
         if listing_type == 'auction':
             if starting_price is None:
@@ -129,6 +148,10 @@ class ListingForm(forms.ModelForm):
         elif listing_type == 'trade':
             if not trade_notes:
                 self.add_error('trade_notes', 'Trade preferences are required for Trading Block listings.')
+        if not featured_image:
+            source_has_image = bool(source_collection_item and source_collection_item.images.exists())
+            if not source_has_image:
+                self.add_error('featured_image', 'Featured image is required unless source collection item has images.')
 
         return cleaned_data
 

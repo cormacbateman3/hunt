@@ -24,7 +24,7 @@ class CollectionItem(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='collection_items')
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    license_year = models.IntegerField(help_text="Year the license was issued")
+    license_year = models.IntegerField(null=True, blank=True, help_text="Year the license was issued")
     county = models.ForeignKey(
         County, on_delete=models.SET_NULL, null=True, blank=True, related_name='collection_items'
     )
@@ -35,8 +35,8 @@ class CollectionItem(models.Model):
         max_length=20, choices=RESIDENT_STATUS_CHOICES, default='unknown'
     )
     condition_grade = models.CharField(max_length=20, choices=CONDITION_CHOICES, blank=True)
-    is_public = models.BooleanField(default=False, help_text="Visible on public profile")
-    trade_eligible = models.BooleanField(default=False, help_text="Available for trade offers")
+    is_public = models.BooleanField(default=True, help_text="Visible on public profile")
+    trade_eligible = models.BooleanField(default=True, help_text="Available for trade offers")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -82,7 +82,7 @@ class WantedItem(models.Model):
     license_type = models.ForeignKey(
         LicenseType, on_delete=models.SET_NULL, null=True, blank=True, related_name='wanted_items'
     )
-    notes = models.TextField(blank=True)
+    notes = models.CharField(max_length=250, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

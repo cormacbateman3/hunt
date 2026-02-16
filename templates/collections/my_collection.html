@@ -3,29 +3,83 @@
 {% block title %}My Collection | KeystoneBid{% endblock %}
 
 {% block content %}
-<section class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-        <h1>My Collection</h1>
-        <a class="btn-primary" href="{% url 'collections:create' %}">Add item</a>
-    </div>
-
-    {% if items %}
-        <div style="display: grid; gap: 0.75rem;">
-            {% for item in items %}
-                <article class="card">
-                    <h3>{{ item.title }}</h3>
-                    <p style="color: var(--color-muted);">
-                        {% if item.county %}{{ item.county.name }}{% else %}Unknown county{% endif %} -
-                        {{ item.license_year }} -
-                        {% if item.license_type %}{{ item.license_type.name }}{% else %}Unknown type{% endif %}
-                    </p>
-                    <p>{{ item.description|default:'No description.' }}</p>
-                    <a class="btn-secondary" href="{% url 'collections:edit' item.pk %}">Edit</a>
-                </article>
-            {% endfor %}
+<section style="display: grid; gap: 1rem;">
+    <article class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h1>My Collection</h1>
+            <div style="display: flex; gap: 0.6rem;">
+                <a class="btn-secondary" href="{% url 'accounts:profile' user.username %}">View Public Profile</a>
+                <a class="btn-primary" href="{% url 'collections:create' %}">Add item</a>
+            </div>
         </div>
-    {% else %}
-        <p>No collection items yet.</p>
-    {% endif %}
+
+        {% if items %}
+            <div style="display: grid; gap: 0.75rem;">
+                {% for item in items %}
+                    <article class="card" style="border: 1px solid var(--color-border);">
+                        <div style="display: flex; justify-content: space-between; gap: 0.75rem; align-items: flex-start;">
+                            <div>
+                                <h3 style="margin-bottom: 0.3rem;">{{ item.title }}</h3>
+                                <p style="color: var(--color-muted); margin-bottom: 0.45rem;">
+                                    {% if item.county %}{{ item.county.name }}{% else %}Unknown county{% endif %}
+                                    {% if item.license_year %} - {{ item.license_year }}{% endif %}
+                                    {% if item.license_type %} - {{ item.license_type.name }}{% endif %}
+                                </p>
+                                <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.45rem;">
+                                    <span class="badge {% if item.is_public %}badge-active{% else %}badge-expired{% endif %}">
+                                        {% if item.is_public %}Public{% else %}Private{% endif %}
+                                    </span>
+                                    <span class="badge {% if item.trade_eligible %}badge-active{% else %}badge-expired{% endif %}">
+                                        {% if item.trade_eligible %}Trade Eligible{% else %}Trade Disabled{% endif %}
+                                    </span>
+                                </div>
+                                <p>{{ item.description|default:'No description.' }}</p>
+                            </div>
+                            {% with primary=item.images.first %}
+                                {% if primary %}
+                                    <img src="{{ primary.image.url }}" alt="{{ item.title }}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 6px;">
+                                {% endif %}
+                            {% endwith %}
+                        </div>
+                        <div style="margin-top: 0.8rem; display: flex; gap: 0.55rem; flex-wrap: wrap;">
+                            <a class="btn-secondary" href="{% url 'collections:edit' item.pk %}">Edit</a>
+                            <a class="btn-secondary" href="{% url 'listings:create' %}?from_collection={{ item.pk }}">List from collection</a>
+                            <a class="btn-secondary" href="{% url 'collections:delete' item.pk %}">Delete</a>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>No collection items yet.</p>
+        {% endif %}
+    </article>
+
+    <article class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
+            <h2 style="font-size: 1.2rem;">Wanted List</h2>
+            <a class="btn-primary" href="{% url 'collections:wanted_create' %}">Add wanted item</a>
+        </div>
+        {% if wanted_items %}
+            <div style="display: grid; gap: 0.55rem;">
+                {% for wanted in wanted_items %}
+                    <article style="border: 1px solid var(--color-border); border-radius: 8px; padding: 0.65rem;">
+                        <p>
+                            {% if wanted.county %}{{ wanted.county.name }}{% else %}Any county{% endif %}
+                            {% if wanted.year_min %} from {{ wanted.year_min }}{% endif %}
+                            {% if wanted.year_max %} to {{ wanted.year_max }}{% endif %}
+                            {% if wanted.license_type %} - {{ wanted.license_type.name }}{% endif %}
+                        </p>
+                        {% if wanted.notes %}<p style="color: var(--color-muted);">{{ wanted.notes }}</p>{% endif %}
+                        <div style="margin-top: 0.5rem; display: flex; gap: 0.55rem;">
+                            <a class="btn-secondary" href="{% url 'collections:wanted_edit' wanted.pk %}">Edit</a>
+                            <a class="btn-secondary" href="{% url 'collections:wanted_delete' wanted.pk %}">Delete</a>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>No wanted items yet.</p>
+        {% endif %}
+    </article>
 </section>
 {% endblock %}

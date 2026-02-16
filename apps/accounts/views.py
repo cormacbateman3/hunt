@@ -13,6 +13,7 @@ from apps.listings.models import Listing
 from apps.bids.models import Bid
 from apps.orders.models import Order
 from apps.notifications.models import Notification
+from apps.collections.models import CollectionItem, WantedItem
 
 
 def register(request):
@@ -95,10 +96,29 @@ def profile_view(request, username):
     """Public profile view"""
     user = get_object_or_404(User, username=username)
     profile = user.profile
+    is_owner = request.user.is_authenticated and request.user.id == user.id
+
+    collection_items = (
+        CollectionItem.objects.filter(owner=user)
+        .select_related('county', 'license_type')
+        .prefetch_related('images')
+        .order_by('-created_at')
+    )
+    if not is_owner:
+        collection_items = collection_items.filter(is_public=True)
+
+    wanted_items = (
+        WantedItem.objects.filter(user=user)
+        .select_related('county', 'license_type')
+        .order_by('-created_at')[:8]
+    )
 
     context = {
         'profile_user': user,
         'profile': profile,
+        'collection_items': collection_items,
+        'wanted_items': wanted_items,
+        'is_owner': is_owner,
     }
 
     return render(request, 'accounts/profile.html', context)

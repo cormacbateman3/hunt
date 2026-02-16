@@ -22,6 +22,14 @@
 
         <div style="display: grid; gap: 0.85rem;">
             <div>
+                <label class="form-label" for="{{ form.source_collection_item.id_for_label }}">List from collection (optional)</label>
+                {{ form.source_collection_item }}
+                {% if form.source_collection_item.help_text %}
+                    <small style="color: var(--color-muted);">{{ form.source_collection_item.help_text }}</small>
+                {% endif %}
+                {{ form.source_collection_item.errors }}
+            </div>
+            <div>
                 <label class="form-label" for="{{ form.listing_type.id_for_label }}">Listing type</label>
                 {{ form.listing_type }}
                 {{ form.listing_type.errors }}

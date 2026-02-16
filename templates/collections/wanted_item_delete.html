@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Wanted Item | KeystoneBid{% endblock %}
+
+{% block content %}
+<section class="card" style="max-width: 700px;">
+    <h1 style="margin-bottom: 0.8rem;">Delete wanted item</h1>
+    <p style="margin-bottom: 1rem;">Are you sure you want to remove this wanted item?</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn-primary">Delete</button>
+        <a href="{% url 'collections:my_collection' %}" style="margin-left: 0.75rem; color: var(--color-aged-amber);">Cancel</a>
+    </form>
+</section>
+{% endblock %}

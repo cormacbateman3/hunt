@@ -14,6 +14,34 @@ from apps.orders.services import calculate_platform_fee
 from apps.payments.models import PaymentTransaction
 
 
+def _prefill_from_collection_item(collection_item):
+    return {
+        'source_collection_item': collection_item.pk,
+        'title': collection_item.title,
+        'description': collection_item.description,
+        'license_year': collection_item.license_year,
+        'county_ref': collection_item.county_id,
+        'license_type_ref': collection_item.license_type_id,
+        'condition_grade': collection_item.condition_grade or '',
+    }
+
+
+def _copy_collection_images_to_listing(listing):
+    source = listing.source_collection_item
+    if not source:
+        return
+    source_images = list(source.images.order_by('sort_order', 'uploaded_at'))
+    if not source_images:
+        return
+    if not listing.featured_image:
+        listing.featured_image = source_images[0].image
+        listing.save(update_fields=['featured_image', 'updated_at'])
+    if listing.additional_images.exists():
+        return
+    for idx, image in enumerate(source_images[1:], start=1):
+        listing.additional_images.create(image=image.image, sort_order=idx)
+
+
 class BaseListingListView(ListView):
     """Browse active listings with dynamic GET filtering."""
 
@@ -191,7 +219,7 @@ def listing_create(request):
     image_formset = ListingImageFormSet(request.POST or None, request.FILES or None)
 
     if request.method == 'POST':
-        form = ListingForm(request.POST, request.FILES)
+        form = ListingForm(request.POST, request.FILES, user=request.user)
 
         if form.is_valid() and image_formset.is_valid():
             listing = form.save(commit=False)
@@ -206,6 +234,7 @@ def listing_create(request):
             )
             if image_formset.is_valid():
                 image_formset.save()
+                _copy_collection_images_to_listing(listing)
             else:
                 listing.delete()
                 return render(
@@ -217,7 +246,15 @@ def listing_create(request):
             messages.success(request, 'Listing created successfully!')
             return redirect('listings:detail', pk=listing.pk)
     else:
-        form = ListingForm()
+        source_id = request.GET.get('from_collection')
+        if source_id and source_id.isdigit():
+            source_item = get_object_or_404(
+                request.user.collection_items.select_related('county', 'license_type'),
+                pk=int(source_id),
+            )
+            form = ListingForm(initial=_prefill_from_collection_item(source_item), user=request.user)
+        else:
+            form = ListingForm(user=request.user)
 
     context = {
         'form': form,
@@ -233,16 +270,17 @@ def listing_edit(request, pk):
     listing = get_object_or_404(Listing, pk=pk, seller=request.user)
 
     if request.method == 'POST':
-        form = ListingForm(request.POST, request.FILES, instance=listing)
+        form = ListingForm(request.POST, request.FILES, instance=listing, user=request.user)
         image_formset = ListingImageFormSet(request.POST, request.FILES, instance=listing)
 
         if form.is_valid() and image_formset.is_valid():
             form.save()
             image_formset.save()
+            _copy_collection_images_to_listing(listing)
             messages.success(request, 'Listing updated successfully!')
             return redirect('listings:detail', pk=listing.pk)
     else:
-        form = ListingForm(instance=listing)
+        form = ListingForm(instance=listing, user=request.user)
         image_formset = ListingImageFormSet(instance=listing)
 
     context = {

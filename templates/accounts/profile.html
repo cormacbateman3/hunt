@@ -3,22 +3,85 @@
 {% block title %}{{ profile_user.username }} | KeystoneBid{% endblock %}
 
 {% block content %}
-<section class="card" style="max-width: 700px;">
-    <h1 style="margin-bottom: 0.5rem;">{{ profile.get_display_name }}</h1>
-    <p style="color: var(--color-muted); margin-bottom: 0.75rem;">@{{ profile_user.username }}</p>
-    {% if profile.county %}
-        <p style="margin-bottom: 0.5rem;"><strong>County:</strong> {{ profile.county }}</p>
-    {% endif %}
-    {% if profile.bio %}
-        <p>{{ profile.bio }}</p>
-    {% else %}
-        <p style="color: var(--color-muted);">No bio provided yet.</p>
-    {% endif %}
-
-    {% if user.is_authenticated and user.username == profile_user.username %}
-        <div style="margin-top: 1rem;">
-            <a href="{% url 'accounts:profile_edit' %}" class="btn-secondary">Edit profile</a>
+<section style="display: grid; gap: 1rem;">
+    <article class="card" style="background: linear-gradient(135deg, #f5ecd7 0%, #fafaf5 100%); border: 1px solid #d9cfb7;">
+        <h1 style="margin-bottom: 0.3rem;">{{ profile.get_display_name }}</h1>
+        <p style="color: var(--color-muted); margin-bottom: 0.75rem;">@{{ profile_user.username }}</p>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.7rem;">
+            {% if profile.county %}
+                <span class="badge badge-active">{{ profile.county }}</span>
+            {% endif %}
+            <span class="badge {% if profile.email_verified %}badge-active{% else %}badge-expired{% endif %}">
+                {% if profile.email_verified %}Email Verified{% else %}Email Unverified{% endif %}
+            </span>
+            <span class="badge {% if profile.phone_verified %}badge-active{% else %}badge-expired{% endif %}">
+                {% if profile.phone_verified %}Phone Verified{% else %}Phone Unverified{% endif %}
+            </span>
         </div>
+        {% if profile.bio %}
+            <p>{{ profile.bio }}</p>
+        {% else %}
+            <p style="color: var(--color-muted);">No bio provided yet.</p>
+        {% endif %}
+        <div style="margin-top: 0.9rem; display: flex; gap: 0.6rem; flex-wrap: wrap;">
+            {% if user.is_authenticated and user.username == profile_user.username %}
+                <a href="{% url 'accounts:profile_edit' %}" class="btn-secondary">Edit profile</a>
+                <a href="{% url 'collections:my_collection' %}" class="btn-secondary">Manage collection</a>
+            {% else %}
+                <a href="#" class="btn-secondary">Message collector (soon)</a>
+                <a href="{% url 'listings:trading_block' %}" class="btn-secondary">Propose trade (soon)</a>
+            {% endif %}
+        </div>
+    </article>
+
+    <article class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <h2 style="font-size: 1.2rem;">Collection</h2>
+            <span style="color: var(--color-muted);">{{ collection_items|length }} item{{ collection_items|length|pluralize }}</span>
+        </div>
+        {% if collection_items %}
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem;">
+                {% for item in collection_items %}
+                    <article style="border: 1px solid var(--color-border); border-radius: 8px; padding: 0.7rem;">
+                        {% with primary=item.images.first %}
+                            {% if primary %}
+                                <img src="{{ primary.image.url }}" alt="{{ item.title }}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 6px; margin-bottom: 0.55rem;">
+                            {% endif %}
+                        {% endwith %}
+                        <h3 style="font-size: 1.02rem; margin-bottom: 0.35rem;">{{ item.title }}</h3>
+                        <p style="color: var(--color-muted); margin-bottom: 0.45rem;">
+                            {% if item.county %}{{ item.county.name }}{% else %}Unknown county{% endif %}
+                            {% if item.license_year %} - {{ item.license_year }}{% endif %}
+                        </p>
+                        <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
+                            {% if item.trade_eligible %}<span class="badge badge-active">Trade Eligible</span>{% endif %}
+                            {% if is_owner and not item.is_public %}<span class="badge badge-expired">Private</span>{% endif %}
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p style="color: var(--color-muted);">
+                {% if is_owner %}Your public collection is empty.{% else %}No public collection items yet.{% endif %}
+            </p>
+        {% endif %}
+    </article>
+
+    {% if wanted_items %}
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.75rem;">Looking For</h2>
+        <div style="display: grid; gap: 0.45rem;">
+            {% for wanted in wanted_items %}
+                <p>
+                    {% if wanted.county %}{{ wanted.county.name }}{% else %}Any county{% endif %}
+                    {% if wanted.year_min %} from {{ wanted.year_min }}{% endif %}
+                    {% if wanted.year_max %} to {{ wanted.year_max }}{% endif %}
+                    {% if wanted.license_type %} - {{ wanted.license_type.name }}{% endif %}
+                    {% if wanted.notes %} - {{ wanted.notes }}{% endif %}
+                </p>
+            {% endfor %}
+        </div>
+    </article>
     {% endif %}
 </section>
 {% endblock %}
