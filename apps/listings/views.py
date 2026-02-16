@@ -12,6 +12,7 @@ from apps.core.models import County, LicenseType
 from apps.orders.models import Order
 from apps.orders.services import calculate_platform_fee
 from apps.payments.models import PaymentTransaction
+from apps.trades.models import TradeOffer
 
 
 def _prefill_from_collection_item(collection_item):
@@ -208,6 +209,12 @@ def listing_detail(request, pk):
                     or buy_now_order.buyer_id != request.user.id
                 )
             ),
+        })
+    if listing.listing_type == 'trade':
+        latest_offer = TradeOffer.objects.filter(trade_listing=listing).order_by('-created_at').first()
+        context.update({
+            'trade_offer_count': TradeOffer.objects.filter(trade_listing=listing).count(),
+            'latest_trade_offer': latest_offer,
         })
 
     return render(request, 'listings/listing_detail.html', context)

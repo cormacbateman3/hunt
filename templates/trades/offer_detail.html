@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block title %}Trade Offer #{{ offer.pk }} | KeystoneBid{% endblock %}
+
+{% block content %}
+<section style="display: grid; gap: 1rem;">
+    <article class="card">
+        <h1 style="margin-bottom: 0.45rem;">Trade Offer #{{ offer.pk }}</h1>
+        <p>
+            Listing: <a href="{% url 'listings:detail' offer.trade_listing.pk %}">{{ offer.trade_listing.title }}</a>
+        </p>
+        <p style="color: var(--color-muted);">
+            {{ offer.from_user.username }} -> {{ offer.to_user.username }} | {{ offer.get_status_display }} | Expires {{ offer.expires_at|date:"M j, Y g:i a" }}
+        </p>
+        {% if offer.message %}
+            <p style="margin-top: 0.6rem;">{{ offer.message }}</p>
+        {% endif %}
+        {% if offer.cash_amount %}
+            <p style="margin-top: 0.4rem;"><strong>Cash add-on:</strong> ${{ offer.cash_amount }}</p>
+        {% endif %}
+    </article>
+
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.55rem;">Offer Terms</h2>
+        <div style="display: grid; gap: 0.45rem;">
+            {% for item in offer.items.all %}
+                <p>
+                    {% if item.direction == 'offered' %}<strong>You give:</strong>{% else %}<strong>You receive:</strong>{% endif %}
+                    {{ item.collection_item.title }}
+                </p>
+            {% empty %}
+                <p>No offer items attached.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    {% if trade %}
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.55rem;">Accepted Trade</h2>
+        <p>Trade #{{ trade.pk }} created. <a href="{% url 'trades:trade_detail' trade.pk %}">View trade detail</a></p>
+    </article>
+    {% endif %}
+
+    {% if offer.status == 'pending' and user.is_authenticated %}
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.55rem;">Actions</h2>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            {% if user.id == offer.to_user_id %}
+                <form method="post" action="{% url 'trades:offer_action' offer.pk 'accept' %}">
+                    {% csrf_token %}
+                    <button class="btn-primary" type="submit">Accept</button>
+                </form>
+                <form method="post" action="{% url 'trades:offer_action' offer.pk 'decline' %}">
+                    {% csrf_token %}
+                    <button class="btn-secondary" type="submit">Decline</button>
+                </form>
+                <a class="btn-secondary" href="{% url 'trades:counter_offer' offer.pk %}">Counter</a>
+            {% endif %}
+            {% if user.id == offer.from_user_id %}
+                <form method="post" action="{% url 'trades:offer_action' offer.pk 'withdraw' %}">
+                    {% csrf_token %}
+                    <button class="btn-secondary" type="submit">Withdraw</button>
+                </form>
+            {% endif %}
+        </div>
+    </article>
+    {% endif %}
+
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.55rem;">Offer History</h2>
+        <div style="display: grid; gap: 0.45rem;">
+            {% for h in history %}
+                <p>
+                    <a href="{% url 'trades:offer_detail' h.pk %}">#{{ h.pk }}</a> -
+                    {{ h.from_user.username }} to {{ h.to_user.username }} -
+                    {{ h.get_status_display }} -
+                    {{ h.created_at|date:"M j, Y g:i a" }}
+                </p>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+{% endblock %}

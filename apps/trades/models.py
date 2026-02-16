@@ -21,6 +21,9 @@ class TradeOffer(models.Model):
     from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='trade_offers_sent')
     to_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='trade_offers_received')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    counter_to = models.ForeignKey(
+        'self', on_delete=models.SET_NULL, null=True, blank=True, related_name='counteroffers'
+    )
     expires_at = models.DateTimeField(null=True, blank=True)
     message = models.TextField(blank=True)
     cash_amount = models.DecimalField(
@@ -70,12 +73,15 @@ class Trade(models.Model):
     """An accepted trade between two users"""
 
     STATUS_CHOICES = [
-        ('pending_shipment', 'Pending Shipment'),
-        ('in_transit', 'In Transit'),
-        ('delivered', 'Delivered'),
+        ('accepted', 'Accepted'),
+        ('awaiting_shipments', 'Awaiting Shipments'),
+        ('shipped_one', 'Shipped One Side'),
+        ('shipped_both', 'Shipped Both Sides'),
+        ('delivered_one', 'Delivered One Side'),
+        ('delivered_both', 'Delivered Both Sides'),
         ('completed', 'Completed'),
-        ('disputed', 'Disputed'),
         ('cancelled', 'Cancelled'),
+        ('expired', 'Expired'),
     ]
 
     listing = models.OneToOneField(
@@ -83,7 +89,7 @@ class Trade(models.Model):
     )
     initiator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='trades_initiated')
     counterparty = models.ForeignKey(User, on_delete=models.CASCADE, related_name='trades_received')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending_shipment')
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='awaiting_shipments')
     expires_at = models.DateTimeField(null=True, blank=True)
     ship_by_deadline = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -19,6 +19,7 @@ urlpatterns = [
     path('orders/', include('apps.orders.urls')),
     path('payments/', include('apps.payments.urls')),
     path('shipping/', include('apps.shipping.urls')),
+    path('trades/', include('apps.trades.urls')),
 
     # Homepage
     path('', TemplateView.as_view(template_name='home.html'), name='home'),

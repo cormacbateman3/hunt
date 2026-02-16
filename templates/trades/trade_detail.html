@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Trade #{{ trade.pk }} | KeystoneBid{% endblock %}
+
+{% block content %}
+<section style="display: grid; gap: 1rem;">
+    <article class="card">
+        <h1 style="margin-bottom: 0.5rem;">Trade #{{ trade.pk }}</h1>
+        <p>Listing: <a href="{% url 'listings:detail' trade.listing.pk %}">{{ trade.listing.title }}</a></p>
+        <p style="color: var(--color-muted);">
+            {{ trade.initiator.username }} <-> {{ trade.counterparty.username }} |
+            {{ trade.get_status_display }} |
+            Ship by {{ trade.ship_by_deadline|date:"M j, Y g:i a" }}
+        </p>
+    </article>
+
+    {% if accepted_offer %}
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Accepted Offer Terms</h2>
+        <div style="display: grid; gap: 0.45rem;">
+            {% for item in accepted_offer.items.all %}
+                <p>
+                    {% if item.direction == 'offered' %}<strong>Offered:</strong>{% else %}<strong>Requested:</strong>{% endif %}
+                    {{ item.collection_item.title }}
+                </p>
+            {% endfor %}
+            {% if accepted_offer.cash_amount %}
+                <p><strong>Cash add-on:</strong> ${{ accepted_offer.cash_amount }}</p>
+            {% endif %}
+        </div>
+    </article>
+    {% endif %}
+
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Trade Shipments (placeholders)</h2>
+        <div style="display: grid; gap: 0.45rem;">
+            {% for shipment in trade.shipments.all %}
+                <p>
+                    {{ shipment.sender.username }} -> {{ shipment.recipient.username }} :
+                    {{ shipment.get_status_display }}
+                </p>
+            {% empty %}
+                <p>No shipment placeholders found.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.55rem;">Offer History</h2>
+        <div style="display: grid; gap: 0.45rem;">
+            {% for h in history %}
+                <p>
+                    <a href="{% url 'trades:offer_detail' h.pk %}">#{{ h.pk }}</a> -
+                    {{ h.from_user.username }} to {{ h.to_user.username }} -
+                    {{ h.get_status_display }} -
+                    {{ h.created_at|date:"M j, Y g:i a" }}
+                </p>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+{% endblock %}

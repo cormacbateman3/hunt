@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if mode == 'counter' %}Counter Offer{% else %}Propose Trade{% endif %} | KeystoneBid{% endblock %}
+
+{% block content %}
+<section style="display: grid; gap: 1rem;">
+    <article class="card">
+        <h1 style="margin-bottom: 0.5rem;">
+            {% if mode == 'counter' %}Counter Offer{% else %}Propose Trade{% endif %}
+        </h1>
+        <p style="color: var(--color-muted);">
+            Trade listing: <a href="{% url 'listings:detail' listing.pk %}">{{ listing.title }}</a>
+        </p>
+        {% if parent_offer %}
+            <p style="color: var(--color-muted); margin-top: 0.35rem;">
+                Countering offer #{{ parent_offer.pk }} from {{ parent_offer.from_user.username }}.
+            </p>
+        {% endif %}
+    </article>
+
+    <form method="post" class="card">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="alert alert-error" style="margin-bottom: 1rem;">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <section style="border: 1px solid var(--color-border); border-radius: 8px; padding: 0.85rem;">
+                <h2 style="margin-bottom: 0.6rem;">You Give</h2>
+                <p style="color: var(--color-muted); margin-bottom: 0.55rem;">Choose trade-eligible items from your collection.</p>
+                {{ form.offered_items.errors }}
+                <div style="display: grid; gap: 0.45rem;">
+                    {{ form.offered_items }}
+                </div>
+            </section>
+
+            <section style="border: 1px solid var(--color-border); border-radius: 8px; padding: 0.85rem;">
+                <h2 style="margin-bottom: 0.6rem;">You Receive</h2>
+                {% if listing.source_collection_item %}
+                    <p><strong>{{ listing.source_collection_item.title }}</strong></p>
+                    <p style="color: var(--color-muted);">
+                        {{ listing.source_collection_item.license_year|default:'Unknown year' }}
+                        {% if listing.source_collection_item.county %} - {{ listing.source_collection_item.county.name }}{% endif %}
+                    </p>
+                {% else %}
+                    <p><strong>{{ listing.title }}</strong></p>
+                    <p style="color: var(--color-muted);">Requested item metadata is anchored to this trade listing.</p>
+                {% endif %}
+
+                {% if listing.allow_cash %}
+                    <div style="margin-top: 0.8rem;">
+                        <label class="form-label" for="{{ form.cash_amount.id_for_label }}">Cash add-on (optional)</label>
+                        {{ form.cash_amount }}
+                        {{ form.cash_amount.errors }}
+                    </div>
+                {% endif %}
+            </section>
+        </div>
+
+        <div style="display: grid; gap: 0.8rem; margin-top: 1rem;">
+            <div>
+                <label class="form-label" for="{{ form.expires_days.id_for_label }}">Offer expires in days</label>
+                {{ form.expires_days }}
+                {% if form.expires_days.help_text %}<small style="color: var(--color-muted);">{{ form.expires_days.help_text }}</small>{% endif %}
+                {{ form.expires_days.errors }}
+            </div>
+            <div>
+                <label class="form-label" for="{{ form.message.id_for_label }}">Message (optional)</label>
+                {{ form.message }}
+                {{ form.message.errors }}
+            </div>
+        </div>
+
+        <div style="margin-top: 1rem;">
+            <button class="btn-primary" type="submit">{% if mode == 'counter' %}Send Counteroffer{% else %}Send Offer{% endif %}</button>
+            <a href="{% url 'listings:detail' listing.pk %}" style="margin-left: 0.75rem; color: var(--color-aged-amber);">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

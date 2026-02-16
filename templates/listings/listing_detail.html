@@ -129,9 +129,22 @@
                 </p>
             {% endif %}
         {% elif user.is_authenticated and is_trade %}
-            <p style="margin-top: 1rem; color: var(--color-muted);">
-                Trade offer actions will be enabled in PR8.
-            </p>
+            {% if listing.seller_id == user.id %}
+                <p style="margin-top: 1rem; color: var(--color-muted);">
+                    Offers received: {{ trade_offer_count }}
+                </p>
+                {% if latest_trade_offer %}
+                    <a class="btn-secondary" href="{% url 'trades:offer_detail' offer_id=latest_trade_offer.id %}">
+                        View latest offer
+                    </a>
+                {% else %}
+                    <p style="color: var(--color-muted);">No offers yet.</p>
+                {% endif %}
+            {% else %}
+                <a class="btn-primary" href="{% url 'trades:propose' listing_id=listing.id %}" style="margin-top: 1rem; display:inline-block;">
+                    Propose trade
+                </a>
+            {% endif %}
         {% elif is_auction %}
             <p style="margin-top: 1rem;">
                 <a class="btn-primary" href="{% url 'accounts:login' %}?next={{ request.path }}">Login to bid</a>
