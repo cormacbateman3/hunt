@@ -18,6 +18,7 @@ urlpatterns = [
     path('bids/', include('apps.bids.urls')),
     path('orders/', include('apps.orders.urls')),
     path('payments/', include('apps.payments.urls')),
+    path('shipping/', include('apps.shipping.urls')),
 
     # Homepage
     path('', TemplateView.as_view(template_name='home.html'), name='home'),

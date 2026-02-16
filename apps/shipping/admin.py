@@ -10,7 +10,7 @@ class ShipmentEventInline(admin.TabularInline):
 
 @admin.register(Shipment)
 class ShipmentAdmin(admin.ModelAdmin):
-    list_display = ('id', 'order', 'carrier', 'tracking_number', 'status', 'last_event_at')
+    list_display = ('id', 'order', 'carrier', 'service_level', 'tracking_number', 'status', 'last_event_at')
     list_filter = ('status', 'carrier', 'provider')
     search_fields = ('tracking_number', 'order__listing__title')
     inlines = [ShipmentEventInline]

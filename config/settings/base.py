@@ -138,6 +138,14 @@ STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
 SITE_URL = os.getenv('SITE_URL', 'http://localhost:8000')
 
+# Shippo configuration
+SHIPPO_API_KEY = os.getenv('SHIPPO_API_KEY', '')
+SHIPPO_API_BASE_URL = os.getenv('SHIPPO_API_BASE_URL', 'https://api.goshippo.com')
+SHIPPO_DEFAULT_WEIGHT_OZ = os.getenv('SHIPPO_DEFAULT_WEIGHT_OZ', '8.0')
+SHIPPO_DEFAULT_LENGTH_IN = os.getenv('SHIPPO_DEFAULT_LENGTH_IN', '10.0')
+SHIPPO_DEFAULT_WIDTH_IN = os.getenv('SHIPPO_DEFAULT_WIDTH_IN', '7.0')
+SHIPPO_DEFAULT_HEIGHT_IN = os.getenv('SHIPPO_DEFAULT_HEIGHT_IN', '1.0')
+
 
 # Authentication URLs
 LOGIN_URL = '/accounts/login/'

@@ -8,6 +8,7 @@ from django.views.decorators.http import require_POST
 import stripe
 from apps.notifications.models import Notification
 from apps.orders.models import Order
+from apps.shipping.services import ShippoError, ensure_checkout_shipping_ready
 from .models import PaymentTransaction, Transaction
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -54,6 +55,11 @@ def create_checkout_session(request, order_id):
         order=order,
         defaults={'status': 'pending'},
     )
+    try:
+        ensure_checkout_shipping_ready(order)
+    except ShippoError as exc:
+        messages.error(request, f'Shipping setup required before payment: {exc}')
+        return redirect('orders:detail', pk=order.pk)
 
     try:
         checkout_session = stripe.checkout.Session.create(

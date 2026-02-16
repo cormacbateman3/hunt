@@ -61,6 +61,7 @@ def order_detail(request, pk):
         shipment = order.shipment
     except Exception:
         shipment = None
+    shipment_events = shipment.events.order_by('-event_time')[:10] if shipment else []
 
     current_index = STATUS_FLOW.index(order.status) if order.status in STATUS_FLOW else -1
     timeline = []
@@ -79,6 +80,7 @@ def order_detail(request, pk):
         'is_seller': request.user.id == order.seller_id,
         'payment': payment,
         'shipment': shipment,
+        'shipment_events': shipment_events,
     })
 
 
