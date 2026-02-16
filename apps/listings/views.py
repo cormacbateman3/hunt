@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import Q
 from django.views.generic import ListView
 from .models import Listing
@@ -8,6 +9,9 @@ from .forms import ListingForm, ListingImageFormSet
 from apps.bids.forms import BidForm
 from apps.bids.services import get_user_bid_on_listing, get_winning_bid
 from apps.core.models import County, LicenseType
+from apps.orders.models import Order
+from apps.orders.services import calculate_platform_fee
+from apps.payments.models import PaymentTransaction
 
 
 class BaseListingListView(ListView):
@@ -152,6 +156,31 @@ def listing_detail(request, pk):
         'is_buy_now': listing.listing_type == 'buy_now',
         'is_trade': listing.listing_type == 'trade',
     }
+    if listing.listing_type == 'buy_now':
+        buy_now_order = Order.objects.filter(listing=listing).first()
+        can_resume = (
+            request.user.is_authenticated
+            and buy_now_order
+            and buy_now_order.status == 'pending_payment'
+            and buy_now_order.buyer_id == request.user.id
+        )
+        context.update({
+            'buy_now_order': buy_now_order,
+            'can_buy_now': (
+                request.user.is_authenticated
+                and request.user.id != listing.seller_id
+                and listing.status == 'active'
+            ),
+            'can_resume_buy_now': can_resume,
+            'buy_now_locked': bool(
+                buy_now_order
+                and buy_now_order.status == 'pending_payment'
+                and (
+                    not request.user.is_authenticated
+                    or buy_now_order.buyer_id != request.user.id
+                )
+            ),
+        })
 
     return render(request, 'listings/listing_detail.html', context)
 
@@ -235,3 +264,76 @@ def my_listings(request):
     }
 
     return render(request, 'listings/my_listings.html', context)
+
+
+@login_required
+def buy_now_checkout_start(request, pk):
+    if request.method != 'POST':
+        return redirect('listings:detail', pk=pk)
+
+    with transaction.atomic():
+        listing = get_object_or_404(
+            Listing.objects.select_for_update(),
+            pk=pk,
+            listing_type='buy_now',
+        )
+        if request.user.id == listing.seller_id:
+            messages.error(request, 'You cannot buy your own listing.')
+            return redirect('listings:detail', pk=listing.pk)
+        if listing.status not in {'active', 'pending'}:
+            messages.error(request, 'This listing is not available for buy now.')
+            return redirect('listings:detail', pk=listing.pk)
+
+        existing_order = Order.objects.select_for_update().filter(listing=listing).first()
+
+        if existing_order and existing_order.status == 'pending_payment':
+            if existing_order.buyer_id != request.user.id:
+                messages.error(request, 'This listing is currently locked for checkout by another buyer.')
+                return redirect('listings:detail', pk=listing.pk)
+            order = existing_order
+        elif existing_order and existing_order.status in {'paid', 'label_created', 'in_transit', 'delivered', 'completed'}:
+            messages.error(request, 'This listing has already been purchased.')
+            return redirect('listings:detail', pk=listing.pk)
+        else:
+            if listing.status == 'pending':
+                messages.error(request, 'This listing is currently locked for checkout by another buyer.')
+                return redirect('listings:detail', pk=listing.pk)
+            item_amount = listing.buy_now_price
+            platform_fee = calculate_platform_fee(item_amount)
+            total_amount = item_amount + platform_fee
+
+            if existing_order:
+                order = existing_order
+                order.buyer = request.user
+                order.seller = listing.seller
+                order.order_type = 'buy_now'
+                order.item_amount = item_amount
+                order.shipping_amount = 0
+                order.platform_fee_amount = platform_fee
+                order.total_amount = total_amount
+                order.status = 'pending_payment'
+                order.save()
+            else:
+                order = Order.objects.create(
+                    listing=listing,
+                    buyer=request.user,
+                    seller=listing.seller,
+                    order_type='buy_now',
+                    item_amount=item_amount,
+                    shipping_amount=0,
+                    platform_fee_amount=platform_fee,
+                    total_amount=total_amount,
+                    status='pending_payment',
+                )
+
+        payment, _ = PaymentTransaction.objects.get_or_create(order=order)
+        payment.status = 'pending'
+        payment.stripe_payment_intent_id = ''
+        payment.stripe_checkout_session_id = ''
+        payment.save(update_fields=['status', 'stripe_payment_intent_id', 'stripe_checkout_session_id', 'updated_at'])
+
+        if listing.status != 'pending':
+            listing.status = 'pending'
+            listing.save(update_fields=['status', 'updated_at'])
+
+    return redirect('payments:checkout', order_id=order.pk)

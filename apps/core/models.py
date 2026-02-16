@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.validators import MaxValueValidator, MinValueValidator
 
 
 class County(models.Model):
@@ -29,3 +30,22 @@ class LicenseType(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class MarketplaceSettings(models.Model):
+    """Singleton settings for marketplace-wide tunables."""
+    platform_fee_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text='Platform fee percentage applied to order item amount.',
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Marketplace Settings'
+        verbose_name_plural = 'Marketplace Settings'
+
+    def __str__(self):
+        return f'Marketplace Settings (fee {self.platform_fee_percent}%)'

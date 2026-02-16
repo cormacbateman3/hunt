@@ -46,7 +46,7 @@ def create_checkout_session(request, order_id):
         pk=order_id,
         buyer=request.user,
     )
-    if order.status not in {'pending_payment', 'paid'}:
+    if order.status != 'pending_payment':
         messages.error(request, 'This order is not in a payable state.')
         return redirect('orders:detail', pk=order.pk)
 
@@ -189,6 +189,9 @@ def handle_payment_intent_succeeded(payment_intent):
     if order.status == 'pending_payment':
         order.status = 'paid'
         order.save(update_fields=['status', 'updated_at'])
+    if order.order_type == 'buy_now' and order.listing.status != 'sold':
+        order.listing.status = 'sold'
+        order.listing.save(update_fields=['status', 'updated_at'])
 
     if not was_paid:
         Notification.objects.create(
@@ -198,5 +201,11 @@ def handle_payment_intent_succeeded(payment_intent):
                 f'Payment received for order #{order.pk} ({order.listing.title}) '
                 f'from {order.buyer.username}.'
             ),
+            link_url=f'/orders/{order.pk}/',
+        )
+        Notification.objects.create(
+            user=order.buyer,
+            notification_type='payment_confirmed',
+            message=f'Payment confirmed for order #{order.pk}.',
             link_url=f'/orders/{order.pk}/',
         )

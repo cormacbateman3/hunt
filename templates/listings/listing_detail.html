@@ -111,9 +111,23 @@
                 </p>
             {% endif %}
         {% elif user.is_authenticated and is_buy_now %}
-            <p style="margin-top: 1rem; color: var(--color-muted);">
-                Buy-now checkout will be enabled in PR5.
-            </p>
+            {% if can_buy_now %}
+                <form method="post" action="{% url 'listings:buy_now_checkout_start' listing.pk %}" style="margin-top: 1rem;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-primary">Buy now</button>
+                </form>
+            {% elif can_resume_buy_now %}
+                <p style="margin-top: 1rem; color: var(--color-muted);">You already started checkout for this listing.</p>
+                <a class="btn-primary" href="{% url 'payments:checkout' buy_now_order.pk %}">Resume checkout</a>
+            {% elif buy_now_locked %}
+                <p style="margin-top: 1rem; color: var(--color-hunting-rust);">
+                    This listing is currently locked by another buyer's checkout session.
+                </p>
+            {% else %}
+                <p style="margin-top: 1rem; color: var(--color-muted);">
+                    This listing is no longer available for buy now.
+                </p>
+            {% endif %}
         {% elif user.is_authenticated and is_trade %}
             <p style="margin-top: 1rem; color: var(--color-muted);">
                 Trade offer actions will be enabled in PR8.
