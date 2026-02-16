@@ -13,7 +13,7 @@ urlpatterns = [
 
     # App URLs
     path('accounts/', include('apps.accounts.urls')),
-    path('listings/', include('apps.listings.urls')),
+    path('listings/', include(('apps.listings.urls', 'listings'), namespace='listings')),
     path('collections/', include('apps.collections.urls')),
     path('bids/', include('apps.bids.urls')),
     path('orders/', include('apps.orders.urls')),
