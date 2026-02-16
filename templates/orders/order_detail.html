@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+
+{% block title %}Order #{{ order.pk }} | KeystoneBid{% endblock %}
+
+{% block content %}
+<section style="display: grid; gap: 1rem;">
+    <article class="card">
+        <h1 style="margin-bottom: 0.5rem;">Order #{{ order.pk }}</h1>
+        <p style="margin-bottom: 0.45rem;">
+            Listing: <a href="{% url 'listings:detail' order.listing.pk %}">{{ order.listing.title }}</a>
+        </p>
+        <p style="color: var(--color-muted);">
+            Type: {{ order.get_order_type_display }} | Status: {{ order.get_status_display }}
+        </p>
+    </article>
+
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Status Timeline</h2>
+        <div style="display: grid; gap: 0.45rem;">
+            {% for step in timeline %}
+                <p>
+                    {% if step.is_current %}<strong>{% endif %}
+                    {% if step.is_done %}[x]{% elif step.is_current %}[>]{% else %}[ ]{% endif %}
+                    {{ step.label }}
+                    {% if step.is_current %}</strong>{% endif %}
+                </p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Totals</h2>
+        <p>Item amount: ${{ order.item_amount }}</p>
+        <p>Shipping amount: ${{ order.shipping_amount }}</p>
+        <p>Platform fee: ${{ order.platform_fee_amount }}</p>
+        <p><strong>Total: ${{ order.total_amount }}</strong></p>
+    </article>
+
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Payment</h2>
+        {% if payment %}
+            <p>Status: {{ payment.get_status_display }}</p>
+            {% if payment.stripe_checkout_session_id %}
+                <p style="color: var(--color-muted);">Checkout Session: {{ payment.stripe_checkout_session_id }}</p>
+            {% endif %}
+        {% else %}
+            <p>No payment record yet.</p>
+        {% endif %}
+        {% if is_buyer and order.status == 'pending_payment' %}
+            <p style="margin-top: 0.6rem;">
+                <a class="btn-primary" href="{% url 'payments:checkout' order.pk %}">Pay now</a>
+            </p>
+        {% endif %}
+    </article>
+
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Shipping (Placeholder)</h2>
+        <p style="color: var(--color-muted);">
+            Label creation and tracking will be wired in PR6. This section is the canonical hub location.
+        </p>
+        {% if shipment %}
+            <p>Shipment status: {{ shipment.get_status_display }}</p>
+            <p>Tracking number: {{ shipment.tracking_number|default:'Not provided' }}</p>
+        {% else %}
+            <p>No shipment attached yet.</p>
+        {% endif %}
+    </article>
+
+    {% if is_seller %}
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Seller Actions</h2>
+        <form method="post" action="{% url 'orders:update_status' order.pk %}" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            {% csrf_token %}
+            <button class="btn-secondary" type="submit" name="target_status" value="label_created">Mark label created</button>
+            <button class="btn-secondary" type="submit" name="target_status" value="in_transit">Mark in transit</button>
+            <button class="btn-secondary" type="submit" name="target_status" value="delivered">Mark delivered</button>
+        </form>
+    </article>
+    {% endif %}
+
+    {% if is_buyer %}
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Buyer Action</h2>
+        <form method="post" action="{% url 'orders:confirm_receipt' order.pk %}">
+            {% csrf_token %}
+            <button class="btn-primary" type="submit">Confirm receipt</button>
+        </form>
+    </article>
+    {% endif %}
+</section>
+{% endblock %}

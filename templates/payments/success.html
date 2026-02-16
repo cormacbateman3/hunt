@@ -6,11 +6,12 @@
 <section class="card" style="max-width: 700px;">
     <h1 style="margin-bottom: 0.75rem;">Payment Submitted</h1>
     <p style="margin-bottom: 0.5rem;">
-        Thank you. Your payment for <strong>{{ transaction.listing.title }}</strong> was submitted.
+        Thank you. Your payment for <strong>{{ order.listing.title }}</strong> was submitted.
     </p>
     <p style="margin-bottom: 1rem;">
-        Amount: ${{ transaction.sale_amount }} | Status: {{ transaction.get_status_display }}
+        Amount: ${{ order.total_amount }} |
+        Status: {% if order.payment %}{{ order.payment.get_status_display }}{% else %}Pending{% endif %}
     </p>
-    <a class="btn-primary" href="{% url 'accounts:dashboard' %}">Back to dashboard</a>
+    <a class="btn-primary" href="{% url 'orders:detail' order.pk %}">View order</a>
 </section>
 {% endblock %}

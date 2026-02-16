@@ -44,7 +44,7 @@ class PaymentTransaction(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('processing', 'Processing'),
-        ('succeeded', 'Succeeded'),
+        ('paid', 'Paid'),
         ('failed', 'Failed'),
         ('refunded', 'Refunded'),
     ]

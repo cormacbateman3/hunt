@@ -11,7 +11,7 @@ from .forms import UserRegistrationForm, UserProfileForm
 from .models import UserProfile
 from apps.listings.models import Listing
 from apps.bids.models import Bid
-from apps.payments.models import Transaction
+from apps.orders.models import Order
 from apps.notifications.models import Notification
 
 
@@ -113,14 +113,14 @@ def dashboard(request):
     my_bids = Bid.objects.filter(bidder=request.user).select_related('listing').order_by('-placed_at')[:8]
     winning_bids = Bid.objects.filter(bidder=request.user, is_winning=True, listing__status='active').count()
 
-    pending_payments = Transaction.objects.filter(
+    pending_payments = Order.objects.filter(
         buyer=request.user,
-        status='pending'
+        status='pending_payment'
     ).select_related('listing').order_by('-created_at')
-    recent_purchases = Transaction.objects.filter(
+    recent_purchases = Order.objects.filter(
         buyer=request.user
     ).select_related('listing').order_by('-created_at')[:6]
-    recent_sales = Transaction.objects.filter(
+    recent_sales = Order.objects.filter(
         seller=request.user
     ).select_related('listing').order_by('-created_at')[:6]
 

@@ -16,6 +16,7 @@ urlpatterns = [
     path('listings/', include('apps.listings.urls')),
     path('collections/', include('apps.collections.urls')),
     path('bids/', include('apps.bids.urls')),
+    path('orders/', include('apps.orders.urls')),
     path('payments/', include('apps.payments.urls')),
 
     # Homepage

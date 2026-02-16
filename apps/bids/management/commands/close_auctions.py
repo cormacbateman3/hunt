@@ -5,12 +5,13 @@ from django.conf import settings
 from django.urls import reverse
 from apps.listings.models import Listing
 from apps.bids.models import Bid
-from apps.payments.models import Transaction
+from apps.orders.models import Order
+from apps.payments.models import PaymentTransaction
 from apps.notifications.models import Notification
 
 
 class Command(BaseCommand):
-    help = 'Close expired auctions and create transactions for winners'
+    help = 'Close expired auctions and create orders for winners'
 
     def handle(self, *args, **kwargs):
         now = timezone.now()
@@ -44,28 +45,43 @@ class Command(BaseCommand):
                     locked_listing.current_bid = winning_bid.amount
                     locked_listing.save(update_fields=['status', 'current_bid'])
 
-                    txn = Transaction.objects.create(
+                    order, _ = Order.objects.get_or_create(
                         listing=locked_listing,
-                        buyer=winning_bid.bidder,
-                        seller=locked_listing.seller,
-                        sale_amount=winning_bid.amount,
-                        status='pending'
+                        defaults={
+                            'buyer': winning_bid.bidder,
+                            'seller': locked_listing.seller,
+                            'order_type': 'auction',
+                            'item_amount': winning_bid.amount,
+                            'shipping_amount': 0,
+                            'platform_fee_amount': 0,
+                            'total_amount': winning_bid.amount,
+                            'status': 'pending_payment',
+                        },
                     )
-                    checkout_path = reverse('payments:checkout', kwargs={'transaction_id': txn.pk})
+                    PaymentTransaction.objects.get_or_create(
+                        order=order,
+                        defaults={'status': 'pending'},
+                    )
+                    checkout_path = reverse('payments:checkout', kwargs={'order_id': order.pk})
                     checkout_url = f"{settings.SITE_URL.rstrip('/')}{checkout_path}"
 
                     Notification.objects.create(
                         user=winning_bid.bidder,
-                        notification_type='auction_won',
+                        notification_type='order_created',
                         message=(
-                            f'Congratulations! You won "{locked_listing.title}" for '
-                            f'${winning_bid.amount:.2f}. Complete payment: {checkout_url}'
-                        )
+                            f'You won "{locked_listing.title}" for ${winning_bid.amount:.2f}. '
+                            f'Complete payment for order #{order.pk}: {checkout_url}'
+                        ),
+                        link_url=f'/orders/{order.pk}/',
                     )
                     Notification.objects.create(
                         user=locked_listing.seller,
                         notification_type='auction_sold',
-                        message=f'Your listing "{locked_listing.title}" sold for ${winning_bid.amount:.2f}.'
+                        message=(
+                            f'Your listing "{locked_listing.title}" sold for ${winning_bid.amount:.2f}. '
+                            f'Order #{order.pk} created.'
+                        ),
+                        link_url=f'/orders/{order.pk}/',
                     )
 
                     sold_count += 1

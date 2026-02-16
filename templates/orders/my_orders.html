@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}My Orders | KeystoneBid{% endblock %}
+
+{% block content %}
+<section style="display: grid; gap: 1rem;">
+    <article class="card">
+        <h1 style="margin-bottom: 0.6rem;">My Orders</h1>
+        <p style="color: var(--color-muted);">Order is the canonical sales lifecycle for Auction House and General Store.</p>
+    </article>
+
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Purchases</h2>
+        {% for order in purchases %}
+            <p style="margin-bottom: 0.45rem;">
+                <a href="{% url 'orders:detail' order.pk %}">{{ order.listing.title }}</a> -
+                ${{ order.total_amount }} -
+                {{ order.get_status_display }}
+            </p>
+        {% empty %}
+            <p>No purchases yet.</p>
+        {% endfor %}
+    </article>
+
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Sales</h2>
+        {% for order in sales %}
+            <p style="margin-bottom: 0.45rem;">
+                <a href="{% url 'orders:detail' order.pk %}">{{ order.listing.title }}</a> -
+                ${{ order.total_amount }} -
+                {{ order.get_status_display }}
+            </p>
+        {% empty %}
+            <p>No sales yet.</p>
+        {% endfor %}
+    </article>
+</section>
+{% endblock %}

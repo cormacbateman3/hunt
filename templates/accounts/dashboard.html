@@ -18,10 +18,10 @@
 
     <article class="card">
         <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Pending Payments</h2>
-        {% for txn in pending_payments %}
+        {% for order in pending_payments %}
             <p style="margin-bottom: 0.45rem;">
-                {{ txn.listing.title }} - ${{ txn.sale_amount }}
-                <a href="{% url 'payments:checkout' txn.id %}" style="color: var(--color-aged-amber);">Pay now</a>
+                <a href="{% url 'orders:detail' order.pk %}">{{ order.listing.title }}</a> - ${{ order.total_amount }}
+                <a href="{% url 'payments:checkout' order.pk %}" style="color: var(--color-aged-amber);">Pay now</a>
             </p>
         {% empty %}
             <p>No pending payments.</p>
@@ -65,8 +65,10 @@
 
     <article class="card">
         <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Recent Purchases</h2>
-        {% for txn in recent_purchases %}
-            <p style="margin-bottom: 0.45rem;">{{ txn.listing.title }} - ${{ txn.sale_amount }} ({{ txn.get_status_display }})</p>
+        {% for order in recent_purchases %}
+            <p style="margin-bottom: 0.45rem;">
+                <a href="{% url 'orders:detail' order.pk %}">{{ order.listing.title }}</a> - ${{ order.total_amount }} ({{ order.get_status_display }})
+            </p>
         {% empty %}
             <p>No purchases yet.</p>
         {% endfor %}
@@ -74,8 +76,10 @@
 
     <article class="card">
         <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Recent Sales</h2>
-        {% for txn in recent_sales %}
-            <p style="margin-bottom: 0.45rem;">{{ txn.listing.title }} - ${{ txn.sale_amount }} ({{ txn.get_status_display }})</p>
+        {% for order in recent_sales %}
+            <p style="margin-bottom: 0.45rem;">
+                <a href="{% url 'orders:detail' order.pk %}">{{ order.listing.title }}</a> - ${{ order.total_amount }} ({{ order.get_status_display }})
+            </p>
         {% empty %}
             <p>No sales yet.</p>
         {% endfor %}
