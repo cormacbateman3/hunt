@@ -7,6 +7,7 @@ from .models import Listing
 from .forms import ListingForm, ListingImageFormSet
 from apps.bids.forms import BidForm
 from apps.bids.services import get_user_bid_on_listing, get_winning_bid
+from apps.core.models import County, LicenseType
 
 
 class ListingListView(ListView):
@@ -18,16 +19,27 @@ class ListingListView(ListView):
     paginate_by = 24
 
     def get_queryset(self):
-        queryset = Listing.objects.filter(status='active').select_related('seller')
+        queryset = Listing.objects.filter(status='active').select_related(
+            'seller', 'county_ref', 'license_type_ref'
+        )
 
+        county_id = self.request.GET.get('county_id')
+        license_type_id = self.request.GET.get('license_type_id')
         county = self.request.GET.get('county')
         year_min = self.request.GET.get('year_min')
         year_max = self.request.GET.get('year_max')
         condition = self.request.GET.get('condition')
         search = self.request.GET.get('search')
 
-        if county:
-            queryset = queryset.filter(county__iexact=county)
+        if county_id and county_id.isdigit():
+            queryset = queryset.filter(county_ref_id=county_id)
+        elif county:
+            # Backward-compatible support for legacy county text URLs.
+            queryset = queryset.filter(
+                Q(county_ref__name__iexact=county) | Q(county__iexact=county)
+            )
+        if license_type_id and license_type_id.isdigit():
+            queryset = queryset.filter(license_type_ref_id=license_type_id)
         if year_min:
             queryset = queryset.filter(license_year__gte=year_min)
         if year_max:
@@ -39,13 +51,20 @@ class ListingListView(ListView):
                 Q(title__icontains=search)
                 | Q(description__icontains=search)
                 | Q(county__icontains=search)
+                | Q(county_ref__name__icontains=search)
+                | Q(license_type__icontains=search)
+                | Q(license_type_ref__name__icontains=search)
             )
 
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['counties'] = County.objects.order_by('name')
+        context['license_types'] = LicenseType.objects.order_by('name')
         context['filters'] = {
+            'county_id': self.request.GET.get('county_id', ''),
+            'license_type_id': self.request.GET.get('license_type_id', ''),
             'county': self.request.GET.get('county', ''),
             'year_min': self.request.GET.get('year_min', ''),
             'year_max': self.request.GET.get('year_max', ''),

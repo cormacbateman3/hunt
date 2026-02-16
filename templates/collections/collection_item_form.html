@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if mode == 'create' %}Add Collection Item{% else %}Edit Collection Item{% endif %} | KeystoneBid{% endblock %}
+
+{% block content %}
+<section class="card" style="max-width: 860px; margin: 0 auto;">
+    <h1 style="margin-bottom: 1rem;">
+        {% if mode == 'create' %}Add collection item{% else %}Edit collection item{% endif %}
+    </h1>
+
+    <form method="post">
+        {% csrf_token %}
+        <div style="display: grid; gap: 0.85rem;">
+            {% for field in form %}
+                <div>
+                    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {{ field.errors }}
+                </div>
+            {% endfor %}
+        </div>
+
+        <div style="margin-top: 1.25rem;">
+            <button type="submit" class="btn-primary">
+                {% if mode == 'create' %}Create item{% else %}Save changes{% endif %}
+            </button>
+            <a href="{% url 'collections:my_collection' %}" style="margin-left: 0.75rem; color: var(--color-aged-amber);">
+                Cancel
+            </a>
+        </div>
+    </form>
+</section>
+{% endblock %}

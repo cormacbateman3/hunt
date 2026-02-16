@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}My Collection | KeystoneBid{% endblock %}
+
+{% block content %}
+<section class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h1>My Collection</h1>
+        <a class="btn-primary" href="{% url 'collections:create' %}">Add item</a>
+    </div>
+
+    {% if items %}
+        <div style="display: grid; gap: 0.75rem;">
+            {% for item in items %}
+                <article class="card">
+                    <h3>{{ item.title }}</h3>
+                    <p style="color: var(--color-muted);">
+                        {% if item.county %}{{ item.county.name }}{% else %}Unknown county{% endif %} -
+                        {{ item.license_year }} -
+                        {% if item.license_type %}{{ item.license_type.name }}{% else %}Unknown type{% endif %}
+                    </p>
+                    <p>{{ item.description|default:'No description.' }}</p>
+                    <a class="btn-secondary" href="{% url 'collections:edit' item.pk %}">Edit</a>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No collection items yet.</p>
+    {% endif %}
+</section>
+{% endblock %}

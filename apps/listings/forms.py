@@ -2,6 +2,7 @@ from django import forms
 from django.utils import timezone
 from datetime import timedelta
 from .models import Listing, ListingImage
+from apps.core.models import County, LicenseType
 
 
 class ListingForm(forms.ModelForm):
@@ -20,10 +21,29 @@ class ListingForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-select'})
     )
 
+    county_ref = forms.ModelChoiceField(
+        queryset=County.objects.none(),
+        required=True,
+        empty_label='Select county',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+
+    license_type_ref = forms.ModelChoiceField(
+        queryset=LicenseType.objects.none(),
+        required=True,
+        empty_label='Select license type',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['county_ref'].queryset = County.objects.order_by('name')
+        self.fields['license_type_ref'].queryset = LicenseType.objects.order_by('name')
+
     class Meta:
         model = Listing
         fields = [
-            'title', 'description', 'license_year', 'county', 'license_type',
+            'title', 'description', 'license_year', 'county_ref', 'license_type_ref',
             'condition_grade', 'starting_price', 'featured_image'
         ]
         widgets = {
@@ -39,16 +59,8 @@ class ListingForm(forms.ModelForm):
             'license_year': forms.NumberInput(attrs={
                 'class': 'form-input',
                 'placeholder': '1942',
-                'min': '1900',
+                'min': '1913',
                 'max': '2000'
-            }),
-            'county': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'Adams'
-            }),
-            'license_type': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'Resident'
             }),
             'condition_grade': forms.Select(attrs={
                 'class': 'form-select'
@@ -63,6 +75,12 @@ class ListingForm(forms.ModelForm):
 
     def save(self, commit=True):
         listing = super().save(commit=False)
+
+        # Keep legacy text fields populated while moving to FK selectors.
+        if listing.county_ref:
+            listing.county = listing.county_ref.name
+        if listing.license_type_ref:
+            listing.license_type = listing.license_type_ref.name
 
         # Calculate auction_end based on duration_days
         duration = int(self.cleaned_data['duration_days'])

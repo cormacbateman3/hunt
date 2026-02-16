@@ -17,8 +17,26 @@
                 <input class="form-input" id="search" name="search" value="{{ filters.search }}">
             </div>
             <div>
-                <label class="form-label" for="county">County</label>
-                <input class="form-input" id="county" name="county" value="{{ filters.county }}">
+                <label class="form-label" for="county_id">County</label>
+                <select class="form-select" id="county_id" name="county_id">
+                    <option value="">Any</option>
+                    {% for county in counties %}
+                        <option value="{{ county.id }}" {% if filters.county_id == county.id|stringformat:'s' %}selected{% endif %}>
+                            {{ county.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label" for="license_type_id">License type</label>
+                <select class="form-select" id="license_type_id" name="license_type_id">
+                    <option value="">Any</option>
+                    {% for license_type in license_types %}
+                        <option value="{{ license_type.id }}" {% if filters.license_type_id == license_type.id|stringformat:'s' %}selected{% endif %}>
+                            {{ license_type.name }}
+                        </option>
+                    {% endfor %}
+                </select>
             </div>
             <div>
                 <label class="form-label" for="year_min">Year from</label>
@@ -55,7 +73,7 @@
                         <a href="{% url 'listings:detail' listing.pk %}">{{ listing.title }}</a>
                     </h3>
                     <p style="color: var(--color-muted); margin-bottom: 0.5rem;">
-                        {{ listing.county }} County - {{ listing.license_year }} - {{ listing.get_condition_grade_display }}
+                        {% if listing.county_ref %}{{ listing.county_ref.name }}{% else %}{{ listing.county }}{% endif %} County - {{ listing.license_year }} - {{ listing.get_condition_grade_display }}
                     </p>
                     <p style="margin-bottom: 0.5rem;">Current price: ${{ listing.current_price }}</p>
                     <a class="btn-secondary" href="{% url 'listings:detail' listing.pk %}">View details</a>

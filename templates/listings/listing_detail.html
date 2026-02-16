@@ -64,9 +64,9 @@
                 --
             </span>
         </p>
-        <p><strong>County:</strong> {{ listing.county }}</p>
+        <p><strong>County:</strong> {% if listing.county_ref %}{{ listing.county_ref.name }}{% else %}{{ listing.county }}{% endif %}</p>
         <p><strong>Year:</strong> {{ listing.license_year }}</p>
-        <p><strong>Type:</strong> {{ listing.license_type }}</p>
+        <p><strong>Type:</strong> {% if listing.license_type_ref %}{{ listing.license_type_ref.name }}{% else %}{{ listing.license_type }}{% endif %}</p>
         <p><strong>Condition:</strong> {{ listing.get_condition_grade_display }}</p>
         <p><strong>Status:</strong> {{ listing.get_status_display }}</p>
         <p><strong>Auction ends:</strong> {{ listing.auction_end|date:"M j, Y, g:i a" }}</p>
