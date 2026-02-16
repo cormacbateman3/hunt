@@ -32,13 +32,61 @@
     {% endif %}
 
     <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Trade Shipments (placeholders)</h2>
-        <div style="display: grid; gap: 0.45rem;">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Trade Shipping</h2>
+        <p style="color: var(--color-muted); margin-bottom: 0.75rem;">
+            Both sides must provide tracking and confirm receipt to complete the trade.
+        </p>
+        <div style="display: grid; gap: 1rem;">
             {% for shipment in trade.shipments.all %}
-                <p>
-                    {{ shipment.sender.username }} -> {{ shipment.recipient.username }} :
-                    {{ shipment.get_status_display }}
-                </p>
+                <div style="padding: 0.75rem; border: 1px solid #ddd; border-radius: 10px; background: #fff;">
+                    <p style="margin-bottom: 0.35rem;">
+                        <strong>{{ shipment.sender.username }}</strong> -> <strong>{{ shipment.recipient.username }}</strong>
+                    </p>
+                    <p style="margin-bottom: 0.25rem;">Status: {{ shipment.get_status_display }}</p>
+                    <p style="margin-bottom: 0.25rem;">Carrier: {{ shipment.carrier|default:'Not set' }}</p>
+                    <p style="margin-bottom: 0.25rem;">Tracking: {{ shipment.tracking_number|default:'Not set' }}</p>
+                    {% if shipment.label_url %}
+                        <p style="margin-bottom: 0.25rem;">
+                            <a href="{{ shipment.label_url }}" target="_blank" rel="noopener">View label</a>
+                        </p>
+                    {% endif %}
+                    {% if shipment.delivered_at %}
+                        <p style="margin-bottom: 0.25rem;">Delivered: {{ shipment.delivered_at|date:"M j, Y g:i a" }}</p>
+                    {% endif %}
+                    {% if shipment.recipient_confirmed_at %}
+                        <p style="margin-bottom: 0.25rem;">Recipient confirmed: {{ shipment.recipient_confirmed_at|date:"M j, Y g:i a" }}</p>
+                    {% endif %}
+
+                    {% if user.id == shipment.sender_id %}
+                        <div style="display: grid; gap: 0.5rem; margin-top: 0.5rem;">
+                            <form method="post" action="{% url 'trades:trade_shipment_manual_tracking' trade.pk shipment.pk %}" style="display: grid; gap: 0.45rem;">
+                                {% csrf_token %}
+                                <div style="display: grid; gap: 0.45rem; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
+                                    <input class="form-input" name="carrier" placeholder="Carrier (USPS, UPS, FedEx)" required>
+                                    <input class="form-input" name="tracking_number" placeholder="Tracking number" required>
+                                </div>
+                                <button type="submit" class="btn btn-secondary">Save Tracking</button>
+                            </form>
+                            <form method="post" action="{% url 'trades:trade_shipment_buy_label' trade.pk shipment.pk %}" style="display: grid; gap: 0.45rem;">
+                                {% csrf_token %}
+                                <div style="display: grid; gap: 0.45rem; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));">
+                                    <input class="form-input" name="weight_oz" placeholder="Weight oz" required>
+                                    <input class="form-input" name="length_in" placeholder="Length in" required>
+                                    <input class="form-input" name="width_in" placeholder="Width in" required>
+                                    <input class="form-input" name="height_in" placeholder="Height in" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Buy Shippo Label</button>
+                            </form>
+                        </div>
+                    {% endif %}
+
+                    {% if user.id == shipment.recipient_id and shipment.status == 'delivered' %}
+                        <form method="post" action="{% url 'trades:trade_confirm_receipt' trade.pk shipment.pk %}" style="margin-top: 0.5rem;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary">Confirm Receipt</button>
+                        </form>
+                    {% endif %}
+                </div>
             {% empty %}
                 <p>No shipment placeholders found.</p>
             {% endfor %}

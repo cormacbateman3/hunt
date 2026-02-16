@@ -124,9 +124,13 @@ class TradeShipment(models.Model):
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='trade_shipments_sent')
     recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='trade_shipments_received')
     provider = models.CharField(max_length=50, default='shippo')
+    carrier = models.CharField(max_length=80, blank=True)
     tracking_number = models.CharField(max_length=200, blank=True)
     label_url = models.URLField(max_length=500, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    delivered_at = models.DateTimeField(null=True, blank=True)
+    recipient_confirmed_at = models.DateTimeField(null=True, blank=True)
+    last_event_at = models.DateTimeField(null=True, blank=True)
     ship_from_snapshot = models.ForeignKey(
         AddressSnapshot, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='trade_shipments_from'
@@ -142,6 +146,9 @@ class TradeShipment(models.Model):
         verbose_name = 'Trade Shipment'
         verbose_name_plural = 'Trade Shipments'
         ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(fields=['trade', 'sender'], name='unique_trade_sender_shipment'),
+        ]
 
     def __str__(self):
         return f"Trade #{self.trade_id} shipment from {self.sender.username}"

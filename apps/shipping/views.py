@@ -14,6 +14,7 @@ from .services import (
     handle_tracking_webhook,
     quote_order_shipping,
 )
+from apps.trades.services import handle_trade_tracking_webhook
 
 
 def _get_order_for_shipping_action(request, pk):
@@ -105,5 +106,9 @@ def shippo_webhook(request):
         payload = json.loads(request.body.decode('utf-8') or '{}')
     except json.JSONDecodeError:
         return HttpResponse(status=400)
-    processed = handle_tracking_webhook(payload)
-    return HttpResponse(f'processed={processed}', status=200)
+    processed_orders = handle_tracking_webhook(payload)
+    processed_trades = handle_trade_tracking_webhook(payload)
+    return HttpResponse(
+        f'processed_orders={processed_orders} processed_trades={processed_trades}',
+        status=200,
+    )

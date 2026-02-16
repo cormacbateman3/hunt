@@ -41,6 +41,13 @@ class MarketplaceSettings(models.Model):
         validators=[MinValueValidator(0), MaxValueValidator(100)],
         help_text='Platform fee percentage applied to order item amount.',
     )
+    trade_label_fee_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default='1.00',
+        validators=[MinValueValidator(0)],
+        help_text='Flat fee charged per trader when using in-app trade label purchase.',
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

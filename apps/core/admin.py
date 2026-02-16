@@ -18,7 +18,7 @@ class LicenseTypeAdmin(admin.ModelAdmin):
 
 @admin.register(MarketplaceSettings)
 class MarketplaceSettingsAdmin(admin.ModelAdmin):
-    list_display = ('platform_fee_percent', 'updated_at')
+    list_display = ('platform_fee_percent', 'trade_label_fee_amount', 'updated_at')
 
     def has_add_permission(self, request):
         if MarketplaceSettings.objects.exists():

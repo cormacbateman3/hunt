@@ -26,10 +26,10 @@ class TradeAdmin(admin.ModelAdmin):
 
 @admin.register(TradeShipment)
 class TradeShipmentAdmin(admin.ModelAdmin):
-    list_display = ('id', 'trade', 'sender', 'recipient', 'tracking_number', 'status')
+    list_display = ('id', 'trade', 'sender', 'recipient', 'carrier', 'tracking_number', 'status', 'recipient_confirmed_at')
     list_filter = ('status',)
     search_fields = ('tracking_number', 'sender__username', 'recipient__username')
-    readonly_fields = ('created_at', 'updated_at')
+    readonly_fields = ('delivered_at', 'recipient_confirmed_at', 'last_event_at', 'created_at', 'updated_at')
 
 
 @admin.register(TradeFeeTransaction)
