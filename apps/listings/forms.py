@@ -70,6 +70,7 @@ class ListingForm(forms.ModelForm):
             'license_year',
             'county_ref',
             'license_type_ref',
+            'resident_status',
             'condition_grade',
             'starting_price',
             'reserve_price',
@@ -98,6 +99,7 @@ class ListingForm(forms.ModelForm):
             'condition_grade': forms.Select(attrs={
                 'class': 'form-select'
             }),
+            'resident_status': forms.Select(attrs={'class': 'form-select'}),
             'starting_price': forms.NumberInput(attrs={
                 'class': 'form-input',
                 'placeholder': '25.00',

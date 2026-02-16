@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from apps.core.models import County, LicenseType
+from apps.core.constants import RESIDENT_STATUS_CHOICES
 
 
 class CollectionItem(models.Model):
@@ -13,12 +14,6 @@ class CollectionItem(models.Model):
         ('very_good', 'Very Good'),
         ('excellent', 'Excellent'),
         ('mint', 'Mint'),
-    ]
-
-    RESIDENT_STATUS_CHOICES = [
-        ('resident', 'Resident'),
-        ('non_resident', 'Non-Resident'),
-        ('unknown', 'Unknown'),
     ]
 
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='collection_items')

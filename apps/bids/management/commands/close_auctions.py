@@ -41,6 +41,41 @@ class Command(BaseCommand):
                     )
 
                 if winning_bid:
+                    reserve_met = (
+                        locked_listing.reserve_price is None
+                        or winning_bid.amount >= locked_listing.reserve_price
+                    )
+                    if not reserve_met:
+                        locked_listing.status = 'expired'
+                        locked_listing.current_bid = winning_bid.amount
+                        locked_listing.save(update_fields=['status', 'current_bid', 'updated_at'])
+                        create_notification(
+                            user=locked_listing.seller,
+                            notification_type='auction_expired',
+                            message=(
+                                f'Auction for "{locked_listing.title}" ended without meeting reserve '
+                                f'(${locked_listing.reserve_price:.2f}).'
+                            ),
+                            link_url=f'/listings/{locked_listing.pk}/',
+                        )
+                        create_notification(
+                            user=winning_bid.bidder,
+                            notification_type='auction_expired',
+                            message=(
+                                f'Highest bid on "{locked_listing.title}" was below reserve; '
+                                'no sale was created.'
+                            ),
+                            link_url=f'/listings/{locked_listing.pk}/',
+                        )
+                        self.stdout.write(
+                            self.style.WARNING(
+                                f'Reserve not met: {locked_listing.title} '
+                                f'({winning_bid.amount:.2f} < {locked_listing.reserve_price:.2f})'
+                            )
+                        )
+                        closed_count += 1
+                        continue
+
                     locked_listing.status = 'sold'
                     locked_listing.current_bid = winning_bid.amount
                     locked_listing.save(update_fields=['status', 'current_bid'])
