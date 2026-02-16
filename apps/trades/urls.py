@@ -11,5 +11,7 @@ urlpatterns = [
     path('<int:trade_id>/shipments/<int:shipment_id>/manual-tracking/', views.trade_shipment_manual_tracking, name='trade_shipment_manual_tracking'),
     path('<int:trade_id>/shipments/<int:shipment_id>/buy-label/', views.trade_shipment_buy_label, name='trade_shipment_buy_label'),
     path('<int:trade_id>/shipments/<int:shipment_id>/confirm-receipt/', views.trade_confirm_receipt, name='trade_confirm_receipt'),
+    path('<int:trade_id>/strikes/<int:strike_id>/initiate-excuse/', views.trade_initiate_excuse, name='trade_initiate_excuse'),
+    path('<int:trade_id>/strikes/<int:strike_id>/confirm-excuse/', views.trade_confirm_excuse, name='trade_confirm_excuse'),
     path('<int:trade_id>/', views.trade_detail, name='trade_detail'),
 ]

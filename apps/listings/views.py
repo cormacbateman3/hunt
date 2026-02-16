@@ -13,6 +13,7 @@ from apps.orders.models import Order
 from apps.orders.services import calculate_platform_fee
 from apps.payments.models import PaymentTransaction
 from apps.trades.models import TradeOffer
+from apps.enforcement.services import enforce_capability
 
 
 def _prefill_from_collection_item(collection_item):
@@ -187,6 +188,15 @@ def listing_detail(request, pk):
     }
     if listing.listing_type == 'buy_now':
         buy_now_order = Order.objects.filter(listing=listing).first()
+        can_buy_now = False
+        buy_now_restriction_reason = ''
+        if request.user.is_authenticated:
+            allowed, buy_now_restriction_reason = enforce_capability(request.user, 'buy_now')
+            can_buy_now = (
+                allowed
+                and request.user.id != listing.seller_id
+                and listing.status == 'active'
+            )
         can_resume = (
             request.user.is_authenticated
             and buy_now_order
@@ -195,11 +205,8 @@ def listing_detail(request, pk):
         )
         context.update({
             'buy_now_order': buy_now_order,
-            'can_buy_now': (
-                request.user.is_authenticated
-                and request.user.id != listing.seller_id
-                and listing.status == 'active'
-            ),
+            'can_buy_now': can_buy_now,
+            'buy_now_restriction_reason': buy_now_restriction_reason,
             'can_resume_buy_now': can_resume,
             'buy_now_locked': bool(
                 buy_now_order
@@ -212,9 +219,16 @@ def listing_detail(request, pk):
         })
     if listing.listing_type == 'trade':
         latest_offer = TradeOffer.objects.filter(trade_listing=listing).order_by('-created_at').first()
+        trade_restriction_reason = ''
+        can_propose_trade = False
+        if request.user.is_authenticated and request.user.id != listing.seller_id:
+            allowed, trade_restriction_reason = enforce_capability(request.user, 'trade')
+            can_propose_trade = allowed
         context.update({
             'trade_offer_count': TradeOffer.objects.filter(trade_listing=listing).count(),
             'latest_trade_offer': latest_offer,
+            'trade_restriction_reason': trade_restriction_reason,
+            'can_propose_trade': can_propose_trade,
         })
 
     return render(request, 'listings/listing_detail.html', context)
@@ -223,6 +237,14 @@ def listing_detail(request, pk):
 @login_required
 def listing_create(request):
     """Create a new listing"""
+    allowed, reason = enforce_capability(request.user, 'sell')
+    if not allowed:
+        messages.error(request, reason)
+        return redirect('accounts:dashboard')
+    if not request.user.profile.shipping_address:
+        messages.error(request, 'Add a default shipping address before creating listings.')
+        return redirect('accounts:profile_edit')
+
     image_formset = ListingImageFormSet(request.POST or None, request.FILES or None)
 
     if request.method == 'POST':
@@ -317,6 +339,10 @@ def buy_now_checkout_start(request, pk):
         return redirect('listings:detail', pk=pk)
 
     with transaction.atomic():
+        allowed, reason = enforce_capability(request.user, 'buy_now')
+        if not allowed:
+            messages.error(request, reason)
+            return redirect('listings:detail', pk=pk)
         listing = get_object_or_404(
             Listing.objects.select_for_update(),
             pk=pk,

@@ -106,5 +106,50 @@
             {% endfor %}
         </div>
     </article>
+
+    {% if strikes %}
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Handshake For Exceptions</h2>
+        <p style="color: var(--color-muted); margin-bottom: 0.6rem;">
+            For legitimate exceptions, either side can initiate a handshake and the other side confirms within 72 hours.
+        </p>
+        <div style="display: grid; gap: 0.8rem;">
+            {% for strike in strikes %}
+                <div style="padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px;">
+                    <p><strong>Strike #{{ strike.pk }}</strong> - {{ strike.get_reason_display }} (applies to {{ strike.user.username }})</p>
+                    <p style="color: var(--color-muted);">Issued {{ strike.created_at|date:"M j, Y g:i a" }}{% if strike.expires_at %}, expires {{ strike.expires_at|date:"M j, Y g:i a" }}{% endif %}</p>
+                    {% if strike.notes %}<p>Notes: {{ strike.notes }}</p>{% endif %}
+                    {% if strike.is_excused %}
+                        <p style="color: #2c4a1e;"><strong>Excused</strong> by {{ strike.excuse_confirmed_by.username }}{% if strike.excuse_reason %} ({{ strike.get_excuse_reason_display }}){% endif %}.</p>
+                    {% else %}
+                        {% if strike.excuse_initiated_by %}
+                            <p>Handshake initiated by {{ strike.excuse_initiated_by.username }}{% if strike.excuse_reason %} ({{ strike.get_excuse_reason_display }}){% endif %}.</p>
+                            {% if strike.excuse_note %}<p>Note: {{ strike.excuse_note }}</p>{% endif %}
+                            {% if strike.excuse_expires_at %}<p>Confirm by: {{ strike.excuse_expires_at|date:"M j, Y g:i a" }}</p>{% endif %}
+                            {% if user.id != strike.excuse_initiated_by_id %}
+                                <form method="post" action="{% url 'trades:trade_confirm_excuse' trade.pk strike.pk %}">
+                                    {% csrf_token %}
+                                    <button class="btn-secondary" type="submit">Confirm Handshake</button>
+                                </form>
+                            {% endif %}
+                        {% else %}
+                            <form method="post" action="{% url 'trades:trade_initiate_excuse' trade.pk strike.pk %}" style="display: grid; gap: 0.45rem; margin-top: 0.5rem;">
+                                {% csrf_token %}
+                                <select class="form-input" name="excuse_reason" required>
+                                    <option value="">Select reason</option>
+                                    {% for value, label in excuse_reason_choices %}
+                                        <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                                <input class="form-input" name="excuse_note" placeholder="Optional note (max 250 chars)">
+                                <div><button class="btn-secondary" type="submit">Initiate Handshake</button></div>
+                            </form>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    </article>
+    {% endif %}
 </section>
 {% endblock %}

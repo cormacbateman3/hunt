@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 from apps.notifications.models import Notification
+from apps.enforcement.services import enforce_capability
 from apps.orders.models import AddressSnapshot
 from apps.shipping.providers.shippo import ShippoClient, ShippoError
 from .models import Trade, TradeOffer, TradeOfferItem, TradeShipment
@@ -33,6 +34,9 @@ def _snapshot_from_address(address):
 
 
 def validate_trade_gate(user):
+    allowed, reason = enforce_capability(user, 'trade')
+    if not allowed:
+        return False, reason
     profile = user.profile
     if not profile.email_verified:
         return False, 'Email verification is required before trading.'

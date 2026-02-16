@@ -4,8 +4,23 @@ from django.contrib.auth.models import User
 
 class Strike(models.Model):
     """Strike against a user for policy violations"""
+
+    REASON_CHOICES = [
+        ('non_shipment', 'Non Shipment'),
+        ('non_payment', 'Non Payment'),
+        ('cancellation_abuse', 'Cancellation Abuse'),
+        ('other', 'Other'),
+    ]
+    EXCUSE_REASON_CHOICES = [
+        ('local_pickup', 'Local Pickup'),
+        ('agreed_delay', 'Agreed Delay'),
+        ('combined_shipment', 'Combined Shipment'),
+        ('alternative_delivery', 'Alternative Delivery'),
+        ('other', 'Other'),
+    ]
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='strikes')
-    reason = models.TextField()
+    reason = models.CharField(max_length=50, choices=REASON_CHOICES)
     related_order = models.ForeignKey(
         'orders.Order', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='strikes'
@@ -17,12 +32,13 @@ class Strike(models.Model):
     notes = models.TextField(blank=True)
     expires_at = models.DateTimeField(null=True, blank=True)
     is_excused = models.BooleanField(default=False)
-    excuse_reason = models.TextField(blank=True)
-    excuse_note = models.TextField(blank=True)
+    excuse_reason = models.CharField(max_length=50, choices=EXCUSE_REASON_CHOICES, blank=True)
+    excuse_note = models.CharField(max_length=250, blank=True)
     excuse_initiated_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='excuses_initiated'
     )
+    excuse_expires_at = models.DateTimeField(null=True, blank=True)
     excuse_confirmed_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='excuses_confirmed'
@@ -40,7 +56,7 @@ class Strike(models.Model):
         ]
 
     def __str__(self):
-        return f"Strike for {self.user.username}: {self.reason[:50]}"
+        return f"Strike for {self.user.username}: {self.get_reason_display()}"
 
 
 class AccountRestriction(models.Model):

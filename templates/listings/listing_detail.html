@@ -123,6 +123,10 @@
                 <p style="margin-top: 1rem; color: var(--color-hunting-rust);">
                     This listing is currently locked by another buyer's checkout session.
                 </p>
+            {% elif buy_now_restriction_reason %}
+                <p style="margin-top: 1rem; color: var(--color-hunting-rust);">
+                    {{ buy_now_restriction_reason }}
+                </p>
             {% else %}
                 <p style="margin-top: 1rem; color: var(--color-muted);">
                     This listing is no longer available for buy now.
@@ -141,9 +145,15 @@
                     <p style="color: var(--color-muted);">No offers yet.</p>
                 {% endif %}
             {% else %}
-                <a class="btn-primary" href="{% url 'trades:propose' listing_id=listing.id %}" style="margin-top: 1rem; display:inline-block;">
-                    Propose trade
-                </a>
+                {% if can_propose_trade %}
+                    <a class="btn-primary" href="{% url 'trades:propose' listing_id=listing.id %}" style="margin-top: 1rem; display:inline-block;">
+                        Propose trade
+                    </a>
+                {% elif trade_restriction_reason %}
+                    <p style="margin-top: 1rem; color: var(--color-hunting-rust);">
+                        {{ trade_restriction_reason }}
+                    </p>
+                {% endif %}
             {% endif %}
         {% elif is_auction %}
             <p style="margin-top: 1rem;">

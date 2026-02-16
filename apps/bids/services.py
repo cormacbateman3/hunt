@@ -4,6 +4,7 @@ Business logic for bidding system
 from django.db import transaction
 from apps.listings.models import Listing
 from .models import Bid
+from apps.enforcement.services import enforce_capability
 from apps.notifications.models import Notification
 
 
@@ -17,6 +18,9 @@ def place_bid(listing, bidder, amount):
 
     if listing.listing_type != 'auction':
         return False, "Bids are only allowed on Auction House listings"
+    allowed, restriction_reason = enforce_capability(bidder, 'bid')
+    if not allowed:
+        return False, restriction_reason
 
     # Validation that does not depend on locking first.
     if bidder == listing.seller:

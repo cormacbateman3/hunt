@@ -4,14 +4,10 @@ from .models import Strike, AccountRestriction
 
 @admin.register(Strike)
 class StrikeAdmin(admin.ModelAdmin):
-    list_display = ('user', 'reason_preview', 'is_excused', 'expires_at', 'created_at')
-    list_filter = ('is_excused', 'created_at')
+    list_display = ('user', 'reason', 'is_excused', 'excuse_reason', 'excuse_expires_at', 'expires_at', 'created_at')
+    list_filter = ('reason', 'is_excused', 'excuse_reason', 'created_at')
     search_fields = ('user__username', 'reason', 'notes')
     readonly_fields = ('created_at',)
-
-    def reason_preview(self, obj):
-        return obj.reason[:50] + '...' if len(obj.reason) > 50 else obj.reason
-    reason_preview.short_description = 'Reason'
 
 
 @admin.register(AccountRestriction)

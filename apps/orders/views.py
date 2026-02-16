@@ -3,6 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
+from apps.enforcement.models import Strike
+from apps.enforcement.services import confirm_excuse_handshake, initiate_excuse_handshake
 from apps.notifications.models import Notification
 from .models import Order
 from .services import transition_order
@@ -62,6 +64,9 @@ def order_detail(request, pk):
     except Exception:
         shipment = None
     shipment_events = shipment.events.order_by('-event_time')[:10] if shipment else []
+    strikes = Strike.objects.filter(related_order=order).select_related(
+        'user', 'excuse_initiated_by', 'excuse_confirmed_by'
+    )
 
     current_index = STATUS_FLOW.index(order.status) if order.status in STATUS_FLOW else -1
     timeline = []
@@ -81,6 +86,8 @@ def order_detail(request, pk):
         'payment': payment,
         'shipment': shipment,
         'shipment_events': shipment_events,
+        'strikes': strikes,
+        'excuse_reason_choices': Strike.EXCUSE_REASON_CHOICES,
     })
 
 
@@ -135,4 +142,46 @@ def update_status(request, pk):
         messages.success(request, 'Order status updated.')
     else:
         messages.error(request, message)
+    return redirect('orders:detail', pk=order.pk)
+
+
+@login_required
+@require_POST
+def initiate_excuse(request, pk, strike_id):
+    order = _get_order_for_user(request, pk)
+    if not order:
+        return HttpResponseForbidden('You do not have access to this order.')
+
+    strike = get_object_or_404(Strike, pk=strike_id, related_order=order)
+    excuse_reason = request.POST.get('excuse_reason', '').strip()
+    excuse_note = request.POST.get('excuse_note', '').strip()
+    if excuse_reason not in dict(Strike.EXCUSE_REASON_CHOICES):
+        messages.error(request, 'Invalid handshake reason.')
+        return redirect('orders:detail', pk=order.pk)
+
+    ok, error = initiate_excuse_handshake(
+        strike=strike,
+        actor=request.user,
+        excuse_reason=excuse_reason,
+        excuse_note=excuse_note,
+    )
+    if ok:
+        messages.success(request, 'Handshake initiated. Waiting for counterparty confirmation.')
+    else:
+        messages.error(request, error)
+    return redirect('orders:detail', pk=order.pk)
+
+
+@login_required
+@require_POST
+def confirm_excuse(request, pk, strike_id):
+    order = _get_order_for_user(request, pk)
+    if not order:
+        return HttpResponseForbidden('You do not have access to this order.')
+    strike = get_object_or_404(Strike, pk=strike_id, related_order=order)
+    ok, error = confirm_excuse_handshake(strike=strike, actor=request.user)
+    if ok:
+        messages.success(request, 'Handshake confirmed. Strike marked excused.')
+    else:
+        messages.error(request, error)
     return redirect('orders:detail', pk=order.pk)
