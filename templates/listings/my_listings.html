@@ -16,7 +16,12 @@
                     <a href="{% url 'listings:detail' listing.pk %}">{{ listing.title }}</a>
                 </h2>
                 <p style="color: var(--color-muted); margin-bottom: 0.45rem;">
-                    {{ listing.county }} • {{ listing.license_year }} • Ends {{ listing.auction_end|date:"M j, Y" }}
+                    {{ listing.get_listing_type_display }} |
+                    {% if listing.county_ref %}{{ listing.county_ref.name }}{% else %}{{ listing.county }}{% endif %} |
+                    {{ listing.license_year }}
+                    {% if listing.listing_type == 'auction' %}
+                        | Ends {{ listing.auction_end|date:"M j, Y" }}
+                    {% endif %}
                 </p>
                 <a class="btn-secondary" href="{% url 'listings:edit' listing.pk %}">Edit</a>
             </article>

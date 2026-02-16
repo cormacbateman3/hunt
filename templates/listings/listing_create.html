@@ -9,9 +9,9 @@
 
 {% block content %}
 <section class="card" style="max-width: 860px; margin: 0 auto;">
-    <h1 style="margin-bottom: 0.75rem;">Create auction listing</h1>
+    <h1 style="margin-bottom: 0.75rem;">Create listing</h1>
     <p style="margin-bottom: 1rem; color: var(--color-muted);">
-        Add your item details and photos. You can upload up to 4 additional images.
+        Step 1: choose listing type. Step 2: complete listing details and type-specific fields.
     </p>
 
     <form method="post" enctype="multipart/form-data">
@@ -21,6 +21,11 @@
         {% endif %}
 
         <div style="display: grid; gap: 0.85rem;">
+            <div>
+                <label class="form-label" for="{{ form.listing_type.id_for_label }}">Listing type</label>
+                {{ form.listing_type }}
+                {{ form.listing_type.errors }}
+            </div>
             <div>
                 <label class="form-label" for="{{ form.title.id_for_label }}">Title</label>
                 {{ form.title }}
@@ -56,16 +61,39 @@
                 </div>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
-                <div>
+                <div data-listing-panel="auction">
                     <label class="form-label" for="{{ form.starting_price.id_for_label }}">Starting price ($)</label>
                     {{ form.starting_price }}
                     {{ form.starting_price.errors }}
                 </div>
-                <div>
+                <div data-listing-panel="auction">
+                    <label class="form-label" for="{{ form.reserve_price.id_for_label }}">Reserve price ($)</label>
+                    {{ form.reserve_price }}
+                    {{ form.reserve_price.errors }}
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+                <div data-listing-panel="auction">
                     <label class="form-label" for="{{ form.duration_days.id_for_label }}">Auction duration</label>
                     {{ form.duration_days }}
                     {{ form.duration_days.errors }}
                 </div>
+                <div data-listing-panel="buy_now">
+                    <label class="form-label" for="{{ form.buy_now_price.id_for_label }}">Buy now price ($)</label>
+                    {{ form.buy_now_price }}
+                    {{ form.buy_now_price.errors }}
+                </div>
+            </div>
+            <div data-listing-panel="trade">
+                <label class="form-label" for="{{ form.trade_notes.id_for_label }}">Trade preferences</label>
+                {{ form.trade_notes }}
+                {{ form.trade_notes.errors }}
+            </div>
+            <div data-listing-panel="trade">
+                <label class="form-label" for="{{ form.allow_cash.id_for_label }}">
+                    {{ form.allow_cash }} Allow cash add-on in trade offers
+                </label>
+                {{ form.allow_cash.errors }}
             </div>
             <div>
                 <label class="form-label" for="{{ form.featured_image.id_for_label }}">Featured image</label>
@@ -106,10 +134,29 @@
 
         <div style="margin-top: 1.25rem;">
             <button type="submit" class="btn-primary">Create listing</button>
-            <a href="{% url 'listings:list' %}" style="margin-left: 0.75rem; color: var(--color-aged-amber);">
+            <a href="{% url 'listings:auction_house' %}" style="margin-left: 0.75rem; color: var(--color-aged-amber);">
                 Cancel
             </a>
         </div>
     </form>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const listingType = document.getElementById('{{ form.listing_type.id_for_label }}');
+    if (!listingType) return;
+
+    const togglePanels = () => {
+        const value = listingType.value;
+        document.querySelectorAll('[data-listing-panel]').forEach((panel) => {
+            panel.style.display = panel.dataset.listingPanel === value ? '' : 'none';
+        });
+    };
+
+    listingType.addEventListener('change', togglePanels);
+    togglePanels();
+});
+</script>
 {% endblock %}

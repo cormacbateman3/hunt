@@ -29,7 +29,7 @@ class BidForm(forms.ModelForm):
             raise forms.ValidationError("Listing is required")
 
         # Get minimum bid (current bid + 1, or starting price)
-        minimum_bid = (self.listing.current_bid or self.listing.starting_price) + 1
+        minimum_bid = (self.listing.current_bid or self.listing.starting_price or 0) + 1
 
         if amount < minimum_bid:
             raise forms.ValidationError(
@@ -40,6 +40,9 @@ class BidForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+
+        if self.listing and self.listing.listing_type != 'auction':
+            raise forms.ValidationError("Bids are only allowed on Auction House listings")
 
         # Check if user is the seller
         if self.bidder and self.listing and self.bidder == self.listing.seller:

@@ -13,17 +13,90 @@
 
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="alert alert-error" style="margin-bottom: 1rem;">{{ form.non_field_errors }}</div>
+        {% endif %}
+
         <div style="display: grid; gap: 0.85rem;">
-            {% for field in form %}
+            <div>
+                <label class="form-label" for="{{ form.listing_type.id_for_label }}">Listing type</label>
+                {{ form.listing_type }}
+                {{ form.listing_type.errors }}
+            </div>
+            <div>
+                <label class="form-label" for="{{ form.title.id_for_label }}">Title</label>
+                {{ form.title }}
+                {{ form.title.errors }}
+            </div>
+            <div>
+                <label class="form-label" for="{{ form.description.id_for_label }}">Description</label>
+                {{ form.description }}
+                {{ form.description.errors }}
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
                 <div>
-                    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                    {{ field }}
-                    {% if field.help_text %}
-                        <small style="color: var(--color-muted);">{{ field.help_text }}</small>
-                    {% endif %}
-                    {{ field.errors }}
+                    <label class="form-label" for="{{ form.license_year.id_for_label }}">License year</label>
+                    {{ form.license_year }}
+                    {{ form.license_year.errors }}
                 </div>
-            {% endfor %}
+                <div>
+                    <label class="form-label" for="{{ form.county_ref.id_for_label }}">County</label>
+                    {{ form.county_ref }}
+                    {{ form.county_ref.errors }}
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+                <div>
+                    <label class="form-label" for="{{ form.license_type_ref.id_for_label }}">License type</label>
+                    {{ form.license_type_ref }}
+                    {{ form.license_type_ref.errors }}
+                </div>
+                <div>
+                    <label class="form-label" for="{{ form.condition_grade.id_for_label }}">Condition grade</label>
+                    {{ form.condition_grade }}
+                    {{ form.condition_grade.errors }}
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+                <div data-listing-panel="auction">
+                    <label class="form-label" for="{{ form.starting_price.id_for_label }}">Starting price ($)</label>
+                    {{ form.starting_price }}
+                    {{ form.starting_price.errors }}
+                </div>
+                <div data-listing-panel="auction">
+                    <label class="form-label" for="{{ form.reserve_price.id_for_label }}">Reserve price ($)</label>
+                    {{ form.reserve_price }}
+                    {{ form.reserve_price.errors }}
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+                <div data-listing-panel="auction">
+                    <label class="form-label" for="{{ form.duration_days.id_for_label }}">Auction duration</label>
+                    {{ form.duration_days }}
+                    {{ form.duration_days.errors }}
+                </div>
+                <div data-listing-panel="buy_now">
+                    <label class="form-label" for="{{ form.buy_now_price.id_for_label }}">Buy now price ($)</label>
+                    {{ form.buy_now_price }}
+                    {{ form.buy_now_price.errors }}
+                </div>
+            </div>
+            <div data-listing-panel="trade">
+                <label class="form-label" for="{{ form.trade_notes.id_for_label }}">Trade preferences</label>
+                {{ form.trade_notes }}
+                {{ form.trade_notes.errors }}
+            </div>
+            <div data-listing-panel="trade">
+                <label class="form-label" for="{{ form.allow_cash.id_for_label }}">
+                    {{ form.allow_cash }} Allow cash add-on in trade offers
+                </label>
+                {{ form.allow_cash.errors }}
+            </div>
+            <div>
+                <label class="form-label" for="{{ form.featured_image.id_for_label }}">Featured image</label>
+                {{ form.featured_image }}
+                {{ form.featured_image.errors }}
+            </div>
         </div>
 
         <hr style="margin: 1.2rem 0; border: 0; border-top: 1px solid var(--color-border);">
@@ -54,4 +127,23 @@
         </div>
     </form>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const listingType = document.getElementById('{{ form.listing_type.id_for_label }}');
+    if (!listingType) return;
+
+    const togglePanels = () => {
+        const value = listingType.value;
+        document.querySelectorAll('[data-listing-panel]').forEach((panel) => {
+            panel.style.display = panel.dataset.listingPanel === value ? '' : 'none';
+        });
+    };
+
+    listingType.addEventListener('change', togglePanels);
+    togglePanels();
+});
+</script>
 {% endblock %}

@@ -6,7 +6,7 @@ from apps.core.models import County, LicenseType
 
 
 class ListingForm(forms.ModelForm):
-    """Form for creating and editing auction listings"""
+    """Form for creating and editing listings across all listing types"""
 
     duration_days = forms.ChoiceField(
         choices=[
@@ -39,14 +39,30 @@ class ListingForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['county_ref'].queryset = County.objects.order_by('name')
         self.fields['license_type_ref'].queryset = LicenseType.objects.order_by('name')
+        self.fields['duration_days'].required = False
+
+        if self.instance and self.instance.pk:
+            self.fields['duration_days'].initial = 7
 
     class Meta:
         model = Listing
         fields = [
-            'title', 'description', 'license_year', 'county_ref', 'license_type_ref',
-            'condition_grade', 'starting_price', 'featured_image'
+            'listing_type',
+            'title',
+            'description',
+            'license_year',
+            'county_ref',
+            'license_type_ref',
+            'condition_grade',
+            'starting_price',
+            'reserve_price',
+            'buy_now_price',
+            'trade_notes',
+            'allow_cash',
+            'featured_image',
         ]
         widgets = {
+            'listing_type': forms.Select(attrs={'class': 'form-select'}),
             'title': forms.TextInput(attrs={
                 'class': 'form-input',
                 'placeholder': 'e.g., 1942 Adams County Resident Hunting License'
@@ -71,7 +87,50 @@ class ListingForm(forms.ModelForm):
                 'step': '0.01',
                 'min': '0.01'
             }),
+            'reserve_price': forms.NumberInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'Optional reserve',
+                'step': '0.01',
+                'min': '0.01'
+            }),
+            'buy_now_price': forms.NumberInput(attrs={
+                'class': 'form-input',
+                'placeholder': '75.00',
+                'step': '0.01',
+                'min': '0.01'
+            }),
+            'trade_notes': forms.Textarea(attrs={
+                'class': 'form-input',
+                'rows': 4,
+                'placeholder': 'What are you looking for in return?',
+            }),
+            'allow_cash': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        listing_type = cleaned_data.get('listing_type')
+        starting_price = cleaned_data.get('starting_price')
+        reserve_price = cleaned_data.get('reserve_price')
+        buy_now_price = cleaned_data.get('buy_now_price')
+        trade_notes = (cleaned_data.get('trade_notes') or '').strip()
+        duration_days = cleaned_data.get('duration_days')
+
+        if listing_type == 'auction':
+            if starting_price is None:
+                self.add_error('starting_price', 'Starting price is required for auctions.')
+            if not duration_days:
+                self.add_error('duration_days', 'Duration is required for auctions.')
+            if reserve_price and starting_price and reserve_price < starting_price:
+                self.add_error('reserve_price', 'Reserve price must be at least the starting price.')
+        elif listing_type == 'buy_now':
+            if buy_now_price is None:
+                self.add_error('buy_now_price', 'Buy now price is required for General Store listings.')
+        elif listing_type == 'trade':
+            if not trade_notes:
+                self.add_error('trade_notes', 'Trade preferences are required for Trading Block listings.')
+
+        return cleaned_data
 
     def save(self, commit=True):
         listing = super().save(commit=False)
@@ -82,9 +141,27 @@ class ListingForm(forms.ModelForm):
         if listing.license_type_ref:
             listing.license_type = listing.license_type_ref.name
 
-        # Calculate auction_end based on duration_days
-        duration = int(self.cleaned_data['duration_days'])
-        listing.auction_end = timezone.now() + timedelta(days=duration)
+        listing_type = self.cleaned_data['listing_type']
+        duration = self.cleaned_data.get('duration_days')
+
+        if listing_type == 'auction':
+            listing.auction_end = timezone.now() + timedelta(days=int(duration))
+            listing.buy_now_price = None
+            listing.trade_notes = ''
+            listing.allow_cash = False
+        elif listing_type == 'buy_now':
+            listing.starting_price = None
+            listing.current_bid = None
+            listing.reserve_price = None
+            listing.auction_end = None
+            listing.trade_notes = ''
+            listing.allow_cash = False
+        else:
+            listing.starting_price = None
+            listing.current_bid = None
+            listing.reserve_price = None
+            listing.buy_now_price = None
+            listing.auction_end = None
 
         if commit:
             listing.save()

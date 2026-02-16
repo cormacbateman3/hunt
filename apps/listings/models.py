@@ -61,7 +61,7 @@ class Listing(models.Model):
     condition_grade = models.CharField(max_length=20, choices=CONDITION_CHOICES)
 
     # Auction pricing
-    starting_price = models.DecimalField(max_digits=10, decimal_places=2)
+    starting_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     current_bid = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     reserve_price = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True,
@@ -123,7 +123,9 @@ class Listing(models.Model):
         """Get current price (highest bid or starting price)"""
         if self.listing_type == 'buy_now':
             return self.buy_now_price
-        return self.current_bid if self.current_bid else self.starting_price
+        if self.listing_type == 'auction':
+            return self.current_bid if self.current_bid else self.starting_price
+        return None
 
 
 class ListingImage(models.Model):

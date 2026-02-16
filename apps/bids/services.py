@@ -15,6 +15,9 @@ def place_bid(listing, bidder, amount):
         tuple: (success: bool, message: str)
     """
 
+    if listing.listing_type != 'auction':
+        return False, "Bids are only allowed on Auction House listings"
+
     # Validation that does not depend on locking first.
     if bidder == listing.seller:
         return False, "You cannot bid on your own listing"
@@ -28,7 +31,7 @@ def place_bid(listing, bidder, amount):
         if not locked_listing.is_active():
             return False, "This auction has ended"
 
-        minimum_bid = (locked_listing.current_bid or locked_listing.starting_price) + 1
+        minimum_bid = (locked_listing.current_bid or locked_listing.starting_price or 0) + 1
         if amount < minimum_bid:
             return False, f"Bid must be at least ${minimum_bid:.2f}"
 

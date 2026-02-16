@@ -10,18 +10,23 @@ from apps.bids.services import get_user_bid_on_listing, get_winning_bid
 from apps.core.models import County, LicenseType
 
 
-class ListingListView(ListView):
+class BaseListingListView(ListView):
     """Browse active listings with dynamic GET filtering."""
 
     model = Listing
     template_name = 'listings/listing_list.html'
     context_object_name = 'listings'
     paginate_by = 24
+    listing_type = None
+    section_title = 'Browse Listings'
+    section_description = 'Explore the marketplace.'
 
     def get_queryset(self):
         queryset = Listing.objects.filter(status='active').select_related(
             'seller', 'county_ref', 'license_type_ref'
         )
+        if self.listing_type:
+            queryset = queryset.filter(listing_type=self.listing_type)
 
         county_id = self.request.GET.get('county_id')
         license_type_id = self.request.GET.get('license_type_id')
@@ -62,6 +67,9 @@ class ListingListView(ListView):
         context = super().get_context_data(**kwargs)
         context['counties'] = County.objects.order_by('name')
         context['license_types'] = LicenseType.objects.order_by('name')
+        context['section_title'] = self.section_title
+        context['section_description'] = self.section_description
+        context['current_route_name'] = self.request.resolver_match.view_name
         context['filters'] = {
             'county_id': self.request.GET.get('county_id', ''),
             'license_type_id': self.request.GET.get('license_type_id', ''),
@@ -79,22 +87,52 @@ class ListingListView(ListView):
         return context
 
 
+class ListingListView(BaseListingListView):
+    section_title = 'Browse Listings'
+    section_description = 'All active listings across Auction House, General Store, and Trading Block.'
+
+
+class AuctionHouseListView(BaseListingListView):
+    listing_type = 'auction'
+    section_title = 'Auction House'
+    section_description = 'Timed auctions with active bidding.'
+
+
+class GeneralStoreListView(BaseListingListView):
+    listing_type = 'buy_now'
+    section_title = 'General Store'
+    section_description = 'Fixed-price listings with instant purchase intent.'
+
+
+class TradingBlockListView(BaseListingListView):
+    listing_type = 'trade'
+    section_title = 'Trading Block'
+    section_description = 'Trade listings with structured negotiation.'
+
+
 def listing_detail(request, pk):
     """View a single listing with full details"""
     listing = get_object_or_404(
-        Listing.objects.select_related('seller__profile')
+        Listing.objects.select_related('seller__profile', 'county_ref', 'license_type_ref')
                        .prefetch_related('additional_images'),
         pk=pk
     )
 
-    winning_bid = get_winning_bid(listing)
-    bid_count = listing.bids.count()
-    recent_bids = listing.bids.select_related('bidder').order_by('-placed_at')[:10]
-    minimum_bid = (listing.current_bid or listing.starting_price) + 1
+    is_auction = listing.listing_type == 'auction'
+    winning_bid = None
+    bid_count = 0
+    recent_bids = []
+    minimum_bid = None
     bid_form = None
     user_bid = None
 
-    if request.user.is_authenticated:
+    if is_auction:
+        winning_bid = get_winning_bid(listing)
+        bid_count = listing.bids.count()
+        recent_bids = listing.bids.select_related('bidder').order_by('-placed_at')[:10]
+        minimum_bid = (listing.current_bid or listing.starting_price or 0) + 1
+
+    if is_auction and request.user.is_authenticated:
         user_bid = get_user_bid_on_listing(request.user, listing)
         bid_form = BidForm(
             listing=listing,
@@ -110,6 +148,9 @@ def listing_detail(request, pk):
         'minimum_bid': minimum_bid,
         'bid_form': bid_form,
         'user_bid': user_bid,
+        'is_auction': is_auction,
+        'is_buy_now': listing.listing_type == 'buy_now',
+        'is_trade': listing.listing_type == 'trade',
     }
 
     return render(request, 'listings/listing_detail.html', context)
@@ -117,7 +158,7 @@ def listing_detail(request, pk):
 
 @login_required
 def listing_create(request):
-    """Create a new auction listing"""
+    """Create a new listing"""
     image_formset = ListingImageFormSet(request.POST or None, request.FILES or None)
 
     if request.method == 'POST':

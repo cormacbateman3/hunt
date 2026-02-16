@@ -1,0 +1,25 @@
+<article class="card">
+    <h3 style="font-size: 1.2rem; margin-bottom: 0.45rem;">
+        <a href="{% url 'listings:detail' listing.pk %}">{{ listing.title }}</a>
+    </h3>
+    <p style="color: var(--color-muted); margin-bottom: 0.5rem;">
+        <strong>{{ listing.get_listing_type_display }}</strong> -
+        {% if listing.county_ref %}{{ listing.county_ref.name }}{% else %}{{ listing.county }}{% endif %} County -
+        {{ listing.license_year }} -
+        {{ listing.get_condition_grade_display }}
+    </p>
+
+    {% if listing.listing_type == 'auction' %}
+        <p style="margin-bottom: 0.5rem;">
+            Current bid: {% if listing.current_price %}${{ listing.current_price }}{% else %}-{% endif %}
+        </p>
+    {% elif listing.listing_type == 'buy_now' %}
+        <p style="margin-bottom: 0.5rem;">
+            Buy now: {% if listing.buy_now_price %}${{ listing.buy_now_price }}{% else %}-{% endif %}
+        </p>
+    {% else %}
+        <p style="margin-bottom: 0.5rem;">Open to trade offers{% if listing.allow_cash %} (cash allowed){% endif %}.</p>
+    {% endif %}
+
+    <a class="btn-secondary" href="{% url 'listings:detail' listing.pk %}">View details</a>
+</article>

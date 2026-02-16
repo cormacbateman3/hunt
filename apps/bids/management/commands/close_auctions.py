@@ -16,7 +16,7 @@ class Command(BaseCommand):
         now = timezone.now()
         expired_listings = (
             Listing.objects.select_related('seller')
-            .filter(status='active', auction_end__lte=now)
+            .filter(status='active', listing_type='auction', auction_end__lte=now)
         )
 
         closed_count = 0

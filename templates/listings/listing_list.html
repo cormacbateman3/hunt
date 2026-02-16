@@ -10,6 +10,8 @@
 {% block content %}
 <section class="browse-layout">
     <aside class="card">
+        <h1 style="font-size: 1.4rem; margin-bottom: 0.4rem;">{{ section_title }}</h1>
+        <p style="color: var(--color-muted); margin-bottom: 0.9rem;">{{ section_description }}</p>
         <h2 style="font-size: 1.2rem; margin-bottom: 0.8rem;">Filters</h2>
         <form method="get" style="display: grid; gap: 0.75rem;">
             <div>
@@ -60,7 +62,7 @@
             </div>
             <div style="display: flex; gap: 0.55rem;">
                 <button class="btn-primary" type="submit">Apply</button>
-                <a class="btn-secondary" href="{% url 'listings:list' %}">Reset</a>
+                <a class="btn-secondary" href="{% url current_route_name %}">Reset</a>
             </div>
         </form>
     </aside>
@@ -68,16 +70,7 @@
     <section>
         <div style="display: grid; gap: 0.8rem;">
             {% for listing in page_obj %}
-                <article class="card">
-                    <h3 style="font-size: 1.2rem; margin-bottom: 0.45rem;">
-                        <a href="{% url 'listings:detail' listing.pk %}">{{ listing.title }}</a>
-                    </h3>
-                    <p style="color: var(--color-muted); margin-bottom: 0.5rem;">
-                        {% if listing.county_ref %}{{ listing.county_ref.name }}{% else %}{{ listing.county }}{% endif %} County - {{ listing.license_year }} - {{ listing.get_condition_grade_display }}
-                    </p>
-                    <p style="margin-bottom: 0.5rem;">Current price: ${{ listing.current_price }}</p>
-                    <a class="btn-secondary" href="{% url 'listings:detail' listing.pk %}">View details</a>
-                </article>
+                {% include 'listings/_listing_card.html' %}
             {% empty %}
                 <div class="card">
                     <p>No active listings found.</p>
