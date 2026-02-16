@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 from apps.enforcement.models import Strike
 from apps.enforcement.services import confirm_excuse_handshake, initiate_excuse_handshake
-from apps.notifications.models import Notification
+from apps.notifications.services import create_notification
 from .models import Order
 from .services import transition_order
 
@@ -105,7 +105,7 @@ def confirm_receipt(request, pk):
 
     ok, message = transition_order(order, 'completed', actor=request.user)
     if ok:
-        Notification.objects.create(
+        create_notification(
             user=order.seller,
             notification_type='order_completed',
             message=f'Buyer confirmed receipt for order #{order.pk} ({order.listing.title}).',
@@ -133,7 +133,7 @@ def update_status(request, pk):
     ok, message = transition_order(order, target, actor=request.user)
     if ok:
         note_type = 'order_shipped' if target in {'label_created', 'in_transit'} else 'order_delivered'
-        Notification.objects.create(
+        create_notification(
             user=order.buyer,
             notification_type=note_type,
             message=f'Order #{order.pk} status updated to {order.get_status_display()}.',

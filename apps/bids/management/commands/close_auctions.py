@@ -7,7 +7,7 @@ from apps.listings.models import Listing
 from apps.bids.models import Bid
 from apps.orders.models import Order
 from apps.payments.models import PaymentTransaction
-from apps.notifications.models import Notification
+from apps.notifications.services import create_notification
 
 
 class Command(BaseCommand):
@@ -65,7 +65,7 @@ class Command(BaseCommand):
                     checkout_path = reverse('payments:checkout', kwargs={'order_id': order.pk})
                     checkout_url = f"{settings.SITE_URL.rstrip('/')}{checkout_path}"
 
-                    Notification.objects.create(
+                    create_notification(
                         user=winning_bid.bidder,
                         notification_type='order_created',
                         message=(
@@ -74,7 +74,7 @@ class Command(BaseCommand):
                         ),
                         link_url=f'/orders/{order.pk}/',
                     )
-                    Notification.objects.create(
+                    create_notification(
                         user=locked_listing.seller,
                         notification_type='auction_sold',
                         message=(
@@ -95,10 +95,11 @@ class Command(BaseCommand):
                     locked_listing.status = 'expired'
                     locked_listing.save(update_fields=['status'])
 
-                    Notification.objects.create(
+                    create_notification(
                         user=locked_listing.seller,
                         notification_type='auction_expired',
-                        message=f'Your listing "{locked_listing.title}" expired with no bids.'
+                        message=f'Your listing "{locked_listing.title}" expired with no bids.',
+                        link_url=f'/listings/{locked_listing.pk}/',
                     )
                     self.stdout.write(
                         self.style.WARNING(f'Expired: {locked_listing.title} (no bids)')

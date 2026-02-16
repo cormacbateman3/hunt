@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 import stripe
-from apps.notifications.models import Notification
+from apps.notifications.services import create_notification
 from apps.orders.models import Order
 from apps.shipping.services import ShippoError, ensure_checkout_shipping_ready
 from .models import PaymentTransaction, Transaction
@@ -200,7 +200,7 @@ def handle_payment_intent_succeeded(payment_intent):
         order.listing.save(update_fields=['status', 'updated_at'])
 
     if not was_paid:
-        Notification.objects.create(
+        create_notification(
             user=order.seller,
             notification_type='order_paid',
             message=(
@@ -209,7 +209,7 @@ def handle_payment_intent_succeeded(payment_intent):
             ),
             link_url=f'/orders/{order.pk}/',
         )
-        Notification.objects.create(
+        create_notification(
             user=order.buyer,
             notification_type='payment_confirmed',
             message=f'Payment confirmed for order #{order.pk}.',

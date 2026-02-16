@@ -57,10 +57,18 @@
     <article class="card">
         <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Recent Notifications</h2>
         {% for note in recent_notifications %}
-            <p style="margin-bottom: 0.45rem;">{{ note.message }}</p>
+            <p style="margin-bottom: 0.45rem;">
+                {% if not note.is_read %}<strong>[Unread]</strong>{% endif %}
+                {% if note.link_url %}
+                    <a href="{% url 'notifications:go' note.pk %}">{{ note.message }}</a>
+                {% else %}
+                    {{ note.message }}
+                {% endif %}
+            </p>
         {% empty %}
             <p>No notifications.</p>
         {% endfor %}
+        <a href="{% url 'notifications:center' %}" style="color: var(--color-aged-amber);">Open notifications center</a>
     </article>
 
     <article class="card">

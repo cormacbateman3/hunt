@@ -14,6 +14,7 @@ from apps.orders.services import calculate_platform_fee
 from apps.payments.models import PaymentTransaction
 from apps.trades.models import TradeOffer
 from apps.enforcement.services import enforce_capability
+from apps.notifications.services import create_notification
 
 
 def _prefill_from_collection_item(collection_item):
@@ -407,4 +408,11 @@ def buy_now_checkout_start(request, pk):
             listing.status = 'pending'
             listing.save(update_fields=['status', 'updated_at'])
 
+    create_notification(
+        user=request.user,
+        notification_type='order_created',
+        message=f'Checkout started for order #{order.pk}. Complete payment to secure this listing.',
+        link_url=f'/orders/{order.pk}/',
+        dedupe_window_hours=1,
+    )
     return redirect('payments:checkout', order_id=order.pk)

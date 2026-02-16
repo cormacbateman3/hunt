@@ -2,7 +2,7 @@ from datetime import timedelta
 from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
-from apps.notifications.models import Notification
+from apps.notifications.services import create_notification
 from apps.enforcement.services import enforce_capability
 from apps.orders.models import AddressSnapshot
 from apps.shipping.providers.shippo import ShippoClient, ShippoError
@@ -108,7 +108,7 @@ def _notify_trade_state_change(trade, old_status, new_status):
         return
 
     for user in {trade.initiator, trade.counterparty}:
-        Notification.objects.create(
+        create_notification(
             user=user,
             notification_type=note_type,
             message=message,
@@ -374,14 +374,14 @@ def create_trade_offer(
         if counter_to and counter_to.status == 'pending':
             counter_to.status = 'countered'
             counter_to.save(update_fields=['status', 'updated_at'])
-            Notification.objects.create(
+            create_notification(
                 user=counter_to.from_user,
                 notification_type='trade_offer_countered',
                 message=f'Your trade offer #{counter_to.pk} received a counteroffer.',
                 link_url=f'/trades/offers/{offer.pk}/',
             )
 
-        Notification.objects.create(
+        create_notification(
             user=to_user,
             notification_type='trade_offer_countered' if counter_to else 'trade_offer_received',
             message=(
@@ -465,13 +465,13 @@ def accept_trade_offer(offer, actor):
         listing.status = 'sold'
         listing.save(update_fields=['status', 'updated_at'])
 
-        Notification.objects.create(
+        create_notification(
             user=trade.initiator,
             notification_type='trade_offer_accepted',
             message=f'Your trade offer #{locked_offer.pk} was accepted.',
             link_url=f'/trades/{trade.pk}/',
         )
-        Notification.objects.create(
+        create_notification(
             user=trade.counterparty,
             notification_type='trade_offer_accepted',
             message=f'You accepted trade offer #{locked_offer.pk}. Trade #{trade.pk} created.',
@@ -491,7 +491,7 @@ def decline_trade_offer(offer, actor):
         return False, 'Only the recipient can decline this offer.'
     offer.status = 'declined'
     offer.save(update_fields=['status', 'updated_at'])
-    Notification.objects.create(
+    create_notification(
         user=offer.from_user,
         notification_type='trade_offer_declined',
         message=f'Your trade offer #{offer.pk} was declined.',
@@ -521,5 +521,12 @@ def expire_offers(limit=500):
     for offer in pending:
         offer.status = 'expired'
         offer.save(update_fields=['status', 'updated_at'])
+        create_notification(
+            user=offer.from_user,
+            notification_type='trade_offer_expired',
+            message=f'Trade offer #{offer.pk} expired without response.',
+            link_url=f'/trades/offers/{offer.pk}/',
+            dedupe_window_hours=24,
+        )
         expired += 1
     return expired

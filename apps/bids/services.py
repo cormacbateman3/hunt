@@ -5,7 +5,7 @@ from django.db import transaction
 from apps.listings.models import Listing
 from .models import Bid
 from apps.enforcement.services import enforce_capability
-from apps.notifications.models import Notification
+from apps.notifications.services import create_notification
 
 
 def place_bid(listing, bidder, amount):
@@ -60,10 +60,11 @@ def place_bid(listing, bidder, amount):
         locked_listing.save(update_fields=['current_bid'])
 
         if previous_winner and previous_winner.bidder_id != bidder.id:
-            Notification.objects.create(
+            create_notification(
                 user=previous_winner.bidder,
                 notification_type='outbid',
-                message=f'You have been outbid on "{locked_listing.title}". Current bid: ${amount}'
+                message=f'You have been outbid on "{locked_listing.title}". Current bid: ${amount}',
+                link_url=f'/listings/{locked_listing.pk}/',
             )
 
     return True, f"Bid placed successfully! Your bid: ${amount:.2f}"

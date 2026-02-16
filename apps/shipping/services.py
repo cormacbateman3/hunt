@@ -2,7 +2,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from datetime import datetime
 from django.conf import settings
 from django.utils import timezone
-from apps.notifications.models import Notification
+from apps.notifications.services import create_notification
 from apps.orders.models import AddressSnapshot
 from apps.orders.services import transition_order
 from .models import Shipment, ShipmentEvent
@@ -177,7 +177,7 @@ def _apply_shipment_status(shipment, status, *, description='', raw_payload=None
         ok, _ = transition_order(shipment.order, order_status)
         if ok and notify:
             note_type = 'order_delivered' if order_status == 'delivered' else 'order_shipped'
-            Notification.objects.create(
+            create_notification(
                 user=shipment.order.buyer,
                 notification_type=note_type,
                 message=f'Order #{shipment.order_id} shipment status: {shipment.get_status_display()}.',

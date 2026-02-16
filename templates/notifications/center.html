@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}Notifications | KeystoneBid{% endblock %}
+
+{% block content %}
+<section style="display: grid; gap: 1rem;">
+    <article class="card">
+        <h1 style="margin-bottom: 0.5rem;">Notifications Center</h1>
+        <form method="post" action="{% url 'notifications:mark_all_read' %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button class="btn-secondary" type="submit">Mark all as read</button>
+        </form>
+    </article>
+
+    <article class="card">
+        {% for notification in page_obj %}
+            <div style="padding: 0.7rem 0; border-bottom: 1px solid var(--color-border);">
+                <p style="margin-bottom: 0.25rem;">
+                    {% if not notification.is_read %}<strong>[Unread]</strong>{% endif %}
+                    {{ notification.message }}
+                </p>
+                <p style="color: var(--color-muted); margin-bottom: 0.4rem;">
+                    {{ notification.get_notification_type_display }} - {{ notification.created_at|date:"M j, Y g:i a" }}
+                </p>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    {% if notification.link_url %}
+                        <a class="btn-secondary" href="{% url 'notifications:go' notification.pk %}">Open</a>
+                    {% endif %}
+                    {% if not notification.is_read %}
+                        <form method="post" action="{% url 'notifications:mark_read' notification.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <button class="btn-secondary" type="submit">Mark read</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        {% empty %}
+            <p>No notifications yet.</p>
+        {% endfor %}
+    </article>
+
+    {% if page_obj.has_other_pages %}
+    <article class="card" style="display: flex; justify-content: space-between; align-items: center;">
+        {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
+        {% else %}
+            <span></span>
+        {% endif %}
+        <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}">Next</a>
+        {% else %}
+            <span></span>
+        {% endif %}
+    </article>
+    {% endif %}
+</section>
+{% endblock %}
+

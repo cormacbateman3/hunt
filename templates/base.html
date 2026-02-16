@@ -31,6 +31,9 @@
                     <a href="{% url 'listings:create' %}">Create Listing</a>
                     <a href="{% url 'collections:my_collection' %}">My Collection</a>
                     <a href="{% url 'orders:my_orders' %}">My Orders</a>
+                    <a href="{% url 'notifications:center' %}">
+                        Bell{% if nav_unread_notifications_count %} ({{ nav_unread_notifications_count }}){% endif %}
+                    </a>
                     <a href="{% url 'accounts:dashboard' %}">Dashboard</a>
                     <a href="{% url 'accounts:profile' user.username %}">Profile</a>
                     <a href="{% url 'accounts:logout' %}">Logout</a>

@@ -1,7 +1,7 @@
 from datetime import timedelta
 from django.db.models import Count, Q
 from django.utils import timezone
-from apps.notifications.models import Notification
+from apps.notifications.services import create_notification
 from .models import AccountRestriction, Strike
 
 
@@ -107,7 +107,7 @@ def issue_strike(*, user, reason, related_order=None, related_trade=None, notes=
         expires_at=_strike_expiry(_now()),
     )
     refresh_account_restriction(user)
-    Notification.objects.create(
+    create_notification(
         user=user,
         notification_type='strike_issued',
         message=f'A strike was issued for {strike.get_reason_display().lower()}.',
@@ -162,7 +162,7 @@ def initiate_excuse_handshake(*, strike, actor, excuse_reason, excuse_note=''):
 
     other_party = _counterparty_for_strike(strike, actor)
     if other_party:
-        Notification.objects.create(
+        create_notification(
             user=other_party,
             notification_type='strike_issued',
             message=(
@@ -193,7 +193,7 @@ def confirm_excuse_handshake(*, strike, actor):
     strike.excuse_confirmed_at = _now()
     strike.save(update_fields=['is_excused', 'excuse_confirmed_by', 'excuse_confirmed_at'])
     refresh_account_restriction(strike.user)
-    Notification.objects.create(
+    create_notification(
         user=strike.user,
         notification_type='strike_excused',
         message=f'Strike #{strike.pk} was excused by mutual handshake.',
