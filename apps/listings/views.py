@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q
+from django.urls import reverse
 from django.views.generic import ListView
 from django.utils import timezone
 from .models import Listing, ListingQuestion
@@ -429,7 +430,7 @@ def buy_now_checkout_start(request, pk):
         user=request.user,
         notification_type='order_created',
         message=f'Checkout started for order #{order.pk}. Complete payment to secure this listing.',
-        link_url=f'/orders/{order.pk}/',
+        link_url=reverse('orders:detail', kwargs={'pk': order.pk}),
         dedupe_window_hours=1,
     )
     return redirect('payments:checkout', order_id=order.pk)
@@ -438,6 +439,9 @@ def buy_now_checkout_start(request, pk):
 @login_required
 def ask_question(request, pk):
     listing = get_object_or_404(Listing, pk=pk)
+    if listing.listing_type != 'auction':
+        messages.error(request, 'Q&A is available for auction listings only.')
+        return redirect('listings:detail', pk=pk)
     if request.method != 'POST':
         return redirect('listings:detail', pk=pk)
     if request.user.id == listing.seller_id:
@@ -458,7 +462,7 @@ def ask_question(request, pk):
         user=listing.seller,
         notification_type='listing_question_received',
         message=f'New question on "{listing.title}" from {request.user.username}.',
-        link_url=f'/listings/{listing.pk}/',
+        link_url=reverse('listings:detail', kwargs={'pk': listing.pk}),
         dedupe_window_hours=1,
     )
     messages.success(request, 'Question submitted.')
@@ -468,6 +472,9 @@ def ask_question(request, pk):
 @login_required
 def answer_question(request, pk, question_id):
     listing = get_object_or_404(Listing, pk=pk)
+    if listing.listing_type != 'auction':
+        messages.error(request, 'Q&A is available for auction listings only.')
+        return redirect('listings:detail', pk=pk)
     question = get_object_or_404(ListingQuestion, pk=question_id, listing=listing)
     if request.method != 'POST':
         return redirect('listings:detail', pk=pk)
@@ -486,14 +493,8 @@ def answer_question(request, pk, question_id):
         user=question.asker,
         notification_type='listing_question_answered',
         message=f'Seller answered your question on "{listing.title}".',
-        link_url=f'/listings/{listing.pk}/',
+        link_url=reverse('listings:detail', kwargs={'pk': listing.pk}),
         dedupe_window_hours=1,
     )
     messages.success(request, 'Answer posted.')
     return redirect('listings:detail', pk=pk)
-    if listing.listing_type != 'auction':
-        messages.error(request, 'Q&A is available for auction listings only.')
-        return redirect('listings:detail', pk=pk)
-    if listing.listing_type != 'auction':
-        messages.error(request, 'Q&A is available for auction listings only.')
-        return redirect('listings:detail', pk=pk)

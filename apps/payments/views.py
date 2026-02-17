@@ -1,8 +1,10 @@
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import transaction as db_transaction
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 import stripe
@@ -185,21 +187,27 @@ def handle_payment_intent_succeeded(payment_intent):
     if not order:
         return
 
-    payment, _ = PaymentTransaction.objects.get_or_create(order=order)
-    was_paid = order.status == 'paid'
+    with db_transaction.atomic():
+        order = Order.objects.select_for_update().select_related(
+            'listing', 'buyer', 'seller',
+        ).get(pk=order.pk)
 
-    payment.status = 'paid'
-    payment.stripe_payment_intent_id = payment_intent.get('id', '')
-    payment.save(update_fields=['status', 'stripe_payment_intent_id', 'updated_at'])
+        payment, _ = PaymentTransaction.objects.get_or_create(order=order)
+        was_paid = order.status == 'paid'
 
-    if order.status == 'pending_payment':
-        order.status = 'paid'
-        order.save(update_fields=['status', 'updated_at'])
-    if order.order_type == 'buy_now' and order.listing.status != 'sold':
-        order.listing.status = 'sold'
-        order.listing.save(update_fields=['status', 'updated_at'])
+        payment.status = 'paid'
+        payment.stripe_payment_intent_id = payment_intent.get('id', '')
+        payment.save(update_fields=['status', 'stripe_payment_intent_id', 'updated_at'])
+
+        if order.status == 'pending_payment':
+            order.status = 'paid'
+            order.save(update_fields=['status', 'updated_at'])
+        if order.order_type == 'buy_now' and order.listing.status != 'sold':
+            order.listing.status = 'sold'
+            order.listing.save(update_fields=['status', 'updated_at'])
 
     if not was_paid:
+        order_url = reverse('orders:detail', kwargs={'pk': order.pk})
         create_notification(
             user=order.seller,
             notification_type='order_paid',
@@ -207,11 +215,11 @@ def handle_payment_intent_succeeded(payment_intent):
                 f'Payment received for order #{order.pk} ({order.listing.title}) '
                 f'from {order.buyer.username}.'
             ),
-            link_url=f'/orders/{order.pk}/',
+            link_url=order_url,
         )
         create_notification(
             user=order.buyer,
             notification_type='payment_confirmed',
             message=f'Payment confirmed for order #{order.pk}.',
-            link_url=f'/orders/{order.pk}/',
+            link_url=order_url,
         )
