@@ -78,7 +78,7 @@ class Command(BaseCommand):
 
                     locked_listing.status = 'sold'
                     locked_listing.current_bid = winning_bid.amount
-                    locked_listing.save(update_fields=['status', 'current_bid'])
+                    locked_listing.save(update_fields=['status', 'current_bid', 'updated_at'])
 
                     order, _ = Order.objects.get_or_create(
                         listing=locked_listing,
@@ -128,7 +128,7 @@ class Command(BaseCommand):
                     )
                 else:
                     locked_listing.status = 'expired'
-                    locked_listing.save(update_fields=['status'])
+                    locked_listing.save(update_fields=['status', 'updated_at'])
 
                     create_notification(
                         user=locked_listing.seller,
