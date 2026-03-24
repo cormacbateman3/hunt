@@ -1,0 +1,26 @@
+state_name,state_abbrev,state_fips,min_license_year,min_year_confidence,issuance_unit_type,issuance_unit_label,is_primary_default
+Colorado,CO,8,1899,high,GMU,Game Management Unit (GMU),False
+Georgia,GA,13,1911,high,County,County,False
+Illinois,IL,17,1903,high,County,County,False
+Indiana,IN,18,1901,medium,County,County,False
+Iowa,IA,19,1909,medium,County,County,False
+Kansas,KS,20,1905,medium,DMU,Deer Management Unit (DMU),False
+Kentucky,KY,21,1912,high,County,County,False
+Maine,ME,23,1903,medium,WMD,Wildlife Management District (WMD),False
+Maryland,MD,24,1872,medium,County,County; Deer Management Region (regulatory overlay),False
+Michigan,MI,26,1895,high,DMU,Deer Management Unit (DMU),False
+Minnesota,MN,27,1899,high,DPA,Deer Permit Area (DPA),False
+Missouri,MO,29,1913,medium,County,County,False
+Montana,MT,30,1901,medium,Hunting District,Hunting District (HD),False
+New Hampshire,NH,33,1909,medium,WMU,Wildlife Management Unit (WMU),False
+New York,NY,36,1864,medium,WMU,Wildlife Management Unit (WMU),False
+North Carolina,NC,37,1935,medium,County,County,False
+Ohio,OH,39,1913,high,County,County,False
+Pennsylvania,PA,42,1913,high,County,County (historical); Wildlife Management Unit (WMU since 2003),True
+Tennessee,TN,47,1920,medium,County,County,False
+Texas,TX,48,1909,high,County,County,False
+Vermont,VT,50,1908,medium,WMU,Wildlife Management Unit (WMU),False
+Virginia,VA,51,1916,medium,County,County and Independent City,False
+West Virginia,WV,54,1899,high,County,County,False
+Wisconsin,WI,55,1897,high,County,County (historical/antique); Deer Management Unit (DMU current),False
+Wyoming,WY,56,1886,low,Hunt Area,Hunt Area,False

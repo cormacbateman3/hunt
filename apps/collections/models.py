@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-from apps.core.models import County, LicenseType
+from apps.core.models import GeographicUnit, LicenseType
 from apps.core.constants import RESIDENT_STATUS_CHOICES
 
 
@@ -21,10 +21,11 @@ class CollectionItem(models.Model):
     description = models.TextField(blank=True)
     license_year = models.IntegerField(null=True, blank=True, help_text="Year the license was issued")
     county = models.ForeignKey(
-        County, on_delete=models.SET_NULL, null=True, blank=True, related_name='collection_items'
+        GeographicUnit, on_delete=models.SET_NULL, null=True, blank=True, related_name='collection_items'
     )
-    license_type = models.ForeignKey(
-        LicenseType, on_delete=models.SET_NULL, null=True, blank=True, related_name='collection_items'
+    license_types = models.ManyToManyField(
+        LicenseType, blank=True, related_name='collection_items',
+        help_text="License type(s) for this collection item",
     )
     resident_status = models.CharField(
         max_length=20, choices=RESIDENT_STATUS_CHOICES, default='unknown'
@@ -70,7 +71,7 @@ class WantedItem(models.Model):
     """Item a user is looking for"""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='wanted_items')
     county = models.ForeignKey(
-        County, on_delete=models.SET_NULL, null=True, blank=True, related_name='wanted_items'
+        GeographicUnit, on_delete=models.SET_NULL, null=True, blank=True, related_name='wanted_items'
     )
     year_min = models.IntegerField(null=True, blank=True)
     year_max = models.IntegerField(null=True, blank=True)

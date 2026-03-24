@@ -16,8 +16,8 @@ Core Alpha systems are included:
 - Shipping + tracking integration (Shippo wrapper, webhook + polling fallback)
 - Collections and wanted list
 - Trade offers and dual-shipment lifecycle
-- Enforcement (strikes, restrictions, excuse handshake)
-- In-app notifications center
+- Enforcement (strikes, restrictions, excuses)
+- In-app notifications
 - Auction enhancements (reserve handling, Q&A)
 - Favorites (listings + public collection items)
 

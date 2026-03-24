@@ -1,0 +1,592 @@
+state_abbrev,name,unit_type,fips_code,geo_data_complete,sort_order
+CO,GMU 1,GMU,,False,0
+CO,GMU 2,GMU,,False,1
+CO,GMU 3,GMU,,False,2
+CO,GMU 4,GMU,,False,3
+CO,GMU 5,GMU,,False,4
+CO,GMU 6,GMU,,False,5
+CO,GMU 7,GMU,,False,6
+CO,GMU 8,GMU,,False,7
+CO,GMU 9,GMU,,False,8
+CO,GMU 10,GMU,,False,9
+CO,GMU 11,GMU,,False,10
+CO,GMU 12,GMU,,False,11
+CO,GMU 13,GMU,,False,12
+CO,GMU 14,GMU,,False,13
+CO,GMU 15,GMU,,False,14
+CO,GMU 181,GMU,,False,15
+CO,GMU 371,GMU,,False,16
+CO,GMU 444,GMU,,False,17
+CO,GMU 461,GMU,,False,18
+CO,GMU 751,GMU,,False,19
+GA,Appling,County,,False,0
+GA,Atkinson,County,,False,1
+GA,Bacon,County,,False,2
+GA,Baker,County,,False,3
+GA,Baldwin,County,,False,4
+GA,Banks,County,,False,5
+GA,Barrow,County,,False,6
+GA,Bartow,County,,False,7
+GA,Ben Hill,County,,False,8
+GA,Berrien,County,,False,9
+GA,Bibb,County,,False,10
+GA,Bleckley,County,,False,11
+GA,Brantley,County,,False,12
+GA,Brooks,County,,False,13
+GA,Bryan,County,,False,14
+IL,Adams,County,,False,0
+IL,Alexander,County,,False,1
+IL,Bond,County,,False,2
+IL,Boone,County,,False,3
+IL,Brown,County,,False,4
+IL,Bureau,County,,False,5
+IL,Calhoun,County,,False,6
+IL,Carroll,County,,False,7
+IL,Cass,County,,False,8
+IL,Champaign,County,,False,9
+IL,Christian,County,,False,10
+IL,Clark,County,,False,11
+IL,Clay,County,,False,12
+IL,Clinton,County,,False,13
+IL,Coles,County,,False,14
+IN,Adams,County,,False,0
+IN,Allen,County,,False,1
+IN,Bartholomew,County,,False,2
+IN,Benton,County,,False,3
+IN,Blackford,County,,False,4
+IN,Boone,County,,False,5
+IN,Brown,County,,False,6
+IN,Carroll,County,,False,7
+IN,Cass,County,,False,8
+IN,Clark,County,,False,9
+IN,Clay,County,,False,10
+IN,Clinton,County,,False,11
+IN,Crawford,County,,False,12
+IN,Daviess,County,,False,13
+IN,Dearborn,County,,False,14
+IA,Adair,County,,False,0
+IA,Adams,County,,False,1
+IA,Allamakee,County,,False,2
+IA,Appanoose,County,,False,3
+IA,Audubon,County,,False,4
+IA,Benton,County,,False,5
+IA,Black Hawk,County,,False,6
+IA,Boone,County,,False,7
+IA,Bremer,County,,False,8
+IA,Buchanan,County,,False,9
+IA,Buena Vista,County,,False,10
+IA,Butler,County,,False,11
+IA,Calhoun,County,,False,12
+IA,Carroll,County,,False,13
+IA,Cass,County,,False,14
+IA,Cedar,County,,False,15
+IA,Cerro Gordo,County,,False,16
+IA,Cherokee,County,,False,17
+IA,Chickasaw,County,,False,18
+IA,Clarke,County,,False,19
+IA,Clay,County,,False,20
+IA,Clayton,County,,False,21
+IA,Clinton,County,,False,22
+IA,Crawford,County,,False,23
+IA,Dallas,County,,False,24
+IA,Davis,County,,False,25
+IA,Decatur,County,,False,26
+IA,Delaware,County,,False,27
+IA,Des Moines,County,,False,28
+IA,Dickinson,County,,False,29
+KS,1,DMU,,True,0
+KS,2,DMU,,True,1
+KS,3,DMU,,True,2
+KS,4,DMU,,True,3
+KS,5,DMU,,True,4
+KS,6,DMU,,True,5
+KS,7,DMU,,True,6
+KS,8,DMU,,True,7
+KS,8A (Fort Riley),DMU,,True,8
+KS,9,DMU,,True,9
+KS,10,DMU,,True,10
+KS,10A (Fort Leavenworth),DMU,,True,11
+KS,11,DMU,,True,12
+KS,12,DMU,,True,13
+KS,13,DMU,,True,14
+KS,14,DMU,,True,15
+KS,15,DMU,,True,16
+KS,16,DMU,,True,17
+KS,17,DMU,,True,18
+KS,18,DMU,,True,19
+KS,19,DMU,,True,20
+KY,Adair,County,,False,0
+KY,Allen,County,,False,1
+KY,Anderson,County,,False,2
+KY,Ballard,County,,False,3
+KY,Barren,County,,False,4
+KY,Bath,County,,False,5
+KY,Bell,County,,False,6
+KY,Boone,County,,False,7
+KY,Bourbon,County,,False,8
+KY,Boyd,County,,False,9
+KY,Boyle,County,,False,10
+KY,Bracken,County,,False,11
+KY,Breathitt,County,,False,12
+KY,Breckinridge,County,,False,13
+KY,Bullitt,County,,False,14
+ME,WMD 1,WMD,,True,0
+ME,WMD 2,WMD,,True,1
+ME,WMD 3,WMD,,True,2
+ME,WMD 4,WMD,,True,3
+ME,WMD 5,WMD,,True,4
+ME,WMD 6,WMD,,True,5
+ME,WMD 7,WMD,,True,6
+ME,WMD 8,WMD,,True,7
+ME,WMD 9,WMD,,True,8
+ME,WMD 10,WMD,,True,9
+ME,WMD 11,WMD,,True,10
+ME,WMD 12,WMD,,True,11
+ME,WMD 13,WMD,,True,12
+ME,WMD 14,WMD,,True,13
+ME,WMD 15,WMD,,True,14
+ME,WMD 16,WMD,,True,15
+ME,WMD 17,WMD,,True,16
+ME,WMD 18,WMD,,True,17
+ME,WMD 19,WMD,,True,18
+ME,WMD 20,WMD,,True,19
+ME,WMD 21,WMD,,True,20
+ME,WMD 22,WMD,,True,21
+ME,WMD 23,WMD,,True,22
+ME,WMD 24,WMD,,True,23
+ME,WMD 25,WMD,,True,24
+ME,WMD 26,WMD,,True,25
+ME,WMD 27,WMD,,True,26
+ME,WMD 28,WMD,,True,27
+ME,WMD 29,WMD,,True,28
+MD,Allegany,County,,True,0
+MD,Anne Arundel,County,,True,1
+MD,Baltimore County,County,,True,2
+MD,Baltimore City,County,,True,3
+MD,Calvert,County,,True,4
+MD,Caroline,County,,True,5
+MD,Carroll,County,,True,6
+MD,Cecil,County,,True,7
+MD,Charles,County,,True,8
+MD,Dorchester,County,,True,9
+MD,Frederick,County,,True,10
+MD,Garrett,County,,True,11
+MD,Harford,County,,True,12
+MD,Howard,County,,True,13
+MD,Kent,County,,True,14
+MD,Montgomery,County,,True,15
+MD,Prince George's,County,,True,16
+MD,Queen Anne's,County,,True,17
+MD,St. Mary's,County,,True,18
+MD,Somerset,County,,True,19
+MD,Talbot,County,,True,20
+MD,Washington,County,,True,21
+MD,Wicomico,County,,True,22
+MD,Worcester,County,,True,23
+MI,DMU 001,DMU,,False,0
+MI,DMU 006,DMU,,False,1
+MI,DMU 018,DMU,,False,2
+MI,DMU 046 (Lenawee Co.),DMU,,False,3
+MI,DMU 047 (Livingston Co.),DMU,,False,4
+MI,DMU 052,DMU,,False,5
+MI,DMU 056,DMU,,False,6
+MI,DMU 065,DMU,,False,7
+MI,DMU 070,DMU,,False,8
+MI,DMU 075,DMU,,False,9
+MI,DMU 086,DMU,,False,10
+MI,DMU 121,DMU,,False,11
+MI,DMU 122,DMU,,False,12
+MI,DMU 127,DMU,,False,13
+MI,DMU 245,DMU,,False,14
+MI,DMU 273,DMU,,False,15
+MI,DMU 486,DMU,,False,16
+MN,DPA 100-series (northern),DPA,,False,0
+MN,DPA 200-series (central/western),DPA,,False,1
+MN,DPA 300-series (southeast),DPA,,False,2
+MN,DPA 600-series (CWD management: 601,DPA,,False,3
+MN,604,DPA,,False,4
+MN,605,DPA,,False,5
+MN,642-649,DPA,,False,6
+MN,655,DPA,,False,7
+MN,661,DPA,,False,8
+MN,666,DPA,,False,9
+MN,671,DPA,,False,10
+MN,679,DPA,,False,11
+MN,684),DPA,,False,12
+MN,DPA 701 (special),DPA,,False,13
+MO,Adair,County,,False,0
+MO,Andrew,County,,False,1
+MO,Atchison,County,,False,2
+MO,Audrain,County,,False,3
+MO,Barry,County,,False,4
+MO,Barton,County,,False,5
+MO,Bates,County,,False,6
+MO,Benton,County,,False,7
+MO,Bollinger,County,,False,8
+MO,Boone,County,,False,9
+MO,Buchanan,County,,False,10
+MO,Butler,County,,False,11
+MO,Caldwell,County,,False,12
+MO,Callaway,County,,False,13
+MO,Camden,County,,False,14
+MT,HD 100,Hunting District,,False,0
+MT,HD 101,Hunting District,,False,1
+MT,HD 102,Hunting District,,False,2
+MT,HD 103,Hunting District,,False,3
+MT,HD 104,Hunting District,,False,4
+MT,HD 105,Hunting District,,False,5
+NH,A1,WMU,,True,0
+NH,A2,WMU,,True,1
+NH,B,WMU,,True,2
+NH,C1,WMU,,True,3
+NH,C2,WMU,,True,4
+NH,D1,WMU,,True,5
+NH,D2,WMU,,True,6
+NH,E1,WMU,,True,7
+NH,E2,WMU,,True,8
+NH,E3,WMU,,True,9
+NH,F,WMU,,True,10
+NH,G1,WMU,,True,11
+NH,H1,WMU,,True,12
+NH,H2N,WMU,,True,13
+NH,H2S,WMU,,True,14
+NH,I1,WMU,,True,15
+NH,I2,WMU,,True,16
+NH,J1,WMU,,True,17
+NH,J2,WMU,,True,18
+NH,K,WMU,,True,19
+NH,L,WMU,,True,20
+NH,M,WMU,,True,21
+NY,1A,WMU,,False,0
+NY,1C,WMU,,False,1
+NY,2A,WMU,,False,2
+NY,3A,WMU,,False,3
+NY,3C,WMU,,False,4
+NY,3F,WMU,,False,5
+NY,3G,WMU,,False,6
+NY,3H,WMU,,False,7
+NY,3J,WMU,,False,8
+NY,3K,WMU,,False,9
+NY,3M,WMU,,False,10
+NY,3N,WMU,,False,11
+NY,3P,WMU,,False,12
+NY,3R,WMU,,False,13
+NY,3S,WMU,,False,14
+NY,4A,WMU,,False,15
+NY,4B,WMU,,False,16
+NY,4C,WMU,,False,17
+NY,4F,WMU,,False,18
+NY,4G,WMU,,False,19
+NY,4H,WMU,,False,20
+NY,4J,WMU,,False,21
+NY,4K,WMU,,False,22
+NY,4L,WMU,,False,23
+NY,4O,WMU,,False,24
+NY,4P,WMU,,False,25
+NY,4R,WMU,,False,26
+NY,4S,WMU,,False,27
+NY,4T,WMU,,False,28
+NY,4U,WMU,,False,29
+NY,4W,WMU,,False,30
+NY,4Y,WMU,,False,31
+NY,4Z,WMU,,False,32
+NC,Alamance,County,,False,0
+NC,Alexander,County,,False,1
+NC,Alleghany,County,,False,2
+NC,Anson,County,,False,3
+NC,Ashe,County,,False,4
+NC,Avery,County,,False,5
+NC,Beaufort,County,,False,6
+NC,Bertie,County,,False,7
+NC,Bladen,County,,False,8
+NC,Brunswick,County,,False,9
+NC,Buncombe,County,,False,10
+NC,Burke,County,,False,11
+NC,Cabarrus,County,,False,12
+NC,Caldwell,County,,False,13
+NC,Camden,County,,False,14
+OH,Adams,County,,False,0
+OH,Allen,County,,False,1
+OH,Ashland,County,,False,2
+OH,Ashtabula,County,,False,3
+OH,Athens,County,,False,4
+OH,Auglaize,County,,False,5
+OH,Belmont,County,,False,6
+OH,Brown,County,,False,7
+OH,Butler,County,,False,8
+OH,Carroll,County,,False,9
+OH,Champaign,County,,False,10
+OH,Clark,County,,False,11
+OH,Clermont,County,,False,12
+OH,Clinton,County,,False,13
+OH,Columbiana,County,,False,14
+PA,Adams,County,,True,0
+PA,Allegheny,County,,True,1
+PA,Armstrong,County,,True,2
+PA,Beaver,County,,True,3
+PA,Bedford,County,,True,4
+PA,Berks,County,,True,5
+PA,Blair,County,,True,6
+PA,Bradford,County,,True,7
+PA,Bucks,County,,True,8
+PA,Butler,County,,True,9
+PA,Cambria,County,,True,10
+PA,Cameron,County,,True,11
+PA,Carbon,County,,True,12
+PA,Centre,County,,True,13
+PA,Chester,County,,True,14
+PA,Clarion,County,,True,15
+PA,Clearfield,County,,True,16
+PA,Clinton,County,,True,17
+PA,Columbia,County,,True,18
+PA,Crawford,County,,True,19
+PA,Cumberland,County,,True,20
+PA,Dauphin,County,,True,21
+PA,Delaware,County,,True,22
+PA,Elk,County,,True,23
+PA,Erie,County,,True,24
+PA,Fayette,County,,True,25
+PA,Forest,County,,True,26
+PA,Franklin,County,,True,27
+PA,Fulton,County,,True,28
+PA,Greene,County,,True,29
+PA,Huntingdon,County,,True,30
+PA,Indiana,County,,True,31
+PA,Jefferson,County,,True,32
+PA,Juniata,County,,True,33
+PA,Lackawanna,County,,True,34
+PA,Lancaster,County,,True,35
+PA,Lawrence,County,,True,36
+PA,Lebanon,County,,True,37
+PA,Lehigh,County,,True,38
+PA,Luzerne,County,,True,39
+PA,Lycoming,County,,True,40
+PA,McKean,County,,True,41
+PA,Mercer,County,,True,42
+PA,Mifflin,County,,True,43
+PA,Monroe,County,,True,44
+PA,Montgomery,County,,True,45
+PA,Montour,County,,True,46
+PA,Northampton,County,,True,47
+PA,Northumberland,County,,True,48
+PA,Perry,County,,True,49
+PA,Philadelphia,County,,True,50
+PA,Pike,County,,True,51
+PA,Potter,County,,True,52
+PA,Schuylkill,County,,True,53
+PA,Snyder,County,,True,54
+PA,Somerset,County,,True,55
+PA,Sullivan,County,,True,56
+PA,Susquehanna,County,,True,57
+PA,Tioga,County,,True,58
+PA,Union,County,,True,59
+PA,Venango,County,,True,60
+PA,Warren,County,,True,61
+PA,Washington,County,,True,62
+PA,Wayne,County,,True,63
+PA,Westmoreland,County,,True,64
+PA,Wyoming,County,,True,65
+PA,York,County,,True,66
+TN,Anderson,County,,False,0
+TN,Bedford,County,,False,1
+TN,Benton,County,,False,2
+TN,Bledsoe,County,,False,3
+TN,Blount,County,,False,4
+TN,Bradley,County,,False,5
+TN,Campbell,County,,False,6
+TN,Cannon,County,,False,7
+TN,Carroll,County,,False,8
+TN,Carter,County,,False,9
+TN,Cheatham,County,,False,10
+TN,Chester,County,,False,11
+TN,Claiborne,County,,False,12
+TN,Clay,County,,False,13
+TN,Cocke,County,,False,14
+TX,Anderson,County,,False,0
+TX,Andrews,County,,False,1
+TX,Angelina,County,,False,2
+TX,Aransas,County,,False,3
+TX,Archer,County,,False,4
+TX,Armstrong,County,,False,5
+TX,Atascosa,County,,False,6
+TX,Austin,County,,False,7
+TX,Bailey,County,,False,8
+TX,Bandera,County,,False,9
+TX,Bastrop,County,,False,10
+TX,Baylor,County,,False,11
+TX,Bee,County,,False,12
+TX,Bell,County,,False,13
+TX,Bexar,County,,False,14
+VT,A,WMU,,True,0
+VT,B,WMU,,True,1
+VT,C,WMU,,True,2
+VT,D1,WMU,,True,3
+VT,D2,WMU,,True,4
+VT,E1,WMU,,True,5
+VT,E2,WMU,,True,6
+VT,F1,WMU,,True,7
+VT,F2,WMU,,True,8
+VT,G,WMU,,True,9
+VT,H,WMU,,True,10
+VT,I,WMU,,True,11
+VT,J1,WMU,,True,12
+VT,J2,WMU,,True,13
+VT,K,WMU,,True,14
+VT,L,WMU,,True,15
+VT,M,WMU,,True,16
+VT,N,WMU,,True,17
+VT,O,WMU,,True,18
+VT,P,WMU,,True,19
+VT,Q,WMU,,True,20
+VA,Accomack,County,,False,0
+VA,Albemarle,County,,False,1
+VA,Alleghany,County,,False,2
+VA,Amelia,County,,False,3
+VA,Amherst,County,,False,4
+VA,Appomattox,County,,False,5
+VA,Arlington,County,,False,6
+VA,Augusta,County,,False,7
+VA,Bath,County,,False,8
+VA,Bedford,County,,False,9
+VA,Bland,County,,False,10
+VA,Botetourt,County,,False,11
+VA,Brunswick,County,,False,12
+VA,Buchanan,County,,False,13
+VA,Buckingham,County,,False,14
+WV,Barbour,County,,True,0
+WV,Berkeley,County,,True,1
+WV,Boone,County,,True,2
+WV,Braxton,County,,True,3
+WV,Brooke,County,,True,4
+WV,Cabell,County,,True,5
+WV,Calhoun,County,,True,6
+WV,Clay,County,,True,7
+WV,Doddridge,County,,True,8
+WV,Fayette,County,,True,9
+WV,Gilmer,County,,True,10
+WV,Grant,County,,True,11
+WV,Greenbrier,County,,True,12
+WV,Hampshire,County,,True,13
+WV,Hancock,County,,True,14
+WV,Hardy,County,,True,15
+WV,Harrison,County,,True,16
+WV,Jackson,County,,True,17
+WV,Jefferson,County,,True,18
+WV,Kanawha,County,,True,19
+WV,Lewis,County,,True,20
+WV,Lincoln,County,,True,21
+WV,Logan,County,,True,22
+WV,Marion,County,,True,23
+WV,Marshall,County,,True,24
+WV,Mason,County,,True,25
+WV,McDowell,County,,True,26
+WV,Mercer,County,,True,27
+WV,Mineral,County,,True,28
+WV,Mingo,County,,True,29
+WV,Monongalia,County,,True,30
+WV,Monroe,County,,True,31
+WV,Morgan,County,,True,32
+WV,Nicholas,County,,True,33
+WV,Ohio,County,,True,34
+WV,Pendleton,County,,True,35
+WV,Pleasants,County,,True,36
+WV,Pocahontas,County,,True,37
+WV,Preston,County,,True,38
+WV,Putnam,County,,True,39
+WV,Raleigh,County,,True,40
+WV,Randolph,County,,True,41
+WV,Ritchie,County,,True,42
+WV,Roane,County,,True,43
+WV,Summers,County,,True,44
+WV,Taylor,County,,True,45
+WV,Tucker,County,,True,46
+WV,Tyler,County,,True,47
+WV,Upshur,County,,True,48
+WV,Wayne,County,,True,49
+WV,Webster,County,,True,50
+WV,Wetzel,County,,True,51
+WV,Wirt,County,,True,52
+WV,Wood,County,,True,53
+WV,Wyoming,County,,True,54
+WI,Adams,County,,True,0
+WI,Ashland,County,,True,1
+WI,Barron,County,,True,2
+WI,Bayfield,County,,True,3
+WI,Brown,County,,True,4
+WI,Buffalo,County,,True,5
+WI,Burnett,County,,True,6
+WI,Calumet,County,,True,7
+WI,Chippewa,County,,True,8
+WI,Clark,County,,True,9
+WI,Columbia,County,,True,10
+WI,Crawford,County,,True,11
+WI,Dane,County,,True,12
+WI,Dodge,County,,True,13
+WI,Door,County,,True,14
+WI,Douglas,County,,True,15
+WI,Dunn,County,,True,16
+WI,Eau Claire,County,,True,17
+WI,Florence,County,,True,18
+WI,Fond du Lac,County,,True,19
+WI,Forest,County,,True,20
+WI,Grant,County,,True,21
+WI,Green,County,,True,22
+WI,Green Lake,County,,True,23
+WI,Iowa,County,,True,24
+WI,Iron,County,,True,25
+WI,Jackson,County,,True,26
+WI,Jefferson,County,,True,27
+WI,Juneau,County,,True,28
+WI,Kenosha,County,,True,29
+WI,Kewaunee,County,,True,30
+WI,La Crosse,County,,True,31
+WI,Lafayette,County,,True,32
+WI,Langlade,County,,True,33
+WI,Lincoln,County,,True,34
+WI,Manitowoc,County,,True,35
+WI,Marathon,County,,True,36
+WI,Marinette,County,,True,37
+WI,Marquette,County,,True,38
+WI,Menominee,County,,True,39
+WI,Milwaukee,County,,True,40
+WI,Monroe,County,,True,41
+WI,Oconto,County,,True,42
+WI,Oneida,County,,True,43
+WI,Outagamie,County,,True,44
+WI,Ozaukee,County,,True,45
+WI,Pepin,County,,True,46
+WI,Pierce,County,,True,47
+WI,Polk,County,,True,48
+WI,Portage,County,,True,49
+WI,Price,County,,True,50
+WI,Racine,County,,True,51
+WI,Richland,County,,True,52
+WI,Rock,County,,True,53
+WI,Rusk,County,,True,54
+WI,St. Croix,County,,True,55
+WI,Sauk,County,,True,56
+WI,Sawyer,County,,True,57
+WI,Shawano,County,,True,58
+WI,Sheboygan,County,,True,59
+WI,Taylor,County,,True,60
+WI,Trempealeau,County,,True,61
+WI,Vernon,County,,True,62
+WI,Vilas,County,,True,63
+WI,Walworth,County,,True,64
+WI,Washburn,County,,True,65
+WI,Washington,County,,True,66
+WI,Waukesha,County,,True,67
+WI,Waupaca,County,,True,68
+WI,Waushara,County,,True,69
+WI,Winnebago,County,,True,70
+WI,Wood,County,,True,71
+WY,Area 1 (Crook),Hunt Area,,False,0
+WY,Area 2 (Bearlodge),Hunt Area,,False,1
+WY,Area 3 (Keyhole),Hunt Area,,False,2
+WY,Area 4 (Arch Creek),Hunt Area,,False,3
+WY,Area 5 (Inyan Kara),Hunt Area,,False,4
+WY,Area 6 (S. Newcastle),Hunt Area,,False,5
+WY,Area 7 (S. Upton),Hunt Area,,False,6
+WY,Area 8 (Niobrara),Hunt Area,,False,7
+WY,Area 9 (Lance Creek),Hunt Area,,False,8
+WY,Area 10 (Lake De Smet),Hunt Area,,False,9

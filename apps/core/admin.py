@@ -1,18 +1,28 @@
 from django.contrib import admin
-from .models import County, LicenseType, MarketplaceSettings
+from .models import State, GeographicUnit, LicenseType, MarketplaceSettings
 
 
-@admin.register(County)
-class CountyAdmin(admin.ModelAdmin):
-    list_display = ('name', 'state', 'fips_code', 'slug')
+@admin.register(State)
+class StateAdmin(admin.ModelAdmin):
+    list_display = ('code', 'name', 'fips_code', 'issuance_unit_type', 'min_license_year', 'is_primary_default', 'slug')
+    search_fields = ('code', 'name')
+    prepopulated_fields = {'slug': ('name',)}
+    list_filter = ('is_primary_default',)
+
+
+@admin.register(GeographicUnit)
+class GeographicUnitAdmin(admin.ModelAdmin):
+    list_display = ('name', 'state', 'unit_type', 'fips_code', 'sort_order', 'slug')
     search_fields = ('name', 'fips_code')
+    list_filter = ('state', 'unit_type')
     prepopulated_fields = {'slug': ('name',)}
 
 
 @admin.register(LicenseType)
 class LicenseTypeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug')
+    list_display = ('name', 'state', 'category', 'slug')
     search_fields = ('name',)
+    list_filter = ('category', 'state')
     prepopulated_fields = {'slug': ('name',)}
 
 

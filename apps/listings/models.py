@@ -51,13 +51,13 @@ class Listing(models.Model):
     license_year = models.IntegerField(help_text="Year the license was issued")
     county = models.CharField(max_length=50, help_text="Pennsylvania county")
     county_ref = models.ForeignKey(
-        'core.County', on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='listings', help_text="County reference"
+        'core.GeographicUnit', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='listings', help_text="Geographic unit reference"
     )
     license_type = models.CharField(max_length=50, help_text="e.g., Resident, Non-resident, etc.")
-    license_type_ref = models.ForeignKey(
-        'core.LicenseType', on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='listings', help_text="License type reference"
+    license_types = models.ManyToManyField(
+        'core.LicenseType', blank=True, related_name='listings',
+        help_text="License type(s) for this listing",
     )
     condition_grade = models.CharField(max_length=20, choices=CONDITION_CHOICES)
     resident_status = models.CharField(
