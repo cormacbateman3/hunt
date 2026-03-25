@@ -8,7 +8,7 @@ class UserProfileInline(admin.StackedInline):
     model = UserProfile
     can_delete = False
     verbose_name_plural = 'Profile'
-    fields = ('display_name', 'bio', 'county', 'avatar', 'email_verified', 'phone_verified', 'stripe_customer_id', 'shipping_address')
+    fields = ('display_name', 'bio', 'county', 'avatar', 'email_verified', 'phone_verified', 'stripe_customer_id', 'shipping_address', 'messaging_disabled', 'messaging_disabled_reason', 'messaging_disabled_at')
     readonly_fields = ('email_verification_token', 'created_at', 'updated_at')
 
 
@@ -42,6 +42,10 @@ class UserProfileAdmin(admin.ModelAdmin):
         }),
         ('Payment', {
             'fields': ('stripe_customer_id',)
+        }),
+        ('Messaging', {
+            'fields': ('messaging_disabled', 'messaging_disabled_reason', 'messaging_disabled_at'),
+            'classes': ('collapse',),
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at')

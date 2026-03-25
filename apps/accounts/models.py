@@ -55,6 +55,10 @@ class UserProfile(models.Model):
         related_name='default_for_profile',
         help_text="Default shipping address"
     )
+    # Messaging gate fields — set by admin only
+    messaging_disabled = models.BooleanField(default=False)
+    messaging_disabled_reason = models.TextField(blank=True)
+    messaging_disabled_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -69,6 +73,35 @@ class UserProfile(models.Model):
     def get_display_name(self):
         """Return display name if set, otherwise username"""
         return self.display_name or self.user.username
+
+    @property
+    def account_readiness(self):
+        """
+        Returns a list of dicts describing readiness items.
+        Each dict: {label, complete, fix_url_name, fix_label}
+        fix_url_name is a named URL (no args) or None if not applicable.
+        """
+        from django.urls import reverse
+        return [
+            {
+                'label': 'Email verified',
+                'complete': self.email_verified,
+                'fix_url': reverse('accounts:resend_verification'),
+                'fix_label': 'Resend verification email',
+            },
+            {
+                'label': 'Shipping address saved',
+                'complete': bool(self.shipping_address_id),
+                'fix_url': reverse('accounts:address_add'),
+                'fix_label': 'Add address',
+            },
+            {
+                'label': 'Phone verified',
+                'complete': self.phone_verified,
+                'fix_url': reverse('accounts:profile_edit'),
+                'fix_label': 'Verify phone',
+            },
+        ]
 
 
 @receiver(post_save, sender=User)

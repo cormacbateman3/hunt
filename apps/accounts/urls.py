@@ -54,4 +54,9 @@ urlpatterns = [
     path('profile/edit/', views.profile_edit, name='profile_edit'),
     path('profile/<str:username>/', views.profile_view, name='profile'),
     path('verify/<uuid:token>/', views.verify_email, name='verify_email'),
+    path('verify/resend/', views.resend_verification_email, name='resend_verification'),
+    path('addresses/add/', views.address_add, name='address_add'),
+    path('addresses/<int:pk>/edit/', views.address_edit, name='address_edit'),
+    path('addresses/<int:pk>/delete/', views.address_delete, name='address_delete'),
+    path('addresses/<int:pk>/set-default/', views.address_set_default, name='address_set_default'),
 ]

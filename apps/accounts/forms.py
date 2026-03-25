@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
-from .models import UserProfile
+from .models import UserProfile, Address
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -81,3 +81,45 @@ class UserProfileForm(forms.ModelForm):
                 'placeholder': 'Your Pennsylvania County'
             }),
         }
+
+
+class AddressForm(forms.ModelForm):
+    """Form for adding/editing a shipping address"""
+    class Meta:
+        model = Address
+        fields = ['full_name', 'line1', 'line2', 'city', 'state', 'postal_code', 'phone']
+        widgets = {
+            'full_name': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'Full name'
+            }),
+            'line1': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'Street address'
+            }),
+            'line2': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'Apt, suite, unit (optional)'
+            }),
+            'city': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'City'
+            }),
+            'state': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'State (2-letter)',
+                'maxlength': 2,
+                'style': 'text-transform: uppercase;'
+            }),
+            'postal_code': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'ZIP code'
+            }),
+            'phone': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'Phone (optional)'
+            }),
+        }
+
+    def clean_state(self):
+        return self.cleaned_data['state'].upper()

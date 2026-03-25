@@ -286,8 +286,12 @@ def listing_create(request):
         messages.error(request, reason)
         return redirect('accounts:dashboard')
     if not request.user.profile.shipping_address:
-        messages.error(request, 'Add a default shipping address before creating listings.')
-        return redirect('accounts:profile_edit')
+        messages.error(
+            request,
+            'To create a listing, you need a saved shipping address. '
+            f'<a href="{reverse("accounts:address_add")}">Add address &rarr;</a>'
+        )
+        return redirect('accounts:dashboard')
 
     image_formset = ListingImageFormSet(request.POST or None, request.FILES or None)
 

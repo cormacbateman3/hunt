@@ -1,6 +1,7 @@
 from datetime import timedelta
 from decimal import Decimal
 from django.db import transaction
+from django.urls import reverse
 from django.utils import timezone
 from apps.notifications.services import create_notification
 from apps.enforcement.services import enforce_capability
@@ -39,9 +40,15 @@ def validate_trade_gate(user):
         return False, reason
     profile = user.profile
     if not profile.email_verified:
-        return False, 'Email verification is required before trading.'
+        return False, (
+            'To trade, your email must be verified. '
+            f'<a href="{reverse("accounts:resend_verification")}">Resend verification email &rarr;</a>'
+        )
     if not profile.shipping_address:
-        return False, 'A default shipping address is required before trading.'
+        return False, (
+            'To trade, you need a saved shipping address. '
+            f'<a href="{reverse("accounts:address_add")}">Add address &rarr;</a>'
+        )
     return True, ''
 
 

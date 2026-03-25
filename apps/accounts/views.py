@@ -3,12 +3,14 @@ from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
+from django.core.cache import cache
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.urls import reverse
-from .forms import UserRegistrationForm, UserProfileForm
-from .models import UserProfile
+from django.utils import timezone
+from .forms import UserRegistrationForm, UserProfileForm, AddressForm
+from .models import UserProfile, Address
 from apps.listings.models import Listing
 from apps.bids.models import Bid
 from apps.orders.models import Order
@@ -90,7 +92,12 @@ def profile_edit(request):
     else:
         form = UserProfileForm(instance=profile)
 
-    return render(request, 'accounts/profile_edit.html', {'form': form})
+    addresses = request.user.addresses.all()
+    return render(request, 'accounts/profile_edit.html', {
+        'form': form,
+        'addresses': addresses,
+        'readiness': profile.account_readiness,
+    })
 
 
 def profile_view(request, username):
@@ -169,6 +176,7 @@ def dashboard(request):
         'recent_sales': recent_sales,
         'recent_notifications': recent_notifications,
         'recent_favorites': recent_favorites,
+        'readiness': request.user.profile.account_readiness,
     }
     return render(request, 'accounts/dashboard.html', context)
 
@@ -189,3 +197,122 @@ def verify_email(request, token):
     except UserProfile.DoesNotExist:
         messages.error(request, 'Invalid verification link.')
         return redirect('home')
+
+
+@login_required
+def resend_verification_email(request):
+    """Resend email verification link. Rate-limited to 3 per hour."""
+    if request.method != 'POST':
+        return redirect('accounts:profile_edit')
+
+    profile = request.user.profile
+    if profile.email_verified:
+        messages.info(request, 'Your email is already verified.')
+        return redirect('accounts:profile_edit')
+
+    cache_key = f'resend_verify_{request.user.pk}'
+    sent_times = cache.get(cache_key, [])
+    now = timezone.now().timestamp()
+    # Keep only timestamps within the last hour
+    sent_times = [t for t in sent_times if now - t < 3600]
+    if len(sent_times) >= 3:
+        messages.error(request, 'You have requested too many verification emails. Please wait before trying again.')
+        return redirect('accounts:profile_edit')
+
+    sent_times.append(now)
+    cache.set(cache_key, sent_times, 3600)
+
+    verification_url = request.build_absolute_uri(
+        reverse('accounts:verify_email', kwargs={'token': profile.email_verification_token})
+    )
+    email_context = {'user': request.user, 'verification_url': verification_url}
+    send_mail(
+        subject='Verify your KeystoneBid account',
+        message=render_to_string('accounts/emails/verify_email.txt', email_context),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[request.user.email],
+        html_message=render_to_string('accounts/emails/verify_email.html', email_context),
+        fail_silently=False,
+    )
+    messages.success(request, 'Verification email sent. Check your inbox.')
+    return redirect('accounts:profile_edit')
+
+
+@login_required
+def address_add(request):
+    """Add a new shipping address."""
+    if request.method == 'POST':
+        form = AddressForm(request.POST)
+        if form.is_valid():
+            address = form.save(commit=False)
+            address.user = request.user
+            address.save()
+            # Make default if this is the user's first address
+            profile = request.user.profile
+            if not profile.shipping_address_id:
+                profile.shipping_address = address
+                profile.save(update_fields=['shipping_address'])
+                address.is_default = True
+                address.save(update_fields=['is_default'])
+            messages.success(request, 'Address saved.')
+            return redirect('accounts:profile_edit')
+    else:
+        form = AddressForm()
+
+    return render(request, 'accounts/address_form.html', {'form': form, 'action': 'Add'})
+
+
+@login_required
+def address_edit(request, pk):
+    """Edit an existing shipping address."""
+    address = get_object_or_404(Address, pk=pk, user=request.user)
+    if request.method == 'POST':
+        form = AddressForm(request.POST, instance=address)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Address updated.')
+            return redirect('accounts:profile_edit')
+    else:
+        form = AddressForm(instance=address)
+
+    return render(request, 'accounts/address_form.html', {'form': form, 'action': 'Edit', 'address': address})
+
+
+@login_required
+def address_delete(request, pk):
+    """Delete an address. POST only."""
+    address = get_object_or_404(Address, pk=pk, user=request.user)
+    if request.method == 'POST':
+        profile = request.user.profile
+        if profile.shipping_address_id == address.pk:
+            # Clear default; auto-assign another if available
+            profile.shipping_address = None
+            profile.save(update_fields=['shipping_address'])
+            remaining = request.user.addresses.exclude(pk=address.pk).first()
+            if remaining:
+                profile.shipping_address = remaining
+                profile.save(update_fields=['shipping_address'])
+                remaining.is_default = True
+                remaining.save(update_fields=['is_default'])
+        address.delete()
+        messages.success(request, 'Address removed.')
+        return redirect('accounts:profile_edit')
+
+    return render(request, 'accounts/address_confirm_delete.html', {'address': address})
+
+
+@login_required
+def address_set_default(request, pk):
+    """Set an address as the default. POST only."""
+    if request.method != 'POST':
+        return redirect('accounts:profile_edit')
+    address = get_object_or_404(Address, pk=pk, user=request.user)
+    profile = request.user.profile
+    # Clear old default flag
+    request.user.addresses.filter(is_default=True).update(is_default=False)
+    address.is_default = True
+    address.save(update_fields=['is_default'])
+    profile.shipping_address = address
+    profile.save(update_fields=['shipping_address'])
+    messages.success(request, 'Default address updated.')
+    return redirect('accounts:profile_edit')

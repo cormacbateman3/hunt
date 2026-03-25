@@ -2,6 +2,7 @@
 Business logic for bidding system
 """
 from django.db import transaction
+from django.urls import reverse
 from apps.listings.models import Listing
 from .models import Bid
 from apps.enforcement.services import enforce_capability
@@ -26,7 +27,10 @@ def place_bid(listing, bidder, amount):
     if bidder == listing.seller:
         return False, "You cannot bid on your own listing"
     if not bidder.profile.email_verified:
-        return False, "You must verify your email before bidding"
+        return False, (
+            'To bid, your email must be verified. '
+            f'<a href="{reverse("accounts:resend_verification")}">Resend verification email &rarr;</a>'
+        )
 
     # Serialize bid writes against the listing to avoid stale bid races.
     with transaction.atomic():

@@ -9,12 +9,36 @@
         <p style="color: var(--color-muted); margin-bottom: 0.75rem;">
             Active listings: {{ active_listings_count }} | Active winning bids: {{ winning_bids_count }}
         </p>
-        {% if user.profile.email_verified %}
-            <span class="badge badge-active">Email verified</span>
-        {% else %}
-            <span class="badge badge-expired">Email not verified</span>
-        {% endif %}
     </article>
+
+    {# ── Account Readiness Checklist (compact) ── #}
+    {% with incomplete=readiness|dictsort:"complete" %}
+    {% if not user.profile.email_verified or not user.profile.shipping_address %}
+    <article class="card" style="border-left: 3px solid var(--color-aged-amber, #c8a040);">
+        <h2 style="font-size: 1rem; margin-bottom: 0.6rem;">Complete your account</h2>
+        <ul style="list-style: none; padding: 0; margin: 0; display: grid; gap: 0.4rem;">
+            {% for item in readiness %}
+            <li style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; font-size: 0.9rem;">
+                <span>
+                    {% if item.complete %}
+                        <span style="color: var(--color-forest-green);">&#10003;</span>
+                    {% else %}
+                        <span style="color: var(--color-muted);">&#9675;</span>
+                    {% endif %}
+                    {{ item.label }}
+                </span>
+                {% if not item.complete %}
+                    <a href="{{ item.fix_url }}" style="color: var(--color-aged-amber); font-size: 0.82rem; white-space: nowrap;">
+                        {{ item.fix_label }} &rarr;
+                    </a>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        <a href="{% url 'accounts:profile_edit' %}" style="display: inline-block; margin-top: 0.6rem; font-size: 0.82rem; color: var(--color-muted);">Go to profile settings</a>
+    </article>
+    {% endif %}
+    {% endwith %}
 
     <article class="card">
         <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Pending Payments</h2>
