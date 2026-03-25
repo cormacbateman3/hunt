@@ -1,30 +1,58 @@
 from django import forms
-from apps.core.models import County, LicenseType
-from .models import CollectionItem, CollectionItemImage, WantedItem
+from django.db.models import Q
+
+from apps.core.constants import COLOR_CHOICES, FORM_LICENSE_TYPE_CATEGORIES, SHAPE_CHOICES
+from apps.core.models import GeographicUnit, LicenseType, ReferenceDataSuggestion, State
+from apps.collections.models import CollectionItem, CollectionItemImage, WantedItem
+
+
+def _state_license_type_queryset(state, category=None):
+    queryset = LicenseType.objects.filter(is_system_value=True)
+    if category:
+        queryset = queryset.filter(category=category)
+    if state:
+        queryset = queryset.filter(Q(state=state) | Q(state__isnull=True) | Q(state__code='FD'))
+    else:
+        queryset = queryset.filter(Q(state__isnull=True) | Q(state__code='FD'))
+    return queryset.order_by('category', 'name').distinct()
 
 
 class CollectionItemForm(forms.ModelForm):
-    county = forms.ModelChoiceField(
-        queryset=County.objects.none(),
-        required=False,
-        empty_label='Select county',
-        widget=forms.Select(attrs={'class': 'form-select'}),
-    )
-    license_type = forms.ModelChoiceField(
-        queryset=LicenseType.objects.none(),
-        required=False,
-        empty_label='Select license type',
-        widget=forms.Select(attrs={'class': 'form-select'}),
-    )
+    state = forms.ModelChoiceField(queryset=State.objects.none(), required=True, widget=forms.Select(attrs={'class': 'form-select'}))
+    county = forms.ModelChoiceField(queryset=GeographicUnit.objects.none(), required=False, empty_label='Select geographic unit', widget=forms.Select(attrs={'class': 'form-select'}))
+    residency = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select residency', widget=forms.Select(attrs={'class': 'form-select'}))
+    residency_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter residency value'}))
+    holder_eligibility = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select holder eligibility', widget=forms.Select(attrs={'class': 'form-select'}))
+    holder_eligibility_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter eligibility value'}))
+    activity_scope = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select activity scope', widget=forms.Select(attrs={'class': 'form-select'}))
+    activity_scope_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter activity scope'}))
+    duration = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select duration', widget=forms.Select(attrs={'class': 'form-select'}))
+    duration_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter duration'}))
+    addon_type = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select add-on type', widget=forms.Select(attrs={'class': 'form-select'}))
+    addon_type_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter add-on type'}))
+    material = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select material', widget=forms.Select(attrs={'class': 'form-select'}))
+    material_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter material'}))
+    shape = forms.ChoiceField(choices=[('', 'Select shape')] + SHAPE_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-select'}))
+    shape_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter shape'}))
+    colors = forms.MultipleChoiceField(choices=COLOR_CHOICES, required=False, widget=forms.SelectMultiple(attrs={'class': 'form-select', 'size': 6}))
+    colors_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter color'}))
 
     class Meta:
         model = CollectionItem
         fields = [
             'title',
             'description',
+            'state',
             'license_year',
             'county',
-            'license_type',
+            'residency',
+            'holder_eligibility',
+            'activity_scope',
+            'duration',
+            'addon_type',
+            'material',
+            'shape',
+            'colors',
             'resident_status',
             'condition_grade',
             'is_public',
@@ -41,9 +69,120 @@ class CollectionItemForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
-        self.fields['county'].queryset = County.objects.order_by('name')
-        self.fields['license_type'].queryset = LicenseType.objects.order_by('name')
+        self.fields['state'].queryset = State.objects.order_by('-is_primary_default', 'name')
+
+        state = self._resolve_state()
+        if state:
+            self.fields['state'].initial = state
+        self._set_reference_querysets(state)
+
+        if self.instance and self.instance.pk:
+            self.fields['colors'].initial = self.instance.colors
+            for category in FORM_LICENSE_TYPE_CATEGORIES:
+                selected = self.instance.license_types.filter(category=category).order_by('name').first()
+                if selected:
+                    self.fields[category].initial = selected
+
+    def _resolve_state(self):
+        state = None
+        if self.is_bound:
+            state_id = self.data.get('state')
+            if state_id and state_id.isdigit():
+                state = State.objects.filter(pk=int(state_id)).first()
+        if state is None and self.initial.get('state'):
+            initial_state = self.initial['state']
+            state = initial_state if isinstance(initial_state, State) else State.objects.filter(pk=initial_state).first()
+        if state is None and self.instance and self.instance.pk:
+            state = self.instance.state or getattr(self.instance.county, 'state', None)
+        if state is None:
+            state = State.objects.filter(is_primary_default=True).first() or State.objects.order_by('name').first()
+        return state
+
+    def _set_reference_querysets(self, state):
+        if state:
+            self.fields['county'].queryset = GeographicUnit.objects.filter(state=state).order_by('sort_order', 'name')
+            self.fields['county'].label = state.issuance_unit_label or 'Geographic Unit'
+        else:
+            self.fields['county'].queryset = GeographicUnit.objects.none()
+            self.fields['county'].label = 'Geographic Unit'
+        for category in FORM_LICENSE_TYPE_CATEGORIES:
+            self.fields[category].queryset = _state_license_type_queryset(state, category)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        state = cleaned_data.get('state')
+        county = cleaned_data.get('county')
+        year = cleaned_data.get('license_year')
+        selected_dimensions = [cleaned_data.get(category) for category in FORM_LICENSE_TYPE_CATEGORIES]
+        if county and state and county.state_id != state.id:
+            self.add_error('county', 'Selected geographic unit does not belong to the chosen state.')
+        if state and year and state.min_license_year and year < state.min_license_year:
+            self.add_error('license_year', f'Earliest known hunting license year for {state.name} is {state.min_license_year}.')
+        if not any(selected_dimensions) and not cleaned_data.get('shape') and not (cleaned_data.get('colors') or []):
+            raise forms.ValidationError('Select at least one taxonomy or physical attribute value to describe the item.')
+        for category in FORM_LICENSE_TYPE_CATEGORIES:
+            selected = cleaned_data.get(category)
+            other_text = (cleaned_data.get(f'{category}_other') or '').strip()
+            if selected and selected.name.lower() == 'other' and not other_text:
+                self.add_error(f'{category}_other', 'Please describe the missing value.')
+        if cleaned_data.get('shape') == 'other' and not (cleaned_data.get('shape_other') or '').strip():
+            self.add_error('shape_other', 'Please describe the missing shape.')
+        if 'other' in (cleaned_data.get('colors') or []) and not (cleaned_data.get('colors_other') or '').strip():
+            self.add_error('colors_other', 'Please describe the missing color.')
+        return cleaned_data
+
+    def save(self, commit=True):
+        item = super().save(commit=False)
+        item.state = self.cleaned_data['state']
+        item.shape = self.cleaned_data.get('shape') or ''
+        item.colors = self.cleaned_data.get('colors') or []
+        if commit:
+            item.save()
+            selected_types = [self.cleaned_data.get(category) for category in FORM_LICENSE_TYPE_CATEGORIES if self.cleaned_data.get(category)]
+            item.license_types.set(selected_types)
+            self._create_other_suggestions(item)
+        return item
+
+    def _create_other_suggestions(self, item):
+        if not self.user or not self.user.is_authenticated:
+            return
+        for category in FORM_LICENSE_TYPE_CATEGORIES:
+            selected = self.cleaned_data.get(category)
+            other_text = (self.cleaned_data.get(f'{category}_other') or '').strip()
+            if selected and selected.name.lower() == 'other' and other_text:
+                ReferenceDataSuggestion.objects.create(
+                    user=self.user,
+                    suggestion_type='new_value',
+                    target_model='license_type',
+                    target_id=selected.id,
+                    field_name=category,
+                    current_value='Other',
+                    proposed_value=other_text,
+                )
+        shape_other = (self.cleaned_data.get('shape_other') or '').strip()
+        if self.cleaned_data.get('shape') == 'other' and shape_other:
+            ReferenceDataSuggestion.objects.create(
+                user=self.user,
+                suggestion_type='new_value',
+                target_model='collection_item',
+                target_id=item.id,
+                field_name='shape',
+                current_value='Other',
+                proposed_value=shape_other,
+            )
+        colors_other = (self.cleaned_data.get('colors_other') or '').strip()
+        if 'other' in (self.cleaned_data.get('colors') or []) and colors_other:
+            ReferenceDataSuggestion.objects.create(
+                user=self.user,
+                suggestion_type='new_value',
+                target_model='collection_item',
+                target_id=item.id,
+                field_name='colors',
+                current_value='Other',
+                proposed_value=colors_other,
+            )
 
 
 class CollectionItemImageForm(forms.ModelForm):
@@ -67,22 +206,13 @@ CollectionItemImageFormSet = forms.inlineformset_factory(
 
 
 class WantedItemForm(forms.ModelForm):
-    county = forms.ModelChoiceField(
-        queryset=County.objects.none(),
-        required=False,
-        empty_label='Any county',
-        widget=forms.Select(attrs={'class': 'form-select'}),
-    )
-    license_type = forms.ModelChoiceField(
-        queryset=LicenseType.objects.none(),
-        required=False,
-        empty_label='Any type',
-        widget=forms.Select(attrs={'class': 'form-select'}),
-    )
+    state = forms.ModelChoiceField(queryset=State.objects.none(), required=False, widget=forms.Select(attrs={'class': 'form-select'}))
+    county = forms.ModelChoiceField(queryset=GeographicUnit.objects.none(), required=False, empty_label='Any geographic unit', widget=forms.Select(attrs={'class': 'form-select'}))
+    license_type = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Any type', widget=forms.Select(attrs={'class': 'form-select'}))
 
     class Meta:
         model = WantedItem
-        fields = ['county', 'year_min', 'year_max', 'license_type', 'notes']
+        fields = ['state', 'county', 'year_min', 'year_max', 'license_type', 'notes']
         widgets = {
             'year_min': forms.NumberInput(attrs={'class': 'form-input'}),
             'year_max': forms.NumberInput(attrs={'class': 'form-input'}),
@@ -91,13 +221,40 @@ class WantedItemForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['county'].queryset = County.objects.order_by('name')
-        self.fields['license_type'].queryset = LicenseType.objects.order_by('name')
+        self.fields['state'].queryset = State.objects.order_by('-is_primary_default', 'name')
+        state = self._resolve_state()
+        if state:
+            self.fields['state'].initial = state
+            self.fields['county'].queryset = GeographicUnit.objects.filter(state=state).order_by('sort_order', 'name')
+            self.fields['county'].label = state.issuance_unit_label or 'Geographic Unit'
+            self.fields['license_type'].queryset = _state_license_type_queryset(state)
+        else:
+            self.fields['county'].queryset = GeographicUnit.objects.none()
+            self.fields['license_type'].queryset = _state_license_type_queryset(None)
+
+    def _resolve_state(self):
+        state = None
+        if self.is_bound:
+            state_id = self.data.get('state')
+            if state_id and state_id.isdigit():
+                state = State.objects.filter(pk=int(state_id)).first()
+        if state is None and self.initial.get('state'):
+            initial_state = self.initial['state']
+            state = initial_state if isinstance(initial_state, State) else State.objects.filter(pk=initial_state).first()
+        if state is None and self.instance and self.instance.pk:
+            state = self.instance.state or getattr(self.instance.county, 'state', None)
+        if state is None:
+            state = State.objects.filter(is_primary_default=True).first() or State.objects.order_by('name').first()
+        return state
 
     def clean(self):
         cleaned_data = super().clean()
+        state = cleaned_data.get('state')
+        county = cleaned_data.get('county')
         year_min = cleaned_data.get('year_min')
         year_max = cleaned_data.get('year_max')
+        if county and state and county.state_id != state.id:
+            self.add_error('county', 'Selected geographic unit does not belong to the chosen state.')
         if year_min and year_max and year_min > year_max:
             self.add_error('year_max', 'Year max must be greater than or equal to year min.')
         return cleaned_data

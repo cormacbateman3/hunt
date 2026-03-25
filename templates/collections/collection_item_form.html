@@ -3,7 +3,7 @@
 {% block title %}{% if mode == 'create' %}Add Collection Item{% else %}Edit Collection Item{% endif %} | KeystoneBid{% endblock %}
 
 {% block content %}
-<section class="card" style="max-width: 900px; margin: 0 auto;">
+<section class="card" style="max-width: 960px; margin: 0 auto;">
     <h1 style="margin-bottom: 1rem;">
         {% if mode == 'create' %}Add collection item{% else %}Edit collection item{% endif %}
     </h1>
@@ -15,14 +15,95 @@
         {% endif %}
 
         <div style="display: grid; gap: 0.85rem;">
-            {% for field in form %}
+            <div>
+                <label class="form-label" for="{{ form.title.id_for_label }}">Title</label>
+                {{ form.title }}
+                {{ form.title.errors }}
+            </div>
+            <div>
+                <label class="form-label" for="{{ form.description.id_for_label }}">Description</label>
+                {{ form.description }}
+                {{ form.description.errors }}
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
                 <div>
-                    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                    {{ field }}
-                    {{ field.errors }}
+                    <label class="form-label" for="{{ form.state.id_for_label }}">Issuing state</label>
+                    {{ form.state }}
+                    {{ form.state.errors }}
+                </div>
+                <div>
+                    <label class="form-label" for="{{ form.license_year.id_for_label }}">License year</label>
+                    {{ form.license_year }}
+                    {{ form.license_year.errors }}
+                </div>
+            </div>
+            <div>
+                <label class="form-label" id="county-label" for="{{ form.county.id_for_label }}">{{ form.county.label }}</label>
+                {{ form.county }}
+                {{ form.county.errors }}
+            </div>
+
+            <h2 style="font-size: 1.1rem; margin: 0.25rem 0 0;">Item Taxonomy</h2>
+            {% for field_name, other_name, heading in taxonomy_fields %}
+                <div style="display: grid; gap: 0.45rem;">
+                    <label class="form-label" for="{{ form[field_name].id_for_label }}">{{ heading }}</label>
+                    {{ form[field_name] }}
+                    {{ form[field_name].errors }}
+                    <div data-other-wrapper="{{ field_name }}" style="display: none;">
+                        <label class="form-label" for="{{ form[other_name].id_for_label }}">{{ heading }} other</label>
+                        {{ form[other_name] }}
+                        {{ form[other_name].errors }}
+                    </div>
                 </div>
             {% endfor %}
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+                <div>
+                    <label class="form-label" for="{{ form.shape.id_for_label }}">Shape</label>
+                    {{ form.shape }}
+                    {{ form.shape.errors }}
+                    <div data-other-wrapper="shape" style="display: none; margin-top: 0.45rem;">
+                        <label class="form-label" for="{{ form.shape_other.id_for_label }}">Shape other</label>
+                        {{ form.shape_other }}
+                        {{ form.shape_other.errors }}
+                    </div>
+                </div>
+                <div>
+                    <label class="form-label" for="{{ form.colors.id_for_label }}">Color(s)</label>
+                    {{ form.colors }}
+                    {{ form.colors.errors }}
+                    <div data-other-wrapper="colors" style="display: none; margin-top: 0.45rem;">
+                        <label class="form-label" for="{{ form.colors_other.id_for_label }}">Color other</label>
+                        {{ form.colors_other }}
+                        {{ form.colors_other.errors }}
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.85rem;">
+                <div>
+                    <label class="form-label" for="{{ form.resident_status.id_for_label }}">Resident status</label>
+                    {{ form.resident_status }}
+                    {{ form.resident_status.errors }}
+                </div>
+                <div>
+                    <label class="form-label" for="{{ form.condition_grade.id_for_label }}">Condition grade</label>
+                    {{ form.condition_grade }}
+                    {{ form.condition_grade.errors }}
+                </div>
+            </div>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <label class="form-label">{{ form.is_public }} Public item</label>
+                <label class="form-label">{{ form.trade_eligible }} Trade eligible</label>
+            </div>
         </div>
+
+        <details style="margin-top: 1rem;">
+            <summary style="cursor: pointer; color: var(--color-aged-amber);">Is a value missing?</summary>
+            <div style="margin-top: 0.75rem;">
+                {% include 'core/_reference_data_suggestion_form.html' %}
+            </div>
+        </details>
 
         <hr style="margin: 1.2rem 0; border: 0; border-top: 1px solid var(--color-border);">
         <h2 style="font-size: 1.2rem; margin-bottom: 0.75rem;">Images (reorder with sort order)</h2>
@@ -66,4 +147,74 @@
         </div>
     </form>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const stateSelect = document.getElementById('{{ form.state.id_for_label }}');
+    const geoSelect = document.getElementById('{{ form.county.id_for_label }}');
+    const geoLabel = document.getElementById('county-label');
+    const taxonomyFields = {{ taxonomy_field_names_json|safe }};
+
+    const updateOtherWrapper = (fieldName) => {
+        const field = document.getElementById(`id_${fieldName}`);
+        const wrapper = document.querySelector(`[data-other-wrapper="${fieldName}"]`);
+        if (!field || !wrapper) return;
+        let show = false;
+        if (field.multiple) {
+            show = Array.from(field.selectedOptions).some((option) => option.value === 'other' || option.text.trim().toLowerCase() === 'other');
+        } else {
+            const selected = field.options[field.selectedIndex];
+            show = selected && selected.text.trim().toLowerCase() === 'other';
+        }
+        wrapper.style.display = show ? '' : 'none';
+    };
+
+    const loadReferenceData = async () => {
+        const stateId = stateSelect.value;
+        if (!stateId) return;
+
+        const geoResponse = await fetch(`/api/geo-units/?state=${encodeURIComponent(stateId)}`);
+        const geoData = await geoResponse.json();
+        const currentGeo = geoSelect.value;
+        geoSelect.innerHTML = '<option value="">Select geographic unit</option>';
+        geoData.results.forEach((unit) => {
+            const option = document.createElement('option');
+            option.value = unit.id;
+            option.textContent = unit.name;
+            if (String(unit.id) === currentGeo) option.selected = true;
+            geoSelect.appendChild(option);
+        });
+        geoLabel.textContent = geoData.issuance_unit_label || 'Geographic Unit';
+
+        const licenseTypeResponse = await fetch(`/api/license-types/?state=${encodeURIComponent(stateId)}`);
+        const licenseTypeData = await licenseTypeResponse.json();
+        taxonomyFields.forEach((fieldName) => {
+            const field = document.getElementById(`id_${fieldName}`);
+            if (!field) return;
+            const currentValue = field.value;
+            field.innerHTML = `<option value="">Select ${fieldName.replace('_', ' ')}</option>`;
+            (licenseTypeData.results[fieldName] || []).forEach((item) => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = item.name;
+                if (String(item.id) === currentValue) option.selected = true;
+                field.appendChild(option);
+            });
+            updateOtherWrapper(fieldName);
+        });
+    };
+
+    stateSelect.addEventListener('change', loadReferenceData);
+    taxonomyFields.concat(['shape', 'colors']).forEach((fieldName) => {
+        const field = document.getElementById(`id_${fieldName}`);
+        if (field) {
+            field.addEventListener('change', () => updateOtherWrapper(fieldName));
+            updateOtherWrapper(fieldName);
+        }
+    });
+    loadReferenceData();
+});
+</script>
 {% endblock %}

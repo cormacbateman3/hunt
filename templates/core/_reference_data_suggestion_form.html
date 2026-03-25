@@ -1,0 +1,32 @@
+<form method="post" action="{% url 'core:suggestion_create' %}" style="display: grid; gap: 0.6rem;">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.path }}">
+    <div>
+        <label class="form-label" for="id_suggestion_type">Suggestion type</label>
+        {{ suggestion_form.suggestion_type }}
+    </div>
+    <div>
+        <label class="form-label" for="id_target_model">Target model</label>
+        {{ suggestion_form.target_model }}
+    </div>
+    {{ suggestion_form.target_id }}
+    <div>
+        <label class="form-label" for="id_field_name">Field name</label>
+        {{ suggestion_form.field_name }}
+    </div>
+    <div>
+        <label class="form-label" for="id_current_value">Current value</label>
+        {{ suggestion_form.current_value }}
+    </div>
+    <div>
+        <label class="form-label" for="id_proposed_value">Proposed value</label>
+        {{ suggestion_form.proposed_value }}
+    </div>
+    <div>
+        <label class="form-label" for="id_source_or_evidence">Source or evidence</label>
+        {{ suggestion_form.source_or_evidence }}
+    </div>
+    <div>
+        <button type="submit" class="btn-secondary">Submit suggestion</button>
+    </div>
+</form>

@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ state.name }} | KeystoneBid{% endblock %}
+
+{% block content %}
+<section class="card" style="max-width: 860px; margin: 0 auto; display: grid; gap: 1rem;">
+    <div>
+        <h1>{{ state.name }} ({{ state.code }})</h1>
+        <p style="color: var(--color-muted);">
+            Earliest known license year:
+            {% if state.min_license_year %}{{ state.min_license_year }}{% else %}Unknown{% endif %}
+            {% if state.min_year_confidence %} ({{ state.min_year_confidence }} confidence){% endif %}
+        </p>
+        {% if state.notes %}
+            <p>{{ state.notes }}</p>
+        {% endif %}
+        <p><strong>Issuance unit:</strong> {{ state.issuance_unit_label }}</p>
+        {% if state.min_year_confidence == 'low' or state.min_year_confidence == 'medium' %}
+            <p style="color: var(--color-hunting-rust);">
+                Earliest known year for {{ state.name }} is {{ state.min_license_year }}. If you know of an earlier license, let us know.
+            </p>
+        {% endif %}
+    </div>
+
+    <details open>
+        <summary style="cursor: pointer; color: var(--color-aged-amber);">Report an error</summary>
+        <div style="margin-top: 0.75rem;">
+            {% include 'core/_reference_data_suggestion_form.html' %}
+        </div>
+    </details>
+</section>
+{% endblock %}

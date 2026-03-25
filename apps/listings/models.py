@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.urls import reverse
-from apps.core.constants import RESIDENT_STATUS_CHOICES
+from apps.core.constants import COLOR_CHOICES, FORM_LICENSE_TYPE_CATEGORIES, RESIDENT_STATUS_CHOICES, SHAPE_CHOICES
 
 
 class Listing(models.Model):
@@ -49,16 +49,23 @@ class Listing(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField()
     license_year = models.IntegerField(help_text="Year the license was issued")
+    state = models.ForeignKey(
+        'core.State', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='listings', help_text='Issuing state for this item'
+    )
     county = models.CharField(max_length=50, help_text="Pennsylvania county")
     county_ref = models.ForeignKey(
         'core.GeographicUnit', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='listings', help_text="Geographic unit reference"
     )
-    license_type = models.CharField(max_length=50, help_text="e.g., Resident, Non-resident, etc.")
+    is_statewide = models.BooleanField(default=False)
+    license_type = models.CharField(max_length=50, help_text="Legacy type snapshot", blank=True)
     license_types = models.ManyToManyField(
         'core.LicenseType', blank=True, related_name='listings',
         help_text="License type(s) for this listing",
     )
+    shape = models.CharField(max_length=30, choices=SHAPE_CHOICES, blank=True)
+    colors = models.JSONField(default=list, blank=True)
     condition_grade = models.CharField(max_length=20, choices=CONDITION_CHOICES)
     resident_status = models.CharField(
         max_length=20, choices=RESIDENT_STATUS_CHOICES, default='unknown'
@@ -130,6 +137,45 @@ class Listing(models.Model):
         if self.listing_type == 'auction':
             return self.current_bid if self.current_bid else self.starting_price
         return None
+
+    @property
+    def listing_completeness_score(self):
+        checks = [
+            bool(self.county_ref or self.is_statewide),
+            self.license_types.filter(category='activity_scope').exists(),
+            self.license_types.filter(category='material').exists(),
+            bool(self.description.strip()),
+            bool(self.shape),
+            bool(self.colors),
+            self.license_types.filter(category='residency').exists(),
+            self.license_types.filter(category='duration').exists(),
+            self.license_types.filter(category='holder_eligibility').exists(),
+            self.license_types.filter(category='addon_type').exists(),
+        ]
+        return int((sum(1 for item in checks if item) / len(checks)) * 100)
+
+    def license_types_for_category(self, category):
+        return list(self.license_types.filter(category=category).order_by('name'))
+
+    def primary_license_type_name(self, category):
+        item = self.license_types.filter(category=category).order_by('name').first()
+        return item.name if item else ''
+
+    def display_license_type_summary(self):
+        parts = []
+        for category in FORM_LICENSE_TYPE_CATEGORIES:
+            label = self.primary_license_type_name(category)
+            if label:
+                parts.append(label)
+        return ', '.join(parts)
+
+    def display_colors(self):
+        labels = dict(COLOR_CHOICES)
+        return ', '.join(labels.get(value, value) for value in self.colors)
+
+    def get_shape_display_label(self):
+        labels = dict(SHAPE_CHOICES)
+        return labels.get(self.shape, '')
 
 
 class ListingImage(models.Model):

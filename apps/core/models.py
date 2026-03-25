@@ -1,5 +1,13 @@
-from django.db import models
+from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
+
+from apps.core.constants import (
+    LICENSE_TYPE_CATEGORY_CHOICES,
+    SUGGESTION_STATUS_CHOICES,
+    SUGGESTION_TARGET_MODEL_CHOICES,
+    SUGGESTION_TYPE_CHOICES,
+)
 
 
 class State(models.Model):
@@ -16,6 +24,8 @@ class State(models.Model):
         max_length=20, blank=True,
         help_text='Confidence level of min_license_year: high/medium/low',
     )
+    min_year_source = models.URLField(blank=True)
+    issuance_scope = models.CharField(max_length=30, blank=True)
     issuance_unit_type = models.CharField(
         max_length=30, default='County',
         help_text='e.g. County, GMU, WMD, DPA, Hunt Area',
@@ -28,6 +38,11 @@ class State(models.Model):
         default=False,
         help_text='True only for Pennsylvania — the default state in all forms',
     )
+    agency_name = models.CharField(max_length=150, blank=True)
+    agency_name_historical = models.CharField(max_length=150, blank=True)
+    licensing_start_year = models.IntegerField(null=True, blank=True)
+    licensing_start_source = models.URLField(blank=True)
+    notes = models.TextField(blank=True)
     slug = models.SlugField(max_length=50, unique=True)
 
     class Meta:
@@ -60,6 +75,10 @@ class GeographicUnit(models.Model):
     fips_code = models.CharField(max_length=5, blank=True)
     slug = models.SlugField(max_length=100)
     sort_order = models.IntegerField(default=0)
+    unit_number = models.CharField(max_length=30, blank=True)
+    is_statewide = models.BooleanField(default=False)
+    geo_data_complete = models.BooleanField(default=True)
+    notes = models.TextField(blank=True)
 
     class Meta:
         verbose_name = 'Geographic Unit'
@@ -85,22 +104,19 @@ class LicenseType(models.Model):
     e.g. Resident (residency) + Annual (duration) + Hunting (activity_scope).
     """
 
-    CATEGORY_CHOICES = [
-        ('residency', 'Residency'),
-        ('duration', 'Duration'),
-        ('eligibility', 'Eligibility'),
-        ('activity_scope', 'Activity Scope'),
-        ('addon', 'Add-on / Tag / Permit'),
-    ]
-
     state = models.ForeignKey(
         State, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='license_types',
         help_text='State this type belongs to; null = universal/cross-state',
     )
     name = models.CharField(max_length=100)
-    category = models.CharField(max_length=30, choices=CATEGORY_CHOICES, default='residency')
+    category = models.CharField(
+        max_length=30,
+        choices=LICENSE_TYPE_CATEGORY_CHOICES,
+        default='residency',
+    )
     slug = models.SlugField(max_length=150)
+    is_system_value = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = 'License Type'
@@ -114,6 +130,54 @@ class LicenseType(models.Model):
     def __str__(self):
         state_label = f' ({self.state.code})' if self.state_id else ' (universal)'
         return f'{self.name}{state_label}'
+
+
+class ReferenceDataSuggestion(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='reference_data_suggestions',
+    )
+    suggestion_type = models.CharField(
+        max_length=20,
+        choices=SUGGESTION_TYPE_CHOICES,
+        default='new_value',
+    )
+    target_model = models.CharField(
+        max_length=30,
+        choices=SUGGESTION_TARGET_MODEL_CHOICES,
+        default='other',
+    )
+    target_id = models.IntegerField(null=True, blank=True)
+    field_name = models.CharField(max_length=100, blank=True)
+    current_value = models.TextField(blank=True)
+    proposed_value = models.TextField()
+    source_or_evidence = models.TextField(blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=SUGGESTION_STATUS_CHOICES,
+        default='pending',
+    )
+    admin_notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='reviewed_reference_data_suggestions',
+    )
+
+    class Meta:
+        ordering = ['status', '-created_at']
+        indexes = [
+            models.Index(fields=['status', 'created_at']),
+            models.Index(fields=['target_model', 'target_id']),
+        ]
+
+    def __str__(self):
+        return f'{self.get_target_model_display()} suggestion #{self.pk}'
 
 
 class MarketplaceSettings(models.Model):

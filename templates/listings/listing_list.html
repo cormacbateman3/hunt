@@ -19,6 +19,16 @@
                 <input class="form-input" id="search" name="search" value="{{ filters.search }}">
             </div>
             <div>
+                <label class="form-label" for="state_id">State</label>
+                <select class="form-select" id="state_id" name="state_id">
+                    {% for state in states %}
+                        <option value="{{ state.id }}" {% if filters.state_id == state.id|stringformat:'s' %}selected{% endif %}>
+                            {{ state.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
                 <label class="form-label" for="county_id">County</label>
                 <select class="form-select" id="county_id" name="county_id">
                     <option value="">Any</option>

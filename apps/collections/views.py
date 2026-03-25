@@ -1,22 +1,35 @@
+import json
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
+from apps.core.forms import ReferenceDataSuggestionForm
 from apps.orders.models import Order
 from .forms import CollectionItemForm, CollectionItemImageFormSet, WantedItemForm
 from .models import CollectionItem, CollectionItemImage, WantedItem
+
+
+TAXONOMY_FIELDS = [
+    ('residency', 'residency_other', 'Residency'),
+    ('holder_eligibility', 'holder_eligibility_other', 'Holder Eligibility'),
+    ('activity_scope', 'activity_scope_other', 'Activity Scope'),
+    ('duration', 'duration_other', 'Duration'),
+    ('addon_type', 'addon_type_other', 'Add-on Type'),
+    ('material', 'material_other', 'Physical Form / Material'),
+]
 
 
 @login_required
 def my_collection(request):
     items = (
         CollectionItem.objects.filter(owner=request.user)
-        .select_related('county', 'license_type')
-        .prefetch_related('images')
+        .select_related('state', 'county')
+        .prefetch_related('images', 'license_types')
         .order_by('-created_at')
     )
     wanted_items = (
         WantedItem.objects.filter(user=request.user)
-        .select_related('county', 'license_type')
+        .select_related('state', 'county', 'license_type')
         .order_by('-created_at')
     )
     return render(request, 'collections/my_collection.html', {
@@ -29,11 +42,10 @@ def my_collection(request):
 def collection_item_create(request):
     image_formset = CollectionItemImageFormSet(request.POST or None, request.FILES or None)
     if request.method == 'POST':
-        form = CollectionItemForm(request.POST)
+        form = CollectionItemForm(request.POST, user=request.user)
         if form.is_valid() and image_formset.is_valid():
-            item = form.save(commit=False)
-            item.owner = request.user
-            item.save()
+            form.instance.owner = request.user
+            item = form.save()
 
             image_formset = CollectionItemImageFormSet(request.POST, request.FILES, instance=item)
             if image_formset.is_valid():
@@ -42,12 +54,17 @@ def collection_item_create(request):
                 return redirect('collections:my_collection')
             item.delete()
     else:
-        form = CollectionItemForm()
+        form = CollectionItemForm(user=request.user)
 
     return render(request, 'collections/collection_item_form.html', {
         'form': form,
         'image_formset': image_formset,
         'mode': 'create',
+        'taxonomy_fields': TAXONOMY_FIELDS,
+        'taxonomy_field_names_json': json.dumps([item[0] for item in TAXONOMY_FIELDS]),
+        'suggestion_form': ReferenceDataSuggestionForm(
+            initial={'target_model': 'other', 'suggestion_type': 'new_value'}
+        ),
     })
 
 
@@ -55,7 +72,7 @@ def collection_item_create(request):
 def collection_item_edit(request, pk):
     item = get_object_or_404(CollectionItem, pk=pk, owner=request.user)
     if request.method == 'POST':
-        form = CollectionItemForm(request.POST, instance=item)
+        form = CollectionItemForm(request.POST, instance=item, user=request.user)
         image_formset = CollectionItemImageFormSet(request.POST, request.FILES, instance=item)
         if form.is_valid() and image_formset.is_valid():
             form.save()
@@ -63,7 +80,7 @@ def collection_item_edit(request, pk):
             messages.success(request, 'Collection item updated.')
             return redirect('collections:my_collection')
     else:
-        form = CollectionItemForm(instance=item)
+        form = CollectionItemForm(instance=item, user=request.user)
         image_formset = CollectionItemImageFormSet(instance=item)
 
     return render(request, 'collections/collection_item_form.html', {
@@ -71,6 +88,11 @@ def collection_item_edit(request, pk):
         'image_formset': image_formset,
         'mode': 'edit',
         'item': item,
+        'taxonomy_fields': TAXONOMY_FIELDS,
+        'taxonomy_field_names_json': json.dumps([item[0] for item in TAXONOMY_FIELDS]),
+        'suggestion_form': ReferenceDataSuggestionForm(
+            initial={'target_model': 'collection_item', 'target_id': item.id, 'suggestion_type': 'new_value'}
+        ),
     })
 
 
@@ -96,7 +118,13 @@ def wanted_item_create(request):
             return redirect('collections:my_collection')
     else:
         form = WantedItemForm()
-    return render(request, 'collections/wanted_item_form.html', {'form': form, 'mode': 'create'})
+    return render(request, 'collections/wanted_item_form.html', {
+        'form': form,
+        'mode': 'create',
+        'suggestion_form': ReferenceDataSuggestionForm(
+            initial={'target_model': 'other', 'suggestion_type': 'new_value'}
+        ),
+    })
 
 
 @login_required
@@ -114,6 +142,9 @@ def wanted_item_edit(request, pk):
         'form': form,
         'mode': 'edit',
         'wanted_item': wanted_item,
+        'suggestion_form': ReferenceDataSuggestionForm(
+            initial={'target_model': 'other', 'suggestion_type': 'new_value'}
+        ),
     })
 
 
@@ -142,13 +173,16 @@ def add_from_order(request, order_id):
         title=listing.title,
         description=listing.description,
         license_year=listing.license_year,
+        state=listing.state,
         county=listing.county_ref,
-        license_type=listing.license_type_ref,
         resident_status='unknown',
+        shape=listing.shape,
+        colors=listing.colors,
         condition_grade=listing.condition_grade,
         is_public=True,
         trade_eligible=True,
     )
+    item.license_types.set(listing.license_types.all())
     if listing.featured_image:
         CollectionItemImage.objects.create(
             collection_item=item,

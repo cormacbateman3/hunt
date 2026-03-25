@@ -101,8 +101,8 @@ def profile_view(request, username):
 
     collection_items = (
         CollectionItem.objects.filter(owner=user)
-        .select_related('county', 'license_type')
-        .prefetch_related('images')
+        .select_related('state', 'county')
+        .prefetch_related('images', 'license_types')
         .order_by('-created_at')
     )
     if not is_owner:
@@ -110,7 +110,7 @@ def profile_view(request, username):
 
     wanted_items = (
         WantedItem.objects.filter(user=user)
-        .select_related('county', 'license_type')
+        .select_related('state', 'county', 'license_type')
         .order_by('-created_at')[:8]
     )
     favorite_collection_ids = set()

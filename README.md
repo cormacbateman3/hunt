@@ -29,7 +29,7 @@ Core Alpha systems are included:
 - Stripe Checkout + webhook flow
 - Shippo API integration for shipping/tracking
 
-## Project Structure
+## Proj Structure
 
 ```text
 repo/

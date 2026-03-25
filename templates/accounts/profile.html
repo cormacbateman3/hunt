@@ -50,9 +50,13 @@
                         {% endwith %}
                         <h3 style="font-size: 1.02rem; margin-bottom: 0.35rem;">{{ item.title }}</h3>
                         <p style="color: var(--color-muted); margin-bottom: 0.45rem;">
-                            {% if item.county %}{{ item.county.name }}{% else %}Unknown county{% endif %}
+                            {% if item.state %}{{ item.state.code }} - {% endif %}
+                            {% if item.county %}{{ item.county.name }}{% else %}Unknown unit{% endif %}
                             {% if item.license_year %} - {{ item.license_year }}{% endif %}
                         </p>
+                        {% if item.display_license_type_summary %}
+                            <p style="color: var(--color-muted); margin-bottom: 0.45rem;">{{ item.display_license_type_summary }}</p>
+                        {% endif %}
                         <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
                             {% if item.trade_eligible %}<span class="badge badge-active">Trade Eligible</span>{% endif %}
                             {% if is_owner and not item.is_public %}<span class="badge badge-expired">Private</span>{% endif %}
@@ -82,7 +86,8 @@
         <div style="display: grid; gap: 0.45rem;">
             {% for wanted in wanted_items %}
                 <p>
-                    {% if wanted.county %}{{ wanted.county.name }}{% else %}Any county{% endif %}
+                    {% if wanted.state %}{{ wanted.state.code }} - {% endif %}
+                    {% if wanted.county %}{{ wanted.county.name }}{% else %}Any unit{% endif %}
                     {% if wanted.year_min %} from {{ wanted.year_min }}{% endif %}
                     {% if wanted.year_max %} to {{ wanted.year_max }}{% endif %}
                     {% if wanted.license_type %} - {{ wanted.license_type.name }}{% endif %}

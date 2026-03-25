@@ -4,10 +4,14 @@
     </h3>
     <p style="color: var(--color-muted); margin-bottom: 0.5rem;">
         <strong>{{ listing.get_listing_type_display }}</strong> -
-        {% if listing.county_ref %}{{ listing.county_ref.name }}{% else %}{{ listing.county }}{% endif %} County -
+        {% if listing.state %}{{ listing.state.code }} - {% endif %}
+        {% if listing.county_ref %}{{ listing.county_ref.name }}{% else %}Unknown unit{% endif %} -
         {{ listing.license_year }} -
         {{ listing.get_condition_grade_display }}
     </p>
+    {% if listing.display_license_type_summary %}
+        <p style="margin-bottom: 0.5rem;">{{ listing.display_license_type_summary }}</p>
+    {% endif %}
 
     {% if listing.listing_type == 'auction' %}
         <p style="margin-bottom: 0.5rem;">

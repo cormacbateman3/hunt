@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ geographic_unit.name }} | KeystoneBid{% endblock %}
+
+{% block content %}
+<section class="card" style="max-width: 860px; margin: 0 auto; display: grid; gap: 1rem;">
+    <div>
+        <h1>{{ geographic_unit.name }}</h1>
+        <p style="color: var(--color-muted);">
+            {% if geographic_unit.state %}{{ geographic_unit.state.name }}{% endif %}
+            {% if geographic_unit.unit_type %} · {{ geographic_unit.unit_type }}{% endif %}
+        </p>
+        {% if geographic_unit.fips_code %}
+            <p><strong>FIPS:</strong> {{ geographic_unit.fips_code }}</p>
+        {% endif %}
+        <p><strong>Statewide:</strong> {% if geographic_unit.is_statewide %}Yes{% else %}No{% endif %}</p>
+        <p><strong>Geo data complete:</strong> {% if geographic_unit.geo_data_complete %}Yes{% else %}No{% endif %}</p>
+        {% if geographic_unit.notes %}
+            <p>{{ geographic_unit.notes }}</p>
+        {% endif %}
+    </div>
+
+    <details open>
+        <summary style="cursor: pointer; color: var(--color-aged-amber);">Report an error</summary>
+        <div style="margin-top: 0.75rem;">
+            {% include 'core/_reference_data_suggestion_form.html' %}
+        </div>
+    </details>
+</section>
+{% endblock %}

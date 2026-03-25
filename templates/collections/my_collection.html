@@ -21,9 +21,10 @@
                             <div>
                                 <h3 style="margin-bottom: 0.3rem;">{{ item.title }}</h3>
                                 <p style="color: var(--color-muted); margin-bottom: 0.45rem;">
-                                    {% if item.county %}{{ item.county.name }}{% else %}Unknown county{% endif %}
+                                    {% if item.state %}{{ item.state.code }} - {% endif %}
+                                    {% if item.county %}{{ item.county.name }}{% else %}Unknown unit{% endif %}
                                     {% if item.license_year %} - {{ item.license_year }}{% endif %}
-                                    {% if item.license_type %} - {{ item.license_type.name }}{% endif %}
+                                    {% if item.display_license_type_summary %} - {{ item.display_license_type_summary }}{% endif %}
                                 </p>
                                 <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.45rem;">
                                     <span class="badge {% if item.is_public %}badge-active{% else %}badge-expired{% endif %}">
@@ -64,7 +65,8 @@
                 {% for wanted in wanted_items %}
                     <article style="border: 1px solid var(--color-border); border-radius: 8px; padding: 0.65rem;">
                         <p>
-                            {% if wanted.county %}{{ wanted.county.name }}{% else %}Any county{% endif %}
+                            {% if wanted.state %}{{ wanted.state.code }} - {% endif %}
+                            {% if wanted.county %}{{ wanted.county.name }}{% else %}Any unit{% endif %}
                             {% if wanted.year_min %} from {{ wanted.year_min }}{% endif %}
                             {% if wanted.year_max %} to {{ wanted.year_max }}{% endif %}
                             {% if wanted.license_type %} - {{ wanted.license_type.name }}{% endif %}

@@ -1,8 +1,10 @@
+import json
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.urls import reverse
 from django.views.generic import ListView
 from django.utils import timezone
@@ -10,7 +12,8 @@ from .models import Listing, ListingQuestion
 from .forms import ListingForm, ListingImageFormSet
 from apps.bids.forms import BidForm
 from apps.bids.services import get_user_bid_on_listing, get_winning_bid
-from apps.core.models import County, LicenseType
+from apps.core.models import GeographicUnit, LicenseType, State
+from apps.core.forms import ReferenceDataSuggestionForm
 from apps.orders.models import Order
 from apps.orders.services import calculate_platform_fee
 from apps.payments.models import PaymentTransaction
@@ -20,17 +23,34 @@ from apps.notifications.services import create_notification
 from apps.favorites.models import Favorite
 
 
+TAXONOMY_FIELDS = [
+    ('residency', 'residency_other', 'Residency'),
+    ('holder_eligibility', 'holder_eligibility_other', 'Holder Eligibility'),
+    ('activity_scope', 'activity_scope_other', 'Activity Scope'),
+    ('duration', 'duration_other', 'Duration'),
+    ('addon_type', 'addon_type_other', 'Add-on Type'),
+    ('material', 'material_other', 'Physical Form / Material'),
+]
+
+
 def _prefill_from_collection_item(collection_item):
-    return {
+    initial = {
         'source_collection_item': collection_item.pk,
         'title': collection_item.title,
         'description': collection_item.description,
         'license_year': collection_item.license_year,
+        'state': collection_item.state_id or getattr(collection_item.county, 'state_id', None),
         'county_ref': collection_item.county_id,
-        'license_type_ref': collection_item.license_type_id,
         'resident_status': collection_item.resident_status or 'unknown',
         'condition_grade': collection_item.condition_grade or '',
+        'shape': collection_item.shape or '',
+        'colors': collection_item.colors,
     }
+    for category in ('residency', 'holder_eligibility', 'activity_scope', 'duration', 'addon_type', 'material'):
+        selected = collection_item.license_types.filter(category=category).order_by('name').first()
+        if selected:
+            initial[category] = selected.id
+    return initial
 
 
 def _copy_collection_images_to_listing(listing):
@@ -69,28 +89,25 @@ class BaseListingListView(ListView):
 
     def get_queryset(self):
         queryset = Listing.objects.filter(status='active').select_related(
-            'seller', 'county_ref', 'license_type_ref'
-        )
+            'seller', 'state', 'county_ref'
+        ).prefetch_related('license_types')
         if self.listing_type:
             queryset = queryset.filter(listing_type=self.listing_type)
 
+        state_id = self.request.GET.get('state_id')
         county_id = self.request.GET.get('county_id')
         license_type_id = self.request.GET.get('license_type_id')
-        county = self.request.GET.get('county')
         year_min = self.request.GET.get('year_min')
         year_max = self.request.GET.get('year_max')
         condition = self.request.GET.get('condition')
         search = self.request.GET.get('search')
 
+        if state_id and state_id.isdigit():
+            queryset = queryset.filter(state_id=state_id)
         if county_id and county_id.isdigit():
             queryset = queryset.filter(county_ref_id=county_id)
-        elif county:
-            # Backward-compatible support for legacy county text URLs.
-            queryset = queryset.filter(
-                Q(county_ref__name__iexact=county) | Q(county__iexact=county)
-            )
         if license_type_id and license_type_id.isdigit():
-            queryset = queryset.filter(license_type_ref_id=license_type_id)
+            queryset = queryset.filter(license_types__id=license_type_id)
         if year_min:
             queryset = queryset.filter(license_year__gte=year_min)
         if year_max:
@@ -101,25 +118,35 @@ class BaseListingListView(ListView):
             queryset = queryset.filter(
                 Q(title__icontains=search)
                 | Q(description__icontains=search)
+                | Q(state__name__icontains=search)
                 | Q(county__icontains=search)
                 | Q(county_ref__name__icontains=search)
                 | Q(license_type__icontains=search)
-                | Q(license_type_ref__name__icontains=search)
+                | Q(license_types__name__icontains=search)
             )
 
-        return queryset
+        return queryset.distinct()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['counties'] = County.objects.order_by('name')
-        context['license_types'] = LicenseType.objects.order_by('name')
+        selected_state_id = self.request.GET.get('state_id')
+        default_state = State.objects.filter(is_primary_default=True).first() or State.objects.order_by('name').first()
+        selected_state = State.objects.filter(pk=selected_state_id).first() if selected_state_id and selected_state_id.isdigit() else default_state
+        context['states'] = State.objects.order_by('-is_primary_default', 'name')
+        context['selected_state'] = selected_state
+        context['counties'] = GeographicUnit.objects.filter(state=selected_state).order_by('sort_order', 'name') if selected_state else GeographicUnit.objects.none()
+        context['license_types'] = LicenseType.objects.filter(
+            is_system_value=True,
+        ).filter(
+            Q(state=selected_state) | Q(state__isnull=True) | Q(state__code='FD')
+        ).order_by('category', 'name').distinct() if selected_state else LicenseType.objects.none()
         context['section_title'] = self.section_title
         context['section_description'] = self.section_description
         context['current_route_name'] = self.request.resolver_match.view_name
         context['filters'] = {
+            'state_id': self.request.GET.get('state_id', str(selected_state.id) if selected_state else ''),
             'county_id': self.request.GET.get('county_id', ''),
             'license_type_id': self.request.GET.get('license_type_id', ''),
-            'county': self.request.GET.get('county', ''),
             'year_min': self.request.GET.get('year_min', ''),
             'year_max': self.request.GET.get('year_max', ''),
             'condition': self.request.GET.get('condition', ''),
@@ -159,8 +186,8 @@ class TradingBlockListView(BaseListingListView):
 def listing_detail(request, pk):
     """View a single listing with full details"""
     listing = get_object_or_404(
-        Listing.objects.select_related('seller__profile', 'county_ref', 'license_type_ref')
-                       .prefetch_related('additional_images', 'questions__asker'),
+        Listing.objects.select_related('seller__profile', 'state', 'county_ref')
+                       .prefetch_related('additional_images', 'questions__asker', 'license_types'),
         pk=pk
     )
 
@@ -268,9 +295,8 @@ def listing_create(request):
         form = ListingForm(request.POST, request.FILES, user=request.user)
 
         if form.is_valid() and image_formset.is_valid():
-            listing = form.save(commit=False)
-            listing.seller = request.user
-            listing.save()
+            form.instance.seller = request.user
+            listing = form.save()
 
             # Re-bind as inline formset to save FK automatically.
             image_formset = ListingImageFormSet(
@@ -296,7 +322,7 @@ def listing_create(request):
         source_id = request.GET.get('from_collection')
         if source_id and source_id.isdigit():
             source_item = get_object_or_404(
-                request.user.collection_items.select_related('county', 'license_type'),
+                request.user.collection_items.select_related('state', 'county').prefetch_related('license_types'),
                 pk=int(source_id),
             )
             form = ListingForm(initial=_prefill_from_collection_item(source_item), user=request.user)
@@ -306,6 +332,11 @@ def listing_create(request):
     context = {
         'form': form,
         'image_formset': image_formset,
+        'taxonomy_fields': TAXONOMY_FIELDS,
+        'taxonomy_field_names_json': json.dumps([item[0] for item in TAXONOMY_FIELDS]),
+        'suggestion_form': ReferenceDataSuggestionForm(
+            initial={'target_model': 'other', 'suggestion_type': 'new_value'}
+        ),
     }
 
     return render(request, 'listings/listing_create.html', context)
@@ -335,6 +366,11 @@ def listing_edit(request, pk):
         'form': form,
         'image_formset': image_formset,
         'listing': listing,
+        'taxonomy_fields': TAXONOMY_FIELDS,
+        'taxonomy_field_names_json': json.dumps([item[0] for item in TAXONOMY_FIELDS]),
+        'suggestion_form': ReferenceDataSuggestionForm(
+            initial={'target_model': 'listing', 'target_id': listing.id, 'suggestion_type': 'new_value'}
+        ),
     }
 
     return render(request, 'listings/listing_edit.html', context)

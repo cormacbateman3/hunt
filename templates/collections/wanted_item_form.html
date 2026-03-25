@@ -11,14 +11,47 @@
     <form method="post">
         {% csrf_token %}
         <div style="display: grid; gap: 0.85rem;">
-            {% for field in form %}
+            <div>
+                <label class="form-label" for="{{ form.state.id_for_label }}">State</label>
+                {{ form.state }}
+                {{ form.state.errors }}
+            </div>
+            <div>
+                <label class="form-label" id="wanted-county-label" for="{{ form.county.id_for_label }}">{{ form.county.label }}</label>
+                {{ form.county }}
+                {{ form.county.errors }}
+            </div>
+            <div>
+                <label class="form-label" for="{{ form.license_type.id_for_label }}">License type</label>
+                {{ form.license_type }}
+                {{ form.license_type.errors }}
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
                 <div>
-                    <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                    {{ field }}
-                    {{ field.errors }}
+                    <label class="form-label" for="{{ form.year_min.id_for_label }}">Year min</label>
+                    {{ form.year_min }}
+                    {{ form.year_min.errors }}
                 </div>
-            {% endfor %}
+                <div>
+                    <label class="form-label" for="{{ form.year_max.id_for_label }}">Year max</label>
+                    {{ form.year_max }}
+                    {{ form.year_max.errors }}
+                </div>
+            </div>
+            <div>
+                <label class="form-label" for="{{ form.notes.id_for_label }}">Notes</label>
+                {{ form.notes }}
+                {{ form.notes.errors }}
+            </div>
         </div>
+
+        <details style="margin-top: 1rem;">
+            <summary style="cursor: pointer; color: var(--color-aged-amber);">Is a value missing?</summary>
+            <div style="margin-top: 0.75rem;">
+                {% include 'core/_reference_data_suggestion_form.html' %}
+            </div>
+        </details>
+
         <div style="margin-top: 1.25rem;">
             <button type="submit" class="btn-primary">
                 {% if mode == 'create' %}Add wanted item{% else %}Save changes{% endif %}
@@ -29,4 +62,48 @@
         </div>
     </form>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const stateSelect = document.getElementById('{{ form.state.id_for_label }}');
+    const geoSelect = document.getElementById('{{ form.county.id_for_label }}');
+    const geoLabel = document.getElementById('wanted-county-label');
+    const licenseTypeSelect = document.getElementById('{{ form.license_type.id_for_label }}');
+
+    const loadReferenceData = async () => {
+        const stateId = stateSelect.value;
+        if (!stateId) return;
+
+        const geoResponse = await fetch(`/api/geo-units/?state=${encodeURIComponent(stateId)}`);
+        const geoData = await geoResponse.json();
+        const currentGeo = geoSelect.value;
+        geoSelect.innerHTML = '<option value="">Any geographic unit</option>';
+        geoData.results.forEach((unit) => {
+            const option = document.createElement('option');
+            option.value = unit.id;
+            option.textContent = unit.name;
+            if (String(unit.id) === currentGeo) option.selected = true;
+            geoSelect.appendChild(option);
+        });
+        geoLabel.textContent = geoData.issuance_unit_label || 'Geographic Unit';
+
+        const licenseTypeResponse = await fetch(`/api/license-types/?state=${encodeURIComponent(stateId)}`);
+        const licenseTypeData = await licenseTypeResponse.json();
+        const currentType = licenseTypeSelect.value;
+        licenseTypeSelect.innerHTML = '<option value="">Any type</option>';
+        Object.values(licenseTypeData.results).flat().forEach((item) => {
+            const option = document.createElement('option');
+            option.value = item.id;
+            option.textContent = item.name;
+            if (String(item.id) === currentType) option.selected = true;
+            licenseTypeSelect.appendChild(option);
+        });
+    };
+
+    stateSelect.addEventListener('change', loadReferenceData);
+    loadReferenceData();
+});
+</script>
 {% endblock %}

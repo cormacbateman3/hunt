@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Listing, ListingImage, ListingQuestion
+
+from apps.listings.models import Listing, ListingImage, ListingQuestion
 
 
 class ListingImageInline(admin.TabularInline):
@@ -10,10 +11,23 @@ class ListingImageInline(admin.TabularInline):
 
 @admin.register(Listing)
 class ListingAdmin(admin.ModelAdmin):
-    list_display = ('title', 'listing_type', 'seller', 'license_year', 'county', 'resident_status', 'current_price', 'status', 'auction_end', 'created_at')
-    list_filter = ('listing_type', 'status', 'condition_grade', 'county', 'license_year', 'created_at')
+    list_display = (
+        'title',
+        'listing_type',
+        'seller',
+        'state',
+        'county_ref',
+        'license_year',
+        'condition_grade',
+        'current_price',
+        'listing_completeness_score',
+        'status',
+        'created_at',
+    )
+    list_filter = ('listing_type', 'status', 'condition_grade', 'state', 'license_year', 'created_at')
     search_fields = ('title', 'description', 'county', 'seller__username')
-    readonly_fields = ('created_at', 'updated_at', 'current_bid')
+    readonly_fields = ('created_at', 'updated_at', 'current_bid', 'listing_completeness_score')
+    filter_horizontal = ('license_types',)
     inlines = [ListingImageInline]
     date_hierarchy = 'created_at'
 
@@ -21,8 +35,12 @@ class ListingAdmin(admin.ModelAdmin):
         ('Listing Information', {
             'fields': ('seller', 'listing_type', 'title', 'description', 'featured_image', 'source_collection_item')
         }),
-        ('License Details', {
-            'fields': ('license_year', 'county', 'county_ref', 'license_type', 'license_type_ref', 'resident_status', 'condition_grade')
+        ('Reference Data', {
+            'fields': ('state', 'county_ref', 'is_statewide', 'license_types', 'shape', 'colors', 'condition_grade', 'listing_completeness_score')
+        }),
+        ('Legacy Snapshots', {
+            'fields': ('county', 'license_type', 'resident_status'),
+            'classes': ('collapse',),
         }),
         ('Auction Pricing', {
             'fields': ('starting_price', 'current_bid', 'reserve_price')
@@ -47,6 +65,7 @@ class ListingAdmin(admin.ModelAdmin):
     def current_price(self, obj):
         price = obj.current_price()
         return f"${price:.2f}" if price else '-'
+
     current_price.short_description = 'Current Price'
 
 

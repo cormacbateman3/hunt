@@ -1,316 +1,535 @@
-state_abbrev,name,category,slug
-CO,Resident,residency,co-resident
-CO,Nonresident,residency,co-nonresident
-CO,Annual,duration,co-annual
-CO,Lifetime,duration,co-lifetime
-CO,Youth,eligibility,co-youth
-CO,Senior,eligibility,co-senior
-CO,Disabled,eligibility,co-disabled
-CO,Veteran,eligibility,co-veteran
-CO,Hunting,activity_scope,co-hunting
-CO,Combo Hunt/Fish,activity_scope,co-combo-hunt-fish
-CO,Trapping,activity_scope,co-trapping
-CO,Sportsman,activity_scope,co-sportsman
-GA,Resident,residency,ga-resident
-GA,Nonresident,residency,ga-nonresident
-GA,Annual,duration,ga-annual
-GA,Short-term,duration,ga-short-term
-GA,Lifetime,duration,ga-lifetime
-GA,Youth,eligibility,ga-youth
-GA,Senior,eligibility,ga-senior
-GA,Disabled,eligibility,ga-disabled
-GA,Veteran,eligibility,ga-veteran
-GA,Hunting,activity_scope,ga-hunting
-GA,Combo Hunt/Fish,activity_scope,ga-combo-hunt-fish
-GA,Sportsman,activity_scope,ga-sportsman
-GA,Apprentice,eligibility,ga-apprentice
-IL,Resident,residency,il-resident
-IL,Nonresident,residency,il-nonresident
-IL,Annual,duration,il-annual
-IL,Lifetime,duration,il-lifetime
-IL,Youth,eligibility,il-youth
-IL,Senior,eligibility,il-senior
-IL,Apprentice,eligibility,il-apprentice
-IL,Hunting,activity_scope,il-hunting
-IL,Combo Hunt/Fish,activity_scope,il-combo-hunt-fish
-IL,Trapping,activity_scope,il-trapping
-IN,Resident,residency,in-resident
-IN,Nonresident,residency,in-nonresident
-IN,Annual,duration,in-annual
-IN,Short-term,duration,in-short-term
-IN,Lifetime,duration,in-lifetime
-IN,Youth,eligibility,in-youth
-IN,Disabled,eligibility,in-disabled
-IN,Veteran,eligibility,in-veteran
-IN,Hunting,activity_scope,in-hunting
-IN,Combo Hunt/Fish,activity_scope,in-combo-hunt-fish
-IN,Trapping,activity_scope,in-trapping
-IA,Resident,residency,ia-resident
-IA,Nonresident,residency,ia-nonresident
-IA,Annual,duration,ia-annual
-IA,Lifetime,duration,ia-lifetime
-IA,Youth,eligibility,ia-youth
-IA,Senior,eligibility,ia-senior
-IA,Disabled,eligibility,ia-disabled
-IA,Apprentice,eligibility,ia-apprentice
-IA,Hunting,activity_scope,ia-hunting
-IA,Combo Hunt/Fish,activity_scope,ia-combo-hunt-fish
-IA,Trapping/Fur Harvester,activity_scope,ia-trapping-fur-harvester
-KS,Resident,residency,ks-resident
-KS,Nonresident,residency,ks-nonresident
-KS,Annual,duration,ks-annual
-KS,Multi-year,duration,ks-multi-year
-KS,Lifetime,duration,ks-lifetime
-KS,Youth,eligibility,ks-youth
-KS,Senior,eligibility,ks-senior
-KS,Military,eligibility,ks-military
-KS,Hunting,activity_scope,ks-hunting
-KS,Combo Hunt/Fish,activity_scope,ks-combo-hunt-fish
-KS,Furtaker,activity_scope,ks-furtaker
-KY,Resident,residency,ky-resident
-KY,Nonresident,residency,ky-nonresident
-KY,Annual,duration,ky-annual
-KY,Short-term,duration,ky-short-term
-KY,Lifetime,duration,ky-lifetime
-KY,Youth,eligibility,ky-youth
-KY,Senior,eligibility,ky-senior
-KY,Disabled,eligibility,ky-disabled
-KY,Veteran,eligibility,ky-veteran
-KY,Hunting,activity_scope,ky-hunting
-KY,Combo Hunt/Fish,activity_scope,ky-combo-hunt-fish
-KY,Trapping,activity_scope,ky-trapping
-KY,Sportsman,activity_scope,ky-sportsman
-ME,Resident,residency,me-resident
-ME,Nonresident,residency,me-nonresident
-ME,Alien,residency,me-alien
-ME,Annual,duration,me-annual
-ME,Short-term,duration,me-short-term
-ME,Lifetime,duration,me-lifetime
-ME,Youth,eligibility,me-youth
-ME,Senior,eligibility,me-senior
-ME,Disabled,eligibility,me-disabled
-ME,Veteran,eligibility,me-veteran
-ME,Apprentice,eligibility,me-apprentice
-ME,Hunting,activity_scope,me-hunting
-ME,Combo Hunt/Fish,activity_scope,me-combo-hunt-fish
-ME,Trapping,activity_scope,me-trapping
-ME,Sportsman,activity_scope,me-sportsman
-MD,Resident,residency,md-resident
-MD,Nonresident,residency,md-nonresident
-MD,Annual,duration,md-annual
-MD,Short-term,duration,md-short-term
-MD,Lifetime,duration,md-lifetime
-MD,Youth,eligibility,md-youth
-MD,Senior,eligibility,md-senior
-MD,Disabled,eligibility,md-disabled
-MD,Veteran,eligibility,md-veteran
-MD,Apprentice,eligibility,md-apprentice
-MD,Hunting,activity_scope,md-hunting
-MD,Trapping,activity_scope,md-trapping
-MI,Resident,residency,mi-resident
-MI,Nonresident,residency,mi-nonresident
-MI,Annual,duration,mi-annual
-MI,Short-term,duration,mi-short-term
-MI,Lifetime,duration,mi-lifetime
-MI,Youth,eligibility,mi-youth
-MI,Senior,eligibility,mi-senior
-MI,Disabled,eligibility,mi-disabled
-MI,Veteran,eligibility,mi-veteran
-MI,Military,eligibility,mi-military
-MI,Hunting,activity_scope,mi-hunting
-MI,Combo Hunt/Fish,activity_scope,mi-combo-hunt-fish
-MI,Fur Harvester,activity_scope,mi-fur-harvester
-MI,Apprentice,eligibility,mi-apprentice
-MN,Resident,residency,mn-resident
-MN,Nonresident,residency,mn-nonresident
-MN,Annual,duration,mn-annual
-MN,Youth,eligibility,mn-youth
-MN,Senior,eligibility,mn-senior
-MN,Military,eligibility,mn-military
-MN,Veteran,eligibility,mn-veteran
-MN,Hunting,activity_scope,mn-hunting
-MN,Combo Hunt/Fish,activity_scope,mn-combo-hunt-fish
-MN,Trapping,activity_scope,mn-trapping
-MN,Sportsman,activity_scope,mn-sportsman
-MO,Resident,residency,mo-resident
-MO,Nonresident,residency,mo-nonresident
-MO,Annual,duration,mo-annual
-MO,Lifetime,duration,mo-lifetime
-MO,Youth,eligibility,mo-youth
-MO,Senior,eligibility,mo-senior
-MO,Disabled,eligibility,mo-disabled
-MO,Veteran,eligibility,mo-veteran
-MO,Military,eligibility,mo-military
-MO,Hunting,activity_scope,mo-hunting
-MO,Combo Hunt/Fish,activity_scope,mo-combo-hunt-fish
-MO,Trapping,activity_scope,mo-trapping
-MO,Sportsman,activity_scope,mo-sportsman
-MO,Apprentice,eligibility,mo-apprentice
-MT,Resident,residency,mt-resident
-MT,Nonresident,residency,mt-nonresident
-MT,Annual,duration,mt-annual
-MT,Youth,eligibility,mt-youth
-MT,Senior,eligibility,mt-senior
-MT,Disabled,eligibility,mt-disabled
-MT,Veteran,eligibility,mt-veteran
-MT,Military,eligibility,mt-military
-MT,Hunting,activity_scope,mt-hunting
-MT,Combo Hunt/Fish,activity_scope,mt-combo-hunt-fish
-MT,Sportsman,activity_scope,mt-sportsman
-NH,Resident,residency,nh-resident
-NH,Nonresident,residency,nh-nonresident
-NH,Annual,duration,nh-annual
-NH,Short-term,duration,nh-short-term
-NH,Lifetime,duration,nh-lifetime
-NH,Youth,eligibility,nh-youth
-NH,Senior,eligibility,nh-senior
-NH,Disabled,eligibility,nh-disabled
-NH,Veteran,eligibility,nh-veteran
-NH,Apprentice,eligibility,nh-apprentice
-NH,Hunting,activity_scope,nh-hunting
-NH,Combo Hunt/Fish,activity_scope,nh-combo-hunt-fish
-NH,Trapping,activity_scope,nh-trapping
-NY,Resident,residency,ny-resident
-NY,Nonresident,residency,ny-nonresident
-NY,Annual,duration,ny-annual
-NY,Lifetime,duration,ny-lifetime
-NY,Youth,eligibility,ny-youth
-NY,Senior,eligibility,ny-senior
-NY,Disabled,eligibility,ny-disabled
-NY,Veteran,eligibility,ny-veteran
-NY,Military,eligibility,ny-military
-NY,Hunting,activity_scope,ny-hunting
-NY,Combo Hunt/Fish,activity_scope,ny-combo-hunt-fish
-NY,Sportsman,activity_scope,ny-sportsman
-NC,Resident,residency,nc-resident
-NC,Nonresident,residency,nc-nonresident
-NC,Annual,duration,nc-annual
-NC,Short-term,duration,nc-short-term
-NC,Lifetime,duration,nc-lifetime
-NC,Youth,eligibility,nc-youth
-NC,Senior,eligibility,nc-senior
-NC,Disabled,eligibility,nc-disabled
-NC,Veteran,eligibility,nc-veteran
-NC,Hunting,activity_scope,nc-hunting
-NC,Combo Hunt/Fish,activity_scope,nc-combo-hunt-fish
-NC,Trapping,activity_scope,nc-trapping
-NC,Sportsman,activity_scope,nc-sportsman
-OH,Resident,residency,oh-resident
-OH,Nonresident,residency,oh-nonresident
-OH,Annual,duration,oh-annual
-OH,Short-term,duration,oh-short-term
-OH,Multi-year,duration,oh-multi-year
-OH,Lifetime,duration,oh-lifetime
-OH,Youth,eligibility,oh-youth
-OH,Senior,eligibility,oh-senior
-OH,Disabled,eligibility,oh-disabled
-OH,Veteran,eligibility,oh-veteran
-OH,Apprentice,eligibility,oh-apprentice
-OH,Hunting,activity_scope,oh-hunting
-PA,Resident,residency,pa-resident
-PA,Nonresident,residency,pa-nonresident
-PA,Annual,duration,pa-annual
-PA,Short-term,duration,pa-short-term
-PA,Lifetime,duration,pa-lifetime
-PA,Youth,eligibility,pa-youth
-PA,Senior,eligibility,pa-senior
-PA,Disabled,eligibility,pa-disabled
-PA,Veteran,eligibility,pa-veteran
-PA,Military,eligibility,pa-military
-PA,Hunting,activity_scope,pa-hunting
-PA,Combo Hunt/Fish,activity_scope,pa-combo-hunt-fish
-PA,Furtaker,activity_scope,pa-furtaker
-PA,Apprentice,eligibility,pa-apprentice
-TN,Resident,residency,tn-resident
-TN,Nonresident,residency,tn-nonresident
-TN,Annual,duration,tn-annual
-TN,Short-term,duration,tn-short-term
-TN,Lifetime,duration,tn-lifetime
-TN,Youth,eligibility,tn-youth
-TN,Senior,eligibility,tn-senior
-TN,Disabled,eligibility,tn-disabled
-TN,Veteran,eligibility,tn-veteran
-TN,Hunting,activity_scope,tn-hunting
-TN,Combo Hunt/Fish,activity_scope,tn-combo-hunt-fish
-TN,Trapping,activity_scope,tn-trapping
-TN,Sportsman,activity_scope,tn-sportsman
-TX,Resident,residency,tx-resident
-TX,Nonresident,residency,tx-nonresident
-TX,Annual,duration,tx-annual
-TX,Short-term,duration,tx-short-term
-TX,Lifetime,duration,tx-lifetime
-TX,Youth,eligibility,tx-youth
-TX,Senior,eligibility,tx-senior
-TX,Disabled,eligibility,tx-disabled
-TX,Veteran,eligibility,tx-veteran
-TX,Military,eligibility,tx-military
-TX,Hunting,activity_scope,tx-hunting
-TX,Combo Hunt/Fish,activity_scope,tx-combo-hunt-fish
-TX,Trapping,activity_scope,tx-trapping
-TX,Sportsman,activity_scope,tx-sportsman
-VT,Resident,residency,vt-resident
-VT,Nonresident,residency,vt-nonresident
-VT,Annual,duration,vt-annual
-VT,Lifetime,duration,vt-lifetime
-VT,Youth,eligibility,vt-youth
-VT,Senior,eligibility,vt-senior
-VT,Disabled,eligibility,vt-disabled
-VT,Veteran,eligibility,vt-veteran
-VT,Hunting,activity_scope,vt-hunting
-VT,Combo Hunt/Fish,activity_scope,vt-combo-hunt-fish
-VT,Trapping,activity_scope,vt-trapping
-VA,Resident,residency,va-resident
-VA,Nonresident,residency,va-nonresident
-VA,Annual,duration,va-annual
-VA,Short-term,duration,va-short-term
-VA,Multi-year,duration,va-multi-year
-VA,Lifetime,duration,va-lifetime
-VA,Youth,eligibility,va-youth
-VA,Senior,eligibility,va-senior
-VA,Disabled,eligibility,va-disabled
-VA,Veteran,eligibility,va-veteran
-VA,Apprentice,eligibility,va-apprentice
-VA,Hunting,activity_scope,va-hunting
-VA,Combo Hunt/Fish,activity_scope,va-combo-hunt-fish
-VA,Trapping,activity_scope,va-trapping
-VA,Sportsman,activity_scope,va-sportsman
-WV,Resident,residency,wv-resident
-WV,Nonresident,residency,wv-nonresident
-WV,Annual,duration,wv-annual
-WV,Multi-year,duration,wv-multi-year
-WV,Lifetime,duration,wv-lifetime
-WV,Youth,eligibility,wv-youth
-WV,Senior,eligibility,wv-senior
-WV,Disabled,eligibility,wv-disabled
-WV,Veteran,eligibility,wv-veteran
-WV,Hunting,activity_scope,wv-hunting
-WV,Combo Hunt/Fish,activity_scope,wv-combo-hunt-fish
-WV,Trapping,activity_scope,wv-trapping
-WV,Sportsman,activity_scope,wv-sportsman
-WV,Apprentice,eligibility,wv-apprentice
-WI,Resident,residency,wi-resident
-WI,Nonresident,residency,wi-nonresident
-WI,Annual,duration,wi-annual
-WI,Short-term,duration,wi-short-term
-WI,Lifetime,duration,wi-lifetime
-WI,Youth,eligibility,wi-youth
-WI,Senior,eligibility,wi-senior
-WI,Military,eligibility,wi-military
-WI,Hunting,activity_scope,wi-hunting
-WI,Combo Hunt/Fish,activity_scope,wi-combo-hunt-fish
-WI,Trapping,activity_scope,wi-trapping
-WI,Sportsman,activity_scope,wi-sportsman
-WY,Resident,residency,wy-resident
-WY,Nonresident,residency,wy-nonresident
-WY,Annual,duration,wy-annual
-WY,Youth,eligibility,wy-youth
-WY,Senior,eligibility,wy-senior
-WY,Disabled,eligibility,wy-disabled
-WY,Veteran,eligibility,wy-veteran
-WY,Hunting,activity_scope,wy-hunting
-WY,Trapping,activity_scope,wy-trapping
-,Other,residency,other-residency
-,Other,duration,other-duration
-,Other,eligibility,other-eligibility
-,Other,activity_scope,other-activityscope
-,Other,addon,other-addon
+state_abbrev,name,category,slug,is_system_value
+,Other,activity_scope,universal-activityscope-other,True
+CO,Combo Hunt+Fish,activity_scope,co-activityscope-combo-huntfish,True
+CO,General Hunting,activity_scope,co-activityscope-general-hunting,True
+GA,Combo Hunt+Fish,activity_scope,ga-activityscope-combo-huntfish,True
+GA,General Hunting,activity_scope,ga-activityscope-general-hunting,True
+GA,Sportsman,activity_scope,ga-activityscope-sportsman,True
+IA,Combo Hunt+Fish,activity_scope,ia-activityscope-combo-huntfish,True
+IA,General Hunting,activity_scope,ia-activityscope-general-hunting,True
+IA,Trapping/Furbearer,activity_scope,ia-activityscope-trapping-furbearer,True
+IL,Combo Hunt+Fish,activity_scope,il-activityscope-combo-huntfish,True
+IL,General Hunting,activity_scope,il-activityscope-general-hunting,True
+IL,Trapping/Furbearer,activity_scope,il-activityscope-trapping-furbearer,True
+IN,Combo Hunt+Fish,activity_scope,in-activityscope-combo-huntfish,True
+IN,General Hunting,activity_scope,in-activityscope-general-hunting,True
+IN,Trapping/Furbearer,activity_scope,in-activityscope-trapping-furbearer,True
+KS,Combo Hunt+Fish,activity_scope,ks-activityscope-combo-huntfish,True
+KS,General Hunting,activity_scope,ks-activityscope-general-hunting,True
+KS,Trapping/Furbearer,activity_scope,ks-activityscope-trapping-furbearer,True
+KY,Combo Hunt+Fish,activity_scope,ky-activityscope-combo-huntfish,True
+KY,General Hunting,activity_scope,ky-activityscope-general-hunting,True
+KY,Sportsman,activity_scope,ky-activityscope-sportsman,True
+KY,Trapping/Furbearer,activity_scope,ky-activityscope-trapping-furbearer,True
+MD,General Hunting,activity_scope,md-activityscope-general-hunting,True
+MD,Trapping/Furbearer,activity_scope,md-activityscope-trapping-furbearer,True
+MD,Waterfowl/Migratory,activity_scope,md-activityscope-waterfowl-migratory,True
+ME,Combo Hunt+Fish,activity_scope,me-activityscope-combo-huntfish,True
+ME,General Hunting,activity_scope,me-activityscope-general-hunting,True
+ME,Sportsman,activity_scope,me-activityscope-sportsman,True
+MI,Combo Hunt+Fish,activity_scope,mi-activityscope-combo-huntfish,True
+MI,General Hunting,activity_scope,mi-activityscope-general-hunting,True
+MI,Trapping/Furbearer,activity_scope,mi-activityscope-trapping-furbearer,True
+MN,Big Game,activity_scope,mn-activityscope-big-game,True
+MN,General Hunting,activity_scope,mn-activityscope-general-hunting,True
+MN,Sportsman,activity_scope,mn-activityscope-sportsman,True
+MN,Trapping/Furbearer,activity_scope,mn-activityscope-trapping-furbearer,True
+MO,Combo Hunt+Fish,activity_scope,mo-activityscope-combo-huntfish,True
+MO,General Hunting,activity_scope,mo-activityscope-general-hunting,True
+MT,Big Game,activity_scope,mt-activityscope-big-game,True
+MT,General Hunting,activity_scope,mt-activityscope-general-hunting,True
+MT,Sportsman,activity_scope,mt-activityscope-sportsman,True
+NC,General Hunting,activity_scope,nc-activityscope-general-hunting,True
+NC,Other,activity_scope,nc-activityscope-other,True
+NC,Sportsman,activity_scope,nc-activityscope-sportsman,True
+NC,Trapping/Furbearer,activity_scope,nc-activityscope-trapping-furbearer,True
+NH,Combo Hunt+Fish,activity_scope,nh-activityscope-combo-huntfish,True
+NH,General Hunting,activity_scope,nh-activityscope-general-hunting,True
+NY,General Hunting,activity_scope,ny-activityscope-general-hunting,True
+NY,Sportsman,activity_scope,ny-activityscope-sportsman,True
+OH,General Hunting,activity_scope,oh-activityscope-general-hunting,True
+PA,Combo Hunt+Fish,activity_scope,pa-activityscope-combo-huntfish,True
+PA,General Hunting,activity_scope,pa-activityscope-general-hunting,True
+PA,Trapping/Furbearer,activity_scope,pa-activityscope-trapping-furbearer,True
+TN,Combo Hunt+Fish,activity_scope,tn-activityscope-combo-huntfish,True
+TN,General Hunting,activity_scope,tn-activityscope-general-hunting,True
+TN,Sportsman,activity_scope,tn-activityscope-sportsman,True
+TX,General Hunting,activity_scope,tx-activityscope-general-hunting,True
+TX,Sportsman,activity_scope,tx-activityscope-sportsman,True
+TX,Trapping/Furbearer,activity_scope,tx-activityscope-trapping-furbearer,True
+VA,Combo Hunt+Fish,activity_scope,va-activityscope-combo-huntfish,True
+VA,General Hunting,activity_scope,va-activityscope-general-hunting,True
+VA,Other,activity_scope,va-activityscope-other,True
+VA,Sportsman,activity_scope,va-activityscope-sportsman,True
+VA,Trapping/Furbearer,activity_scope,va-activityscope-trapping-furbearer,True
+VT,Combo Hunt+Fish,activity_scope,vt-activityscope-combo-huntfish,True
+VT,General Hunting,activity_scope,vt-activityscope-general-hunting,True
+VT,Trapping/Furbearer,activity_scope,vt-activityscope-trapping-furbearer,True
+WI,Big Game,activity_scope,wi-activityscope-big-game,True
+WI,Combo Hunt+Fish,activity_scope,wi-activityscope-combo-huntfish,True
+WI,General Hunting,activity_scope,wi-activityscope-general-hunting,True
+WI,Sportsman,activity_scope,wi-activityscope-sportsman,True
+WI,Trapping/Furbearer,activity_scope,wi-activityscope-trapping-furbearer,True
+WV,Big Game,activity_scope,wv-activityscope-big-game,True
+WV,Combo Hunt+Fish,activity_scope,wv-activityscope-combo-huntfish,True
+WV,General Hunting,activity_scope,wv-activityscope-general-hunting,True
+WV,Sportsman,activity_scope,wv-activityscope-sportsman,True
+WY,Big Game,activity_scope,wy-activityscope-big-game,True
+WY,General Hunting,activity_scope,wy-activityscope-general-hunting,True
+,Other,addon_type,universal-addontype-other,True
+CO,Bear Tag (Draw),addon_type,co-addontype-bear-tag-draw,True
+CO,Bear Tag (Over-the-Counter),addon_type,co-addontype-bear-tag-over-the-counter,True
+CO,Bighorn Sheep Tag (Draw),addon_type,co-addontype-bighorn-sheep-tag-draw,True
+CO,Bison Tag (Draw),addon_type,co-addontype-bison-tag-draw,True
+CO,Colorado Waterfowl Stamp,addon_type,co-addontype-colorado-waterfowl-stamp,True
+CO,Deer Tag (Limited Draw),addon_type,co-addontype-deer-tag-limited-draw,True
+CO,Deer Tag (Over-the-Counter),addon_type,co-addontype-deer-tag-over-the-counter,True
+CO,Elk Tag (Limited Draw),addon_type,co-addontype-elk-tag-limited-draw,True
+CO,Elk Tag (Over-the-Counter),addon_type,co-addontype-elk-tag-over-the-counter,True
+CO,Furbearer License,addon_type,co-addontype-furbearer-license,True
+CO,Habitat Stamp,addon_type,co-addontype-habitat-stamp,True
+CO,Moose Tag (Draw),addon_type,co-addontype-moose-tag-draw,True
+CO,Mountain Goat Tag (Draw),addon_type,co-addontype-mountain-goat-tag-draw,True
+CO,Mountain Lion Tag (Over-the-Counter),addon_type,co-addontype-mountain-lion-tag-over-the-counter,True
+CO,Pronghorn Tag (Draw),addon_type,co-addontype-pronghorn-tag-draw,True
+CO,Turkey Tag (Draw),addon_type,co-addontype-turkey-tag-draw,True
+CO,Turkey Tag (Over-the-Counter),addon_type,co-addontype-turkey-tag-over-the-counter,True
+FD,Federal Duck Stamp,addon_type,fd-addontype-federal-duck-stamp,True
+FD,HIP Certification (Harvest Information Program),addon_type,fd-addontype-hip-certification-harvest-information-program,True
+GA,Alligator Harvest Permit,addon_type,ga-addontype-alligator-harvest-permit,True
+GA,Big Game License (deer/turkey/bear),addon_type,ga-addontype-big-game-license-deer-turkey-bear,True
+GA,GA Waterfowl and Migratory Bird License,addon_type,ga-addontype-ga-waterfowl-and-migratory-bird-license,True
+GA,Harvest Record,addon_type,ga-addontype-harvest-record,True
+GA,Lands Pass (WMA Access),addon_type,ga-addontype-lands-pass-wma-access,True
+IA,Antlerless Deer Tag (County Quota),addon_type,ia-addontype-antlerless-deer-tag-county-quota,True
+IA,Deer Tag (Any-Sex County-Specific),addon_type,ia-addontype-deer-tag-any-sex-county-specific,True
+IA,Habitat Fee,addon_type,ia-addontype-habitat-fee,True
+IA,IA Migratory Game Bird Fee,addon_type,ia-addontype-ia-migratory-game-bird-fee,True
+IA,Turkey Tag (Zone/Season),addon_type,ia-addontype-turkey-tag-zone-season,True
+IL,Antlerless Deer Permit,addon_type,il-addontype-antlerless-deer-permit,True
+IL,Archery Deer Permit,addon_type,il-addontype-archery-deer-permit,True
+IL,Combination Deer Permit,addon_type,il-addontype-combination-deer-permit,True
+IL,Fall Turkey Permit,addon_type,il-addontype-fall-turkey-permit,True
+IL,Firearm Deer Permit,addon_type,il-addontype-firearm-deer-permit,True
+IL,IL Migratory Waterfowl Stamp,addon_type,il-addontype-il-migratory-waterfowl-stamp,True
+IL,Muzzleloader Deer Permit,addon_type,il-addontype-muzzleloader-deer-permit,True
+IL,Spring Turkey Permit,addon_type,il-addontype-spring-turkey-permit,True
+IL,State Habitat Stamp,addon_type,il-addontype-state-habitat-stamp,True
+IN,Antlerless Deer Permit,addon_type,in-addontype-antlerless-deer-permit,True
+IN,Bobcat License,addon_type,in-addontype-bobcat-license,True
+IN,Deer Archery Permit,addon_type,in-addontype-deer-archery-permit,True
+IN,Deer Firearm Permit,addon_type,in-addontype-deer-firearm-permit,True
+IN,Deer License Bundle,addon_type,in-addontype-deer-license-bundle,True
+IN,Deer Muzzleloader Permit,addon_type,in-addontype-deer-muzzleloader-permit,True
+IN,Fall Turkey Permit,addon_type,in-addontype-fall-turkey-permit,True
+IN,Game Bird Habitat Stamp,addon_type,in-addontype-game-bird-habitat-stamp,True
+IN,Spring Turkey Permit,addon_type,in-addontype-spring-turkey-permit,True
+IN,Waterfowl Stamp Privilege,addon_type,in-addontype-waterfowl-stamp-privilege,True
+KS,Antelope Tag (Draw),addon_type,ks-addontype-antelope-tag-draw,True
+KS,Antlerless Whitetail Tag (OTC),addon_type,ks-addontype-antlerless-whitetail-tag-otc,True
+KS,Deer Archery Tag (OTC),addon_type,ks-addontype-deer-archery-tag-otc,True
+KS,Deer Firearm Tag (Draw),addon_type,ks-addontype-deer-firearm-tag-draw,True
+KS,Elk Tag (Draw),addon_type,ks-addontype-elk-tag-draw,True
+KS,Fall Turkey Tag,addon_type,ks-addontype-fall-turkey-tag,True
+KS,KS Waterfowl Stamp,addon_type,ks-addontype-ks-waterfowl-stamp,True
+KS,Mule Deer Stamp (Draw),addon_type,ks-addontype-mule-deer-stamp-draw,True
+KS,Sandhill Crane Permit,addon_type,ks-addontype-sandhill-crane-permit,True
+KS,Spring Turkey Tag,addon_type,ks-addontype-spring-turkey-tag,True
+KY,Bear Permit,addon_type,ky-addontype-bear-permit,True
+KY,Bonus Deer Permit,addon_type,ky-addontype-bonus-deer-permit,True
+KY,Deer Permit,addon_type,ky-addontype-deer-permit,True
+KY,Elk Draw Permit,addon_type,ky-addontype-elk-draw-permit,True
+KY,Fall Turkey Permit,addon_type,ky-addontype-fall-turkey-permit,True
+KY,Migratory Game Bird / Waterfowl Permit,addon_type,ky-addontype-migratory-game-bird-waterfowl-permit,True
+KY,Spring Turkey Permit,addon_type,ky-addontype-spring-turkey-permit,True
+MD,Archery Stamp,addon_type,md-addontype-archery-stamp,True
+MD,Black Bear Hunting Permit,addon_type,md-addontype-black-bear-hunting-permit,True
+MD,Bonus Antlered Deer Stamp,addon_type,md-addontype-bonus-antlered-deer-stamp,True
+MD,Furbearer Permit,addon_type,md-addontype-furbearer-permit,True
+MD,MD Migratory Game Bird Stamp,addon_type,md-addontype-md-migratory-game-bird-stamp,True
+MD,Muzzleloader Stamp,addon_type,md-addontype-muzzleloader-stamp,True
+MD,Sika Deer Stamp,addon_type,md-addontype-sika-deer-stamp,True
+MD,Snow Goose Conservation Order Permit,addon_type,md-addontype-snow-goose-conservation-order-permit,True
+ME,Antlerless Deer Permit (Lottery),addon_type,me-addontype-antlerless-deer-permit-lottery,True
+ME,Bear Permit,addon_type,me-addontype-bear-permit,True
+ME,Coyote Night Hunt Permit,addon_type,me-addontype-coyote-night-hunt-permit,True
+ME,Crossbow Permit,addon_type,me-addontype-crossbow-permit,True
+ME,Expanded Archery Antlerless Deer Permit,addon_type,me-addontype-expanded-archery-antlerless-deer-permit,True
+ME,Fall Turkey Permit,addon_type,me-addontype-fall-turkey-permit,True
+ME,ME Migratory Waterfowl Permit,addon_type,me-addontype-me-migratory-waterfowl-permit,True
+ME,Moose Permit (Auction),addon_type,me-addontype-moose-permit-auction,True
+ME,Moose Permit (Lottery),addon_type,me-addontype-moose-permit-lottery,True
+ME,Muzzleloader Permit,addon_type,me-addontype-muzzleloader-permit,True
+ME,Pheasant Hunting Authority,addon_type,me-addontype-pheasant-hunting-authority,True
+ME,Spring Turkey Permit,addon_type,me-addontype-spring-turkey-permit,True
+MI,Antlerless Deer License,addon_type,mi-addontype-antlerless-deer-license,True
+MI,Bear License,addon_type,mi-addontype-bear-license,True
+MI,DMAP Antlerless Tags,addon_type,mi-addontype-dmap-antlerless-tags,True
+MI,Deer Combo License,addon_type,mi-addontype-deer-combo-license,True
+MI,Deer License (Firearm),addon_type,mi-addontype-deer-license-firearm,True
+MI,Elk License (Lottery),addon_type,mi-addontype-elk-license-lottery,True
+MI,Fall Turkey License,addon_type,mi-addontype-fall-turkey-license,True
+MI,Spring Turkey License,addon_type,mi-addontype-spring-turkey-license,True
+MI,Waterfowl License,addon_type,mi-addontype-waterfowl-license,True
+MN,Antlerless Deer Bonus Tag,addon_type,mn-addontype-antlerless-deer-bonus-tag,True
+MN,Apprentice Hunter Validation,addon_type,mn-addontype-apprentice-hunter-validation,True
+MN,Bear License,addon_type,mn-addontype-bear-license,True
+MN,Elk License (Lottery),addon_type,mn-addontype-elk-license-lottery,True
+MN,Pheasant Stamp,addon_type,mn-addontype-pheasant-stamp,True
+MN,Turkey License,addon_type,mn-addontype-turkey-license,True
+MN,Waterfowl Stamp,addon_type,mn-addontype-waterfowl-stamp,True
+MO,Antlerless Deer Permit (County-Specific),addon_type,mo-addontype-antlerless-deer-permit-county-specific,True
+MO,Archery Hunting Permit,addon_type,mo-addontype-archery-hunting-permit,True
+MO,Black Bear Permit (Draw),addon_type,mo-addontype-black-bear-permit-draw,True
+MO,Conservation Order Permit,addon_type,mo-addontype-conservation-order-permit,True
+MO,Deer Firearms Any-Deer Permit,addon_type,mo-addontype-deer-firearms-any-deer-permit,True
+MO,Elk Permit (Draw),addon_type,mo-addontype-elk-permit-draw,True
+MO,Fall Turkey Permit,addon_type,mo-addontype-fall-turkey-permit,True
+MO,Furbearer Permit,addon_type,mo-addontype-furbearer-permit,True
+MO,Migratory Bird Permit,addon_type,mo-addontype-migratory-bird-permit,True
+MO,Spring Turkey Permit,addon_type,mo-addontype-spring-turkey-permit,True
+MT,Bear License,addon_type,mt-addontype-bear-license,True
+MT,Bighorn Sheep License (Draw),addon_type,mt-addontype-bighorn-sheep-license-draw,True
+MT,Bison License (Draw),addon_type,mt-addontype-bison-license-draw,True
+MT,Bow and Arrow License,addon_type,mt-addontype-bow-and-arrow-license,True
+MT,Migratory Bird License,addon_type,mt-addontype-migratory-bird-license,True
+MT,Moose License (Draw),addon_type,mt-addontype-moose-license-draw,True
+MT,Mountain Goat License (Draw),addon_type,mt-addontype-mountain-goat-license-draw,True
+MT,Wolf License,addon_type,mt-addontype-wolf-license,True
+NC,Bear Management E-Stamp,addon_type,nc-addontype-bear-management-e-stamp,True
+NC,Big Game Privilege (deer/turkey/bear),addon_type,nc-addontype-big-game-privilege-deer-turkey-bear,True
+NC,Bonus Antlerless Deer Tags,addon_type,nc-addontype-bonus-antlerless-deer-tags,True
+NC,NC Waterfowl Privilege (State Duck Stamp),addon_type,nc-addontype-nc-waterfowl-privilege-state-duck-stamp,True
+NH,Archery License,addon_type,nh-addontype-archery-license,True
+NH,Moose Permit (Lottery),addon_type,nh-addontype-moose-permit-lottery,True
+NH,Muzzleloader License,addon_type,nh-addontype-muzzleloader-license,True
+NH,NH Migratory Waterfowl License,addon_type,nh-addontype-nh-migratory-waterfowl-license,True
+NH,Turkey Permit,addon_type,nh-addontype-turkey-permit,True
+NH,Unit M/L Special Antlerless Deer Tag,addon_type,nh-addontype-unit-m-l-special-antlerless-deer-tag,True
+NH,Wildlife Habitat Fee,addon_type,nh-addontype-wildlife-habitat-fee,True
+NY,Bowhunting Privilege,addon_type,ny-addontype-bowhunting-privilege,True
+NY,Deer Management Permit (DMP),addon_type,ny-addontype-deer-management-permit-dmp,True
+NY,Fall Turkey Permit,addon_type,ny-addontype-fall-turkey-permit,True
+NY,Muzzleloading Privilege,addon_type,ny-addontype-muzzleloading-privilege,True
+NY,Spring Turkey Permit,addon_type,ny-addontype-spring-turkey-permit,True
+OH,Antlerless Deer Permit,addon_type,oh-addontype-antlerless-deer-permit,True
+OH,Archery Deer Permit,addon_type,oh-addontype-archery-deer-permit,True
+OH,Deer Gun Permit,addon_type,oh-addontype-deer-gun-permit,True
+OH,Deer Muzzleloader Permit,addon_type,oh-addontype-deer-muzzleloader-permit,True
+OH,OH Wetlands Habitat Stamp,addon_type,oh-addontype-oh-wetlands-habitat-stamp,True
+OH,Spring Turkey Permit,addon_type,oh-addontype-spring-turkey-permit,True
+PA,Antlerless Deer Permit,addon_type,pa-addontype-antlerless-deer-permit,True
+PA,Archery Stamp,addon_type,pa-addontype-archery-stamp,True
+PA,Bear Permit,addon_type,pa-addontype-bear-permit,True
+PA,DMAP Antlerless Tags,addon_type,pa-addontype-dmap-antlerless-tags,True
+PA,Elk License (Lottery),addon_type,pa-addontype-elk-license-lottery,True
+PA,Muzzleloader Stamp,addon_type,pa-addontype-muzzleloader-stamp,True
+PA,Pheasant Permit,addon_type,pa-addontype-pheasant-permit,True
+PA,Special Spring Turkey Permit,addon_type,pa-addontype-special-spring-turkey-permit,True
+PA,Waterfowl/Migratory Bird Stamp,addon_type,pa-addontype-waterfowl-migratory-bird-stamp,True
+TN,Big Game Archery Supplemental License,addon_type,tn-addontype-big-game-archery-supplemental-license,True
+TN,Big Game Gun Supplemental License,addon_type,tn-addontype-big-game-gun-supplemental-license,True
+TN,Big Game Muzzleloader Supplemental License,addon_type,tn-addontype-big-game-muzzleloader-supplemental-license,True
+TN,Trapping Supplemental License,addon_type,tn-addontype-trapping-supplemental-license,True
+TN,WMA Non-Quota Hunt Permit,addon_type,tn-addontype-wma-non-quota-hunt-permit,True
+TN,WMA Quota Hunt Permit,addon_type,tn-addontype-wma-quota-hunt-permit,True
+TN,Waterfowl Supplemental License,addon_type,tn-addontype-waterfowl-supplemental-license,True
+TX,APH Permit (Antlerless/Spike Hardhorn),addon_type,tx-addontype-aph-permit-antlerless-spike-hardhorn,True
+TX,Archery Endorsement,addon_type,tx-addontype-archery-endorsement,True
+TX,MLDP Managed Lands Tags,addon_type,tx-addontype-mldp-managed-lands-tags,True
+TX,Migratory Game Bird Endorsement,addon_type,tx-addontype-migratory-game-bird-endorsement,True
+TX,Pronghorn Permit,addon_type,tx-addontype-pronghorn-permit,True
+TX,Upland Game Bird Endorsement,addon_type,tx-addontype-upland-game-bird-endorsement,True
+VA,Archery License,addon_type,va-addontype-archery-license,True
+VA,Bear License,addon_type,va-addontype-bear-license,True
+VA,Bonus Antlerless Deer Permit (DCAP),addon_type,va-addontype-bonus-antlerless-deer-permit-dcap,True
+VA,DMAP Antlerless Tags,addon_type,va-addontype-dmap-antlerless-tags,True
+VA,DPOP Permit,addon_type,va-addontype-dpop-permit,True
+VA,Deer/Turkey License,addon_type,va-addontype-deer-turkey-license,True
+VA,Muzzleloading License,addon_type,va-addontype-muzzleloading-license,True
+VA,National Forest Permit,addon_type,va-addontype-national-forest-permit,True
+VA,VA Migratory Waterfowl Conservation Stamp,addon_type,va-addontype-va-migratory-waterfowl-conservation-stamp,True
+VT,Antlerless Deer Permit,addon_type,vt-addontype-antlerless-deer-permit,True
+VT,Archery License,addon_type,vt-addontype-archery-license,True
+VT,Bear License,addon_type,vt-addontype-bear-license,True
+VT,Moose Permit (Lottery),addon_type,vt-addontype-moose-permit-lottery,True
+VT,Muzzleloader License,addon_type,vt-addontype-muzzleloader-license,True
+VT,Turkey Permit,addon_type,vt-addontype-turkey-permit,True
+VT,VT Waterfowl Stamp,addon_type,vt-addontype-vt-waterfowl-stamp,True
+WI,Bear License,addon_type,wi-addontype-bear-license,True
+WI,Deer Harvest Authorization (Antlerless),addon_type,wi-addontype-deer-harvest-authorization-antlerless,True
+WI,Elk Application,addon_type,wi-addontype-elk-application,True
+WI,Fall Turkey License,addon_type,wi-addontype-fall-turkey-license,True
+WI,Pheasant Stamp,addon_type,wi-addontype-pheasant-stamp,True
+WI,Spring Turkey Stamp,addon_type,wi-addontype-spring-turkey-stamp,True
+WI,Waterfowl Stamp,addon_type,wi-addontype-waterfowl-stamp,True
+WI,Wolf License,addon_type,wi-addontype-wolf-license,True
+WV,Additional Antlerless Deer Stamp (Class NN),addon_type,wv-addontype-additional-antlerless-deer-stamp-class-nn,True
+WV,Additional Muzzleloader Deer Stamp (Class RM),addon_type,wv-addontype-additional-muzzleloader-deer-stamp-class-rm,True
+WV,Antlerless Deer Stamp (Class N),addon_type,wv-addontype-antlerless-deer-stamp-class-n,True
+WV,Bear Damage Stamp (Class DS),addon_type,wv-addontype-bear-damage-stamp-class-ds,True
+WV,Big Game Stamp (Class BG),addon_type,wv-addontype-big-game-stamp-class-bg,True
+WV,Conservation Stamp (Class CS),addon_type,wv-addontype-conservation-stamp-class-cs,True
+WV,National Forest Stamp (Class I),addon_type,wv-addontype-national-forest-stamp-class-i,True
+WY,Archery Permit,addon_type,wy-addontype-archery-permit,True
+WY,Bighorn Sheep License (Draw),addon_type,wy-addontype-bighorn-sheep-license-draw,True
+WY,Moose License (Draw),addon_type,wy-addontype-moose-license-draw,True
+WY,Mountain Goat License (Draw),addon_type,wy-addontype-mountain-goat-license-draw,True
+WY,Turkey License (Draw),addon_type,wy-addontype-turkey-license-draw,True
+WY,Wild Bison License (Draw),addon_type,wy-addontype-wild-bison-license-draw,True
+,Black,colors,universal-colors-black,True
+,Blue,colors,universal-colors-blue,True
+,Brown/Tan,colors,universal-colors-brown-tan,True
+,Cream/Ivory,colors,universal-colors-cream-ivory,True
+,Crimson/Dark Red,colors,universal-colors-crimson-dark-red,True
+,Forest Green,colors,universal-colors-forest-green,True
+,Gold,colors,universal-colors-gold,True
+,Gray,colors,universal-colors-gray,True
+,Lime/Bright Green,colors,universal-colors-lime-bright-green,True
+,Multi-color,colors,universal-colors-multi-color,True
+,Navy,colors,universal-colors-navy,True
+,Orange,colors,universal-colors-orange,True
+,Other,colors,universal-colors-other,True
+,Pink,colors,universal-colors-pink,True
+,Purple,colors,universal-colors-purple,True
+,Red,colors,universal-colors-red,True
+,Silver,colors,universal-colors-silver,True
+,White,colors,universal-colors-white,True
+,Yellow,colors,universal-colors-yellow,True
+,Other,duration,universal-duration-other,True
+CO,Annual,duration,co-duration-annual,True
+CO,Lifetime,duration,co-duration-lifetime,True
+GA,1-day,duration,ga-duration-1-day,True
+GA,3-day,duration,ga-duration-3-day,True
+GA,7-day,duration,ga-duration-7-day,True
+GA,Annual,duration,ga-duration-annual,True
+GA,Lifetime,duration,ga-duration-lifetime,True
+IA,Annual,duration,ia-duration-annual,True
+IA,Lifetime,duration,ia-duration-lifetime,True
+IL,Annual,duration,il-duration-annual,True
+IL,Lifetime,duration,il-duration-lifetime,True
+IN,5-day,duration,in-duration-5-day,True
+IN,Annual,duration,in-duration-annual,True
+IN,Multi-year,duration,in-duration-multi-year,True
+KS,Annual,duration,ks-duration-annual,True
+KS,Lifetime,duration,ks-duration-lifetime,True
+KS,Multi-year,duration,ks-duration-multi-year,True
+KY,1-day,duration,ky-duration-1-day,True
+KY,5-day,duration,ky-duration-5-day,True
+KY,7-day,duration,ky-duration-7-day,True
+KY,Annual,duration,ky-duration-annual,True
+KY,Lifetime,duration,ky-duration-lifetime,True
+MD,3-day,duration,md-duration-3-day,True
+MD,Annual,duration,md-duration-annual,True
+MD,Lifetime,duration,md-duration-lifetime,True
+ME,3-day,duration,me-duration-3-day,True
+ME,Annual,duration,me-duration-annual,True
+ME,Lifetime,duration,me-duration-lifetime,True
+MI,3-day,duration,mi-duration-3-day,True
+MI,7-day,duration,mi-duration-7-day,True
+MI,Annual,duration,mi-duration-annual,True
+MI,Lifetime,duration,mi-duration-lifetime,True
+MN,Annual,duration,mn-duration-annual,True
+MO,Annual,duration,mo-duration-annual,True
+MO,Lifetime,duration,mo-duration-lifetime,True
+MT,Annual,duration,mt-duration-annual,True
+NC,10-day,duration,nc-duration-10-day,True
+NC,Annual,duration,nc-duration-annual,True
+NC,Lifetime,duration,nc-duration-lifetime,True
+NH,3-day,duration,nh-duration-3-day,True
+NH,Annual,duration,nh-duration-annual,True
+NH,Lifetime,duration,nh-duration-lifetime,True
+NY,Annual,duration,ny-duration-annual,True
+NY,Lifetime,duration,ny-duration-lifetime,True
+OH,1-day,duration,oh-duration-1-day,True
+OH,Annual,duration,oh-duration-annual,True
+OH,Lifetime,duration,oh-duration-lifetime,True
+OH,Multi-year,duration,oh-duration-multi-year,True
+PA,7-day,duration,pa-duration-7-day,True
+PA,Annual,duration,pa-duration-annual,True
+PA,Lifetime,duration,pa-duration-lifetime,True
+TN,7-day,duration,tn-duration-7-day,True
+TN,Annual,duration,tn-duration-annual,True
+TN,Lifetime,duration,tn-duration-lifetime,True
+TX,5-day,duration,tx-duration-5-day,True
+TX,Annual,duration,tx-duration-annual,True
+TX,Lifetime,duration,tx-duration-lifetime,True
+VA,3-day,duration,va-duration-3-day,True
+VA,Annual,duration,va-duration-annual,True
+VA,Lifetime,duration,va-duration-lifetime,True
+VA,Multi-year,duration,va-duration-multi-year,True
+VT,Annual,duration,vt-duration-annual,True
+VT,Lifetime,duration,vt-duration-lifetime,True
+WI,5-day,duration,wi-duration-5-day,True
+WI,Annual,duration,wi-duration-annual,True
+WV,Annual,duration,wv-duration-annual,True
+WV,Lifetime,duration,wv-duration-lifetime,True
+WV,Multi-year,duration,wv-duration-multi-year,True
+WY,Annual,duration,wy-duration-annual,True
+,Other,holder_eligibility,universal-holdereligibility-other,True
+CO,Disabled,holder_eligibility,co-holdereligibility-disabled,True
+CO,General,holder_eligibility,co-holdereligibility-general,True
+CO,Veteran,holder_eligibility,co-holdereligibility-veteran,True
+CO,Youth,holder_eligibility,co-holdereligibility-youth,True
+GA,Disabled,holder_eligibility,ga-holdereligibility-disabled,True
+GA,General,holder_eligibility,ga-holdereligibility-general,True
+GA,Senior,holder_eligibility,ga-holdereligibility-senior,True
+GA,Veteran,holder_eligibility,ga-holdereligibility-veteran,True
+GA,Youth,holder_eligibility,ga-holdereligibility-youth,True
+IA,General,holder_eligibility,ia-holdereligibility-general,True
+IA,Youth,holder_eligibility,ia-holdereligibility-youth,True
+IL,Apprentice,holder_eligibility,il-holdereligibility-apprentice,True
+IL,General,holder_eligibility,il-holdereligibility-general,True
+IL,Senior,holder_eligibility,il-holdereligibility-senior,True
+IL,Youth,holder_eligibility,il-holdereligibility-youth,True
+IN,Disabled,holder_eligibility,in-holdereligibility-disabled,True
+IN,General,holder_eligibility,in-holdereligibility-general,True
+IN,Youth,holder_eligibility,in-holdereligibility-youth,True
+KS,General,holder_eligibility,ks-holdereligibility-general,True
+KS,Military,holder_eligibility,ks-holdereligibility-military,True
+KS,Senior,holder_eligibility,ks-holdereligibility-senior,True
+KS,Youth,holder_eligibility,ks-holdereligibility-youth,True
+KY,General,holder_eligibility,ky-holdereligibility-general,True
+KY,Junior,holder_eligibility,ky-holdereligibility-junior,True
+KY,Senior,holder_eligibility,ky-holdereligibility-senior,True
+MD,Apprentice,holder_eligibility,md-holdereligibility-apprentice,True
+MD,Disabled,holder_eligibility,md-holdereligibility-disabled,True
+MD,General,holder_eligibility,md-holdereligibility-general,True
+MD,Junior,holder_eligibility,md-holdereligibility-junior,True
+MD,Senior,holder_eligibility,md-holdereligibility-senior,True
+ME,Apprentice,holder_eligibility,me-holdereligibility-apprentice,True
+ME,Disabled,holder_eligibility,me-holdereligibility-disabled,True
+ME,General,holder_eligibility,me-holdereligibility-general,True
+ME,Junior,holder_eligibility,me-holdereligibility-junior,True
+MI,General,holder_eligibility,mi-holdereligibility-general,True
+MI,Senior,holder_eligibility,mi-holdereligibility-senior,True
+MI,Youth,holder_eligibility,mi-holdereligibility-youth,True
+MN,General,holder_eligibility,mn-holdereligibility-general,True
+MN,Youth,holder_eligibility,mn-holdereligibility-youth,True
+MO,Apprentice,holder_eligibility,mo-holdereligibility-apprentice,True
+MO,General,holder_eligibility,mo-holdereligibility-general,True
+MO,Military,holder_eligibility,mo-holdereligibility-military,True
+MT,General,holder_eligibility,mt-holdereligibility-general,True
+NC,Disabled,holder_eligibility,nc-holdereligibility-disabled,True
+NC,General,holder_eligibility,nc-holdereligibility-general,True
+NC,Senior,holder_eligibility,nc-holdereligibility-senior,True
+NC,Veteran,holder_eligibility,nc-holdereligibility-veteran,True
+NH,Apprentice,holder_eligibility,nh-holdereligibility-apprentice,True
+NH,Disabled,holder_eligibility,nh-holdereligibility-disabled,True
+NH,General,holder_eligibility,nh-holdereligibility-general,True
+NH,Senior,holder_eligibility,nh-holdereligibility-senior,True
+NY,Disabled,holder_eligibility,ny-holdereligibility-disabled,True
+NY,General,holder_eligibility,ny-holdereligibility-general,True
+NY,Junior,holder_eligibility,ny-holdereligibility-junior,True
+NY,Military,holder_eligibility,ny-holdereligibility-military,True
+NY,Senior,holder_eligibility,ny-holdereligibility-senior,True
+NY,Veteran,holder_eligibility,ny-holdereligibility-veteran,True
+OH,Apprentice,holder_eligibility,oh-holdereligibility-apprentice,True
+OH,General,holder_eligibility,oh-holdereligibility-general,True
+OH,Senior,holder_eligibility,oh-holdereligibility-senior,True
+OH,Veteran,holder_eligibility,oh-holdereligibility-veteran,True
+OH,Youth,holder_eligibility,oh-holdereligibility-youth,True
+PA,General,holder_eligibility,pa-holdereligibility-general,True
+PA,Junior,holder_eligibility,pa-holdereligibility-junior,True
+PA,Military,holder_eligibility,pa-holdereligibility-military,True
+PA,Senior,holder_eligibility,pa-holdereligibility-senior,True
+PA,Veteran,holder_eligibility,pa-holdereligibility-veteran,True
+PA,Youth,holder_eligibility,pa-holdereligibility-youth,True
+TN,Apprentice,holder_eligibility,tn-holdereligibility-apprentice,True
+TN,Disabled,holder_eligibility,tn-holdereligibility-disabled,True
+TN,General,holder_eligibility,tn-holdereligibility-general,True
+TN,Junior,holder_eligibility,tn-holdereligibility-junior,True
+TN,Senior,holder_eligibility,tn-holdereligibility-senior,True
+TN,Veteran,holder_eligibility,tn-holdereligibility-veteran,True
+TX,General,holder_eligibility,tx-holdereligibility-general,True
+TX,Senior,holder_eligibility,tx-holdereligibility-senior,True
+TX,Veteran,holder_eligibility,tx-holdereligibility-veteran,True
+TX,Youth,holder_eligibility,tx-holdereligibility-youth,True
+VA,General,holder_eligibility,va-holdereligibility-general,True
+VA,Junior,holder_eligibility,va-holdereligibility-junior,True
+VA,Senior,holder_eligibility,va-holdereligibility-senior,True
+VA,Veteran,holder_eligibility,va-holdereligibility-veteran,True
+VA,Youth,holder_eligibility,va-holdereligibility-youth,True
+VT,Apprentice,holder_eligibility,vt-holdereligibility-apprentice,True
+VT,Disabled,holder_eligibility,vt-holdereligibility-disabled,True
+VT,General,holder_eligibility,vt-holdereligibility-general,True
+VT,Honorary,holder_eligibility,vt-holdereligibility-honorary,True
+VT,Senior,holder_eligibility,vt-holdereligibility-senior,True
+VT,Veteran,holder_eligibility,vt-holdereligibility-veteran,True
+VT,Youth,holder_eligibility,vt-holdereligibility-youth,True
+WI,General,holder_eligibility,wi-holdereligibility-general,True
+WI,Junior,holder_eligibility,wi-holdereligibility-junior,True
+WI,Senior,holder_eligibility,wi-holdereligibility-senior,True
+WI,Youth,holder_eligibility,wi-holdereligibility-youth,True
+WV,Apprentice,holder_eligibility,wv-holdereligibility-apprentice,True
+WV,Disabled,holder_eligibility,wv-holdereligibility-disabled,True
+WV,General,holder_eligibility,wv-holdereligibility-general,True
+WV,Junior,holder_eligibility,wv-holdereligibility-junior,True
+WV,Senior,holder_eligibility,wv-holdereligibility-senior,True
+WY,General,holder_eligibility,wy-holdereligibility-general,True
+WY,Senior,holder_eligibility,wy-holdereligibility-senior,True
+WY,Veteran,holder_eligibility,wy-holdereligibility-veteran,True
+WY,Youth,holder_eligibility,wy-holdereligibility-youth,True
+,Celluloid,material,universal-material-celluloid,True
+,Fabric/Canvas,material,universal-material-fabric-canvas,True
+,Metal Button,material,universal-material-metal-button,True
+,Metal Tag,material,universal-material-metal-tag,True
+,Other,material,universal-material-other,True
+,Paper/Cardstock,material,universal-material-paper-cardstock,True
+,Plastic,material,universal-material-plastic,True
+,Other,residency,universal-residency-other,True
+CO,Nonresident,residency,co-residency-nonresident,True
+CO,Resident,residency,co-residency-resident,True
+GA,Nonresident,residency,ga-residency-nonresident,True
+GA,Resident,residency,ga-residency-resident,True
+IA,Nonresident,residency,ia-residency-nonresident,True
+IA,Resident,residency,ia-residency-resident,True
+IL,Nonresident,residency,il-residency-nonresident,True
+IL,Resident,residency,il-residency-resident,True
+IN,Nonresident,residency,in-residency-nonresident,True
+IN,Resident,residency,in-residency-resident,True
+KS,Nonresident,residency,ks-residency-nonresident,True
+KS,Resident,residency,ks-residency-resident,True
+KY,Nonresident,residency,ky-residency-nonresident,True
+KY,Resident,residency,ky-residency-resident,True
+MD,Nonresident,residency,md-residency-nonresident,True
+MD,Resident,residency,md-residency-resident,True
+ME,Nonresident,residency,me-residency-nonresident,True
+ME,Resident,residency,me-residency-resident,True
+MI,Nonresident,residency,mi-residency-nonresident,True
+MI,Resident,residency,mi-residency-resident,True
+MN,Nonresident,residency,mn-residency-nonresident,True
+MN,Resident,residency,mn-residency-resident,True
+MO,Nonresident,residency,mo-residency-nonresident,True
+MO,Resident,residency,mo-residency-resident,True
+MT,Resident,residency,mt-residency-resident,True
+NC,Nonresident,residency,nc-residency-nonresident,True
+NC,Resident,residency,nc-residency-resident,True
+NH,Nonresident,residency,nh-residency-nonresident,True
+NH,Resident,residency,nh-residency-resident,True
+NY,Nonresident,residency,ny-residency-nonresident,True
+NY,Resident,residency,ny-residency-resident,True
+OH,Nonresident,residency,oh-residency-nonresident,True
+OH,Resident,residency,oh-residency-resident,True
+PA,Nonresident,residency,pa-residency-nonresident,True
+PA,Resident,residency,pa-residency-resident,True
+TN,Nonresident,residency,tn-residency-nonresident,True
+TN,Resident,residency,tn-residency-resident,True
+TX,Nonresident,residency,tx-residency-nonresident,True
+TX,Resident,residency,tx-residency-resident,True
+VA,Nonresident,residency,va-residency-nonresident,True
+VA,Resident,residency,va-residency-resident,True
+VT,Nonresident,residency,vt-residency-nonresident,True
+VT,Resident,residency,vt-residency-resident,True
+WI,Nonresident,residency,wi-residency-nonresident,True
+WI,Resident,residency,wi-residency-resident,True
+WV,Nonresident,residency,wv-residency-nonresident,True
+WV,Resident,residency,wv-residency-resident,True
+WY,Resident,residency,wy-residency-resident,True
+,Button/Disc,shape,universal-shape-button-disc,True
+,Irregular/Custom,shape,universal-shape-irregular-custom,True
+,Other,shape,universal-shape-other,True
+,Rectangle,shape,universal-shape-rectangle,True
+,Square,shape,universal-shape-square,True
+,Strip,shape,universal-shape-strip,True
+,Tag (with hole),shape,universal-shape-tag-with-hole,True
