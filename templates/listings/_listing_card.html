@@ -1,29 +1,53 @@
-<article class="card">
-    <h3 style="font-size: 1.2rem; margin-bottom: 0.45rem;">
-        <a href="{% url 'listings:detail' listing.pk %}">{{ listing.title }}</a>
-    </h3>
-    <p style="color: var(--color-muted); margin-bottom: 0.5rem;">
-        <strong>{{ listing.get_listing_type_display }}</strong> -
-        {% if listing.state %}{{ listing.state.code }} - {% endif %}
-        {% if listing.county_ref %}{{ listing.county_ref.name }}{% else %}Unknown unit{% endif %} -
-        {{ listing.license_year }} -
-        {{ listing.get_condition_grade_display }}
-    </p>
-    {% if listing.display_license_type_summary %}
-        <p style="margin-bottom: 0.5rem;">{{ listing.display_license_type_summary }}</p>
-    {% endif %}
-
-    {% if listing.listing_type == 'auction' %}
-        <p style="margin-bottom: 0.5rem;">
-            Current bid: {% if listing.current_price %}${{ listing.current_price }}{% else %}-{% endif %}
-        </p>
-    {% elif listing.listing_type == 'buy_now' %}
-        <p style="margin-bottom: 0.5rem;">
-            Buy now: {% if listing.buy_now_price %}${{ listing.buy_now_price }}{% else %}-{% endif %}
-        </p>
+<article class="listing-card">
+    {% if listing.featured_image %}
+        <a href="{% url 'listings:detail' listing.pk %}" tabindex="-1" aria-hidden="true">
+            <img class="listing-card-img"
+                 src="{{ listing.featured_image.url }}"
+                 alt="{{ listing.title }}"
+                 loading="lazy">
+        </a>
     {% else %}
-        <p style="margin-bottom: 0.5rem;">Open to trade offers{% if listing.allow_cash %} (cash allowed){% endif %}.</p>
+        <div class="listing-card-img-placeholder">No image</div>
     {% endif %}
 
-    <a class="btn-secondary" href="{% url 'listings:detail' listing.pk %}">View details</a>
+    <div class="listing-card-body">
+        <h3 class="listing-card-title">
+            <a href="{% url 'listings:detail' listing.pk %}">{{ listing.title }}</a>
+        </h3>
+
+        <div class="listing-card-meta">
+            {% if listing.state %}<span>{{ listing.state.code }}</span>{% endif %}
+            {% if listing.county_ref %}<span>&middot; {{ listing.county_ref.name }}</span>{% endif %}
+            <span>&middot; {{ listing.license_year }}</span>
+            <span>&middot; {{ listing.get_condition_grade_display }}</span>
+        </div>
+
+        {% if listing.listing_type == 'auction' %}
+            <div class="listing-card-price">
+                {% if listing.current_price %}${{ listing.current_price }}{% else %}No bids yet{% endif %}
+            </div>
+        {% elif listing.listing_type == 'buy_now' %}
+            <div class="listing-card-price">
+                ${{ listing.buy_now_price }}
+            </div>
+        {% else %}
+            <div class="listing-card-price" style="font-size:0.9rem; font-weight:600; color:var(--color-muted);">
+                Trade offer
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="listing-card-footer">
+        <span>
+            {% if listing.listing_type == 'auction' and listing.auction_end %}
+                <span data-auction-end="{{ listing.auction_end|date:'c' }}">--</span>
+            {% elif listing.local_pickup_available %}
+                Local pickup &bull; {{ listing.local_pickup_location }}
+            {% else %}
+                {{ listing.get_listing_type_display }}
+            {% endif %}
+        </span>
+        <a class="btn-secondary" href="{% url 'listings:detail' listing.pk %}"
+           style="padding:0.35rem 0.7rem; font-size:0.82rem;">View</a>
+    </div>
 </article>

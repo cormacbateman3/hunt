@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Browse Collections | KeystoneBid{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/browse.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="browse-layout">
+    <!-- Filters sidebar -->
+    <aside class="card browse-filters">
+        <h1 style="font-size: 1.25rem; margin-bottom: 0.3rem;">Browse Collections</h1>
+        <p style="color: var(--color-muted); font-size: 0.88rem; margin-bottom: 1rem;">Explore items from all collectors.</p>
+
+        <h2 style="font-size: 1rem; margin-bottom: 0.65rem;">Filters</h2>
+        <form method="get" style="display: grid; gap: 0.65rem;">
+            <div>
+                <label class="form-label" for="search">Search</label>
+                <input class="form-input" id="search" name="search" value="{{ filters.search }}" placeholder="Title, description…">
+            </div>
+            <div>
+                <label class="form-label" for="owner">Collector</label>
+                <input class="form-input" id="owner" name="owner" value="{{ filters.owner }}" placeholder="Username or display name">
+            </div>
+            <div>
+                <label class="form-label" for="state_id">State</label>
+                <select class="form-select" id="state_id" name="state_id">
+                    {% for state in states %}
+                        <option value="{{ state.id }}" {% if filters.state_id == state.id|stringformat:'s' %}selected{% endif %}>
+                            {{ state.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label" for="county_id">{{ selected_state.issuance_unit_label|default:"County" }}</label>
+                <select class="form-select" id="county_id" name="county_id">
+                    <option value="">Any</option>
+                    {% for county in counties %}
+                        <option value="{{ county.id }}" {% if filters.county_id == county.id|stringformat:'s' %}selected{% endif %}>
+                            {{ county.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label" for="license_type_id">License type</label>
+                <select class="form-select" id="license_type_id" name="license_type_id">
+                    <option value="">Any</option>
+                    {% for lt in license_types %}
+                        <option value="{{ lt.id }}" {% if filters.license_type_id == lt.id|stringformat:'s' %}selected{% endif %}>
+                            {{ lt.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                <div>
+                    <label class="form-label" for="year_min">Year from</label>
+                    <input class="form-input" id="year_min" type="number" name="year_min" value="{{ filters.year_min }}" placeholder="e.g. 1930">
+                </div>
+                <div>
+                    <label class="form-label" for="year_max">Year to</label>
+                    <input class="form-input" id="year_max" type="number" name="year_max" value="{{ filters.year_max }}" placeholder="e.g. 2000">
+                </div>
+            </div>
+            <div>
+                <label class="form-label" for="sort">Sort by</label>
+                <select class="form-select" id="sort" name="sort">
+                    <option value="newest" {% if filters.sort == 'newest' %}selected{% endif %}>Newest added</option>
+                    <option value="year_desc" {% if filters.sort == 'year_desc' %}selected{% endif %}>Year (newest)</option>
+                    <option value="year_asc" {% if filters.sort == 'year_asc' %}selected{% endif %}>Year (oldest)</option>
+                    <option value="owner_az" {% if filters.sort == 'owner_az' %}selected{% endif %}>Collector A–Z</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="btn-primary" type="submit" style="flex: 1;">Apply</button>
+                <a class="btn-secondary" href="{% url 'collections:browse' %}" style="flex: 1; text-align: center; padding: 0.6rem 0;">Reset</a>
+            </div>
+        </form>
+
+        {% if user.is_authenticated %}
+            <hr style="margin: 1rem 0; border: 0; border-top: 1px solid var(--color-border);">
+            <a href="{% url 'collections:my_collection' %}" class="btn-secondary" style="display: block; text-align: center;">My Collection</a>
+        {% endif %}
+    </aside>
+
+    <!-- Item grid -->
+    <section>
+        <div class="listing-grid">
+            {% for item in page_obj %}
+                <article class="listing-card">
+                    {% with primary=item.images.first %}
+                        {% if primary %}
+                            <img class="listing-card-img" src="{{ primary.image.url }}" alt="{{ item.title }}" loading="lazy">
+                        {% else %}
+                            <div class="listing-card-img-placeholder">
+                                <span>No image</span>
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+                    <div class="listing-card-body">
+                        <h3 class="listing-card-title">{{ item.title }}</h3>
+                        <div class="listing-card-meta">
+                            {% if item.state %}{{ item.state.code }}{% endif %}
+                            {% if item.county %} · {{ item.county.name }}{% endif %}
+                            {% if item.license_year %} · {{ item.license_year }}{% endif %}
+                        </div>
+                        {% if item.display_license_type_summary %}
+                            <div class="listing-card-meta" style="margin-top: 0.2rem;">{{ item.display_license_type_summary }}</div>
+                        {% endif %}
+                        {% if item.condition_grade %}
+                            <div style="margin-top: 0.3rem;">
+                                <span class="badge" style="font-size: 0.75rem;">{{ item.get_condition_grade_display }}</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="listing-card-footer" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.82rem; color: var(--color-muted);">
+                            {% if item.owner.profile.display_name %}{{ item.owner.profile.display_name }}{% else %}{{ item.owner.username }}{% endif %}
+                        </span>
+                        <a href="{% url 'accounts:profile' item.owner.username %}" class="btn-secondary"
+                           style="font-size: 0.8rem; padding: 0.2rem 0.55rem;">View profile</a>
+                    </div>
+                </article>
+            {% empty %}
+                <div class="card" style="grid-column: 1 / -1;">
+                    <p>No collection items found. Try adjusting the filters.</p>
+                </div>
+            {% endfor %}
+        </div>
+
+        {% if page_obj.paginator.num_pages > 1 %}
+            <nav style="margin-top: var(--space-3); display: flex; gap: 0.75rem; align-items: center;" aria-label="Pagination">
+                {% if page_obj.has_previous %}
+                    <a class="btn-secondary" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}">&larr; Previous</a>
+                {% endif %}
+                <span style="font-size: 0.9rem; color: var(--color-muted);">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                </span>
+                {% if page_obj.has_next %}
+                    <a class="btn-secondary" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}">Next &rarr;</a>
+                {% endif %}
+            </nav>
+        {% endif %}
+    </section>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const stateSelect = document.getElementById('state_id');
+    const countySelect = document.getElementById('county_id');
+    const countyLabel = countySelect ? countySelect.previousElementSibling : null;
+    if (!stateSelect || !countySelect) return;
+
+    stateSelect.addEventListener('change', async () => {
+        const stateId = stateSelect.value;
+        if (!stateId) return;
+        const res = await fetch(`/api/geo-units/?state=${encodeURIComponent(stateId)}`);
+        const data = await res.json();
+        const current = countySelect.value;
+        countySelect.innerHTML = '<option value="">Any</option>';
+        (data.results || []).forEach((unit) => {
+            const opt = document.createElement('option');
+            opt.value = unit.id;
+            opt.textContent = unit.name;
+            if (String(unit.id) === current) opt.selected = true;
+            countySelect.appendChild(opt);
+        });
+        if (countyLabel) countyLabel.textContent = data.issuance_unit_label || 'County';
+    });
+});
+</script>
+{% endblock %}

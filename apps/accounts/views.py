@@ -106,14 +106,17 @@ def profile_view(request, username):
     profile = user.profile
     is_owner = request.user.is_authenticated and request.user.id == user.id
 
-    collection_items = (
+    collection_qs = (
         CollectionItem.objects.filter(owner=user)
         .select_related('state', 'county')
         .prefetch_related('images', 'license_types')
         .order_by('-created_at')
     )
     if not is_owner:
-        collection_items = collection_items.filter(is_public=True)
+        collection_qs = collection_qs.filter(is_public=True)
+
+    featured_items = list(collection_qs.filter(featured=True).order_by('-created_at')[:6])
+    collection_items = collection_qs
 
     wanted_items = (
         WantedItem.objects.filter(user=user)
@@ -130,6 +133,7 @@ def profile_view(request, username):
     context = {
         'profile_user': user,
         'profile': profile,
+        'featured_items': featured_items,
         'collection_items': collection_items,
         'wanted_items': wanted_items,
         'is_owner': is_owner,

@@ -128,6 +128,7 @@ class TradeShipment(models.Model):
     tracking_number = models.CharField(max_length=200, blank=True)
     label_url = models.URLField(max_length=500, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    local_pickup = models.BooleanField(default=False, help_text="This side of the trade will be handled by local pickup")
     delivered_at = models.DateTimeField(null=True, blank=True)
     recipient_confirmed_at = models.DateTimeField(null=True, blank=True)
     last_event_at = models.DateTimeField(null=True, blank=True)

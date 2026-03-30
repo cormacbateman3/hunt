@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
@@ -73,6 +75,7 @@ class Command(BaseCommand):
                                 f'({winning_bid.amount:.2f} < {locked_listing.reserve_price:.2f})'
                             )
                         )
+                        self._maybe_relist(locked_listing, now)
                         closed_count += 1
                         continue
 
@@ -139,11 +142,75 @@ class Command(BaseCommand):
                     self.stdout.write(
                         self.style.WARNING(f'Expired: {locked_listing.title} (no bids)')
                     )
+                    self._maybe_relist(locked_listing, now)
 
             closed_count += 1
 
         self.stdout.write(
             self.style.SUCCESS(
                 f'Closed {closed_count} auctions ({sold_count} sold, {closed_count - sold_count} expired)'
+            )
+        )
+
+    def _maybe_relist(self, listing, now):
+        """Auto-relist an unsold auction if eligible (4b)."""
+        if not listing.auto_relist:
+            return
+        if listing.relist_count >= 3:
+            return
+
+        # Estimate original duration from created_at → auction_end (minimum 1 day)
+        if listing.auction_end and listing.created_at:
+            duration_days = max(1, round((listing.auction_end - listing.created_at).total_seconds() / 86400))
+        else:
+            duration_days = 7
+
+        original = listing.original_listing or listing
+
+        new_listing = Listing(
+            seller=listing.seller,
+            source_collection_item=listing.source_collection_item,
+            listing_type=listing.listing_type,
+            title=listing.title,
+            description=listing.description,
+            license_year=listing.license_year,
+            state=listing.state,
+            county=listing.county,
+            county_ref=listing.county_ref,
+            is_statewide=listing.is_statewide,
+            license_type=listing.license_type,
+            shape=listing.shape,
+            colors=listing.colors,
+            condition_grade=listing.condition_grade,
+            resident_status=listing.resident_status,
+            starting_price=listing.starting_price,
+            reserve_price=listing.reserve_price,
+            trade_notes=listing.trade_notes,
+            allow_cash=listing.allow_cash,
+            featured_image=listing.featured_image,
+            local_pickup_available=listing.local_pickup_available,
+            local_pickup_location=listing.local_pickup_location,
+            auto_relist=listing.auto_relist,
+            relist_count=listing.relist_count + 1,
+            original_listing=original,
+            auction_end=now + timedelta(days=duration_days),
+            status='active',
+        )
+        new_listing.save()
+        new_listing.license_types.set(listing.license_types.all())
+
+        create_notification(
+            user=listing.seller,
+            notification_type='listing_relisted',
+            message=(
+                f'"{listing.title}" has been automatically relisted '
+                f'(relist {new_listing.relist_count}/3).'
+            ),
+            link_url=f'/listings/{new_listing.pk}/',
+        )
+        self.stdout.write(
+            self.style.SUCCESS(
+                f'Auto-relisted: {listing.title} → pk={new_listing.pk} '
+                f'(relist {new_listing.relist_count}/3)'
             )
         )

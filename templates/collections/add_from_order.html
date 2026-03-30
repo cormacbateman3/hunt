@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+
+{% block title %}Add to Collection | KeystoneBid{% endblock %}
+
+{% block content %}
+<!-- Purchase banner -->
+<div style="background: linear-gradient(135deg, var(--color-forest-green) 0%, #2c5a1e 100%); color: #fff; border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1.25rem; display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
+    <div style="flex: 1; min-width: 200px;">
+        <p style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em;">Adding purchase to collection — Order #{{ order.pk }}</p>
+        <h1 style="font-size: 1.3rem; margin-bottom: 0.3rem; color: #fff;">{{ listing.title }}</h1>
+        <p style="opacity: 0.85; font-size: 0.9rem;">
+            {% if listing.state %}{{ listing.state.name }}{% endif %}
+            {% if listing.county_ref %} · {{ listing.county_ref.name }}{% endif %}
+            {% if listing.license_year %} · {{ listing.license_year }}{% endif %}
+        </p>
+    </div>
+    {% with primary=listing.featured_image %}
+        {% if primary %}
+            <img src="{{ primary.url }}" alt="{{ listing.title }}"
+                 style="width: 80px; height: 80px; object-fit: cover; border-radius: 6px; flex-shrink: 0;">
+        {% endif %}
+    {% endwith %}
+</div>
+
+<section class="card" style="max-width: 960px; margin: 0 auto;">
+    <p style="color: var(--color-muted); margin-bottom: 1rem; font-size: 0.9rem;">
+        Fields are pre-filled from the listing. Review and adjust before saving to your collection.
+    </p>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="alert alert-error" style="margin-bottom: 1rem;">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div style="display: grid; gap: 0.85rem;">
+            <div>
+                <label class="form-label" for="{{ form.title.id_for_label }}">Title</label>
+                {{ form.title }}
+                {{ form.title.errors }}
+            </div>
+            <div>
+                <label class="form-label" for="{{ form.description.id_for_label }}">Description</label>
+                {{ form.description }}
+                {{ form.description.errors }}
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+                <div>
+                    <label class="form-label" for="{{ form.state.id_for_label }}">Issuing state</label>
+                    {{ form.state }}
+                    {{ form.state.errors }}
+                </div>
+                <div>
+                    <label class="form-label" for="{{ form.license_year.id_for_label }}">License year</label>
+                    {{ form.license_year }}
+                    {{ form.license_year.errors }}
+                </div>
+            </div>
+            <div>
+                <label class="form-label" id="county-label" for="{{ form.county.id_for_label }}">{{ form.county.label }}</label>
+                {{ form.county }}
+                {{ form.county.errors }}
+            </div>
+
+            <hr style="margin: 0.25rem 0; border: 0; border-top: 1px solid var(--color-border);">
+            <h2 style="font-size: 1.1rem; margin: 0;">Item Taxonomy</h2>
+
+            {% for field_name, other_name, heading in taxonomy_fields %}
+                <div style="display: grid; gap: 0.45rem;">
+                    <label class="form-label" for="{{ form[field_name].id_for_label }}">{{ heading }}</label>
+                    {{ form[field_name] }}
+                    {{ form[field_name].errors }}
+                    <div data-other-wrapper="{{ field_name }}" style="display: none;">
+                        <label class="form-label" for="{{ form[other_name].id_for_label }}">{{ heading }} other</label>
+                        {{ form[other_name] }}
+                        {{ form[other_name].errors }}
+                    </div>
+                </div>
+            {% endfor %}
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+                <div>
+                    <label class="form-label" for="{{ form.shape.id_for_label }}">Shape</label>
+                    {{ form.shape }}
+                    {{ form.shape.errors }}
+                    <div data-other-wrapper="shape" style="display: none; margin-top: 0.45rem;">
+                        <label class="form-label" for="{{ form.shape_other.id_for_label }}">Shape other</label>
+                        {{ form.shape_other }}
+                        {{ form.shape_other.errors }}
+                    </div>
+                </div>
+                <div>
+                    <label class="form-label" for="{{ form.colors.id_for_label }}">Color(s)</label>
+                    {{ form.colors }}
+                    {{ form.colors.errors }}
+                    <div data-other-wrapper="colors" style="display: none; margin-top: 0.45rem;">
+                        <label class="form-label" for="{{ form.colors_other.id_for_label }}">Color other</label>
+                        {{ form.colors_other }}
+                        {{ form.colors_other.errors }}
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.85rem;">
+                <div>
+                    <label class="form-label" for="{{ form.resident_status.id_for_label }}">Resident status</label>
+                    {{ form.resident_status }}
+                    {{ form.resident_status.errors }}
+                </div>
+                <div>
+                    <label class="form-label" for="{{ form.condition_grade.id_for_label }}">Condition grade</label>
+                    {{ form.condition_grade }}
+                    {{ form.condition_grade.errors }}
+                </div>
+            </div>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <label class="form-label">{{ form.is_public }} Public item</label>
+                <label class="form-label">{{ form.trade_eligible }} Trade eligible</label>
+            </div>
+        </div>
+
+        <details style="margin-top: 1rem;">
+            <summary style="cursor: pointer; color: var(--color-aged-amber);">Is a value missing?</summary>
+            <div style="margin-top: 0.75rem;">
+                {% include 'core/_reference_data_suggestion_form.html' %}
+            </div>
+        </details>
+
+        <hr style="margin: 1.2rem 0; border: 0; border-top: 1px solid var(--color-border);">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.5rem;">Images</h2>
+        <p style="color: var(--color-muted); font-size: 0.88rem; margin-bottom: 0.75rem;">
+            Listing images will be copied automatically. You can add more below.
+        </p>
+        {{ image_formset.management_form }}
+        <div style="display: grid; gap: 0.7rem;">
+            {% for image_form in image_formset %}
+                <article style="border: 1px solid var(--color-border); border-radius: 8px; padding: 0.7rem;">
+                    {{ image_form.id }}
+                    <div style="display: grid; grid-template-columns: 1fr 140px; gap: 0.7rem; align-items: end;">
+                        <div>
+                            <label class="form-label" for="{{ image_form.image.id_for_label }}">Image</label>
+                            {{ image_form.image }}
+                            {{ image_form.image.errors }}
+                        </div>
+                        <div>
+                            <label class="form-label" for="{{ image_form.sort_order.id_for_label }}">Sort order</label>
+                            {{ image_form.sort_order }}
+                        </div>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+
+        <div style="margin-top: 1.25rem;">
+            <button type="submit" class="btn-primary">Add to my collection</button>
+            <a href="{% url 'orders:detail' order.pk %}" style="margin-left: 0.75rem; color: var(--color-aged-amber);">
+                Cancel
+            </a>
+        </div>
+    </form>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const stateSelect = document.getElementById('{{ form.state.id_for_label }}');
+    const geoSelect = document.getElementById('{{ form.county.id_for_label }}');
+    const geoLabel = document.getElementById('county-label');
+    const taxonomyFields = {{ taxonomy_field_names_json|safe }};
+
+    const updateOtherWrapper = (fieldName) => {
+        const field = document.getElementById(`id_${fieldName}`);
+        const wrapper = document.querySelector(`[data-other-wrapper="${fieldName}"]`);
+        if (!field || !wrapper) return;
+        let show = false;
+        if (field.multiple) {
+            show = Array.from(field.selectedOptions).some((o) => o.value === 'other' || o.text.trim().toLowerCase() === 'other');
+        } else {
+            const selected = field.options[field.selectedIndex];
+            show = selected && selected.text.trim().toLowerCase() === 'other';
+        }
+        wrapper.style.display = show ? '' : 'none';
+    };
+
+    const loadReferenceData = async () => {
+        const stateId = stateSelect.value;
+        if (!stateId) return;
+        const geoRes = await fetch(`/api/geo-units/?state=${encodeURIComponent(stateId)}`);
+        const geoData = await geoRes.json();
+        const currentGeo = geoSelect.value;
+        geoSelect.innerHTML = '<option value="">Select geographic unit</option>';
+        geoData.results.forEach((unit) => {
+            const opt = document.createElement('option');
+            opt.value = unit.id;
+            opt.textContent = unit.name;
+            if (String(unit.id) === currentGeo) opt.selected = true;
+            geoSelect.appendChild(opt);
+        });
+        geoLabel.textContent = geoData.issuance_unit_label || 'Geographic Unit';
+
+        const ltRes = await fetch(`/api/license-types/?state=${encodeURIComponent(stateId)}`);
+        const ltData = await ltRes.json();
+        taxonomyFields.forEach((fieldName) => {
+            const field = document.getElementById(`id_${fieldName}`);
+            if (!field) return;
+            const currentValue = field.value;
+            field.innerHTML = `<option value="">Select ${fieldName.replace('_', ' ')}</option>`;
+            (ltData.results[fieldName] || []).forEach((item) => {
+                const opt = document.createElement('option');
+                opt.value = item.id;
+                opt.textContent = item.name;
+                if (String(item.id) === currentValue) opt.selected = true;
+                field.appendChild(opt);
+            });
+            updateOtherWrapper(fieldName);
+        });
+    };
+
+    stateSelect.addEventListener('change', loadReferenceData);
+    taxonomyFields.concat(['shape', 'colors']).forEach((fieldName) => {
+        const field = document.getElementById(`id_${fieldName}`);
+        if (field) {
+            field.addEventListener('change', () => updateOtherWrapper(fieldName));
+            updateOtherWrapper(fieldName);
+        }
+    });
+    loadReferenceData();
+});
+</script>
+{% endblock %}

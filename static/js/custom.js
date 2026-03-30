@@ -128,8 +128,69 @@ async function pollJson(endpoint, callback, intervalMs = 10000) {
     return setInterval(run, intervalMs);
 }
 
+function initNav() {
+    // Hamburger toggle
+    const hamburger = document.getElementById('hamburger-btn');
+    const nav = document.querySelector('.site-nav');
+    if (hamburger && nav) {
+        hamburger.addEventListener('click', () => {
+            const open = nav.classList.toggle('nav-open');
+            hamburger.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+    }
+
+    // User menu dropdown
+    const userMenuBtns = document.querySelectorAll('.user-menu-btn');
+    userMenuBtns.forEach((btn) => {
+        const menu = btn.closest('.user-menu');
+        if (!menu) return;
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const open = menu.classList.toggle('is-open');
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+    });
+    // Close dropdowns on outside click
+    document.addEventListener('click', () => {
+        document.querySelectorAll('.user-menu.is-open').forEach((m) => {
+            m.classList.remove('is-open');
+            const btn = m.querySelector('.user-menu-btn');
+            if (btn) btn.setAttribute('aria-expanded', 'false');
+        });
+    });
+}
+
+function initDashTabs() {
+    const tabBtns = document.querySelectorAll('.dash-tab-btn');
+    if (tabBtns.length === 0) return;
+
+    const activate = (btn) => {
+        const target = btn.dataset.tab;
+        document.querySelectorAll('.dash-tab-btn').forEach((b) => b.classList.remove('active'));
+        document.querySelectorAll('.dash-tab-panel').forEach((p) => p.classList.remove('active'));
+        btn.classList.add('active');
+        const panel = document.getElementById(target);
+        if (panel) panel.classList.add('active');
+        try { sessionStorage.setItem('dash-tab', target); } catch (_) {}
+    };
+
+    tabBtns.forEach((btn) => {
+        btn.addEventListener('click', () => activate(btn));
+    });
+
+    // Restore last-active tab
+    let initial;
+    try { initial = sessionStorage.getItem('dash-tab'); } catch (_) {}
+    const firstTarget = initial && document.getElementById(initial)
+        ? document.querySelector(`.dash-tab-btn[data-tab="${initial}"]`)
+        : tabBtns[0];
+    if (firstTarget) activate(firstTarget);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     fadeOutMessages();
+    initNav();
+    initDashTabs();
     document.querySelectorAll('[data-auction-end]').forEach(startCountdown);
     initBidFormValidation();
     initGallery();

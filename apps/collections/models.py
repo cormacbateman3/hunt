@@ -39,6 +39,7 @@ class CollectionItem(models.Model):
     condition_grade = models.CharField(max_length=20, choices=CONDITION_CHOICES, blank=True)
     is_public = models.BooleanField(default=True, help_text="Visible on public profile")
     trade_eligible = models.BooleanField(default=True, help_text="Available for trade offers")
+    featured = models.BooleanField(default=False, help_text="Pin to the top of your public profile (max 6)")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

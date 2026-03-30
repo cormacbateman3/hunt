@@ -4,58 +4,62 @@
 
 {% block content %}
 <section class="hero">
-    <h1>Welcome to KeystoneBid</h1>
+    <h1>Pennsylvania&rsquo;s Hunting Heritage Marketplace</h1>
     <p class="hero-subtitle">
-        The premier marketplace for antique Pennsylvania hunting licenses
+        Buy, sell, and trade antique Pennsylvania hunting licenses with fellow collectors.
     </p>
+</section>
 
-    <div class="feature-grid">
-        <article class="card feature-card">
-            <h3>Browse Auctions</h3>
-            <p>
-                Discover authentic Pennsylvania hunting licenses from collectors across the state.
-            </p>
-            <a href="{% url 'listings:auction_house' %}" class="btn-primary">
-                Browse Auction House
-            </a>
-        </article>
+<section class="feature-grid">
+    <article class="card feature-card">
+        <h3>Auction House</h3>
+        <p>
+            Bid on rare licenses in timed auctions. Find pieces from every county, every era.
+        </p>
+        <a href="{% url 'listings:auction_house' %}" class="btn-primary">Browse Auctions</a>
+    </article>
 
-        <article class="card feature-card">
-            <h3>Sell Your Collection</h3>
-            <p>
-                List your antique licenses and connect with serious collectors.
-            </p>
-            {% if user.is_authenticated %}
-                <a href="{% url 'listings:create' %}" class="btn-primary">
-                    Create Listing
-                </a>
-            {% else %}
-                <a href="{% url 'accounts:register' %}" class="btn-primary">
-                    Get Started
-                </a>
-            {% endif %}
-        </article>
+    <article class="card feature-card">
+        <h3>General Store</h3>
+        <p>
+            Browse fixed-price listings. Buy instantly — no waiting for an auction to close.
+        </p>
+        <a href="{% url 'listings:general_store' %}" class="btn-primary">Shop Now</a>
+    </article>
 
-        <article class="card feature-card">
-            <h3>Join the Community</h3>
-            <p>
-                Connect with fellow collectors who share your passion for PA hunting heritage.
-            </p>
-            {% if user.is_authenticated %}
-                <a href="{% url 'accounts:dashboard' %}" class="btn-primary">
-                    Dashboard
-                </a>
-            {% else %}
-                <a href="{% url 'accounts:register' %}" class="btn-primary">
-                    Register
-                </a>
-            {% endif %}
-        </article>
-    </div>
+    <article class="card feature-card">
+        <h3>Trading Block</h3>
+        <p>
+            Trade licenses directly with other collectors. Negotiate, counter, and deal.
+        </p>
+        <a href="{% url 'listings:trading_block' %}" class="btn-primary">Browse Trades</a>
+    </article>
+
+    <article class="card feature-card">
+        <h3>Collections</h3>
+        <p>
+            Browse collector profiles and curated collections from across Pennsylvania.
+        </p>
+        {% if user.is_authenticated %}
+            <a href="{% url 'accounts:profile' user.username %}" class="btn-primary">My Collection</a>
+        {% else %}
+            <a href="{% url 'accounts:register' %}" class="btn-primary">Join &amp; Collect</a>
+        {% endif %}
+    </article>
 </section>
 
 <section class="recent-listings">
     <h2>Recently Listed</h2>
-    <p>Check back soon for active auctions</p>
+    <p>New licenses added to the marketplace every day.</p>
+    {% if user.is_authenticated %}
+        <div style="margin-top: var(--space-2);">
+            <a href="{% url 'listings:auction_house' %}" class="btn-primary">Browse all listings</a>
+        </div>
+    {% else %}
+        <div style="margin-top: var(--space-2);">
+            <a href="{% url 'accounts:register' %}" class="btn-primary" style="margin-right: 0.75rem;">Get started</a>
+            <a href="{% url 'listings:auction_house' %}" class="btn-secondary">Browse as guest</a>
+        </div>
+    {% endif %}
 </section>
 {% endblock %}

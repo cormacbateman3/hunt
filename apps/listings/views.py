@@ -12,6 +12,7 @@ from .models import Listing, ListingQuestion
 from .forms import ListingForm, ListingImageFormSet
 from apps.bids.forms import BidForm
 from apps.bids.services import get_user_bid_on_listing, get_winning_bid
+from apps.collections.models import CollectionItem
 from apps.core.models import GeographicUnit, LicenseType, State
 from apps.core.forms import ReferenceDataSuggestionForm
 from apps.orders.models import Order
@@ -300,7 +301,61 @@ def listing_create(request):
 
         if form.is_valid() and image_formset.is_valid():
             form.instance.seller = request.user
+            source_item = form.cleaned_data.get('source_collection_item')
+
+            # 4e: Duplicate prevention — block if source item already has an active/scheduled listing
+            if source_item:
+                duplicate = Listing.objects.filter(
+                    source_collection_item=source_item,
+                    status__in=('active', 'scheduled', 'pending'),
+                ).exclude(seller=request.user).first() or Listing.objects.filter(
+                    source_collection_item=source_item,
+                    status__in=('active', 'scheduled', 'pending'),
+                    seller=request.user,
+                ).first()
+                if duplicate:
+                    form.add_error(
+                        'source_collection_item',
+                        'This item already has an active or scheduled listing. '
+                        'Close or cancel the existing listing before creating a new one.',
+                    )
+                    return render(
+                        request,
+                        'listings/listing_create.html',
+                        {'form': form, 'image_formset': image_formset,
+                         'taxonomy_fields': TAXONOMY_FIELDS,
+                         'taxonomy_field_names_json': json.dumps([item[0] for item in TAXONOMY_FIELDS]),
+                         'suggestion_form': ReferenceDataSuggestionForm(
+                             initial={'target_model': 'other', 'suggestion_type': 'new_value'}
+                         )},
+                    )
+
             listing = form.save()
+
+            # 4e: Auto-create CollectionItem if none linked
+            if not listing.source_collection_item:
+                collection_item = CollectionItem.objects.create(
+                    owner=request.user,
+                    title=listing.title,
+                    description=listing.description,
+                    license_year=listing.license_year,
+                    state=listing.state,
+                    county=listing.county_ref,
+                    resident_status=listing.resident_status,
+                    condition_grade=listing.condition_grade,
+                    shape=listing.shape,
+                    colors=listing.colors,
+                    is_public=True,
+                    trade_eligible=True,
+                )
+                collection_item.license_types.set(listing.license_types.all())
+                listing.source_collection_item = collection_item
+                listing.save(update_fields=['source_collection_item', 'updated_at'])
+
+            # 4e: Mark collection item as not trade-eligible when listing goes active
+            if listing.source_collection_item and listing.status == 'active':
+                listing.source_collection_item.trade_eligible = False
+                listing.source_collection_item.save(update_fields=['trade_eligible', 'updated_at'])
 
             # Re-bind as inline formset to save FK automatically.
             image_formset = ListingImageFormSet(
@@ -320,7 +375,10 @@ def listing_create(request):
                     {'form': form, 'image_formset': image_formset},
                 )
 
-            messages.success(request, 'Listing created successfully!')
+            if listing.status == 'scheduled':
+                messages.success(request, f'Listing scheduled to go live on {listing.scheduled_at:%b %-d, %Y at %-I:%M %p}.')
+            else:
+                messages.success(request, 'Listing created successfully!')
             return redirect('listings:detail', pk=listing.pk)
     else:
         source_id = request.GET.get('from_collection')

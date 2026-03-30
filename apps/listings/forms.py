@@ -77,6 +77,28 @@ class ListingForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-select'}),
         help_text='Prefill safe fields from an item in your collection.',
     )
+    scheduled_at = forms.DateTimeField(
+        required=False,
+        widget=forms.DateTimeInput(attrs={'class': 'form-input', 'type': 'datetime-local'}),
+        help_text='Leave blank to publish immediately. Max 30 days in the future.',
+        input_formats=['%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M'],
+    )
+    auto_relist = forms.BooleanField(
+        required=False,
+        initial=True,
+        widget=forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+        help_text='Auto-relist if auction ends without a winner (up to 3 times).',
+    )
+    local_pickup_available = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+        help_text='Offer local pickup as an alternative to shipping.',
+    )
+    local_pickup_location = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. Lancaster, PA'}),
+        help_text='City or region for local pickup.',
+    )
 
     class Meta:
         model = Listing
@@ -102,6 +124,10 @@ class ListingForm(forms.ModelForm):
             'buy_now_price',
             'trade_notes',
             'allow_cash',
+            'scheduled_at',
+            'auto_relist',
+            'local_pickup_available',
+            'local_pickup_location',
             'featured_image',
         ]
         widgets = {
@@ -186,6 +212,8 @@ class ListingForm(forms.ModelForm):
             self.add_error('county_ref', 'Selected geographic unit does not belong to the chosen state.')
         if state and license_year and state.min_license_year and license_year < state.min_license_year:
             self.add_error('license_year', f'Earliest known hunting license year for {state.name} is {state.min_license_year}.')
+        if license_year and license_year > 2000:
+            self.add_error('license_year', 'License year cannot exceed 2000.')
 
         if listing_type == 'auction':
             if starting_price is None:
@@ -219,6 +247,19 @@ class ListingForm(forms.ModelForm):
         if 'other' in selected_colors and not (cleaned_data.get('colors_other') or '').strip():
             self.add_error('colors_other', 'Please describe the missing color.')
 
+        scheduled_at = cleaned_data.get('scheduled_at')
+        if scheduled_at:
+            now = timezone.now()
+            if scheduled_at <= now:
+                self.add_error('scheduled_at', 'Scheduled go-live must be in the future.')
+            elif scheduled_at > now + timedelta(days=30):
+                self.add_error('scheduled_at', 'Scheduled go-live cannot be more than 30 days in the future.')
+
+        local_pickup_available = cleaned_data.get('local_pickup_available')
+        local_pickup_location = (cleaned_data.get('local_pickup_location') or '').strip()
+        if local_pickup_available and not local_pickup_location:
+            self.add_error('local_pickup_location', 'Enter a location for local pickup.')
+
         return cleaned_data
 
     def save(self, commit=True):
@@ -229,12 +270,17 @@ class ListingForm(forms.ModelForm):
         listing.is_statewide = bool(listing.county_ref and listing.county_ref.is_statewide)
         listing.shape = self.cleaned_data.get('shape') or ''
         listing.colors = self.cleaned_data.get('colors') or []
+        listing.local_pickup_available = bool(self.cleaned_data.get('local_pickup_available'))
+        listing.local_pickup_location = (self.cleaned_data.get('local_pickup_location') or '').strip()
 
         listing_type = self.cleaned_data['listing_type']
         duration = self.cleaned_data.get('duration_days')
+        scheduled_at = self.cleaned_data.get('scheduled_at')
 
         if listing_type == 'auction':
-            listing.auction_end = timezone.now() + timedelta(days=int(duration))
+            listing.auto_relist = bool(self.cleaned_data.get('auto_relist'))
+            go_live = scheduled_at or timezone.now()
+            listing.auction_end = go_live + timedelta(days=int(duration))
             listing.buy_now_price = None
             listing.trade_notes = ''
             listing.allow_cash = False
@@ -251,6 +297,13 @@ class ListingForm(forms.ModelForm):
             listing.reserve_price = None
             listing.buy_now_price = None
             listing.auction_end = None
+
+        # Scheduled go-live: only apply on new listings (no pk yet)
+        if not listing.pk and scheduled_at:
+            listing.scheduled_at = scheduled_at
+            listing.status = 'scheduled'
+        elif not listing.pk:
+            listing.status = 'active'
 
         if commit:
             listing.save()

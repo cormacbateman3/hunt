@@ -2,7 +2,8 @@ body {
     background: var(--color-cream-white);
     color: var(--color-ink);
     font-family: var(--font-body);
-    line-height: 1.5;
+    font-size: 1rem;
+    line-height: 1.6;
 }
 
 h1,
@@ -12,6 +13,7 @@ h4 {
     margin: 0;
     color: var(--color-forest-green);
     font-family: var(--font-heading);
+    line-height: 1.25;
 }
 
 p {

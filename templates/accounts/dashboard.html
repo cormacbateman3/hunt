@@ -3,138 +3,199 @@
 {% block title %}Dashboard | KeystoneBid{% endblock %}
 
 {% block content %}
-<section style="display: grid; gap: 1rem;">
-    <article class="card">
-        <h1 style="margin-bottom: 0.5rem;">Welcome, {{ user.username }}</h1>
-        <p style="color: var(--color-muted); margin-bottom: 0.75rem;">
-            Active listings: {{ active_listings_count }} | Active winning bids: {{ winning_bids_count }}
-        </p>
+<div style="display: grid; gap: var(--space-3);">
+
+    <!-- Header row -->
+    <article class="card" style="padding: var(--space-3) var(--space-3) var(--space-2);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
+            <div>
+                <h1 style="margin-bottom:0.3rem;">Welcome back, {{ user.username }}</h1>
+                <p class="muted" style="font-size:0.95rem;">
+                    {{ active_listings_count }} active listing{{ active_listings_count|pluralize }}
+                    &bull;
+                    {{ winning_bids_count }} winning bid{{ winning_bids_count|pluralize }}
+                </p>
+            </div>
+            <a href="{% url 'listings:create' %}" class="btn-primary">+ Create Listing</a>
+        </div>
     </article>
 
-    {# ── Account Readiness Checklist (compact) ── #}
-    {% with incomplete=readiness|dictsort:"complete" %}
     {% if not user.profile.email_verified or not user.profile.shipping_address %}
-    <article class="card" style="border-left: 3px solid var(--color-aged-amber, #c8a040);">
-        <h2 style="font-size: 1rem; margin-bottom: 0.6rem;">Complete your account</h2>
-        <ul style="list-style: none; padding: 0; margin: 0; display: grid; gap: 0.4rem;">
+    <!-- Account readiness -->
+    <article class="card" style="border-left: 3px solid var(--color-aged-amber);">
+        <h2 style="font-size: 1rem; margin-bottom: 0.65rem;">Complete your account</h2>
+        <ul class="activity-list">
             {% for item in readiness %}
-            <li style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; font-size: 0.9rem;">
-                <span>
+            <li class="activity-item" style="display:flex; justify-content:space-between; align-items:center; border-bottom-color:transparent; padding:0.35rem 0;">
+                <span style="font-size:0.92rem;">
                     {% if item.complete %}
-                        <span style="color: var(--color-forest-green);">&#10003;</span>
+                        <span style="color: var(--color-forest-green); margin-right:0.4rem;">&#10003;</span>
                     {% else %}
-                        <span style="color: var(--color-muted);">&#9675;</span>
+                        <span style="color: var(--color-muted); margin-right:0.4rem;">&#9675;</span>
                     {% endif %}
                     {{ item.label }}
                 </span>
                 {% if not item.complete %}
-                    <a href="{{ item.fix_url }}" style="color: var(--color-aged-amber); font-size: 0.82rem; white-space: nowrap;">
+                    <a href="{{ item.fix_url }}" style="color:var(--color-aged-amber); font-size:0.82rem; white-space:nowrap;">
                         {{ item.fix_label }} &rarr;
                     </a>
                 {% endif %}
             </li>
             {% endfor %}
         </ul>
-        <a href="{% url 'accounts:profile_edit' %}" style="display: inline-block; margin-top: 0.6rem; font-size: 0.82rem; color: var(--color-muted);">Go to profile settings</a>
     </article>
     {% endif %}
-    {% endwith %}
 
+    {% if pending_payments %}
+    <!-- Pending payments — always visible -->
+    <article class="card" style="border-left: 3px solid var(--color-hunting-rust);">
+        <div class="section-row">
+            <h2 style="font-size:1.05rem; color:var(--color-hunting-rust);">Action Required — Pending Payments</h2>
+        </div>
+        <ul class="activity-list">
+            {% for order in pending_payments %}
+            <li class="activity-item" style="display:flex; justify-content:space-between; align-items:center;">
+                <a href="{% url 'orders:detail' order.pk %}">{{ order.listing.title }}</a>
+                <span style="display:flex; align-items:center; gap:0.75rem;">
+                    <span style="font-weight:600;">${{ order.total_amount }}</span>
+                    <a href="{% url 'payments:checkout' order.pk %}" class="btn-primary" style="padding:0.4rem 0.75rem; font-size:0.85rem;">Pay now</a>
+                </span>
+            </li>
+            {% endfor %}
+        </ul>
+    </article>
+    {% endif %}
+
+    <!-- Tabbed activity area -->
     <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Pending Payments</h2>
-        {% for order in pending_payments %}
-            <p style="margin-bottom: 0.45rem;">
-                <a href="{% url 'orders:detail' order.pk %}">{{ order.listing.title }}</a> - ${{ order.total_amount }}
-                <a href="{% url 'payments:checkout' order.pk %}" style="color: var(--color-aged-amber);">Pay now</a>
-            </p>
-        {% empty %}
-            <p>No pending payments.</p>
-        {% endfor %}
+        <nav class="dash-tabs" role="tablist" aria-label="Dashboard sections">
+            <button class="dash-tab-btn" data-tab="tab-selling" role="tab" type="button">Selling</button>
+            <button class="dash-tab-btn" data-tab="tab-buying" role="tab" type="button">Buying</button>
+            <button class="dash-tab-btn" data-tab="tab-activity" role="tab" type="button">Activity</button>
+        </nav>
+
+        <!-- SELLING -->
+        <div id="tab-selling" class="dash-tab-panel" role="tabpanel">
+            <div class="section-row" style="margin-bottom:0.75rem;">
+                <h2 style="font-size:1.05rem;">My Listings</h2>
+                <a href="{% url 'listings:my_listings' %}" style="font-size:0.85rem; color:var(--color-aged-amber);">View all &rarr;</a>
+            </div>
+            {% if my_listings %}
+                <ul class="activity-list">
+                    {% for listing in my_listings %}
+                    <li class="activity-item" style="display:flex; justify-content:space-between; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+                        <a href="{% url 'listings:detail' listing.id %}">{{ listing.title }}</a>
+                        <span style="display:flex; align-items:center; gap:0.5rem;">
+                            <span class="badge {% if listing.status == 'active' %}badge-active{% elif listing.status == 'sold' %}badge-sold{% elif listing.status == 'scheduled' %}badge-scheduled{% else %}badge-expired{% endif %}">
+                                {{ listing.get_status_display }}
+                            </span>
+                            <a href="{% url 'listings:edit' listing.pk %}" class="btn-secondary" style="padding:0.3rem 0.6rem; font-size:0.8rem;">Edit</a>
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="muted" style="font-size:0.92rem;">No listings yet. <a href="{% url 'listings:create' %}" style="color:var(--color-aged-amber);">Create one &rarr;</a></p>
+            {% endif %}
+
+            {% if recent_sales %}
+            <div class="section-row" style="margin-top:var(--space-3); margin-bottom:0.75rem;">
+                <h2 style="font-size:1.05rem;">Recent Sales</h2>
+            </div>
+            <ul class="activity-list">
+                {% for order in recent_sales %}
+                <li class="activity-item" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+                    <a href="{% url 'orders:detail' order.pk %}">{{ order.listing.title }}</a>
+                    <span class="muted text-sm">${{ order.total_amount }} &bull; {{ order.get_status_display }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+
+        <!-- BUYING -->
+        <div id="tab-buying" class="dash-tab-panel" role="tabpanel">
+            <div class="section-row" style="margin-bottom:0.75rem;">
+                <h2 style="font-size:1.05rem;">Active Bids</h2>
+                <a href="{% url 'bids:my_bids' %}" style="font-size:0.85rem; color:var(--color-aged-amber);">View all &rarr;</a>
+            </div>
+            {% if my_bids %}
+                <ul class="activity-list">
+                    {% for bid in my_bids %}
+                    <li class="activity-item" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+                        <a href="{% url 'listings:detail' bid.listing.id %}">{{ bid.listing.title }}</a>
+                        <span style="font-size:0.9rem;">
+                            ${{ bid.amount }}
+                            {% if bid.is_winning %}<span class="badge badge-active" style="margin-left:0.3rem;">Winning</span>{% endif %}
+                        </span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="muted" style="font-size:0.92rem;">No bids placed yet.</p>
+            {% endif %}
+
+            {% if recent_purchases %}
+            <div class="section-row" style="margin-top:var(--space-3); margin-bottom:0.75rem;">
+                <h2 style="font-size:1.05rem;">Recent Purchases</h2>
+                <a href="{% url 'orders:my_orders' %}" style="font-size:0.85rem; color:var(--color-aged-amber);">View all &rarr;</a>
+            </div>
+            <ul class="activity-list">
+                {% for order in recent_purchases %}
+                <li class="activity-item" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+                    <a href="{% url 'orders:detail' order.pk %}">{{ order.listing.title }}</a>
+                    <span class="muted text-sm">${{ order.total_amount }} &bull; {{ order.get_status_display }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+
+        <!-- ACTIVITY -->
+        <div id="tab-activity" class="dash-tab-panel" role="tabpanel">
+            <div class="section-row" style="margin-bottom:0.75rem;">
+                <h2 style="font-size:1.05rem;">Notifications</h2>
+                <a href="{% url 'notifications:center' %}" style="font-size:0.85rem; color:var(--color-aged-amber);">View all &rarr;</a>
+            </div>
+            {% if recent_notifications %}
+                <ul class="activity-list">
+                    {% for note in recent_notifications %}
+                    <li class="activity-item" style="font-size:0.92rem;">
+                        {% if not note.is_read %}<strong style="color:var(--color-forest-green);">[New]</strong> {% endif %}
+                        {% if note.link_url %}
+                            <a href="{% url 'notifications:go' note.pk %}">{{ note.message }}</a>
+                        {% else %}
+                            {{ note.message }}
+                        {% endif %}
+                        <span class="muted text-sm" style="display:block; margin-top:0.15rem;">{{ note.created_at|date:"M j, g:i a" }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="muted" style="font-size:0.92rem;">No notifications yet.</p>
+            {% endif %}
+
+            {% if recent_favorites %}
+            <div class="section-row" style="margin-top:var(--space-3); margin-bottom:0.75rem;">
+                <h2 style="font-size:1.05rem;">Favorites</h2>
+                <a href="{% url 'favorites:list' %}" style="font-size:0.85rem; color:var(--color-aged-amber);">View all &rarr;</a>
+            </div>
+            <ul class="activity-list">
+                {% for fav in recent_favorites %}
+                <li class="activity-item" style="font-size:0.92rem;">
+                    {% if fav.listing %}
+                        <a href="{% url 'listings:detail' fav.listing.pk %}">{{ fav.listing.title }}</a>
+                        <span class="muted text-sm"> &bull; {{ fav.listing.get_listing_type_display }}</span>
+                    {% elif fav.collection_item %}
+                        {{ fav.collection_item.title }} by
+                        <a href="{% url 'accounts:profile' fav.collection_item.owner.username %}">{{ fav.collection_item.owner.username }}</a>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
     </article>
 
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">My Listings</h2>
-        {% for listing in my_listings %}
-            <p style="margin-bottom: 0.45rem;">
-                <a href="{% url 'listings:detail' listing.id %}">{{ listing.title }}</a>
-                ({{ listing.get_status_display }})
-            </p>
-        {% empty %}
-            <p>No listings yet.</p>
-        {% endfor %}
-        <a href="{% url 'listings:my_listings' %}" style="color: var(--color-aged-amber);">View all listings</a>
-    </article>
-
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Recent Bids</h2>
-        {% for bid in my_bids %}
-            <p style="margin-bottom: 0.45rem;">
-                <a href="{% url 'listings:detail' bid.listing.id %}">{{ bid.listing.title }}</a> - ${{ bid.amount }}
-                {% if bid.is_winning %}<strong>(winning)</strong>{% endif %}
-            </p>
-        {% empty %}
-            <p>No bids yet.</p>
-        {% endfor %}
-        <a href="{% url 'bids:my_bids' %}" style="color: var(--color-aged-amber);">View all bids</a>
-    </article>
-
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Recent Notifications</h2>
-        {% for note in recent_notifications %}
-            <p style="margin-bottom: 0.45rem;">
-                {% if not note.is_read %}<strong>[Unread]</strong>{% endif %}
-                {% if note.link_url %}
-                    <a href="{% url 'notifications:go' note.pk %}">{{ note.message }}</a>
-                {% else %}
-                    {{ note.message }}
-                {% endif %}
-            </p>
-        {% empty %}
-            <p>No notifications.</p>
-        {% endfor %}
-        <a href="{% url 'notifications:center' %}" style="color: var(--color-aged-amber);">Open notifications center</a>
-    </article>
-
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Recent Purchases</h2>
-        {% for order in recent_purchases %}
-            <p style="margin-bottom: 0.45rem;">
-                <a href="{% url 'orders:detail' order.pk %}">{{ order.listing.title }}</a> - ${{ order.total_amount }} ({{ order.get_status_display }})
-            </p>
-        {% empty %}
-            <p>No purchases yet.</p>
-        {% endfor %}
-    </article>
-
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Recent Sales</h2>
-        {% for order in recent_sales %}
-            <p style="margin-bottom: 0.45rem;">
-                <a href="{% url 'orders:detail' order.pk %}">{{ order.listing.title }}</a> - ${{ order.total_amount }} ({{ order.get_status_display }})
-            </p>
-        {% empty %}
-            <p>No sales yet.</p>
-        {% endfor %}
-    </article>
-
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Favorites</h2>
-        {% for favorite in recent_favorites %}
-            <p style="margin-bottom: 0.45rem;">
-                {% if favorite.listing %}
-                    <a href="{% url 'listings:detail' favorite.listing.pk %}">{{ favorite.listing.title }}</a>
-                    ({{ favorite.listing.get_listing_type_display }})
-                {% elif favorite.collection_item %}
-                    {{ favorite.collection_item.title }} by
-                    <a href="{% url 'accounts:profile' favorite.collection_item.owner.username %}">
-                        {{ favorite.collection_item.owner.username }}
-                    </a>
-                {% endif %}
-            </p>
-        {% empty %}
-            <p>No favorites yet.</p>
-        {% endfor %}
-        <a href="{% url 'favorites:list' %}" style="color: var(--color-aged-amber);">Open favorites</a>
-    </article>
-</section>
+</div>
 {% endblock %}

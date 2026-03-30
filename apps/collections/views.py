@@ -2,9 +2,14 @@ import json
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
+
 from apps.core.forms import ReferenceDataSuggestionForm
+from apps.core.models import GeographicUnit, LicenseType, State
 from apps.orders.models import Order
+
 from .forms import CollectionItemForm, CollectionItemImageFormSet, WantedItemForm
 from .models import CollectionItem, CollectionItemImage, WantedItem
 
@@ -18,23 +23,226 @@ TAXONOMY_FIELDS = [
     ('material', 'material_other', 'Physical Form / Material'),
 ]
 
+MAX_FEATURED = 6
+
+
+def _apply_collection_filters(queryset, params):
+    """Apply shared filter params to a CollectionItem queryset."""
+    search = params.get('search', '').strip()
+    county_id = params.get('county_id', '')
+    year_min = params.get('year_min', '')
+    year_max = params.get('year_max', '')
+    license_type_id = params.get('license_type_id', '')
+    material_id = params.get('material_id', '')
+
+    if search:
+        queryset = queryset.filter(
+            Q(title__icontains=search) | Q(description__icontains=search)
+        )
+    if county_id and county_id.isdigit():
+        queryset = queryset.filter(county_id=county_id)
+    if year_min:
+        try:
+            queryset = queryset.filter(license_year__gte=int(year_min))
+        except ValueError:
+            pass
+    if year_max:
+        try:
+            queryset = queryset.filter(license_year__lte=int(year_max))
+        except ValueError:
+            pass
+    if license_type_id and license_type_id.isdigit():
+        queryset = queryset.filter(license_types__id=license_type_id)
+    if material_id and material_id.isdigit():
+        queryset = queryset.filter(license_types__id=material_id)
+    return queryset.distinct()
+
 
 @login_required
 def my_collection(request):
-    items = (
+    base_qs = (
         CollectionItem.objects.filter(owner=request.user)
         .select_related('state', 'county')
         .prefetch_related('images', 'license_types')
-        .order_by('-created_at')
     )
+
+    filtered_qs = _apply_collection_filters(base_qs, request.GET)
+
+    group_by = request.GET.get('group_by', '')
+
+    if group_by == 'county':
+        filtered_qs = filtered_qs.order_by('county__name', '-license_year')
+    elif group_by in ('decade', 'era'):
+        filtered_qs = filtered_qs.order_by('license_year', 'county__name')
+    else:
+        filtered_qs = filtered_qs.order_by('-featured', '-created_at')
+
+    items = list(filtered_qs)
+
+    # Build grouped structure when group_by is active
+    groups = None
+    if group_by == 'county':
+        groups = _group_by_key(items, lambda i: i.county.name if i.county else 'Unknown')
+    elif group_by in ('decade', 'era'):
+        groups = _group_by_key(
+            items,
+            lambda i: f"{(i.license_year // 10) * 10}s" if i.license_year else 'Unknown year',
+        )
+
+    # Featured items (always from unfiltered base so "display case" is stable)
+    featured_items = list(
+        base_qs.filter(featured=True).order_by('-created_at')[:MAX_FEATURED]
+    )
+    featured_ids = {i.pk for i in featured_items}
+    featured_count = base_qs.filter(featured=True).count()
+
     wanted_items = (
         WantedItem.objects.filter(user=request.user)
         .select_related('state', 'county', 'license_type')
         .order_by('-created_at')
     )
+
+    # Filter sidebar data
+    default_state = State.objects.filter(is_primary_default=True).first()
+    counties = GeographicUnit.objects.filter(state=default_state).order_by('sort_order', 'name') if default_state else GeographicUnit.objects.none()
+    license_types = LicenseType.objects.filter(is_system_value=True).order_by('category', 'name')
+
+    filters = {
+        'search': request.GET.get('search', ''),
+        'county_id': request.GET.get('county_id', ''),
+        'year_min': request.GET.get('year_min', ''),
+        'year_max': request.GET.get('year_max', ''),
+        'license_type_id': request.GET.get('license_type_id', ''),
+        'material_id': request.GET.get('material_id', ''),
+    }
+
     return render(request, 'collections/my_collection.html', {
         'items': items,
+        'groups': groups,
+        'group_by': group_by,
+        'featured_items': featured_items,
+        'featured_ids': featured_ids,
+        'featured_count': featured_count,
+        'max_featured': MAX_FEATURED,
         'wanted_items': wanted_items,
+        'counties': counties,
+        'license_types': license_types,
+        'filters': filters,
+    })
+
+
+def _group_by_key(items, key_fn):
+    """Return [(key, [items])] preserving order."""
+    seen = {}
+    for item in items:
+        key = key_fn(item)
+        seen.setdefault(key, []).append(item)
+    return list(seen.items())
+
+
+@login_required
+def feature_toggle(request, pk):
+    """Toggle the featured flag on a collection item (max MAX_FEATURED per user)."""
+    if request.method != 'POST':
+        return redirect('collections:my_collection')
+    item = get_object_or_404(CollectionItem, pk=pk, owner=request.user)
+    if item.featured:
+        item.featured = False
+        item.save(update_fields=['featured', 'updated_at'])
+        messages.success(request, f'"{item.title}" removed from featured display.')
+    else:
+        count = CollectionItem.objects.filter(owner=request.user, featured=True).count()
+        if count >= MAX_FEATURED:
+            messages.error(request, f'You can feature at most {MAX_FEATURED} items. Unfeature one first.')
+        else:
+            item.featured = True
+            item.save(update_fields=['featured', 'updated_at'])
+            messages.success(request, f'"{item.title}" added to featured display.')
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'collections:my_collection'
+    return redirect(next_url)
+
+
+def browse_collections(request):
+    """Public collection browse — all public items across all users."""
+    qs = (
+        CollectionItem.objects.filter(is_public=True)
+        .select_related('owner__profile', 'state', 'county')
+        .prefetch_related('images', 'license_types')
+    )
+
+    search = request.GET.get('search', '').strip()
+    state_id = request.GET.get('state_id', '')
+    county_id = request.GET.get('county_id', '')
+    year_min = request.GET.get('year_min', '')
+    year_max = request.GET.get('year_max', '')
+    license_type_id = request.GET.get('license_type_id', '')
+    owner_search = request.GET.get('owner', '').strip()
+    sort = request.GET.get('sort', 'newest')
+
+    if search:
+        qs = qs.filter(Q(title__icontains=search) | Q(description__icontains=search))
+    if state_id and state_id.isdigit():
+        qs = qs.filter(state_id=state_id)
+    if county_id and county_id.isdigit():
+        qs = qs.filter(county_id=county_id)
+    if year_min:
+        try:
+            qs = qs.filter(license_year__gte=int(year_min))
+        except ValueError:
+            pass
+    if year_max:
+        try:
+            qs = qs.filter(license_year__lte=int(year_max))
+        except ValueError:
+            pass
+    if license_type_id and license_type_id.isdigit():
+        qs = qs.filter(license_types__id=license_type_id)
+    if owner_search:
+        qs = qs.filter(
+            Q(owner__username__icontains=owner_search)
+            | Q(owner__profile__display_name__icontains=owner_search)
+        )
+
+    sort_map = {
+        'newest': '-created_at',
+        'year_asc': 'license_year',
+        'year_desc': '-license_year',
+        'owner_az': 'owner__username',
+    }
+    qs = qs.order_by(sort_map.get(sort, '-created_at')).distinct()
+
+    paginator = Paginator(qs, 24)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    default_state = State.objects.filter(is_primary_default=True).first() or State.objects.order_by('name').first()
+    selected_state_id = state_id
+    selected_state = State.objects.filter(pk=selected_state_id).first() if selected_state_id and selected_state_id.isdigit() else default_state
+    counties = GeographicUnit.objects.filter(state=selected_state).order_by('sort_order', 'name') if selected_state else GeographicUnit.objects.none()
+    license_types = LicenseType.objects.filter(is_system_value=True).order_by('category', 'name')
+    states = State.objects.order_by('-is_primary_default', 'name')
+
+    filters = {
+        'search': search,
+        'state_id': state_id or (str(default_state.id) if default_state else ''),
+        'county_id': county_id,
+        'year_min': year_min,
+        'year_max': year_max,
+        'license_type_id': license_type_id,
+        'owner': owner_search,
+        'sort': sort,
+    }
+
+    query_params = request.GET.copy()
+    query_params.pop('page', None)
+
+    return render(request, 'collections/browse_collections.html', {
+        'page_obj': page_obj,
+        'states': states,
+        'selected_state': selected_state,
+        'counties': counties,
+        'license_types': license_types,
+        'filters': filters,
+        'query_string': query_params.urlencode(),
     })
 
 
@@ -160,40 +368,65 @@ def wanted_item_delete(request, pk):
 
 @login_required
 def add_from_order(request, order_id):
-    order = get_object_or_404(Order.objects.select_related('listing'), pk=order_id, buyer=request.user)
+    """Show a pre-filled collection item form from a completed order (GET), or save it (POST)."""
+    order = get_object_or_404(
+        Order.objects.select_related('listing__state', 'listing__county_ref')
+             .prefetch_related('listing__license_types'),
+        pk=order_id,
+        buyer=request.user,
+    )
     if order.status != 'completed':
         messages.error(request, 'Only completed orders can be added to your collection.')
         return redirect('orders:detail', pk=order.pk)
-    if request.method != 'POST':
-        return redirect('orders:detail', pk=order.pk)
 
     listing = order.listing
-    item = CollectionItem.objects.create(
-        owner=request.user,
-        title=listing.title,
-        description=listing.description,
-        license_year=listing.license_year,
-        state=listing.state,
-        county=listing.county_ref,
-        resident_status='unknown',
-        shape=listing.shape,
-        colors=listing.colors,
-        condition_grade=listing.condition_grade,
-        is_public=True,
-        trade_eligible=True,
-    )
-    item.license_types.set(listing.license_types.all())
-    if listing.featured_image:
-        CollectionItemImage.objects.create(
-            collection_item=item,
-            image=listing.featured_image,
-            sort_order=0,
-        )
-    for listing_image in listing.additional_images.order_by('sort_order', 'uploaded_at'):
-        CollectionItemImage.objects.create(
-            collection_item=item,
-            image=listing_image.image,
-            sort_order=listing_image.sort_order + 1,
-        )
-    messages.success(request, 'Purchase added to your collection.')
-    return redirect('collections:edit', pk=item.pk)
+
+    if request.method == 'POST':
+        form = CollectionItemForm(request.POST, user=request.user)
+        image_formset = CollectionItemImageFormSet(request.POST, request.FILES)
+        if form.is_valid() and image_formset.is_valid():
+            form.instance.owner = request.user
+            item = form.save()
+            # Copy listing images to the new collection item
+            if listing.featured_image:
+                CollectionItemImage.objects.create(
+                    collection_item=item, image=listing.featured_image, sort_order=0
+                )
+            for li in listing.additional_images.order_by('sort_order', 'uploaded_at'):
+                CollectionItemImage.objects.create(
+                    collection_item=item, image=li.image, sort_order=li.sort_order + 1
+                )
+            messages.success(request, 'Purchase added to your collection.')
+            return redirect('collections:my_collection')
+    else:
+        # Pre-fill from the listing
+        initial = {
+            'title': listing.title,
+            'description': listing.description,
+            'license_year': listing.license_year,
+            'state': listing.state_id,
+            'county': listing.county_ref_id,
+            'condition_grade': listing.condition_grade,
+            'shape': listing.shape,
+            'colors': listing.colors,
+            'is_public': True,
+            'trade_eligible': False,  # just purchased, not trading yet
+        }
+        for category in ('residency', 'holder_eligibility', 'activity_scope', 'duration', 'addon_type', 'material'):
+            sel = listing.license_types.filter(category=category).order_by('name').first()
+            if sel:
+                initial[category] = sel.id
+        form = CollectionItemForm(initial=initial, user=request.user)
+        image_formset = CollectionItemImageFormSet()
+
+    return render(request, 'collections/add_from_order.html', {
+        'form': form,
+        'image_formset': image_formset,
+        'order': order,
+        'listing': listing,
+        'taxonomy_fields': TAXONOMY_FIELDS,
+        'taxonomy_field_names_json': json.dumps([t[0] for t in TAXONOMY_FIELDS]),
+        'suggestion_form': ReferenceDataSuggestionForm(
+            initial={'target_model': 'other', 'suggestion_type': 'new_value'}
+        ),
+    })

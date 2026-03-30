@@ -141,6 +141,30 @@
                 </label>
                 {{ form.allow_cash.errors }}
             </div>
+
+            <hr style="margin: 0.5rem 0; border: 0; border-top: 1px solid var(--color-border);">
+            <h2 style="font-size: 1.1rem; margin: 0;">Listing options</h2>
+
+            <div data-listing-panel="auction">
+                <label class="form-label" for="{{ form.auto_relist.id_for_label }}">
+                    {{ form.auto_relist }} Auto-relist if unsold
+                </label>
+                {% if form.auto_relist.help_text %}<small style="color: var(--color-muted);">{{ form.auto_relist.help_text }}</small>{% endif %}
+                {{ form.auto_relist.errors }}
+            </div>
+            <div>
+                <label class="form-label" for="{{ form.local_pickup_available.id_for_label }}">
+                    {{ form.local_pickup_available }} Offer local pickup
+                </label>
+                {% if form.local_pickup_available.help_text %}<small style="color: var(--color-muted);">{{ form.local_pickup_available.help_text }}</small>{% endif %}
+                {{ form.local_pickup_available.errors }}
+                <div id="local-pickup-location-wrapper" style="margin-top: 0.45rem; display: none;">
+                    <label class="form-label" for="{{ form.local_pickup_location.id_for_label }}">Pickup location</label>
+                    {{ form.local_pickup_location }}
+                    {{ form.local_pickup_location.errors }}
+                </div>
+            </div>
+
             <div>
                 <label class="form-label" for="{{ form.featured_image.id_for_label }}">Featured image</label>
                 {{ form.featured_image }}
@@ -201,9 +225,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const togglePanels = () => {
         const value = listingType.value;
         document.querySelectorAll('[data-listing-panel]').forEach((panel) => {
-            panel.style.display = panel.dataset.listingPanel === value ? '' : 'none';
+            const also = (panel.dataset.listingPanelAlso || '').split(',').map(s => s.trim());
+            panel.style.display = (panel.dataset.listingPanel === value || also.includes(value)) ? '' : 'none';
         });
     };
+
+    const pickupCheckbox = document.getElementById('{{ form.local_pickup_available.id_for_label }}');
+    const pickupWrapper = document.getElementById('local-pickup-location-wrapper');
+    if (pickupCheckbox && pickupWrapper) {
+        const togglePickup = () => { pickupWrapper.style.display = pickupCheckbox.checked ? '' : 'none'; };
+        pickupCheckbox.addEventListener('change', togglePickup);
+        togglePickup();
+    }
 
     const updateOtherWrapper = (fieldName) => {
         const field = document.getElementById(`id_${fieldName}`);

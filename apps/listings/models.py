@@ -17,6 +17,7 @@ class Listing(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('active', 'Active'),
+        ('scheduled', 'Scheduled'),
         ('closed', 'Closed'),
         ('sold', 'Sold'),
         ('expired', 'Expired'),
@@ -94,6 +95,34 @@ class Listing(models.Model):
     # Auction Details
     auction_end = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+
+    # Scheduled go-live (4a)
+    scheduled_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Schedule when this listing goes live (leave blank to publish immediately)"
+    )
+
+    # Auto-relist (4b)
+    auto_relist = models.BooleanField(
+        default=True,
+        help_text="Automatically relist this auction if it ends without a winner (up to 3 times)"
+    )
+    relist_count = models.IntegerField(default=0, help_text="How many times this listing has been relisted")
+    original_listing = models.ForeignKey(
+        'self', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='relisted_copies',
+        help_text="Original listing if this is a relist"
+    )
+
+    # Local pickup (4c)
+    local_pickup_available = models.BooleanField(
+        default=False,
+        help_text="Offer local pickup as an alternative to shipping"
+    )
+    local_pickup_location = models.CharField(
+        max_length=100, blank=True,
+        help_text="City or region where pickup is available (e.g. 'Lancaster, PA')"
+    )
 
     # Images
     featured_image = models.ImageField(upload_to='listings/', help_text="Main listing image")

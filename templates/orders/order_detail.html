@@ -124,6 +124,20 @@
     {% endif %}
 
     {% if is_buyer %}
+    {% if order.status == 'completed' %}
+    <article style="background: linear-gradient(135deg, var(--color-forest-green) 0%, #2c5a1e 100%); color: #fff; border-radius: 10px; padding: 1rem 1.2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+            <p style="font-weight: 700; font-size: 1.05rem; margin-bottom: 0.2rem; color: #fff;">Order complete — add to your collection</p>
+            <p style="opacity: 0.85; font-size: 0.88rem;">Preserve this purchase in your collection with pre-filled details.</p>
+        </div>
+        <a href="{% url 'collections:add_from_order' order.pk %}"
+           class="btn-primary"
+           style="background: #fff; color: var(--color-forest-green); font-weight: 700; white-space: nowrap;">
+            Add to collection &rarr;
+        </a>
+    </article>
+    {% endif %}
+
     <article class="card">
         <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Buyer Action</h2>
         {% if order.status == 'paid' or order.status == 'label_created' or order.status == 'in_transit' or order.status == 'delivered' %}
@@ -133,12 +147,6 @@
             </form>
         {% else %}
             <p style="color: var(--color-muted);">No receipt action required for current order status.</p>
-        {% endif %}
-        {% if order.status == 'completed' %}
-            <form method="post" action="{% url 'collections:add_from_order' order.pk %}" style="margin-top: 0.65rem;">
-                {% csrf_token %}
-                <button class="btn-secondary" type="submit">Add purchase to collection</button>
-            </form>
         {% endif %}
     </article>
     {% endif %}

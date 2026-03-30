@@ -1,0 +1,51 @@
+<article class="card" style="display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.75rem;">
+    {% with primary=item.images.first %}
+        {% if primary %}
+            <img src="{{ primary.image.url }}" alt="{{ item.title }}"
+                 style="width: 90px; height: 90px; object-fit: cover; border-radius: 6px; flex-shrink: 0;">
+        {% else %}
+            <div style="width: 90px; height: 90px; background: var(--color-parchment); border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+                <span style="color: var(--color-muted); font-size: 0.75rem;">No image</span>
+            </div>
+        {% endif %}
+    {% endwith %}
+    <div style="flex: 1; min-width: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
+            <h3 style="font-size: 1rem; margin-bottom: 0.2rem;">{{ item.title }}</h3>
+            {% if item.featured %}
+                <span style="background: var(--color-aged-amber); color: #fff; font-size: 0.7rem; padding: 0.15rem 0.4rem; border-radius: 3px; font-weight: 600; flex-shrink: 0;">Featured</span>
+            {% endif %}
+        </div>
+        <p style="color: var(--color-muted); font-size: 0.88rem; margin-bottom: 0.35rem;">
+            {% if item.state %}{{ item.state.code }} — {% endif %}
+            {% if item.county %}{{ item.county.name }}{% else %}Unknown unit{% endif %}
+            {% if item.license_year %} · {{ item.license_year }}{% endif %}
+            {% if item.display_license_type_summary %} · {{ item.display_license_type_summary }}{% endif %}
+        </p>
+        <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
+            <span class="badge {% if item.is_public %}badge-active{% else %}badge-expired{% endif %}">
+                {% if item.is_public %}Public{% else %}Private{% endif %}
+            </span>
+            <span class="badge {% if item.trade_eligible %}badge-active{% else %}badge-expired{% endif %}">
+                {% if item.trade_eligible %}Trade eligible{% else %}Trade off{% endif %}
+            </span>
+            {% if item.condition_grade %}
+                <span class="badge" style="background: var(--color-parchment);">{{ item.get_condition_grade_display }}</span>
+            {% endif %}
+        </div>
+        <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center;">
+            <a class="btn-secondary" href="{% url 'collections:edit' item.pk %}" style="font-size: 0.82rem; padding: 0.25rem 0.55rem;">Edit</a>
+            <a class="btn-secondary" href="{% url 'listings:create' %}?from_collection={{ item.pk }}" style="font-size: 0.82rem; padding: 0.25rem 0.55rem;">List for sale</a>
+            <form method="post" action="{% url 'collections:feature_toggle' item.pk %}" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                {% if item.pk in featured_ids %}
+                    <button type="submit" class="btn-secondary" style="font-size: 0.82rem; padding: 0.25rem 0.55rem;">Unfeature</button>
+                {% elif featured_count < max_featured %}
+                    <button type="submit" class="btn-secondary" style="font-size: 0.82rem; padding: 0.25rem 0.55rem;">Feature</button>
+                {% endif %}
+            </form>
+            <a class="btn-secondary" href="{% url 'collections:delete' item.pk %}" style="font-size: 0.82rem; padding: 0.25rem 0.55rem; color: var(--color-hunting-rust);">Delete</a>
+        </div>
+    </div>
+</article>

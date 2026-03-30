@@ -22,6 +22,16 @@
                     {% if listing.listing_type == 'auction' %}
                         | Ends {{ listing.auction_end|date:"M j, Y" }}
                     {% endif %}
+                    | <strong>{{ listing.get_status_display }}</strong>
+                    {% if listing.status == 'scheduled' %}
+                        &mdash; goes live {{ listing.scheduled_at|date:"M j, Y g:i A" }}
+                    {% endif %}
+                    {% if listing.relist_count > 0 %}
+                        &mdash; relist {{ listing.relist_count }}/3
+                    {% endif %}
+                    {% if listing.local_pickup_available %}
+                        | Local pickup: {{ listing.local_pickup_location }}
+                    {% endif %}
                 </p>
                 <a class="btn-secondary" href="{% url 'listings:edit' listing.pk %}">Edit</a>
             </article>

@@ -1,87 +1,174 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}My Collection | KeystoneBid{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/browse.css' %}">
+{% endblock %}
+
 {% block content %}
-<section style="display: grid; gap: 1rem;">
-    <article class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h1>My Collection</h1>
-            <div style="display: flex; gap: 0.6rem;">
-                <a class="btn-secondary" href="{% url 'accounts:profile' user.username %}">View Public Profile</a>
-                <a class="btn-primary" href="{% url 'collections:create' %}">Add item</a>
-            </div>
-        </div>
 
+<!-- Featured display case -->
+{% if featured_items %}
+<section class="card" style="margin-bottom: 1rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+        <h2 style="font-size: 1.1rem; margin: 0;">Featured Display Case</h2>
+        <span style="color: var(--color-muted); font-size: 0.85rem;">{{ featured_count }}/{{ max_featured }} featured</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.75rem;">
+        {% for item in featured_items %}
+            <article style="border: 1px solid var(--color-aged-amber); border-radius: 8px; overflow: hidden; position: relative;">
+                <span style="position: absolute; top: 0.35rem; left: 0.35rem; background: var(--color-aged-amber); color: #fff; font-size: 0.7rem; padding: 0.15rem 0.4rem; border-radius: 3px; font-weight: 600;">Featured</span>
+                {% with primary=item.images.first %}
+                    {% if primary %}
+                        <img src="{{ primary.image.url }}" alt="{{ item.title }}"
+                             style="width: 100%; height: 130px; object-fit: cover; display: block;">
+                    {% else %}
+                        <div style="width: 100%; height: 130px; background: var(--color-parchment); display: flex; align-items: center; justify-content: center;">
+                            <span style="color: var(--color-muted); font-size: 0.8rem;">No image</span>
+                        </div>
+                    {% endif %}
+                {% endwith %}
+                <div style="padding: 0.5rem;">
+                    <p style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.2rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">{{ item.title }}</p>
+                    <p style="font-size: 0.8rem; color: var(--color-muted);">
+                        {% if item.state %}{{ item.state.code }}{% endif %}{% if item.license_year %} · {{ item.license_year }}{% endif %}
+                    </p>
+                    <form method="post" action="{% url 'collections:feature_toggle' item.pk %}" style="margin-top: 0.4rem;">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button type="submit" class="btn-secondary" style="font-size: 0.8rem; padding: 0.2rem 0.5rem; width: 100%;">Unfeature</button>
+                    </form>
+                </div>
+            </article>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<section class="browse-layout">
+    <!-- Filters sidebar -->
+    <aside class="card browse-filters">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <h1 style="font-size: 1.25rem; margin: 0;">My Collection</h1>
+            <a class="btn-primary" href="{% url 'collections:create' %}" style="font-size: 0.85rem; padding: 0.35rem 0.7rem;">+ Add item</a>
+        </div>
+        <a href="{% url 'accounts:profile' user.username %}" class="btn-secondary" style="display: block; text-align: center; margin-bottom: 1rem;">View public profile</a>
+
+        <h2 style="font-size: 1rem; margin-bottom: 0.6rem;">Filters</h2>
+        <form method="get" style="display: grid; gap: 0.6rem;">
+            <div>
+                <label class="form-label" for="search">Search</label>
+                <input class="form-input" id="search" name="search" value="{{ filters.search }}" placeholder="Title, description…">
+            </div>
+            <div>
+                <label class="form-label" for="county_id">County / Unit</label>
+                <select class="form-select" id="county_id" name="county_id">
+                    <option value="">Any</option>
+                    {% for county in counties %}
+                        <option value="{{ county.id }}" {% if filters.county_id == county.id|stringformat:'s' %}selected{% endif %}>
+                            {{ county.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                <div>
+                    <label class="form-label" for="year_min">Year from</label>
+                    <input class="form-input" id="year_min" type="number" name="year_min" value="{{ filters.year_min }}" placeholder="e.g. 1930">
+                </div>
+                <div>
+                    <label class="form-label" for="year_max">Year to</label>
+                    <input class="form-input" id="year_max" type="number" name="year_max" value="{{ filters.year_max }}" placeholder="e.g. 2000">
+                </div>
+            </div>
+            <div>
+                <label class="form-label" for="license_type_id">License type</label>
+                <select class="form-select" id="license_type_id" name="license_type_id">
+                    <option value="">Any</option>
+                    {% for lt in license_types %}
+                        <option value="{{ lt.id }}" {% if filters.license_type_id == lt.id|stringformat:'s' %}selected{% endif %}>
+                            {{ lt.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="form-label" for="group_by">Group by</label>
+                <select class="form-select" id="group_by" name="group_by">
+                    <option value="" {% if not group_by %}selected{% endif %}>None (newest first)</option>
+                    <option value="county" {% if group_by == 'county' %}selected{% endif %}>County / Unit</option>
+                    <option value="decade" {% if group_by == 'decade' %}selected{% endif %}>Decade</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="btn-primary" type="submit" style="flex: 1;">Apply</button>
+                <a class="btn-secondary" href="{% url 'collections:my_collection' %}" style="flex: 1; text-align: center; padding: 0.6rem 0;">Reset</a>
+            </div>
+        </form>
+    </aside>
+
+    <!-- Collection items -->
+    <section>
         {% if items %}
-            <div style="display: grid; gap: 0.75rem;">
-                {% for item in items %}
-                    <article class="card" style="border: 1px solid var(--color-border);">
-                        <div style="display: flex; justify-content: space-between; gap: 0.75rem; align-items: flex-start;">
-                            <div>
-                                <h3 style="margin-bottom: 0.3rem;">{{ item.title }}</h3>
-                                <p style="color: var(--color-muted); margin-bottom: 0.45rem;">
-                                    {% if item.state %}{{ item.state.code }} - {% endif %}
-                                    {% if item.county %}{{ item.county.name }}{% else %}Unknown unit{% endif %}
-                                    {% if item.license_year %} - {{ item.license_year }}{% endif %}
-                                    {% if item.display_license_type_summary %} - {{ item.display_license_type_summary }}{% endif %}
-                                </p>
-                                <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.45rem;">
-                                    <span class="badge {% if item.is_public %}badge-active{% else %}badge-expired{% endif %}">
-                                        {% if item.is_public %}Public{% else %}Private{% endif %}
-                                    </span>
-                                    <span class="badge {% if item.trade_eligible %}badge-active{% else %}badge-expired{% endif %}">
-                                        {% if item.trade_eligible %}Trade Eligible{% else %}Trade Disabled{% endif %}
-                                    </span>
-                                </div>
-                                <p>{{ item.description|default:'No description.' }}</p>
-                            </div>
-                            {% with primary=item.images.first %}
-                                {% if primary %}
-                                    <img src="{{ primary.image.url }}" alt="{{ item.title }}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 6px;">
-                                {% endif %}
-                            {% endwith %}
-                        </div>
-                        <div style="margin-top: 0.8rem; display: flex; gap: 0.55rem; flex-wrap: wrap;">
-                            <a class="btn-secondary" href="{% url 'collections:edit' item.pk %}">Edit</a>
-                            <a class="btn-secondary" href="{% url 'listings:create' %}?from_collection={{ item.pk }}">List from collection</a>
-                            <a class="btn-secondary" href="{% url 'collections:delete' item.pk %}">Delete</a>
-                        </div>
-                    </article>
+            {% if groups %}
+                {% for group_key, group_items in groups %}
+                    <h2 style="font-size: 1.1rem; margin: 0 0 0.65rem; color: var(--color-forest-green);">{{ group_key }}</h2>
+                    <div style="display: grid; gap: 0.65rem; margin-bottom: 1.5rem;">
+                        {% for item in group_items %}
+                            {% include 'collections/_collection_item_row.html' %}
+                        {% endfor %}
+                    </div>
                 {% endfor %}
-            </div>
+            {% else %}
+                <div style="display: grid; gap: 0.65rem;">
+                    {% for item in items %}
+                        {% include 'collections/_collection_item_row.html' %}
+                    {% endfor %}
+                </div>
+            {% endif %}
         {% else %}
-            <p>No collection items yet.</p>
+            <div class="card">
+                <p style="color: var(--color-muted);">
+                    {% if filters.search or filters.county_id or filters.year_min or filters.year_max or filters.license_type_id %}
+                        No items match your filters.
+                    {% else %}
+                        Your collection is empty. <a href="{% url 'collections:create' %}">Add your first item.</a>
+                    {% endif %}
+                </p>
+            </div>
         {% endif %}
-    </article>
 
-    <article class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem;">
-            <h2 style="font-size: 1.2rem;">Wanted List</h2>
-            <a class="btn-primary" href="{% url 'collections:wanted_create' %}">Add wanted item</a>
-        </div>
-        {% if wanted_items %}
-            <div style="display: grid; gap: 0.55rem;">
-                {% for wanted in wanted_items %}
-                    <article style="border: 1px solid var(--color-border); border-radius: 8px; padding: 0.65rem;">
-                        <p>
-                            {% if wanted.state %}{{ wanted.state.code }} - {% endif %}
-                            {% if wanted.county %}{{ wanted.county.name }}{% else %}Any unit{% endif %}
-                            {% if wanted.year_min %} from {{ wanted.year_min }}{% endif %}
-                            {% if wanted.year_max %} to {{ wanted.year_max }}{% endif %}
-                            {% if wanted.license_type %} - {{ wanted.license_type.name }}{% endif %}
-                        </p>
-                        {% if wanted.notes %}<p style="color: var(--color-muted);">{{ wanted.notes }}</p>{% endif %}
-                        <div style="margin-top: 0.5rem; display: flex; gap: 0.55rem;">
-                            <a class="btn-secondary" href="{% url 'collections:wanted_edit' wanted.pk %}">Edit</a>
-                            <a class="btn-secondary" href="{% url 'collections:wanted_delete' wanted.pk %}">Delete</a>
-                        </div>
-                    </article>
-                {% endfor %}
+        <!-- Wanted list -->
+        <div style="margin-top: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+                <h2 style="font-size: 1.1rem; margin: 0;">Wanted List</h2>
+                <a class="btn-secondary" href="{% url 'collections:wanted_create' %}" style="font-size: 0.85rem; padding: 0.35rem 0.7rem;">+ Add wanted</a>
             </div>
-        {% else %}
-            <p>No wanted items yet.</p>
-        {% endif %}
-    </article>
+            {% if wanted_items %}
+                <div style="display: grid; gap: 0.5rem;">
+                    {% for wanted in wanted_items %}
+                        <div class="card" style="padding: 0.6rem 0.75rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                            <p style="margin: 0;">
+                                {% if wanted.state %}{{ wanted.state.code }} — {% endif %}
+                                {% if wanted.county %}{{ wanted.county.name }}{% else %}Any unit{% endif %}
+                                {% if wanted.year_min %} · from {{ wanted.year_min }}{% endif %}
+                                {% if wanted.year_max %} · to {{ wanted.year_max }}{% endif %}
+                                {% if wanted.license_type %} · {{ wanted.license_type.name }}{% endif %}
+                                {% if wanted.notes %}<br><span style="color: var(--color-muted); font-size: 0.88rem;">{{ wanted.notes }}</span>{% endif %}
+                            </p>
+                            <div style="display: flex; gap: 0.4rem;">
+                                <a class="btn-secondary" href="{% url 'collections:wanted_edit' wanted.pk %}" style="font-size: 0.8rem; padding: 0.2rem 0.5rem;">Edit</a>
+                                <a class="btn-secondary" href="{% url 'collections:wanted_delete' wanted.pk %}" style="font-size: 0.8rem; padding: 0.2rem 0.5rem;">Delete</a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p style="color: var(--color-muted);">No wanted items yet.</p>
+            {% endif %}
+        </div>
+    </section>
 </section>
 {% endblock %}

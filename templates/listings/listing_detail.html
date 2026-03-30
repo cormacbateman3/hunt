@@ -89,9 +89,23 @@
         <p><strong>Resident status:</strong> {{ listing.get_resident_status_display }}</p>
         <p><strong>Condition:</strong> {{ listing.get_condition_grade_display }}</p>
         <p><strong>Completeness:</strong> {{ listing.listing_completeness_score }}%</p>
-        <p><strong>Status:</strong> {{ listing.get_status_display }}</p>
+        <p><strong>Status:</strong> {{ listing.get_status_display }}
+            {% if listing.status == 'scheduled' %}
+                &mdash; goes live {{ listing.scheduled_at|date:"M j, Y g:i A" }}
+            {% endif %}
+        </p>
         {% if is_auction %}
         <p><strong>Auction ends:</strong> {{ listing.auction_end|date:"M j, Y, g:i a" }}</p>
+        {% if listing.relist_count > 0 %}
+        <p><strong>Relist:</strong> {{ listing.relist_count }}/3
+            {% if listing.original_listing %}
+                (<a href="{% url 'listings:detail' listing.original_listing.pk %}">original listing</a>)
+            {% endif %}
+        </p>
+        {% endif %}
+        {% endif %}
+        {% if listing.local_pickup_available %}
+        <p><strong>Local pickup:</strong> Available &mdash; {{ listing.local_pickup_location }}</p>
         {% endif %}
 
         {% if user.is_authenticated and listing.seller_id == user.id %}

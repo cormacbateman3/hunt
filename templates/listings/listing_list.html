@@ -1,22 +1,44 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Browse Listings | KeystoneBid{% endblock %}
+{% block title %}{{ section_title }} | KeystoneBid{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/pages/browse.css' %}">
 {% endblock %}
 
 {% block content %}
+
+<!-- Context switcher -->
+<nav class="market-tabs" aria-label="Marketplace sections">
+    <a href="{% url 'listings:list' %}"
+       class="market-tab {% if current_route_name == 'listings:list' %}active{% endif %}">
+        All Listings
+    </a>
+    <a href="{% url 'listings:auction_house' %}"
+       class="market-tab {% if current_route_name == 'listings:auction_house' %}active{% endif %}">
+        Auction House
+    </a>
+    <a href="{% url 'listings:general_store' %}"
+       class="market-tab {% if current_route_name == 'listings:general_store' %}active{% endif %}">
+        General Store
+    </a>
+    <a href="{% url 'listings:trading_block' %}"
+       class="market-tab {% if current_route_name == 'listings:trading_block' %}active{% endif %}">
+        Trading Block
+    </a>
+</nav>
+
 <section class="browse-layout">
-    <aside class="card">
-        <h1 style="font-size: 1.4rem; margin-bottom: 0.4rem;">{{ section_title }}</h1>
-        <p style="color: var(--color-muted); margin-bottom: 0.9rem;">{{ section_description }}</p>
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.8rem;">Filters</h2>
-        <form method="get" style="display: grid; gap: 0.75rem;">
+    <!-- Filters sidebar -->
+    <aside class="card browse-filters">
+        <h1 style="font-size: 1.25rem; margin-bottom: 0.3rem;">{{ section_title }}</h1>
+        <p style="color: var(--color-muted); margin-bottom: 1rem; font-size:0.9rem;">{{ section_description }}</p>
+        <h2 style="font-size: 1rem; margin-bottom: 0.75rem;">Filters</h2>
+        <form method="get" style="display: grid; gap: 0.7rem;">
             <div>
                 <label class="form-label" for="search">Search</label>
-                <input class="form-input" id="search" name="search" value="{{ filters.search }}">
+                <input class="form-input" id="search" name="search" value="{{ filters.search }}" placeholder="Title, county, type…">
             </div>
             <div>
                 <label class="form-label" for="state_id">State</label>
@@ -29,7 +51,7 @@
                 </select>
             </div>
             <div>
-                <label class="form-label" for="county_id">County</label>
+                <label class="form-label" for="county_id">{{ selected_state.issuance_unit_label|default:"County" }}</label>
                 <select class="form-select" id="county_id" name="county_id">
                     <option value="">Any</option>
                     {% for county in counties %}
@@ -50,13 +72,15 @@
                     {% endfor %}
                 </select>
             </div>
-            <div>
-                <label class="form-label" for="year_min">Year from</label>
-                <input class="form-input" id="year_min" type="number" name="year_min" value="{{ filters.year_min }}">
-            </div>
-            <div>
-                <label class="form-label" for="year_max">Year to</label>
-                <input class="form-input" id="year_max" type="number" name="year_max" value="{{ filters.year_max }}">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                <div>
+                    <label class="form-label" for="year_min">Year from</label>
+                    <input class="form-input" id="year_min" type="number" name="year_min" value="{{ filters.year_min }}" placeholder="e.g. 1930">
+                </div>
+                <div>
+                    <label class="form-label" for="year_max">Year to</label>
+                    <input class="form-input" id="year_max" type="number" name="year_max" value="{{ filters.year_max }}" placeholder="e.g. 2000">
+                </div>
             </div>
             <div>
                 <label class="form-label" for="condition">Condition</label>
@@ -70,32 +94,36 @@
                     <option value="mint" {% if filters.condition == 'mint' %}selected{% endif %}>Mint</option>
                 </select>
             </div>
-            <div style="display: flex; gap: 0.55rem;">
-                <button class="btn-primary" type="submit">Apply</button>
-                <a class="btn-secondary" href="{% url current_route_name %}">Reset</a>
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="btn-primary" type="submit" style="flex:1;">Apply</button>
+                <a class="btn-secondary" href="{% url current_route_name %}" style="flex:1; text-align:center; padding:0.6rem 0;">Reset</a>
             </div>
         </form>
     </aside>
 
+    <!-- Listing grid -->
     <section>
-        <div style="display: grid; gap: 0.8rem;">
+        <div class="listing-grid">
             {% for listing in page_obj %}
                 {% include 'listings/_listing_card.html' %}
             {% empty %}
-                <div class="card">
-                    <p>No active listings found.</p>
+                <div class="card" style="grid-column:1/-1;">
+                    <p>No active listings found. Try adjusting the filters.</p>
                 </div>
             {% endfor %}
         </div>
 
         {% if page_obj.paginator.num_pages > 1 %}
-            <nav style="margin-top: 1rem; display: flex; gap: 0.75rem; align-items: center;">
+            <nav style="margin-top: var(--space-3); display: flex; gap: 0.75rem; align-items: center;"
+                 aria-label="Pagination">
                 {% if page_obj.has_previous %}
-                    <a class="btn-secondary" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
+                    <a class="btn-secondary" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}">&larr; Previous</a>
                 {% endif %}
-                <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                <span style="font-size:0.9rem; color:var(--color-muted);">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                </span>
                 {% if page_obj.has_next %}
-                    <a class="btn-secondary" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>
+                    <a class="btn-secondary" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}">Next &rarr;</a>
                 {% endif %}
             </nav>
         {% endif %}

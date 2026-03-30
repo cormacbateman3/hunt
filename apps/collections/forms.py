@@ -120,6 +120,8 @@ class CollectionItemForm(forms.ModelForm):
             self.add_error('county', 'Selected geographic unit does not belong to the chosen state.')
         if state and year and state.min_license_year and year < state.min_license_year:
             self.add_error('license_year', f'Earliest known hunting license year for {state.name} is {state.min_license_year}.')
+        if year and year > 2000:
+            self.add_error('license_year', 'License year cannot exceed 2000.')
         if not any(selected_dimensions) and not cleaned_data.get('shape') and not (cleaned_data.get('colors') or []):
             raise forms.ValidationError('Select at least one taxonomy or physical attribute value to describe the item.')
         for category in FORM_LICENSE_TYPE_CATEGORIES:

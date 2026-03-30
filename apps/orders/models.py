@@ -51,6 +51,11 @@ class Order(models.Model):
     platform_fee_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending_payment')
+    delivery_method = models.CharField(
+        max_length=20,
+        choices=[('shipping', 'Shipping'), ('local_pickup', 'Local Pickup')],
+        default='shipping',
+    )
     ship_from_snapshot = models.ForeignKey(
         AddressSnapshot, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='orders_ship_from'
