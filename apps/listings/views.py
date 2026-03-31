@@ -225,7 +225,7 @@ def listing_detail(request, pk):
         'is_auction': is_auction,
         'is_buy_now': listing.listing_type == 'buy_now',
         'is_trade': listing.listing_type == 'trade',
-        'questions': listing.questions.select_related('asker').all(),
+        'questions': listing.questions.exclude(moderation_state='hidden').select_related('asker').all(),
         'is_favorited_listing': (
             request.user.is_authenticated
             and Favorite.objects.filter(user=request.user, listing=listing).exists()
@@ -537,8 +537,8 @@ def buy_now_checkout_start(request, pk):
 @login_required
 def ask_question(request, pk):
     listing = get_object_or_404(Listing, pk=pk)
-    if listing.listing_type != 'auction':
-        messages.error(request, 'Q&A is available for auction listings only.')
+    if listing.listing_type == 'trade':
+        messages.error(request, 'Q&A is not available on trade listings.')
         return redirect('listings:detail', pk=pk)
     if request.method != 'POST':
         return redirect('listings:detail', pk=pk)
@@ -551,7 +551,7 @@ def ask_question(request, pk):
         messages.error(request, 'Question must be at least 5 characters.')
         return redirect('listings:detail', pk=pk)
 
-    q = ListingQuestion.objects.create(
+    ListingQuestion.objects.create(
         listing=listing,
         asker=request.user,
         question=question,
@@ -570,8 +570,8 @@ def ask_question(request, pk):
 @login_required
 def answer_question(request, pk, question_id):
     listing = get_object_or_404(Listing, pk=pk)
-    if listing.listing_type != 'auction':
-        messages.error(request, 'Q&A is available for auction listings only.')
+    if listing.listing_type == 'trade':
+        messages.error(request, 'Q&A is not available on trade listings.')
         return redirect('listings:detail', pk=pk)
     question = get_object_or_404(ListingQuestion, pk=question_id, listing=listing)
     if request.method != 'POST':
@@ -595,4 +595,20 @@ def answer_question(request, pk, question_id):
         dedupe_window_hours=1,
     )
     messages.success(request, 'Answer posted.')
+    return redirect('listings:detail', pk=pk)
+
+
+@login_required
+def flag_question(request, pk, question_id):
+    """Flag a Q&A question as inappropriate. Sets moderation_state to 'flagged'."""
+    if request.method != 'POST':
+        return redirect('listings:detail', pk=pk)
+    listing = get_object_or_404(Listing, pk=pk)
+    question = get_object_or_404(ListingQuestion, pk=question_id, listing=listing)
+    if question.moderation_state == 'ok':
+        question.moderation_state = 'flagged'
+        question.save(update_fields=['moderation_state', 'updated_at'])
+        messages.info(request, 'Thank you. This is under review.')
+    elif question.moderation_state == 'flagged':
+        messages.info(request, 'This has already been flagged and is under review.')
     return redirect('listings:detail', pk=pk)

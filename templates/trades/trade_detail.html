@@ -93,6 +93,22 @@
         </div>
     </article>
 
+    {% if user.is_authenticated and trade.status not in 'completed,cancelled,dispute' %}
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.55rem;">Actions</h2>
+        <form method="post" action="{% url 'messaging:start' %}">
+            {% csrf_token %}
+            {% if user.id == trade.initiator_id %}
+                <input type="hidden" name="recipient_id" value="{{ trade.counterparty.pk }}">
+            {% else %}
+                <input type="hidden" name="recipient_id" value="{{ trade.initiator.pk }}">
+            {% endif %}
+            <input type="hidden" name="conversation_type" value="trade">
+            <button type="submit" class="btn-secondary">Message counterparty</button>
+        </form>
+    </article>
+    {% endif %}
+
     <article class="card">
         <h2 style="font-size: 1.2rem; margin-bottom: 0.55rem;">Offer History</h2>
         <div style="display: grid; gap: 0.45rem;">

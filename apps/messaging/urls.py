@@ -1,0 +1,14 @@
+from django.urls import path
+from . import views
+
+app_name = 'messaging'
+
+urlpatterns = [
+    path('', views.inbox, name='inbox'),
+    path('start/', views.start_conversation_view, name='start'),
+    path('<int:pk>/', views.conversation_detail, name='conversation_detail'),
+    path('<int:pk>/block/', views.block_user_view, name='block_user'),
+    path('<int:pk>/report/', views.report_conversation_view, name='report_conversation'),
+    path('<int:pk>/messages/<int:message_id>/report/', views.report_message_view, name='report_message'),
+    path('unblock/<int:user_id>/', views.unblock_user_view, name='unblock_user'),
+]

@@ -126,5 +126,25 @@
         {% endif %}
     </article>
 
+    {# ── Blocked Users ── #}
+    <article class="card">
+        <h2 style="font-size: 1.1rem; margin-bottom: 0.75rem;">Blocked users</h2>
+        {% if blocked_users %}
+            <div style="display: grid; gap: 0.5rem;">
+                {% for block in blocked_users %}
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; border: 1px solid var(--color-border); border-radius: 4px; padding: 0.5rem 0.75rem;">
+                        <span>{{ block.blocked.username }}</span>
+                        <form method="post" action="{% url 'messaging:unblock_user' block.blocked.pk %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-secondary" style="font-size: 0.82rem; padding: 0.2rem 0.5rem;">Unblock</button>
+                        </form>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p style="color: var(--color-muted);">You have not blocked any users.</p>
+        {% endif %}
+    </article>
+
 </section>
 {% endblock %}

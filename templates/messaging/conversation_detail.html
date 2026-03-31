@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+
+{% block title %}Message: {{ other.username }} | KeystoneBid{% endblock %}
+
+{% block content %}
+<section style="max-width: 760px; margin: 0 auto; display: grid; gap: 0.75rem;">
+
+    <!-- Thread header -->
+    <div class="card" style="padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem;">
+        <div>
+            <h1 style="font-size: 1.1rem; margin-bottom: 0.2rem;">
+                <a href="{% url 'messaging:inbox' %}" style="color: var(--color-muted); font-size: 0.85rem; font-weight: 400;">&larr; Inbox</a>
+                &nbsp; {{ other.username }}
+                {% if other.profile.display_name %}
+                    <span style="color: var(--color-muted); font-size: 0.88rem; font-weight: 400;">({{ other.profile.display_name }})</span>
+                {% endif %}
+            </h1>
+            {% if conversation.listing %}
+                <p style="font-size: 0.85rem; color: var(--color-aged-amber); margin: 0;">
+                    Re: <a href="{% url 'listings:detail' conversation.listing.pk %}" style="color: var(--color-aged-amber);">{{ conversation.listing.title }}</a>
+                </p>
+            {% endif %}
+            {% if conversation.is_closed %}
+                <span style="font-size: 0.8rem; color: var(--color-hunting-rust);">This conversation is closed.</span>
+            {% endif %}
+        </div>
+
+        <!-- Moderation controls in header -->
+        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+            {% if not user_has_blocked_other and not conversation.is_closed %}
+                <details style="position: relative;">
+                    <summary style="cursor: pointer; font-size: 0.82rem; color: var(--color-muted); list-style: none; padding: 0.25rem 0.5rem; border: 1px solid var(--color-border); border-radius: 4px;">Report &#9660;</summary>
+                    <div style="position: absolute; right: 0; top: 100%; background: white; border: 1px solid var(--color-border); border-radius: 6px; padding: 0.75rem; z-index: 10; min-width: 240px;">
+                        <form method="post" action="{% url 'messaging:report_conversation' conversation.pk %}" style="display: grid; gap: 0.45rem;">
+                            {% csrf_token %}
+                            <p style="font-size: 0.85rem; font-weight: 600; margin: 0 0 0.35rem;">Report this conversation</p>
+                            <select class="form-select" name="reason" style="font-size: 0.85rem;">
+                                {% for value, label in report_reasons %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <textarea class="form-input" name="notes" rows="2" placeholder="Optional details…" style="font-size: 0.85rem;"></textarea>
+                            <button type="submit" class="btn-secondary" style="font-size: 0.82rem;">Submit report</button>
+                        </form>
+                    </div>
+                </details>
+
+                <form method="post" action="{% url 'messaging:block_user' conversation.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-secondary"
+                            style="font-size: 0.82rem; padding: 0.25rem 0.6rem; color: var(--color-hunting-rust);"
+                            onclick="return confirm('Block {{ other.username }}? This will close the conversation and prevent future messages.')">
+                        Block user
+                    </button>
+                </form>
+            {% elif user_has_blocked_other %}
+                <span style="font-size: 0.82rem; color: var(--color-muted);">You have blocked this user.</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Message thread -->
+    <div id="message-thread" style="display: grid; gap: 0.5rem; max-height: 560px; overflow-y: auto; padding: 0.25rem;">
+        {% for msg in messages %}
+            {% with is_mine=msg.sender_id|stringformat:"s" == request.user.id|stringformat:"s" %}
+            <div style="display: flex; flex-direction: column; align-items: {% if is_mine %}flex-end{% else %}flex-start{% endif %};">
+                <div style="max-width: 72%; background: {% if is_mine %}var(--color-forest-green){% else %}var(--color-parchment){% endif %};
+                             color: {% if is_mine %}#fff{% else %}inherit{% endif %};
+                             border-radius: {% if is_mine %}12px 12px 2px 12px{% else %}12px 12px 12px 2px{% endif %};
+                             padding: 0.55rem 0.85rem; position: relative;">
+                    <p style="margin: 0; word-break: break-word; font-size: 0.95rem;">{{ msg.body }}</p>
+                    {% if msg.moderation_state == 'flagged' %}
+                        <p style="margin: 0.3rem 0 0; font-size: 0.75rem; opacity: 0.75;">Under review</p>
+                    {% endif %}
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.2rem;">
+                    <span style="font-size: 0.75rem; color: var(--color-muted);">
+                        {% if not is_mine %}{{ msg.sender.username }} &middot; {% endif %}
+                        {{ msg.created_at|date:"M j, g:i a" }}
+                    </span>
+                    {% if not is_mine and msg.moderation_state == 'ok' %}
+                        <details style="position: relative; display: inline;">
+                            <summary style="cursor: pointer; font-size: 0.72rem; color: var(--color-muted); list-style: none;">Flag</summary>
+                            <div style="position: absolute; bottom: 100%; left: 0; background: white; border: 1px solid var(--color-border); border-radius: 6px; padding: 0.6rem; z-index: 10; min-width: 200px;">
+                                <form method="post" action="{% url 'messaging:report_message' conversation.pk msg.pk %}" style="display: grid; gap: 0.4rem;">
+                                    {% csrf_token %}
+                                    <select class="form-select" name="reason" style="font-size: 0.8rem;">
+                                        {% for value, label in report_reasons %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit" class="btn-secondary" style="font-size: 0.78rem; padding: 0.2rem 0.4rem;">Report</button>
+                                </form>
+                            </div>
+                        </details>
+                    {% endif %}
+                </div>
+            </div>
+            {% endwith %}
+        {% empty %}
+            <p style="color: var(--color-muted); text-align: center; padding: 1.5rem 0;">No messages yet. Send the first one.</p>
+        {% endfor %}
+    </div>
+
+    <!-- Reply form -->
+    {% if not conversation.is_closed and not is_blocked %}
+        <div class="card" style="padding: 0.75rem;">
+            {% if send_error %}
+                <div class="alert alert-error" style="margin-bottom: 0.65rem;">{{ send_error }}</div>
+            {% endif %}
+            <form method="post" style="display: grid; gap: 0.5rem;">
+                {% csrf_token %}
+                <textarea class="form-input" name="body" rows="3"
+                          placeholder="Type a message…" required
+                          style="resize: vertical;"></textarea>
+                <div>
+                    <button type="submit" class="btn-primary">Send</button>
+                </div>
+            </form>
+        </div>
+    {% elif conversation.is_closed %}
+        <div class="card" style="padding: 0.75rem; text-align: center; color: var(--color-muted);">
+            This conversation has been closed and no new messages can be sent.
+        </div>
+    {% elif is_blocked %}
+        <div class="card" style="padding: 0.75rem; text-align: center; color: var(--color-muted);">
+            Messaging is not available in this conversation.
+        </div>
+    {% endif %}
+
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-scroll to bottom of thread on load
+document.addEventListener('DOMContentLoaded', () => {
+    const thread = document.getElementById('message-thread');
+    if (thread) thread.scrollTop = thread.scrollHeight;
+});
+</script>
+{% endblock %}

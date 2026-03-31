@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'apps.trades',
     'apps.favorites',
     'apps.enforcement',
+    'apps.messaging',
 ]
 
 MIDDLEWARE = [
@@ -66,6 +67,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.media',
                 'apps.notifications.context_processors.notifications_nav',
+                'apps.messaging.context_processors.messaging_nav',
             ],
         },
     },

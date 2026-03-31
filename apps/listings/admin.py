@@ -78,6 +78,17 @@ class ListingImageAdmin(admin.ModelAdmin):
 
 @admin.register(ListingQuestion)
 class ListingQuestionAdmin(admin.ModelAdmin):
-    list_display = ('listing', 'asker', 'created_at', 'answered_at')
-    list_filter = ('created_at', 'answered_at')
+    list_display = ('listing', 'asker', 'moderation_state', 'created_at', 'answered_at')
+    list_filter = ('moderation_state', 'created_at', 'answered_at')
     search_fields = ('listing__title', 'asker__username', 'question', 'seller_answer')
+    actions = ['mark_hidden', 'mark_ok']
+
+    @admin.action(description='Hide selected questions')
+    def mark_hidden(self, request, queryset):
+        updated = queryset.update(moderation_state='hidden')
+        self.message_user(request, f'{updated} question(s) hidden.')
+
+    @admin.action(description='Mark selected questions as OK')
+    def mark_ok(self, request, queryset):
+        updated = queryset.update(moderation_state='ok')
+        self.message_user(request, f'{updated} question(s) marked OK.')

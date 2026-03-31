@@ -62,6 +62,17 @@
                     <button class="btn-secondary" type="submit">Withdraw</button>
                 </form>
             {% endif %}
+            <form method="post" action="{% url 'messaging:start' %}">
+                {% csrf_token %}
+                {% if user.id == offer.from_user_id %}
+                    <input type="hidden" name="recipient_id" value="{{ offer.to_user.pk }}">
+                {% else %}
+                    <input type="hidden" name="recipient_id" value="{{ offer.from_user.pk }}">
+                {% endif %}
+                <input type="hidden" name="trade_offer_id" value="{{ offer.pk }}">
+                <input type="hidden" name="conversation_type" value="trade">
+                <button type="submit" class="btn-secondary">Message counterparty</button>
+            </form>
         </div>
     </article>
     {% endif %}

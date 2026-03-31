@@ -34,7 +34,10 @@ class Notification(models.Model):
         ('trade_completed', 'Trade Completed'),
         ('strike_issued', 'Strike Issued'),
         ('strike_excused', 'Strike Excused'),
+        ('handshake_requested', 'Handshake Requested'),
         ('account_restricted', 'Account Restricted'),
+        # Messaging
+        ('new_message', 'New Message'),
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')

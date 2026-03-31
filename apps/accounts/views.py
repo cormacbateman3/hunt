@@ -92,11 +92,14 @@ def profile_edit(request):
     else:
         form = UserProfileForm(instance=profile)
 
+    from apps.messaging.models import Block
     addresses = request.user.addresses.all()
+    blocked_users = Block.objects.filter(blocker=request.user).select_related('blocked')
     return render(request, 'accounts/profile_edit.html', {
         'form': form,
         'addresses': addresses,
         'readiness': profile.account_readiness,
+        'blocked_users': blocked_users,
     })
 
 

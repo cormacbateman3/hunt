@@ -226,11 +226,21 @@ class ListingImage(models.Model):
 class ListingQuestion(models.Model):
     """Simple listing Q&A for buyer questions and seller answers."""
 
+    MODERATION_CHOICES = [
+        ('ok', 'OK'),
+        ('flagged', 'Flagged'),
+        ('hidden', 'Hidden'),
+    ]
+
     listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name='questions')
     asker = models.ForeignKey(User, on_delete=models.CASCADE, related_name='listing_questions')
     question = models.TextField()
     seller_answer = models.TextField(blank=True)
     answered_at = models.DateTimeField(null=True, blank=True)
+    moderation_state = models.CharField(
+        max_length=10, choices=MODERATION_CHOICES, default='ok',
+        help_text='ok = visible; flagged = visible but under review; hidden = removed from public view',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

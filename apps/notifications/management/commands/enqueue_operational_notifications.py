@@ -14,13 +14,14 @@ class Command(BaseCommand):
         created = 0
 
         # Order ship-by reminders: paid orders approaching 5-day shipping deadline.
-        order_reminder_start = now - timedelta(days=4)
-        order_reminder_end = now - timedelta(days=5)
+        # Window: orders paid between 4 and 5 days ago (1-day reminder window before deadline).
+        four_days_ago = now - timedelta(days=4)
+        five_days_ago = now - timedelta(days=5)
         orders_due = (
             Order.objects.filter(
                 status='paid',
-                updated_at__lte=order_reminder_start,
-                updated_at__gt=order_reminder_end,
+                updated_at__lte=four_days_ago,
+                updated_at__gt=five_days_ago,
             )
             .select_related('seller')
         )

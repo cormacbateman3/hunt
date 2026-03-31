@@ -142,6 +142,13 @@
                     Your highest bid: ${{ user_bid.amount }}
                 </p>
             {% endif %}
+            <form method="post" action="{% url 'messaging:start' %}" style="margin-top: 0.8rem;">
+                {% csrf_token %}
+                <input type="hidden" name="recipient_id" value="{{ listing.seller_id }}">
+                <input type="hidden" name="listing_id" value="{{ listing.pk }}">
+                <input type="hidden" name="conversation_type" value="auction">
+                <button type="submit" class="btn-secondary">Message seller</button>
+            </form>
         {% elif user.is_authenticated and is_buy_now %}
             {% if can_buy_now %}
                 <form method="post" action="{% url 'listings:buy_now_checkout_start' listing.pk %}" style="margin-top: 1rem;">
@@ -171,6 +178,13 @@
                     This listing is no longer available for buy now.
                 </p>
             {% endif %}
+            <form method="post" action="{% url 'messaging:start' %}" style="margin-top: 0.8rem;">
+                {% csrf_token %}
+                <input type="hidden" name="recipient_id" value="{{ listing.seller_id }}">
+                <input type="hidden" name="listing_id" value="{{ listing.pk }}">
+                <input type="hidden" name="conversation_type" value="buy_now">
+                <button type="submit" class="btn-secondary">Message seller</button>
+            </form>
         {% elif user.is_authenticated and is_trade %}
             {% if listing.seller_id == user.id %}
                 <p style="margin-top: 1rem; color: var(--color-muted);">
@@ -195,6 +209,13 @@
                             {% if is_favorited_listing %}Unfavorite{% else %}Favorite{% endif %}
                         </button>
                     </form>
+                    <form method="post" action="{% url 'messaging:start' %}" style="margin-top: 0.6rem;">
+                        {% csrf_token %}
+                        <input type="hidden" name="recipient_id" value="{{ listing.seller_id }}">
+                        <input type="hidden" name="listing_id" value="{{ listing.pk }}">
+                        <input type="hidden" name="conversation_type" value="trade">
+                        <button type="submit" class="btn-secondary">Message seller</button>
+                    </form>
                 {% elif trade_restriction_reason %}
                     <p style="margin-top: 1rem; color: var(--color-hunting-rust);">
                         {{ trade_restriction_reason }}
@@ -217,7 +238,7 @@
     </aside>
 </article>
 
-{% if is_auction %}
+{% if is_auction or is_buy_now %}
 <section class="card" style="margin-top: 1rem;">
     <h2 style="font-size: 1.2rem; margin-bottom: 0.75rem;">Q&A</h2>
     {% if user.is_authenticated and user.id != listing.seller_id %}
@@ -226,12 +247,31 @@
             <textarea class="form-input" name="question" rows="3" placeholder="Ask the seller a question..." required></textarea>
             <div><button type="submit" class="btn-secondary">Ask question</button></div>
         </form>
+    {% elif not user.is_authenticated %}
+        <p style="color: var(--color-muted); margin-bottom: 0.8rem;">
+            <a href="{% url 'accounts:login' %}?next={{ request.path }}">Log in</a> to ask a question.
+        </p>
     {% endif %}
     <div style="display: grid; gap: 0.65rem;">
         {% for q in questions %}
-            <article style="padding: 0.65rem; border: 1px solid var(--color-border); border-radius: 8px;">
-                <p><strong>{{ q.asker.username }} asked:</strong> {{ q.question }}</p>
-                <p style="color: var(--color-muted);">{{ q.created_at|date:"M j, Y g:i a" }}</p>
+            <article style="padding: 0.65rem; border: 1px solid {% if q.moderation_state == 'flagged' %}var(--color-hunting-rust){% else %}var(--color-border){% endif %}; border-radius: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
+                    <p style="margin: 0;"><strong>{{ q.asker.username }} asked:</strong> {{ q.question }}</p>
+                    {% if user.is_authenticated and q.moderation_state == 'ok' and user.id != listing.seller_id %}
+                        <form method="post" action="{% url 'listings:flag_question' listing.pk q.pk %}" style="flex-shrink: 0;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-secondary"
+                                    style="font-size: 0.75rem; padding: 0.15rem 0.4rem; color: var(--color-muted);"
+                                    title="Flag as inappropriate">Flag</button>
+                        </form>
+                    {% endif %}
+                </div>
+                <p style="color: var(--color-muted); font-size: 0.85rem; margin-top: 0.2rem;">{{ q.created_at|date:"M j, Y g:i a" }}</p>
+                {% if q.moderation_state == 'flagged' %}
+                    <p style="margin-top: 0.35rem; color: var(--color-hunting-rust); font-size: 0.85rem;">
+                        This has been flagged and is under review.
+                    </p>
+                {% endif %}
                 {% if q.seller_answer %}
                     <p style="margin-top: 0.45rem;"><strong>Seller:</strong> {{ q.seller_answer }}</p>
                 {% elif user.is_authenticated and user.id == listing.seller_id %}

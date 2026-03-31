@@ -164,7 +164,7 @@ def initiate_excuse_handshake(*, strike, actor, excuse_reason, excuse_note=''):
     if other_party:
         create_notification(
             user=other_party,
-            notification_type='strike_issued',
+            notification_type='handshake_requested',
             message=(
                 f'Handshake requested to excuse strike #{strike.pk}. '
                 f'Please confirm within {EXCUSE_CONFIRM_WINDOW_HOURS} hours.'

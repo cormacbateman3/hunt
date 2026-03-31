@@ -56,6 +56,21 @@
             <!-- Secondary — notifications bell + account menu + hamburger -->
             <div class="nav-secondary">
                 {% if user.is_authenticated %}
+                    <!-- Inbox -->
+                    <a href="{% url 'messaging:inbox' %}"
+                       class="bell-btn"
+                       aria-label="Messages{% if nav_unread_message_count %} — {{ nav_unread_message_count }} unread{% endif %}">
+                        <svg class="bell-icon" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round"
+                             aria-hidden="true">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        {% if nav_unread_message_count %}
+                            <span class="bell-badge">{{ nav_unread_message_count }}</span>
+                        {% endif %}
+                    </a>
+
                     <!-- Notification bell -->
                     <a href="{% url 'notifications:center' %}"
                        class="bell-btn"

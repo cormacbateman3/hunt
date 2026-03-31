@@ -24,12 +24,26 @@ admin.site.unregister(User)
 admin.site.register(User, UserAdmin)
 
 
+@admin.action(description='Disable messaging for selected profiles')
+def disable_messaging(modeladmin, request, queryset):
+    from django.utils import timezone
+    queryset.update(messaging_disabled=True, messaging_disabled_at=timezone.now())
+    modeladmin.message_user(request, f'{queryset.count()} profile(s) messaging disabled.')
+
+
+@admin.action(description='Enable messaging for selected profiles')
+def enable_messaging(modeladmin, request, queryset):
+    queryset.update(messaging_disabled=False, messaging_disabled_at=None)
+    modeladmin.message_user(request, f'{queryset.count()} profile(s) messaging enabled.')
+
+
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'display_name', 'county', 'email_verified', 'phone_verified', 'created_at')
-    list_filter = ('email_verified', 'phone_verified', 'county', 'created_at')
+    list_display = ('user', 'display_name', 'county', 'email_verified', 'phone_verified', 'messaging_disabled', 'created_at')
+    list_filter = ('email_verified', 'phone_verified', 'messaging_disabled', 'county', 'created_at')
     search_fields = ('user__username', 'user__email', 'display_name', 'county')
     readonly_fields = ('email_verification_token', 'created_at', 'updated_at')
+    actions = [disable_messaging, enable_messaging]
     fieldsets = (
         ('User Info', {
             'fields': ('user', 'display_name', 'bio', 'avatar')
