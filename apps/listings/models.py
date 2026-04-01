@@ -171,6 +171,8 @@ class Listing(models.Model):
             models.Index(fields=['status', '-auction_end']),
             models.Index(fields=['county', 'license_year']),
             models.Index(fields=['listing_type', 'status']),
+            models.Index(fields=['license_year'], name='listing_license_year_idx'),
+            models.Index(fields=['era_label'], name='listing_era_label_idx'),
         ]
 
     def __str__(self):

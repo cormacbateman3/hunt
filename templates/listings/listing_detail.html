@@ -354,4 +354,29 @@
     {% endif %}
 </section>
 {% endif %}
+
+{% if related_listings %}
+<section class="card" style="margin-top: 1rem;">
+    <h2 style="font-size: 1.2rem; margin-bottom: 0.75rem;">Related Listings</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem;">
+        {% for listing in related_listings %}
+            {% include 'listings/_listing_card.html' %}
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% if more_from_seller %}
+<section class="card" style="margin-top: 1rem;">
+    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.75rem;">
+        <h2 style="font-size: 1.2rem; margin: 0;">More from {{ listing.seller.profile.get_display_name|default:listing.seller.username }}</h2>
+        <a href="{% url 'accounts:profile' listing.seller.username %}?tab=listings" style="font-size: 0.85rem; color: var(--color-muted);">See all &rarr;</a>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem;">
+        {% for listing in more_from_seller %}
+            {% include 'listings/_listing_card.html' %}
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
 {% endblock %}

@@ -4,11 +4,11 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Prefetch, Q
+from django.db.models import Count, Q
 from django.urls import reverse
 from django.views.generic import ListView
 from django.utils import timezone
-from .models import ERA_LABEL_CHOICES, Listing, ListingQuestion, _year_to_era
+from .models import ERA_LABEL_CHOICES, Listing, ListingQuestion
 from .forms import ListingForm, ListingImageFormSet
 from apps.bids.forms import BidForm
 from apps.bids.services import get_user_bid_on_listing, get_winning_bid
@@ -102,6 +102,7 @@ class BaseListingListView(ListView):
     listing_type = None
     section_title = 'Browse Listings'
     section_description = 'Explore the marketplace.'
+    show_map_toggle = False
 
     def get_queryset(self):
         queryset = Listing.objects.filter(status='active').select_related(
@@ -187,6 +188,64 @@ class BaseListingListView(ListView):
         query_params.pop('page', None)
         context['query_string'] = query_params.urlencode()
 
+        # View mode: list (default) or map
+        view_mode = self.request.GET.get('view', 'list')
+        context['view_mode'] = view_mode
+        context['show_map_toggle'] = self.show_map_toggle
+
+        if self.show_map_toggle and view_mode == 'map' and selected_state:
+            is_county_state = (selected_state.issuance_unit_type.lower() == 'county')
+            units = GeographicUnit.objects.filter(
+                state=selected_state, is_statewide=False
+            ).order_by('sort_order', 'name')
+
+            # Count listings per unit from the already-filtered queryset
+            count_map = dict(
+                self.get_queryset()
+                .filter(county_ref__isnull=False)
+                .values('county_ref_id')
+                .annotate(_c=Count('id', distinct=True))
+                .values_list('county_ref_id', '_c')
+            )
+
+            def _unit_url(unit_id):
+                p = self.request.GET.copy()
+                p['county_id'] = str(unit_id)
+                p.pop('page', None)
+                return f'?{p.urlencode()}'
+
+            _heat_colors = ['#f0ede6', '#d4e8c2', '#98c97a', '#5a9e33', '#2c5a1e']
+            _max_c = max(count_map.values(), default=1)
+
+            geo_units = [
+                {
+                    'id': u.id,
+                    'name': u.name,
+                    'fips_code': u.fips_code,
+                    'count': count_map.get(u.id, 0),
+                    'url': _unit_url(u.id),
+                    'heat_color': _heat_colors[
+                        min(4, round((count_map.get(u.id, 0) / _max_c) * 4))
+                        if _max_c else 0
+                    ],
+                }
+                for u in units
+            ]
+            context['is_county_state'] = is_county_state
+            context['geo_units'] = geo_units
+            context['geo_units_json'] = json.dumps(geo_units)
+            context['state_fips'] = str(selected_state.fips_code or '').zfill(2)
+
+        # Toggle URL helpers (strip view param so each button sets it cleanly)
+        def _view_url(mode):
+            p = self.request.GET.copy()
+            p['view'] = mode
+            p.pop('page', None)
+            return f'?{p.urlencode()}'
+
+        context['map_url'] = _view_url('map')
+        context['list_url'] = _view_url('list')
+
         return context
 
 
@@ -199,12 +258,14 @@ class AuctionHouseListView(BaseListingListView):
     listing_type = 'auction'
     section_title = 'Auction House'
     section_description = 'Timed auctions with active bidding.'
+    show_map_toggle = True
 
 
 class GeneralStoreListView(BaseListingListView):
     listing_type = 'buy_now'
     section_title = 'General Store'
     section_description = 'Fixed-price listings with instant purchase intent.'
+    show_map_toggle = True
 
 
 class TradingBlockListView(BaseListingListView):
@@ -247,6 +308,37 @@ def listing_detail(request, pk):
     seller_completed_sales = listing.seller.orders_as_seller.filter(status='completed').count()
     listing_favorite_count = listing.favorites.count()
 
+    # Discovery: related listings (same state + overlapping era or license types)
+    listing_era = listing.effective_era
+    era_filter = Q()
+    if listing_era:
+        era_years = _era_to_year_range(listing_era)
+        if era_years:
+            year_from, year_to = era_years
+            era_filter = (
+                Q(license_year__gte=year_from, license_year__lte=year_to)
+                | Q(license_year__isnull=True, era_label=listing_era)
+            )
+        else:
+            era_filter = Q(license_year__isnull=True, era_label=listing_era)
+
+    related_listings = (
+        Listing.objects.filter(status='active', state=listing.state)
+        .exclude(pk=listing.pk)
+        .filter(era_filter | Q(license_types__in=listing.license_types.all()))
+        .select_related('seller', 'state', 'county_ref')
+        .distinct()
+        .order_by('-created_at')[:6]
+    ) if listing.state else []
+
+    # Discovery: more from this seller
+    more_from_seller = (
+        Listing.objects.filter(status='active', seller=listing.seller)
+        .exclude(pk=listing.pk)
+        .select_related('seller', 'state', 'county_ref')
+        .order_by('-created_at')[:6]
+    )
+
     context = {
         'listing': listing,
         'winning_bid': winning_bid,
@@ -266,6 +358,8 @@ def listing_detail(request, pk):
         'seller_review_summary': seller_review_summary,
         'seller_completed_sales': seller_completed_sales,
         'listing_favorite_count': listing_favorite_count,
+        'related_listings': related_listings,
+        'more_from_seller': more_from_seller,
     }
     if listing.listing_type == 'buy_now':
         buy_now_order = Order.objects.filter(listing=listing).first()
