@@ -22,6 +22,7 @@ from apps.trades.models import TradeOffer
 from apps.enforcement.services import enforce_capability
 from apps.notifications.services import create_notification
 from apps.favorites.models import Favorite
+from apps.reviews.models import Review
 
 
 TAXONOMY_FIELDS = [
@@ -242,6 +243,10 @@ def listing_detail(request, pk):
             initial={'amount': minimum_bid},
         )
 
+    seller_review_summary = Review.summary_for_user(listing.seller)
+    seller_completed_sales = listing.seller.orders_as_seller.filter(status='completed').count()
+    listing_favorite_count = listing.favorites.count()
+
     context = {
         'listing': listing,
         'winning_bid': winning_bid,
@@ -258,6 +263,9 @@ def listing_detail(request, pk):
             request.user.is_authenticated
             and Favorite.objects.filter(user=request.user, listing=listing).exists()
         ),
+        'seller_review_summary': seller_review_summary,
+        'seller_completed_sales': seller_completed_sales,
+        'listing_favorite_count': listing_favorite_count,
     }
     if listing.listing_type == 'buy_now':
         buy_now_order = Order.objects.filter(listing=listing).first()

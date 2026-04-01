@@ -115,7 +115,11 @@
                         <div class="listing-card-meta">
                             {% if item.state %}{{ item.state.code }}{% endif %}
                             {% if item.county %} · {{ item.county.name }}{% endif %}
-                            {% if item.license_year %} · {{ item.license_year }}{% endif %}
+                            {% if item.license_year %}
+                                · {{ item.license_year }}
+                            {% elif item.effective_era %}
+                                · {{ item.effective_era }}
+                            {% endif %}
                         </div>
                         {% if item.display_license_type_summary %}
                             <div class="listing-card-meta" style="margin-top: 0.2rem;">{{ item.display_license_type_summary }}</div>
@@ -129,6 +133,9 @@
                     <div class="listing-card-footer" style="display: flex; justify-content: space-between; align-items: center;">
                         <span style="font-size: 0.82rem; color: var(--color-muted);">
                             {% if item.owner.profile.display_name %}{{ item.owner.profile.display_name }}{% else %}{{ item.owner.username }}{% endif %}
+                            {% with fav_count=item.favorites.count %}
+                                {% if fav_count > 0 %}&bull; {{ fav_count }} fav{{ fav_count|pluralize }}{% endif %}
+                            {% endwith %}
                         </span>
                         <a href="{% url 'accounts:profile' item.owner.username %}" class="btn-secondary"
                            style="font-size: 0.8rem; padding: 0.2rem 0.55rem;">View profile</a>

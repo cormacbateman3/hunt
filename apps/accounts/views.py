@@ -17,6 +17,7 @@ from apps.orders.models import Order
 from apps.notifications.models import Notification
 from apps.collections.models import CollectionItem, WantedItem
 from apps.favorites.models import Favorite
+from apps.reviews.models import Review
 
 
 def register(request):
@@ -109,6 +110,8 @@ def profile_view(request, username):
     profile = user.profile
     is_owner = request.user.is_authenticated and request.user.id == user.id
 
+    tab = request.GET.get('tab', 'collection')
+
     collection_qs = (
         CollectionItem.objects.filter(owner=user)
         .select_related('state', 'county')
@@ -120,6 +123,18 @@ def profile_view(request, username):
 
     featured_items = list(collection_qs.filter(featured=True).order_by('-created_at')[:6])
     collection_items = collection_qs
+
+    # Active listings tab — auction house + general store only (not trade)
+    active_listings = (
+        Listing.objects.filter(
+            seller=user,
+            status='active',
+            listing_type__in=('auction', 'buy_now'),
+        )
+        .select_related('state', 'county_ref')
+        .prefetch_related('license_types')
+        .order_by('-created_at')
+    )
 
     wanted_items = (
         WantedItem.objects.filter(user=user)
@@ -133,14 +148,37 @@ def profile_view(request, username):
             .values_list('collection_item_id', flat=True)
         )
 
+    # Review summary
+    review_summary = Review.summary_for_user(user)
+    completed_transaction_count = (
+        Listing.objects.filter(
+            seller=user,
+            order__status='completed',
+        ).count() +
+        Listing.objects.filter(
+            trade__status='completed',
+        ).filter(
+            trade__initiator=user,
+        ).count() +
+        Listing.objects.filter(
+            trade__status='completed',
+        ).filter(
+            trade__counterparty=user,
+        ).count()
+    )
+
     context = {
         'profile_user': user,
         'profile': profile,
         'featured_items': featured_items,
         'collection_items': collection_items,
+        'active_listings': active_listings,
         'wanted_items': wanted_items,
         'is_owner': is_owner,
         'favorite_collection_ids': favorite_collection_ids,
+        'review_summary': review_summary,
+        'completed_transaction_count': completed_transaction_count,
+        'active_tab': tab,
     }
 
     return render(request, 'accounts/profile.html', context)

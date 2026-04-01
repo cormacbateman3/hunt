@@ -46,6 +46,41 @@
         </div>
     </section>
 
+    <!-- Seller card -->
+    <aside class="card" style="padding: 1rem;">
+        <h2 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.6rem; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.04em;">Seller</h2>
+        <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem;">
+            {% if listing.seller.profile.avatar %}
+                <img src="{{ listing.seller.profile.avatar.url }}" alt="{{ listing.seller.profile.get_display_name }}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+            {% else %}
+                <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--color-parchment); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--color-aged-amber);">
+                    {{ listing.seller.profile.get_display_name|first|upper }}
+                </div>
+            {% endif %}
+            <div>
+                <a href="{% url 'accounts:profile' listing.seller.username %}" style="font-weight: 600; font-size: 1rem;">
+                    {{ listing.seller.profile.get_display_name }}
+                </a>
+                <p style="color: var(--color-muted); font-size: 0.85rem; margin: 0;">@{{ listing.seller.username }}</p>
+            </div>
+        </div>
+        {% if listing.seller.profile.county %}
+            <p style="font-size: 0.88rem; color: var(--color-muted); margin-bottom: 0.45rem;">{{ listing.seller.profile.county }}, PA</p>
+        {% endif %}
+        {% if seller_review_summary.total > 0 %}
+            <p style="font-size: 0.9rem; margin-bottom: 0.3rem;">
+                <strong>{{ seller_review_summary.positive_pct }}% positive</strong>
+                <span style="color: var(--color-muted);">({{ seller_review_summary.total }} review{{ seller_review_summary.total|pluralize }})</span>
+            </p>
+        {% else %}
+            <p style="font-size: 0.88rem; color: var(--color-muted); margin-bottom: 0.3rem;">No reviews yet</p>
+        {% endif %}
+        {% if seller_completed_sales > 0 %}
+            <p style="font-size: 0.88rem; color: var(--color-muted);">{{ seller_completed_sales }} completed sale{{ seller_completed_sales|pluralize }}</p>
+        {% endif %}
+        <a href="{% url 'accounts:profile' listing.seller.username %}" class="btn-secondary" style="margin-top: 0.65rem; display: inline-block; font-size: 0.85rem;">View profile</a>
+    </aside>
+
     <aside
         class="card"
         {% if is_auction %}
@@ -97,6 +132,9 @@
         <p><strong>Resident status:</strong> {{ listing.get_resident_status_display }}</p>
         <p><strong>Condition:</strong> {{ listing.get_condition_grade_display }}</p>
         <p><strong>Completeness:</strong> {{ listing.listing_completeness_score }}%</p>
+        {% if listing_favorite_count %}
+        <p><strong>Favorites:</strong> {{ listing_favorite_count }}</p>
+        {% endif %}
         <p><strong>Status:</strong> {{ listing.get_status_display }}
             {% if listing.status == 'scheduled' %}
                 &mdash; goes live {{ listing.scheduled_at|date:"M j, Y g:i A" }}

@@ -6,6 +6,8 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from apps.enforcement.models import Strike
 from apps.enforcement.services import confirm_excuse_handshake, enforce_capability, initiate_excuse_handshake
+from apps.reviews.forms import ReviewForm
+from apps.reviews.models import Review
 from apps.shipping.services import ShippoError
 from apps.collections.models import CollectionItem
 from apps.listings.models import Listing
@@ -193,6 +195,14 @@ def trade_detail(request, trade_id):
     strikes = Strike.objects.filter(related_trade=trade).select_related(
         'user', 'excuse_initiated_by', 'excuse_confirmed_by'
     )
+    can_review = (
+        trade.status == 'completed'
+        and request.user.id in {trade.initiator_id, trade.counterparty_id}
+        and not Review.objects.filter(reviewer=request.user, trade=trade).exists()
+    )
+    existing_review = Review.objects.filter(reviewer=request.user, trade=trade).first()
+    review_form = ReviewForm() if can_review else None
+
     return render(request, 'trades/trade_detail.html', {
         'trade': trade,
         'accepted_offer': accepted_offer,
@@ -201,6 +211,9 @@ def trade_detail(request, trade_id):
         'shipment_from_counterparty': shipments_by_sender.get(trade.counterparty_id),
         'strikes': strikes,
         'excuse_reason_choices': Strike.EXCUSE_REASON_CHOICES,
+        'can_review': can_review,
+        'existing_review': existing_review,
+        'review_form': review_form,
     })
 
 

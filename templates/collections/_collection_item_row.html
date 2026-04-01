@@ -19,8 +19,11 @@
         <p style="color: var(--color-muted); font-size: 0.88rem; margin-bottom: 0.35rem;">
             {% if item.state %}{{ item.state.code }} — {% endif %}
             {% if item.county %}{{ item.county.name }}{% else %}Unknown unit{% endif %}
-            {% if item.license_year %} · {{ item.license_year }}{% endif %}
+            {% if item.license_year %} · {{ item.license_year }}{% elif item.effective_era %} · {{ item.effective_era }}{% endif %}
             {% if item.display_license_type_summary %} · {{ item.display_license_type_summary }}{% endif %}
+            {% with fav_count=item.favorites.count %}
+                {% if fav_count > 0 %} · {{ fav_count }} fav{{ fav_count|pluralize }}{% endif %}
+            {% endwith %}
         </p>
         <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 0.5rem;">
             <span class="badge {% if item.is_public %}badge-active{% else %}badge-expired{% endif %}">

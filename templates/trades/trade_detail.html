@@ -167,5 +167,43 @@
         </div>
     </article>
     {% endif %}
+
+    <!-- Review section -->
+    {% if trade.status == 'completed' %}
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Review</h2>
+        {% if existing_review %}
+            <p style="margin-bottom: 0.3rem;">
+                <strong>Your review:</strong>
+                <span class="badge {% if existing_review.sentiment == 'positive' %}badge-active{% elif existing_review.sentiment == 'negative' %}badge-expired{% else %}{% endif %}">
+                    {{ existing_review.get_sentiment_display }}
+                </span>
+            </p>
+            {% if existing_review.body %}
+                <p style="color: var(--color-muted);">{{ existing_review.body }}</p>
+            {% endif %}
+        {% elif can_review %}
+            <p style="color: var(--color-muted); margin-bottom: 0.65rem;">Rate your experience with your trade partner.</p>
+            <form method="post" action="{% url 'reviews:submit_trade' trade.pk %}" style="display: grid; gap: 0.55rem;">
+                {% csrf_token %}
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    {% for value, label in review_form.fields.sentiment.choices %}
+                        <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
+                            <input type="radio" name="sentiment" value="{{ value }}" required> {{ label }}
+                        </label>
+                    {% endfor %}
+                </div>
+                {{ review_form.body.errors }}
+                <div>
+                    <label class="form-label" for="{{ review_form.body.id_for_label }}">Comments (optional)</label>
+                    {{ review_form.body }}
+                </div>
+                <div>
+                    <button type="submit" class="btn-primary">Submit review</button>
+                </div>
+            </form>
+        {% endif %}
+    </article>
+    {% endif %}
 </section>
 {% endblock %}

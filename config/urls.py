@@ -24,6 +24,7 @@ urlpatterns = [
     path('trades/', include('apps.trades.urls')),
     path('favorites/', include('apps.favorites.urls')),
     path('messages/', include(('apps.messaging.urls', 'messaging'), namespace='messaging')),
+    path('reviews/', include(('apps.reviews.urls', 'reviews'), namespace='reviews')),
 
     # Homepage
     path('', TemplateView.as_view(template_name='home.html'), name='home'),

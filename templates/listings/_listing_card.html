@@ -50,6 +50,9 @@
             {% else %}
                 {{ listing.get_listing_type_display }}
             {% endif %}
+            {% with fav_count=listing.favorites.count %}
+                {% if fav_count > 0 %}&bull; {{ fav_count }} fav{{ fav_count|pluralize }}{% endif %}
+            {% endwith %}
         </span>
         <a class="btn-secondary" href="{% url 'listings:detail' listing.pk %}"
            style="padding:0.35rem 0.7rem; font-size:0.82rem;">View</a>

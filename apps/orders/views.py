@@ -6,6 +6,8 @@ from django.views.decorators.http import require_POST
 from apps.enforcement.models import Strike
 from apps.enforcement.services import confirm_excuse_handshake, initiate_excuse_handshake
 from apps.notifications.services import create_notification
+from apps.reviews.forms import ReviewForm
+from apps.reviews.models import Review
 from .models import Order
 from .services import transition_order
 
@@ -78,16 +80,29 @@ def order_detail(request, pk):
             'is_done': index < current_index,
         })
 
+    is_buyer = request.user.id == order.buyer_id
+    is_seller = request.user.id == order.seller_id
+
+    # Review context
+    can_review = order.status == 'completed' and not Review.objects.filter(
+        reviewer=request.user, order=order
+    ).exists()
+    existing_review = Review.objects.filter(reviewer=request.user, order=order).first()
+    review_form = ReviewForm() if can_review else None
+
     return render(request, 'orders/order_detail.html', {
         'order': order,
         'timeline': timeline,
-        'is_buyer': request.user.id == order.buyer_id,
-        'is_seller': request.user.id == order.seller_id,
+        'is_buyer': is_buyer,
+        'is_seller': is_seller,
         'payment': payment,
         'shipment': shipment,
         'shipment_events': shipment_events,
         'strikes': strikes,
         'excuse_reason_choices': Strike.EXCUSE_REASON_CHOICES,
+        'can_review': can_review,
+        'existing_review': existing_review,
+        'review_form': review_form,
     })
 
 
