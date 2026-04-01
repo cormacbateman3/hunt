@@ -20,6 +20,7 @@
             <div class="alert alert-error" style="margin-bottom: 1rem;">{{ form.non_field_errors }}</div>
         {% endif %}
 
+        <!-- Section 1: Required fields -->
         <div style="display: grid; gap: 0.85rem;">
             <div>
                 <label class="form-label" for="{{ form.source_collection_item.id_for_label }}">List from collection (optional)</label>
@@ -57,10 +58,25 @@
                     {{ form.license_year }}
                     {{ form.license_year.errors }}
                 </div>
+                <div id="era-label-field">
+                    <label class="form-label" for="{{ form.era_label.id_for_label }}">
+                        Era <span id="era-label-required" style="color: var(--color-error); display: none;">*</span>
+                    </label>
+                    {{ form.era_label }}
+                    <small style="color: var(--color-muted);">{{ form.era_label.help_text }}</small>
+                    {{ form.era_label.errors }}
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
                 <div>
                     <label class="form-label" id="county-ref-label" for="{{ form.county_ref.id_for_label }}">{{ form.county_ref.label }}</label>
                     {{ form.county_ref }}
                     {{ form.county_ref.errors }}
+                </div>
+                <div>
+                    <label class="form-label" for="{{ form.condition_grade.id_for_label }}">Condition grade</label>
+                    {{ form.condition_grade }}
+                    {{ form.condition_grade.errors }}
                 </div>
             </div>
 
@@ -103,12 +119,27 @@
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div>
-                <label class="form-label" for="{{ form.condition_grade.id_for_label }}">Condition grade</label>
-                {{ form.condition_grade }}
-                {{ form.condition_grade.errors }}
+        <!-- Section 2: Optional fields (collapsed) -->
+        <details style="margin-top: 1.25rem;" {% if form.serial_number.value %}open{% endif %}>
+            <summary style="cursor: pointer; font-size: 1.05rem; font-weight: 600; margin-bottom: 0.5rem;">
+                Optional details
+            </summary>
+            <div style="display: grid; gap: 0.85rem; margin-top: 0.75rem;">
+                <div>
+                    <label class="form-label" for="{{ form.serial_number.id_for_label }}">Serial / stub number</label>
+                    {{ form.serial_number }}
+                    <small style="color: var(--color-muted);">{{ form.serial_number.help_text }}</small>
+                    {{ form.serial_number.errors }}
+                </div>
             </div>
+        </details>
+
+        <!-- Section 3: Listing details (pricing / settings) -->
+        <div style="margin-top: 1.25rem; display: grid; gap: 0.85rem;">
+            <hr style="margin: 0; border: 0; border-top: 1px solid var(--color-border);">
+            <h2 style="font-size: 1.1rem; margin: 0;">Listing details</h2>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
                 <div data-listing-panel="auction">
@@ -241,7 +272,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const stateSelect = document.getElementById('{{ form.state.id_for_label }}');
     const geoSelect = document.getElementById('{{ form.county_ref.id_for_label }}');
     const geoLabel = document.getElementById('county-ref-label');
+    const licenseYearInput = document.getElementById('{{ form.license_year.id_for_label }}');
+    const eraLabelField = document.getElementById('era-label-field');
+    const eraRequired = document.getElementById('era-label-required');
     const taxonomyFields = {{ taxonomy_field_names_json|safe }};
+
+    const toggleEraRequired = () => {
+        const yearKnown = licenseYearInput && licenseYearInput.value.trim() !== '';
+        if (eraRequired) eraRequired.style.display = yearKnown ? 'none' : '';
+    };
+    if (licenseYearInput) {
+        licenseYearInput.addEventListener('input', toggleEraRequired);
+        toggleEraRequired();
+    }
 
     const togglePanels = () => {
         const value = listingType.value;

@@ -18,7 +18,11 @@
         <div class="listing-card-meta">
             {% if listing.state %}<span>{{ listing.state.code }}</span>{% endif %}
             {% if listing.county_ref %}<span>&middot; {{ listing.county_ref.name }}</span>{% endif %}
-            <span>&middot; {{ listing.license_year }}</span>
+            {% if listing.license_year %}
+                <span>&middot; {{ listing.license_year }}</span>
+            {% elif listing.effective_era %}
+                <span>&middot; {{ listing.effective_era }}</span>
+            {% endif %}
             <span>&middot; {{ listing.get_condition_grade_display }}</span>
         </div>
 

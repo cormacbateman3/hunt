@@ -37,10 +37,20 @@
                     {{ form.license_year.errors }}
                 </div>
             </div>
-            <div>
-                <label class="form-label" id="county-label" for="{{ form.county.id_for_label }}">{{ form.county.label }}</label>
-                {{ form.county }}
-                {{ form.county.errors }}
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+                <div>
+                    <label class="form-label" id="county-label" for="{{ form.county.id_for_label }}">{{ form.county.label }}</label>
+                    {{ form.county }}
+                    {{ form.county.errors }}
+                </div>
+                <div id="era-label-field">
+                    <label class="form-label" for="{{ form.era_label.id_for_label }}">
+                        Era <span id="era-label-required" style="color: var(--color-error); display: none;">*</span>
+                    </label>
+                    {{ form.era_label }}
+                    <small style="color: var(--color-muted);">{{ form.era_label.help_text }}</small>
+                    {{ form.era_label.errors }}
+                </div>
             </div>
 
             <h2 style="font-size: 1.1rem; margin: 0.25rem 0 0;">Item Taxonomy</h2>
@@ -97,6 +107,21 @@
                 <label class="form-label">{{ form.trade_eligible }} Trade eligible</label>
             </div>
         </div>
+
+        <!-- Optional details (collapsed) -->
+        <details style="margin-top: 1.25rem;" {% if item.serial_number %}open{% endif %}>
+            <summary style="cursor: pointer; font-size: 1.05rem; font-weight: 600; margin-bottom: 0.5rem;">
+                Optional details
+            </summary>
+            <div style="display: grid; gap: 0.85rem; margin-top: 0.75rem;">
+                <div>
+                    <label class="form-label" for="{{ form.serial_number.id_for_label }}">Serial / stub number</label>
+                    {{ form.serial_number }}
+                    <small style="color: var(--color-muted);">{{ form.serial_number.help_text }}</small>
+                    {{ form.serial_number.errors }}
+                </div>
+            </div>
+        </details>
 
         <details style="margin-top: 1rem;">
             <summary style="cursor: pointer; color: var(--color-aged-amber);">Is a value missing?</summary>
@@ -155,7 +180,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const stateSelect = document.getElementById('{{ form.state.id_for_label }}');
     const geoSelect = document.getElementById('{{ form.county.id_for_label }}');
     const geoLabel = document.getElementById('county-label');
+    const licenseYearInput = document.getElementById('{{ form.license_year.id_for_label }}');
+    const eraRequired = document.getElementById('era-label-required');
     const taxonomyFields = {{ taxonomy_field_names_json|safe }};
+
+    const toggleEraRequired = () => {
+        const yearKnown = licenseYearInput && licenseYearInput.value.trim() !== '';
+        if (eraRequired) eraRequired.style.display = yearKnown ? 'none' : '';
+    };
+    if (licenseYearInput) {
+        licenseYearInput.addEventListener('input', toggleEraRequired);
+        toggleEraRequired();
+    }
 
     const updateOtherWrapper = (fieldName) => {
         const field = document.getElementById(`id_${fieldName}`);

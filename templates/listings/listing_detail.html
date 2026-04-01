@@ -76,7 +76,15 @@
         {% endif %}
         <p><strong>State:</strong> {% if listing.state %}<a href="{% url 'core:state_detail' listing.state.slug %}">{{ listing.state.name }}</a>{% else %}Unknown{% endif %}</p>
         <p><strong>{{ listing.state.issuance_unit_label|default:'Geographic Unit' }}:</strong> {% if listing.county_ref %}<a href="{% url 'core:geographic_unit_detail' listing.county_ref.pk %}">{{ listing.county_ref.name }}</a>{% else %}Unknown{% endif %}</p>
-        <p><strong>Year:</strong> {{ listing.license_year }}</p>
+        <p><strong>Year:</strong>
+            {% if listing.license_year %}{{ listing.license_year }}{% else %}Unknown{% endif %}
+        </p>
+        {% if listing.effective_era %}
+        <p><strong>Era:</strong> {{ listing.effective_era }}</p>
+        {% endif %}
+        {% if listing.serial_number %}
+        <p><strong>Serial / stub #:</strong> {{ listing.serial_number }}</p>
+        {% endif %}
         {% if listing.display_license_type_summary %}
         <p><strong>Taxonomy:</strong> {{ listing.display_license_type_summary }}</p>
         {% endif %}

@@ -83,6 +83,15 @@
                 </div>
             </div>
             <div>
+                <label class="form-label" for="era">Era</label>
+                <select class="form-select" id="era" name="era">
+                    <option value="">Any</option>
+                    {% for value, label in era_choices %}
+                        <option value="{{ value }}" {% if filters.era == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
                 <label class="form-label" for="condition">Condition</label>
                 <select class="form-select" id="condition" name="condition">
                     <option value="">Any</option>

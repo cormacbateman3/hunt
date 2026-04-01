@@ -4,6 +4,7 @@ from django.db.models import Q
 from apps.core.constants import COLOR_CHOICES, FORM_LICENSE_TYPE_CATEGORIES, SHAPE_CHOICES
 from apps.core.models import GeographicUnit, LicenseType, ReferenceDataSuggestion, State
 from apps.collections.models import CollectionItem, CollectionItemImage, WantedItem
+from apps.listings.models import ERA_LABEL_CHOICES
 
 
 def _state_license_type_queryset(state, category=None):
@@ -36,6 +37,17 @@ class CollectionItemForm(forms.ModelForm):
     shape_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter shape'}))
     colors = forms.MultipleChoiceField(choices=COLOR_CHOICES, required=False, widget=forms.SelectMultiple(attrs={'class': 'form-select', 'size': 6}))
     colors_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter color'}))
+    serial_number = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. A-12345'}),
+        help_text='License serial or stub number, if visible.',
+    )
+    era_label = forms.ChoiceField(
+        choices=[('', 'Select era')] + ERA_LABEL_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        help_text='Required when license year is unknown.',
+    )
 
     class Meta:
         model = CollectionItem
@@ -57,6 +69,8 @@ class CollectionItemForm(forms.ModelForm):
             'condition_grade',
             'is_public',
             'trade_eligible',
+            'serial_number',
+            'era_label',
         ]
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-input'}),
@@ -122,6 +136,12 @@ class CollectionItemForm(forms.ModelForm):
             self.add_error('license_year', f'Earliest known hunting license year for {state.name} is {state.min_license_year}.')
         if year and year > 2000:
             self.add_error('license_year', 'License year cannot exceed 2000.')
+
+        # era_label is required when license_year is not provided
+        era_label = cleaned_data.get('era_label')
+        if not year and not era_label:
+            self.add_error('era_label', 'Era is required when license year is unknown.')
+
         if not any(selected_dimensions) and not cleaned_data.get('shape') and not (cleaned_data.get('colors') or []):
             raise forms.ValidationError('Select at least one taxonomy or physical attribute value to describe the item.')
         for category in FORM_LICENSE_TYPE_CATEGORIES:
@@ -140,6 +160,8 @@ class CollectionItemForm(forms.ModelForm):
         item.state = self.cleaned_data['state']
         item.shape = self.cleaned_data.get('shape') or ''
         item.colors = self.cleaned_data.get('colors') or []
+        item.serial_number = (self.cleaned_data.get('serial_number') or '').strip()
+        item.era_label = self.cleaned_data.get('era_label') or None
         if commit:
             item.save()
             selected_types = [self.cleaned_data.get(category) for category in FORM_LICENSE_TYPE_CATEGORIES if self.cleaned_data.get(category)]

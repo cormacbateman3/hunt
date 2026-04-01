@@ -5,6 +5,30 @@ from django.urls import reverse
 from apps.core.constants import COLOR_CHOICES, FORM_LICENSE_TYPE_CATEGORIES, RESIDENT_STATUS_CHOICES, SHAPE_CHOICES
 
 
+ERA_LABEL_CHOICES = [
+    ('Pre-1920', 'Pre-1920'),
+    ('1920s', '1920s'),
+    ('1930s', '1930s'),
+    ('1940s', '1940s'),
+    ('1950s', '1950s'),
+    ('1960s', '1960s'),
+    ('1970s', '1970s'),
+    ('1980s', '1980s'),
+    ('1990s', '1990s'),
+    ('2000', '2000'),
+]
+
+
+def _year_to_era(year):
+    """Derive a canonical era label from a known license_year integer."""
+    if year < 1920:
+        return 'Pre-1920'
+    if year == 2000:
+        return '2000'
+    decade = (year // 10) * 10
+    return f'{decade}s'
+
+
 class Listing(models.Model):
     """Auction listing for an antique Pennsylvania hunting license"""
 
@@ -49,7 +73,7 @@ class Listing(models.Model):
     # Basic Information
     title = models.CharField(max_length=200)
     description = models.TextField()
-    license_year = models.IntegerField(help_text="Year the license was issued")
+    license_year = models.IntegerField(null=True, blank=True, help_text="Year the license was issued")
     state = models.ForeignKey(
         'core.State', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='listings', help_text='Issuing state for this item'
@@ -70,6 +94,14 @@ class Listing(models.Model):
     condition_grade = models.CharField(max_length=20, choices=CONDITION_CHOICES)
     resident_status = models.CharField(
         max_length=20, choices=RESIDENT_STATUS_CHOICES, default='unknown'
+    )
+    serial_number = models.CharField(
+        max_length=100, blank=True,
+        help_text="License serial or stub number, if visible"
+    )
+    era_label = models.CharField(
+        max_length=10, choices=ERA_LABEL_CHOICES, null=True, blank=True,
+        help_text="Decade era — set automatically when license_year is known; required when year is unknown"
     )
 
     # Auction pricing
@@ -142,10 +174,18 @@ class Listing(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.title} ({self.license_year})"
+        year_part = str(self.license_year) if self.license_year else self.effective_era or 'Unknown year'
+        return f"{self.title} ({year_part})"
 
     def get_absolute_url(self):
         return reverse('listings:detail', kwargs={'pk': self.pk})
+
+    @property
+    def effective_era(self):
+        """Canonical era — derived from license_year if known, else falls back to era_label."""
+        if self.license_year:
+            return _year_to_era(self.license_year)
+        return self.era_label or ''
 
     def is_active(self):
         """Check if auction is still active"""

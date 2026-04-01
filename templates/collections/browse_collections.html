@@ -56,6 +56,15 @@
                     {% endfor %}
                 </select>
             </div>
+            <div>
+                <label class="form-label" for="era">Era</label>
+                <select class="form-select" id="era" name="era">
+                    <option value="">Any</option>
+                    {% for value, label in era_choices %}
+                        <option value="{{ value }}" {% if filters.era == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
                 <div>
                     <label class="form-label" for="year_min">Year from</label>

@@ -7,7 +7,7 @@ from django.utils import timezone
 from apps.collections.models import CollectionItem
 from apps.core.constants import COLOR_CHOICES, FORM_LICENSE_TYPE_CATEGORIES, SHAPE_CHOICES
 from apps.core.models import GeographicUnit, LicenseType, ReferenceDataSuggestion, State
-from apps.listings.models import Listing, ListingImage
+from apps.listings.models import ERA_LABEL_CHOICES, Listing, ListingImage
 
 
 def _state_license_type_queryset(state, category):
@@ -99,6 +99,17 @@ class ListingForm(forms.ModelForm):
         widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. Lancaster, PA'}),
         help_text='City or region for local pickup.',
     )
+    serial_number = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. A-12345'}),
+        help_text='License serial or stub number, if visible.',
+    )
+    era_label = forms.ChoiceField(
+        choices=[('', 'Select era')] + ERA_LABEL_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        help_text='Required when license year is unknown.',
+    )
 
     class Meta:
         model = Listing
@@ -128,13 +139,15 @@ class ListingForm(forms.ModelForm):
             'auto_relist',
             'local_pickup_available',
             'local_pickup_location',
+            'serial_number',
+            'era_label',
             'featured_image',
         ]
         widgets = {
             'listing_type': forms.Select(attrs={'class': 'form-select'}),
             'title': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g., 1942 Adams County Resident Hunting License'}),
             'description': forms.Textarea(attrs={'class': 'form-input', 'placeholder': 'Describe the license condition, notable features, provenance, and any context collectors should know.', 'rows': 6}),
-            'license_year': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '1942'}),
+            'license_year': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '1942 (leave blank if unknown)'}),
             'condition_grade': forms.Select(attrs={'class': 'form-select'}),
             'starting_price': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '25.00', 'step': '0.01', 'min': '0.01'}),
             'reserve_price': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': 'Optional reserve', 'step': '0.01', 'min': '0.01'}),
@@ -149,6 +162,7 @@ class ListingForm(forms.ModelForm):
         self.fields['state'].queryset = State.objects.order_by('-is_primary_default', 'name')
         self.fields['source_collection_item'].queryset = CollectionItem.objects.none()
         self.fields['featured_image'].required = False
+        self.fields['license_year'].required = False
 
         selected_state = self._resolve_state()
         if selected_state:
@@ -215,6 +229,11 @@ class ListingForm(forms.ModelForm):
         if license_year and license_year > 2000:
             self.add_error('license_year', 'License year cannot exceed 2000.')
 
+        # era_label is required when license_year is not provided
+        era_label = cleaned_data.get('era_label')
+        if not license_year and not era_label:
+            self.add_error('era_label', 'Era is required when license year is unknown.')
+
         if listing_type == 'auction':
             if starting_price is None:
                 self.add_error('starting_price', 'Starting price is required for auctions.')
@@ -272,6 +291,8 @@ class ListingForm(forms.ModelForm):
         listing.colors = self.cleaned_data.get('colors') or []
         listing.local_pickup_available = bool(self.cleaned_data.get('local_pickup_available'))
         listing.local_pickup_location = (self.cleaned_data.get('local_pickup_location') or '').strip()
+        listing.serial_number = (self.cleaned_data.get('serial_number') or '').strip()
+        listing.era_label = self.cleaned_data.get('era_label') or None
 
         listing_type = self.cleaned_data['listing_type']
         duration = self.cleaned_data.get('duration_days')

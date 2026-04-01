@@ -8,7 +8,7 @@ from django.db.models import Prefetch, Q
 from django.urls import reverse
 from django.views.generic import ListView
 from django.utils import timezone
-from .models import Listing, ListingQuestion
+from .models import ERA_LABEL_CHOICES, Listing, ListingQuestion, _year_to_era
 from .forms import ListingForm, ListingImageFormSet
 from apps.bids.forms import BidForm
 from apps.bids.services import get_user_bid_on_listing, get_winning_bid
@@ -46,6 +46,8 @@ def _prefill_from_collection_item(collection_item):
         'condition_grade': collection_item.condition_grade or '',
         'shape': collection_item.shape or '',
         'colors': collection_item.colors,
+        'serial_number': collection_item.serial_number or '',
+        'era_label': collection_item.era_label or '',
     }
     for category in ('residency', 'holder_eligibility', 'activity_scope', 'duration', 'addon_type', 'material'):
         selected = collection_item.license_types.filter(category=category).order_by('name').first()
@@ -77,6 +79,18 @@ def _normalize_listing_image_sort_order(listing):
             image.save(update_fields=['sort_order'])
 
 
+def _era_to_year_range(era):
+    """Return (year_from, year_to) for an era label, or None if not mappable."""
+    if era == 'Pre-1920':
+        return (1, 1919)
+    if era == '2000':
+        return (2000, 2000)
+    if era.endswith('s') and era[:-1].isdigit():
+        decade = int(era[:-1])
+        return (decade, decade + 9)
+    return None
+
+
 class BaseListingListView(ListView):
     """Browse active listings with dynamic GET filtering."""
 
@@ -101,6 +115,7 @@ class BaseListingListView(ListView):
         year_min = self.request.GET.get('year_min')
         year_max = self.request.GET.get('year_max')
         condition = self.request.GET.get('condition')
+        era = self.request.GET.get('era')
         search = self.request.GET.get('search')
 
         if state_id and state_id.isdigit():
@@ -115,6 +130,17 @@ class BaseListingListView(ListView):
             queryset = queryset.filter(license_year__lte=year_max)
         if condition:
             queryset = queryset.filter(condition_grade=condition)
+        if era:
+            # Items whose computed effective_era matches: either year-derived or explicit era_label
+            era_years = _era_to_year_range(era)
+            if era_years:
+                year_from, year_to = era_years
+                queryset = queryset.filter(
+                    Q(license_year__gte=year_from, license_year__lte=year_to)
+                    | Q(license_year__isnull=True, era_label=era)
+                )
+            else:
+                queryset = queryset.filter(era_label=era, license_year__isnull=True)
         if search:
             queryset = queryset.filter(
                 Q(title__icontains=search)
@@ -151,8 +177,10 @@ class BaseListingListView(ListView):
             'year_min': self.request.GET.get('year_min', ''),
             'year_max': self.request.GET.get('year_max', ''),
             'condition': self.request.GET.get('condition', ''),
+            'era': self.request.GET.get('era', ''),
             'search': self.request.GET.get('search', ''),
         }
+        context['era_choices'] = ERA_LABEL_CHOICES
 
         query_params = self.request.GET.copy()
         query_params.pop('page', None)
@@ -345,6 +373,8 @@ def listing_create(request):
                     condition_grade=listing.condition_grade,
                     shape=listing.shape,
                     colors=listing.colors,
+                    serial_number=listing.serial_number,
+                    era_label=listing.era_label,
                     is_public=True,
                     trade_eligible=True,
                 )

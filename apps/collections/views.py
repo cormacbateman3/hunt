@@ -8,6 +8,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.core.forms import ReferenceDataSuggestionForm
 from apps.core.models import GeographicUnit, LicenseType, State
+from apps.listings.models import ERA_LABEL_CHOICES
+from apps.listings.views import _era_to_year_range
 from apps.orders.models import Order
 
 from .forms import CollectionItemForm, CollectionItemImageFormSet, WantedItemForm
@@ -176,6 +178,7 @@ def browse_collections(request):
     year_min = request.GET.get('year_min', '')
     year_max = request.GET.get('year_max', '')
     license_type_id = request.GET.get('license_type_id', '')
+    era = request.GET.get('era', '')
     owner_search = request.GET.get('owner', '').strip()
     sort = request.GET.get('sort', 'newest')
 
@@ -197,6 +200,16 @@ def browse_collections(request):
             pass
     if license_type_id and license_type_id.isdigit():
         qs = qs.filter(license_types__id=license_type_id)
+    if era:
+        era_years = _era_to_year_range(era)
+        if era_years:
+            year_from, year_to = era_years
+            qs = qs.filter(
+                Q(license_year__gte=year_from, license_year__lte=year_to)
+                | Q(license_year__isnull=True, era_label=era)
+            )
+        else:
+            qs = qs.filter(era_label=era, license_year__isnull=True)
     if owner_search:
         qs = qs.filter(
             Q(owner__username__icontains=owner_search)
@@ -228,6 +241,7 @@ def browse_collections(request):
         'year_min': year_min,
         'year_max': year_max,
         'license_type_id': license_type_id,
+        'era': era,
         'owner': owner_search,
         'sort': sort,
     }
@@ -241,6 +255,7 @@ def browse_collections(request):
         'selected_state': selected_state,
         'counties': counties,
         'license_types': license_types,
+        'era_choices': ERA_LABEL_CHOICES,
         'filters': filters,
         'query_string': query_params.urlencode(),
     })
@@ -409,6 +424,8 @@ def add_from_order(request, order_id):
             'condition_grade': listing.condition_grade,
             'shape': listing.shape,
             'colors': listing.colors,
+            'serial_number': listing.serial_number or '',
+            'era_label': listing.era_label or '',
             'is_public': True,
             'trade_eligible': False,  # just purchased, not trading yet
         }

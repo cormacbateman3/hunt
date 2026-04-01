@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from apps.core.models import GeographicUnit, LicenseType
 from apps.core.constants import COLOR_CHOICES, FORM_LICENSE_TYPE_CATEGORIES, RESIDENT_STATUS_CHOICES, SHAPE_CHOICES
+from apps.listings.models import ERA_LABEL_CHOICES, _year_to_era
 
 
 class CollectionItem(models.Model):
@@ -34,6 +35,14 @@ class CollectionItem(models.Model):
     resident_status = models.CharField(
         max_length=20, choices=RESIDENT_STATUS_CHOICES, default='unknown'
     )
+    serial_number = models.CharField(
+        max_length=100, blank=True,
+        help_text="License serial or stub number, if visible"
+    )
+    era_label = models.CharField(
+        max_length=10, choices=ERA_LABEL_CHOICES, null=True, blank=True,
+        help_text="Decade era — set automatically when license_year is known; required when year is unknown"
+    )
     shape = models.CharField(max_length=30, choices=SHAPE_CHOICES, blank=True)
     colors = models.JSONField(default=list, blank=True)
     condition_grade = models.CharField(max_length=20, choices=CONDITION_CHOICES, blank=True)
@@ -54,6 +63,13 @@ class CollectionItem(models.Model):
 
     def __str__(self):
         return f"{self.title} ({self.license_year}) - {self.owner.username}"
+
+    @property
+    def effective_era(self):
+        """Canonical era — derived from license_year if known, else falls back to era_label."""
+        if self.license_year:
+            return _year_to_era(self.license_year)
+        return self.era_label or ''
 
     def license_types_for_category(self, category):
         return list(self.license_types.filter(category=category).order_by('name'))
