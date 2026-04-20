@@ -44,6 +44,7 @@
             <div>
                 <label class="form-label" for="state_id">State</label>
                 <select class="form-select" id="state_id" name="state_id">
+                    <option value="" {% if not filters.state_id %}selected{% endif %}>Any</option>
                     {% for state in states %}
                         <option value="{{ state.id }}" {% if filters.state_id == state.id|stringformat:'s' %}selected{% endif %}>
                             {{ state.name }}
@@ -62,17 +63,19 @@
                     {% endfor %}
                 </select>
             </div>
+            {% for group in license_type_groups %}
             <div>
-                <label class="form-label" for="license_type_id">License type</label>
-                <select class="form-select" id="license_type_id" name="license_type_id">
+                <label class="form-label" for="{{ group.filter_key }}">{{ group.label }}</label>
+                <select class="form-select" id="{{ group.filter_key }}" name="{{ group.filter_key }}">
                     <option value="">Any</option>
-                    {% for license_type in license_types %}
-                        <option value="{{ license_type.id }}" {% if filters.license_type_id == license_type.id|stringformat:'s' %}selected{% endif %}>
-                            {{ license_type.name }}
+                    {% for lt in group.types %}
+                        <option value="{{ lt.id }}" {% if group.selected_id == lt.id|stringformat:'s' %}selected{% endif %}>
+                            {{ lt.name }}
                         </option>
                     {% endfor %}
                 </select>
             </div>
+            {% endfor %}
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
                 <div>
                     <label class="form-label" for="year_min">Year from</label>
@@ -208,6 +211,30 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const stateSelect = document.getElementById('state_id');
+    const countySelect = document.getElementById('county_id');
+    const countyLabel = countySelect ? countySelect.previousElementSibling : null;
+    if (!stateSelect || !countySelect) return;
+
+    stateSelect.addEventListener('change', async () => {
+        const stateId = stateSelect.value;
+        countySelect.innerHTML = '<option value="">Any</option>';
+        if (countyLabel) countyLabel.textContent = 'County';
+        if (!stateId) return;
+        const res = await fetch(`/api/geo-units/?state=${encodeURIComponent(stateId)}`);
+        const data = await res.json();
+        (data.results || []).forEach((unit) => {
+            const opt = document.createElement('option');
+            opt.value = unit.id;
+            opt.textContent = unit.name;
+            countySelect.appendChild(opt);
+        });
+        if (countyLabel) countyLabel.textContent = data.issuance_unit_label || 'County';
+    });
+});
+</script>
 {% if show_map_toggle and view_mode == 'map' and is_county_state and geo_units %}
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>

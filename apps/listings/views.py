@@ -14,6 +14,7 @@ from apps.bids.forms import BidForm
 from apps.bids.services import get_user_bid_on_listing, get_winning_bid
 from apps.collections.models import CollectionItem
 from apps.core.models import GeographicUnit, LicenseType, State
+from apps.core.constants import FORM_LICENSE_TYPE_CATEGORIES, LICENSE_TYPE_CATEGORY_CHOICES
 from apps.core.forms import ReferenceDataSuggestionForm
 from apps.orders.models import Order
 from apps.orders.services import calculate_platform_fee
@@ -113,7 +114,6 @@ class BaseListingListView(ListView):
 
         state_id = self.request.GET.get('state_id')
         county_id = self.request.GET.get('county_id')
-        license_type_id = self.request.GET.get('license_type_id')
         year_min = self.request.GET.get('year_min')
         year_max = self.request.GET.get('year_max')
         condition = self.request.GET.get('condition')
@@ -124,8 +124,10 @@ class BaseListingListView(ListView):
             queryset = queryset.filter(state_id=state_id)
         if county_id and county_id.isdigit():
             queryset = queryset.filter(county_ref_id=county_id)
-        if license_type_id and license_type_id.isdigit():
-            queryset = queryset.filter(license_types__id=license_type_id)
+        for cat in FORM_LICENSE_TYPE_CATEGORIES:
+            cat_id = self.request.GET.get(f'{cat}_id')
+            if cat_id and cat_id.isdigit():
+                queryset = queryset.filter(license_types__id=cat_id)
         if year_min:
             queryset = queryset.filter(license_year__gte=year_min)
         if year_max:
@@ -160,28 +162,50 @@ class BaseListingListView(ListView):
         context = super().get_context_data(**kwargs)
         selected_state_id = self.request.GET.get('state_id')
         default_state = State.objects.filter(is_primary_default=True).first() or State.objects.order_by('name').first()
-        selected_state = State.objects.filter(pk=selected_state_id).first() if selected_state_id and selected_state_id.isdigit() else default_state
+        if 'state_id' in self.request.GET:
+            selected_state = State.objects.filter(pk=selected_state_id).first() if selected_state_id and selected_state_id.isdigit() else None
+        else:
+            selected_state = default_state
         context['states'] = State.objects.order_by('-is_primary_default', 'name')
         context['selected_state'] = selected_state
         context['counties'] = GeographicUnit.objects.filter(state=selected_state).order_by('sort_order', 'name') if selected_state else GeographicUnit.objects.none()
-        context['license_types'] = LicenseType.objects.filter(
-            is_system_value=True,
-        ).filter(
-            Q(state=selected_state) | Q(state__isnull=True) | Q(state__code='FD')
-        ).order_by('category', 'name').distinct() if selected_state else LicenseType.objects.none()
+
+        category_labels = dict(LICENSE_TYPE_CATEGORY_CHOICES)
+        if selected_state:
+            all_types = LicenseType.objects.filter(
+                is_system_value=True,
+            ).filter(
+                Q(state=selected_state) | Q(state__isnull=True) | Q(state__code='FD')
+            ).order_by('category', 'name').distinct()
+            all_types_list = list(all_types)
+        else:
+            all_types_list = []
+        license_type_groups = []
+        for cat in FORM_LICENSE_TYPE_CATEGORIES:
+            types = [lt for lt in all_types_list if lt.category == cat]
+            if types:
+                license_type_groups.append({
+                    'category': cat,
+                    'label': category_labels.get(cat, cat.replace('_', ' ').title()),
+                    'types': types,
+                    'filter_key': f'{cat}_id',
+                    'selected_id': self.request.GET.get(f'{cat}_id', ''),
+                })
+        context['license_type_groups'] = license_type_groups
+
         context['section_title'] = self.section_title
         context['section_description'] = self.section_description
         context['current_route_name'] = self.request.resolver_match.view_name
-        context['filters'] = {
-            'state_id': self.request.GET.get('state_id', str(selected_state.id) if selected_state else ''),
+        filters = {
+            'state_id': self.request.GET.get('state_id', str(default_state.id) if default_state else ''),
             'county_id': self.request.GET.get('county_id', ''),
-            'license_type_id': self.request.GET.get('license_type_id', ''),
             'year_min': self.request.GET.get('year_min', ''),
             'year_max': self.request.GET.get('year_max', ''),
             'condition': self.request.GET.get('condition', ''),
             'era': self.request.GET.get('era', ''),
             'search': self.request.GET.get('search', ''),
         }
+        context['filters'] = filters
         context['era_choices'] = ERA_LABEL_CHOICES
 
         query_params = self.request.GET.copy()
