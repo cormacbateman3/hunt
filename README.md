@@ -100,3 +100,28 @@ py manage.py enforce_policies
 py manage.py enqueue_operational_notifications
 py manage.py send_notifications --limit 200
 ```
+
+
+## Add demo data:
+
+```bash
+python manage.py seed_demo
+```
+
+two independent guards on removal:
+- Must be owned by __keystonebid_demo__ (that username won't exist in prod)
+- Title must start with [DEMO] (can't match a real user's listing even if the username somehow collides)
+- remove_demo is dry-run by default - you see what would be deleted before anything happens
+
+Check what would be removed:
+```bash
+python manage.py remove_demo
+```
+Actually remove it:
+```bash
+python manage.py remove_demo --yes
+```
+Re-seed from scratch (after tweaking something):
+```bash
+python manage.py seed_demo --reset
+```
