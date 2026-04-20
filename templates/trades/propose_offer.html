@@ -1,67 +1,175 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}{% if mode == 'counter' %}Counter Offer{% else %}Propose Trade{% endif %} | KeystoneBid{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/trade.css' %}">
+{% endblock %}
+
 {% block content %}
 <section style="display: grid; gap: 1rem;">
-    <article class="card">
-        <h1 style="margin-bottom: 0.5rem;">
+
+    <article class="card" style="padding: 0.85rem 1rem;">
+        <h1 style="margin-bottom: 0.3rem;">
             {% if mode == 'counter' %}Counter Offer{% else %}Propose Trade{% endif %}
         </h1>
-        <p style="color: var(--color-muted);">
-            Trade listing: <a href="{% url 'listings:detail' listing.pk %}">{{ listing.title }}</a>
+        <p style="color: var(--color-muted); margin: 0;">
+            Listing: <a href="{% url 'listings:detail' listing.pk %}">{{ listing.title }}</a>
+            &nbsp;&mdash;&nbsp;Seller: <strong>{{ listing.seller.username }}</strong>
         </p>
         {% if parent_offer %}
-            <p style="color: var(--color-muted); margin-top: 0.35rem;">
+            <p style="color: var(--color-muted); margin: 0.25rem 0 0; font-size: 0.9rem;">
                 Countering offer #{{ parent_offer.pk }} from {{ parent_offer.from_user.username }}.
             </p>
         {% endif %}
+        {% if form.non_field_errors %}
+            <div class="alert alert-error" style="margin-top: 0.6rem;">{{ form.non_field_errors }}</div>
+        {% endif %}
+        {% if form.offered_items.errors %}
+            <div class="alert alert-error" style="margin-top: 0.6rem;">{{ form.offered_items.errors }}</div>
+        {% endif %}
     </article>
 
-    <form method="post" class="card">
-        {% csrf_token %}
-        {% if form.non_field_errors %}
-            <div class="alert alert-error" style="margin-bottom: 1rem;">{{ form.non_field_errors }}</div>
-        {% endif %}
+    <!-- Trade board -->
+    <div class="card" style="padding: 1rem;">
+        <div class="trade-board" id="trade-board">
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <section style="border: 1px solid var(--color-border); border-radius: 8px; padding: 0.85rem;">
-                <h2 style="margin-bottom: 0.6rem;">You Give</h2>
-                <p style="color: var(--color-muted); margin-bottom: 0.55rem;">Choose trade-eligible items from your collection.</p>
-                {{ form.offered_items.errors }}
-                <div style="display: grid; gap: 0.45rem;">
-                    {{ form.offered_items }}
+            <!-- Col 1: My Collection -->
+            <div class="trade-col">
+                <div class="trade-col-header">
+                    <h3>My Collection</h3>
+                    <p>Drag to offer &rarr;</p>
                 </div>
-            </section>
+                <div class="trade-drop-zone" id="pool-zone" data-zone="pool">
+                    {% if not my_collection %}
+                        <p class="drop-hint">No trade-eligible items in your collection.</p>
+                    {% else %}
+                        <p class="drop-hint" id="pool-hint" style="display:none;">All items are in the offer.</p>
+                    {% endif %}
+                    {% for item in my_collection %}
+                        {% with img=item.images.first %}
+                        <div class="trade-tile"
+                             draggable="true"
+                             data-id="{{ item.pk }}"
+                             data-title="{{ item.title|truncatechars:40 }}"
+                             data-meta="{{ item.license_year|default:'' }}{% if item.state %} {{ item.state.code }}{% endif %}{% if item.county %} · {{ item.county.name }}{% endif %}"
+                             data-img="{% if img %}{{ img.image.url }}{% endif %}"
+                             data-zone="pool">
+                            {% if img %}
+                                <img class="trade-tile-img" src="{{ img.image.url }}" alt="{{ item.title }}">
+                            {% else %}
+                                <div class="trade-tile-img-placeholder">No img</div>
+                            {% endif %}
+                            <div class="trade-tile-body">
+                                <div class="trade-tile-title">{{ item.title|truncatechars:40 }}</div>
+                                <div class="trade-tile-meta">
+                                    {{ item.license_year|default:'' }}
+                                    {% if item.state %} {{ item.state.code }}{% endif %}
+                                    {% if item.county %} · {{ item.county.name }}{% endif %}
+                                </div>
+                            </div>
+                            <button type="button" class="trade-tile-action trade-tile-action--add" title="Add to offer" data-move="to-offer">&#43;</button>
+                        </div>
+                        {% endwith %}
+                    {% endfor %}
+                </div>
+            </div>
 
-            <section style="border: 1px solid var(--color-border); border-radius: 8px; padding: 0.85rem;">
-                <h2 style="margin-bottom: 0.6rem;">You Receive</h2>
-                {% if listing.source_collection_item %}
-                    <p><strong>{{ listing.source_collection_item.title }}</strong></p>
-                    <p style="color: var(--color-muted);">
-                        {{ listing.source_collection_item.license_year|default:'Unknown year' }}
-                        {% if listing.source_collection_item.county %} - {{ listing.source_collection_item.county.name }}{% endif %}
-                    </p>
-                {% else %}
-                    <p><strong>{{ listing.title }}</strong></p>
-                    <p style="color: var(--color-muted);">Requested item metadata is anchored to this trade listing.</p>
-                {% endif %}
+            <!-- Col 2: I'm Giving -->
+            <div class="trade-col">
+                <div class="trade-col-header">
+                    <h3>I&rsquo;m Giving</h3>
+                    <p>Items you offer</p>
+                </div>
+                <div class="trade-drop-zone" id="offer-zone" data-zone="offer">
+                    <p class="drop-hint" id="offer-hint">Drop items here or use + button.</p>
+                </div>
+            </div>
 
-                {% if listing.allow_cash %}
-                    <div style="margin-top: 0.8rem;">
-                        <label class="form-label" for="{{ form.cash_amount.id_for_label }}">Cash add-on (optional)</label>
-                        {{ form.cash_amount }}
-                        {{ form.cash_amount.errors }}
-                    </div>
-                {% endif %}
-            </section>
-        </div>
+            <!-- Col 3: I'm Receiving -->
+            <div class="trade-col">
+                <div class="trade-col-header">
+                    <h3>I&rsquo;m Receiving</h3>
+                    <p>From seller</p>
+                </div>
+                <div class="trade-drop-zone trade-drop-zone--fixed">
+                    {% if listing.source_collection_item %}
+                        {% with item=listing.source_collection_item img=listing.source_collection_item.images.first %}
+                        <div class="trade-tile trade-tile--fixed">
+                            {% if img %}
+                                <img class="trade-tile-img" src="{{ img.image.url }}" alt="{{ item.title }}">
+                            {% else %}
+                                <div class="trade-tile-img-placeholder">No img</div>
+                            {% endif %}
+                            <div class="trade-tile-body">
+                                <div class="trade-tile-title">{{ item.title|truncatechars:40 }}</div>
+                                <div class="trade-tile-meta">
+                                    {{ item.license_year|default:'' }}
+                                    {% if item.state %} {{ item.state.code }}{% endif %}
+                                    {% if item.county %} · {{ item.county.name }}{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endwith %}
+                    {% else %}
+                        <div class="trade-tile trade-tile--fixed">
+                            <div class="trade-tile-img-placeholder">?</div>
+                            <div class="trade-tile-body">
+                                <div class="trade-tile-title">{{ listing.title|truncatechars:40 }}</div>
+                                <div class="trade-tile-meta">Trade listing (no linked item)</div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
 
-        <div style="display: grid; gap: 0.8rem; margin-top: 1rem;">
+            <!-- Col 4: Their Collection -->
+            <div class="trade-col">
+                <div class="trade-col-header">
+                    <h3>Their Collection</h3>
+                    <p>{{ listing.seller.username }}&rsquo;s trade items</p>
+                </div>
+                <div class="trade-drop-zone trade-drop-zone--fixed" style="min-height: 120px;">
+                    {% for item in their_collection %}
+                        {% with img=item.images.first %}
+                        <div class="trade-tile trade-tile--fixed">
+                            {% if img %}
+                                <img class="trade-tile-img" src="{{ img.image.url }}" alt="{{ item.title }}">
+                            {% else %}
+                                <div class="trade-tile-img-placeholder">No img</div>
+                            {% endif %}
+                            <div class="trade-tile-body">
+                                <div class="trade-tile-title">{{ item.title|truncatechars:40 }}</div>
+                                <div class="trade-tile-meta">
+                                    {{ item.license_year|default:'' }}
+                                    {% if item.state %} {{ item.state.code }}{% endif %}
+                                    {% if item.county %} · {{ item.county.name }}{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endwith %}
+                    {% empty %}
+                        <p class="drop-hint">No other public trade items.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div><!-- /trade-board -->
+
+        <!-- Offer meta -->
+        <div class="trade-meta-row" style="margin-top: 1rem;">
+            {% if listing.allow_cash %}
             <div>
-                <label class="form-label" for="{{ form.expires_days.id_for_label }}">Offer expires in days</label>
+                <label class="form-label" for="{{ form.cash_amount.id_for_label }}">Cash add-on (optional)</label>
+                {{ form.cash_amount }}
+                {{ form.cash_amount.errors }}
+            </div>
+            {% endif %}
+            <div>
+                <label class="form-label" for="{{ form.expires_days.id_for_label }}">Offer expires in (days)</label>
                 {{ form.expires_days }}
-                {% if form.expires_days.help_text %}<small style="color: var(--color-muted);">{{ form.expires_days.help_text }}</small>{% endif %}
+                {% if form.expires_days.help_text %}<small style="color:var(--color-muted);">{{ form.expires_days.help_text }}</small>{% endif %}
                 {{ form.expires_days.errors }}
             </div>
             <div>
@@ -71,10 +179,223 @@
             </div>
         </div>
 
-        <div style="margin-top: 1rem;">
-            <button class="btn-primary" type="submit">{% if mode == 'counter' %}Send Counteroffer{% else %}Send Offer{% endif %}</button>
-            <a href="{% url 'listings:detail' listing.pk %}" style="margin-left: 0.75rem; color: var(--color-aged-amber);">Cancel</a>
+        <div style="margin-top: 1rem; display: flex; gap: 0.75rem; align-items: center;">
+            <button type="button" id="review-btn" class="btn-primary" disabled>
+                {% if mode == 'counter' %}Review Counteroffer{% else %}Review Offer{% endif %}
+            </button>
+            <span id="offer-empty-hint" style="font-size:0.85rem; color:var(--color-muted);">Add at least one item to your offer.</span>
+            <a href="{% url 'listings:detail' listing.pk %}" style="margin-left: auto; color: var(--color-aged-amber);">Cancel</a>
         </div>
-    </form>
+
+    </div><!-- /card -->
+
 </section>
+
+<!-- ── Confirmation modal ─────────────────────────────────────────── -->
+<div class="trade-modal-overlay" id="confirm-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="trade-modal">
+        <h2 id="modal-title">Confirm your offer</h2>
+
+        <div class="trade-modal-cols">
+            <div class="trade-modal-side">
+                <h4>You give</h4>
+                <ul id="modal-giving-list"></ul>
+            </div>
+            <div class="trade-modal-side">
+                <h4>You receive</h4>
+                <ul id="modal-receiving-list"></ul>
+            </div>
+        </div>
+
+        <p class="trade-modal-detail" id="modal-cash" style="display:none;"></p>
+        <p class="trade-modal-detail" id="modal-expires"></p>
+        <p class="trade-modal-detail" id="modal-message" style="display:none;"></p>
+
+        <div class="trade-modal-actions">
+            <form method="post" id="trade-form" style="display:contents;">
+                {% csrf_token %}
+                <div id="hidden-offered-inputs"></div>
+                {{ form.cash_amount.as_hidden }}
+                {{ form.expires_days.as_hidden }}
+                {{ form.message.as_hidden }}
+                <button type="submit" class="btn-primary" id="confirm-submit">
+                    {% if mode == 'counter' %}Send Counteroffer{% else %}Send Offer{% endif %}
+                </button>
+            </form>
+            <button type="button" class="btn-secondary" id="modal-cancel">Go back</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    'use strict';
+
+    const poolZone   = document.getElementById('pool-zone');
+    const offerZone  = document.getElementById('offer-zone');
+    const offerHint  = document.getElementById('offer-hint');
+    const poolHint   = document.getElementById('pool-hint');
+    const reviewBtn  = document.getElementById('review-btn');
+    const emptyHint  = document.getElementById('offer-empty-hint');
+    const modal      = document.getElementById('confirm-modal');
+    const modalCancel = document.getElementById('modal-cancel');
+    const hiddenInputs = document.getElementById('hidden-offered-inputs');
+
+    // ── Drag-and-drop ─────────────────────────────────────────────
+    let dragSrc = null;
+
+    function attachDragHandlers(tile) {
+        tile.addEventListener('dragstart', (e) => {
+            dragSrc = tile;
+            tile.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        });
+        tile.addEventListener('dragend', () => {
+            tile.classList.remove('dragging');
+            dragSrc = null;
+        });
+    }
+
+    [poolZone, offerZone].forEach(zone => {
+        zone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            zone.classList.add('drag-over');
+        });
+        zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+        zone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            zone.classList.remove('drag-over');
+            if (!dragSrc) return;
+            const srcZone = dragSrc.dataset.zone;
+            const dstZone = zone.dataset.zone;
+            if (srcZone === dstZone) return;
+            moveTile(dragSrc, dstZone);
+        });
+    });
+
+    function moveTile(tile, toZone) {
+        tile.dataset.zone = toZone;
+        const target = toZone === 'offer' ? offerZone : poolZone;
+        const addBtn = tile.querySelector('[data-move="to-offer"]');
+        const remBtn = tile.querySelector('[data-move="to-pool"]');
+
+        if (toZone === 'offer') {
+            if (addBtn) { addBtn.dataset.move = 'to-pool'; addBtn.title = 'Remove from offer'; addBtn.textContent = '\u2715'; addBtn.classList.remove('trade-tile-action--add'); }
+        } else {
+            if (remBtn) { remBtn.dataset.move = 'to-offer'; remBtn.title = 'Add to offer'; remBtn.textContent = '+'; remBtn.classList.add('trade-tile-action--add'); }
+        }
+
+        target.appendChild(tile);
+        updateHints();
+        syncHiddenInputs();
+    }
+
+    function updateHints() {
+        const offerTiles = offerZone.querySelectorAll('.trade-tile');
+        const poolTiles  = poolZone.querySelectorAll('.trade-tile');
+        offerHint.style.display = offerTiles.length ? 'none' : '';
+        if (poolHint) poolHint.style.display = poolTiles.length ? 'none' : '';
+        const hasOffer = offerTiles.length > 0;
+        reviewBtn.disabled = !hasOffer;
+        emptyHint.style.display = hasOffer ? 'none' : '';
+    }
+
+    function syncHiddenInputs() {
+        hiddenInputs.innerHTML = '';
+        offerZone.querySelectorAll('.trade-tile').forEach(tile => {
+            const inp = document.createElement('input');
+            inp.type  = 'hidden';
+            inp.name  = 'offered_items';
+            inp.value = tile.dataset.id;
+            hiddenInputs.appendChild(inp);
+        });
+    }
+
+    // ── Button (mobile / fallback) ────────────────────────────────
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-move]');
+        if (!btn) return;
+        const tile = btn.closest('.trade-tile');
+        if (!tile) return;
+        const move = btn.dataset.move;
+        moveTile(tile, move === 'to-offer' ? 'offer' : 'pool');
+    });
+
+    // Attach drag handlers to existing tiles
+    poolZone.querySelectorAll('.trade-tile').forEach(attachDragHandlers);
+
+    // ── Review modal ──────────────────────────────────────────────
+    reviewBtn.addEventListener('click', () => {
+        const givingList     = document.getElementById('modal-giving-list');
+        const receivingList  = document.getElementById('modal-receiving-list');
+        const cashEl         = document.getElementById('modal-cash');
+        const expiresEl      = document.getElementById('modal-expires');
+        const messageEl      = document.getElementById('modal-message');
+
+        givingList.innerHTML = '';
+        offerZone.querySelectorAll('.trade-tile').forEach(tile => {
+            const li = document.createElement('li');
+            li.textContent = tile.dataset.title || tile.querySelector('.trade-tile-title').textContent;
+            givingList.appendChild(li);
+        });
+
+        receivingList.innerHTML = '';
+        document.querySelectorAll('#trade-board .trade-col:nth-child(3) .trade-tile').forEach(tile => {
+            const li = document.createElement('li');
+            li.textContent = tile.querySelector('.trade-tile-title').textContent.trim();
+            receivingList.appendChild(li);
+        });
+
+        const cashInput = document.querySelector('[name="cash_amount"]');
+        if (cashInput && cashInput.value && parseFloat(cashInput.value) > 0) {
+            cashEl.textContent = 'Cash add-on: $' + parseFloat(cashInput.value).toFixed(2);
+            cashEl.style.display = '';
+        } else {
+            cashEl.style.display = 'none';
+        }
+
+        const expiresInput = document.querySelector('[name="expires_days"]');
+        expiresEl.textContent = 'Expires in: ' + (expiresInput ? expiresInput.value : '4') + ' day(s)';
+
+        const msgInput = document.querySelector('[name="message"]');
+        if (msgInput && msgInput.value.trim()) {
+            messageEl.textContent = 'Message: ' + msgInput.value.trim();
+            messageEl.style.display = '';
+        } else {
+            messageEl.style.display = 'none';
+        }
+
+        // sync hidden cash/expires/message into the form
+        syncModalFormValues();
+
+        modal.style.display = 'flex';
+        document.getElementById('confirm-submit').focus();
+    });
+
+    function syncModalFormValues() {
+        // Cash
+        const cashSrc = document.querySelector('[name="cash_amount"]');
+        const cashHidden = document.querySelector('#trade-form [name="cash_amount"]');
+        if (cashSrc && cashHidden) cashHidden.value = cashSrc.value;
+
+        const expSrc = document.querySelector('[name="expires_days"]');
+        const expHidden = document.querySelector('#trade-form [name="expires_days"]');
+        if (expSrc && expHidden) expHidden.value = expSrc.value;
+
+        const msgSrc = document.querySelector('[name="message"]');
+        const msgHidden = document.querySelector('#trade-form [name="message"]');
+        if (msgSrc && msgHidden) msgHidden.value = msgSrc.value;
+    }
+
+    modalCancel.addEventListener('click', () => { modal.style.display = 'none'; });
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') modal.style.display = 'none'; });
+
+    // ── Init ──────────────────────────────────────────────────────
+    updateHints();
+}());
+</script>
 {% endblock %}

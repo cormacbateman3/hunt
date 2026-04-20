@@ -68,10 +68,23 @@ def propose_offer(request, listing_id):
             return redirect('trades:offer_detail', offer_id=offer.pk)
         messages.error(request, error)
 
+    my_collection = CollectionItem.objects.filter(
+        owner=request.user, trade_eligible=True
+    ).prefetch_related('images').order_by('-created_at')
+    exclude_pk = listing.source_collection_item_id
+    their_qs = CollectionItem.objects.filter(
+        owner=listing.seller, is_public=True, trade_eligible=True
+    ).prefetch_related('images').order_by('-created_at')
+    if exclude_pk:
+        their_qs = their_qs.exclude(pk=exclude_pk)
+    their_collection = their_qs
+
     return render(request, 'trades/propose_offer.html', {
         'listing': listing,
         'form': form,
         'mode': 'propose',
+        'my_collection': my_collection,
+        'their_collection': their_collection,
     })
 
 
@@ -117,11 +130,24 @@ def counter_offer(request, offer_id):
             return redirect('trades:offer_detail', offer_id=offer.pk)
         messages.error(request, error)
 
+    my_collection = CollectionItem.objects.filter(
+        owner=request.user, trade_eligible=True
+    ).prefetch_related('images').order_by('-created_at')
+    exclude_pk = listing.source_collection_item_id
+    their_qs = CollectionItem.objects.filter(
+        owner=listing.seller, is_public=True, trade_eligible=True
+    ).prefetch_related('images').order_by('-created_at')
+    if exclude_pk:
+        their_qs = their_qs.exclude(pk=exclude_pk)
+    their_collection = their_qs
+
     return render(request, 'trades/propose_offer.html', {
         'listing': listing,
         'form': form,
         'mode': 'counter',
         'parent_offer': parent_offer,
+        'my_collection': my_collection,
+        'their_collection': their_collection,
     })
 
 
