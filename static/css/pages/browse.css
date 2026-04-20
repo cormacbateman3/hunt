@@ -1,21 +1,115 @@
+/* ── Browse page layout ─────────────────────────────────────────── */
 .browse-layout {
-    display: grid;
-    grid-template-columns: 260px 1fr;
+    display: flex;
+    flex-direction: column;
     gap: var(--space-3);
-    align-items: start;
 }
 
-.browse-filters {
-    position: sticky;
-    top: calc(var(--space-4) + 56px); /* below fixed nav */
+/* Section title row */
+.browse-section-header {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin-bottom: 0.1rem;
+}
+
+.browse-section-header h1 {
+    font-size: 1.3rem;
+    margin: 0;
+}
+
+.browse-section-header p {
+    color: var(--color-muted);
+    font-size: 0.88rem;
+    margin: 0;
+}
+
+/* Horizontal filter bar */
+.browse-filter-bar {
+    padding: 0.75rem 1rem;
+}
+
+.filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.65rem;
+    align-items: flex-end;
+}
+
+.filter-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    flex: 1 1 120px;
+    min-width: 100px;
+    max-width: 190px;
+}
+
+.filter-item--wide {
+    flex: 2 1 200px;
+    max-width: 280px;
+}
+
+.filter-item--narrow {
+    flex: 0 1 85px;
+    min-width: 72px;
+    max-width: 105px;
+}
+
+.filter-item > .form-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-muted);
+    margin-bottom: 0;
+    white-space: nowrap;
+}
+
+.browse-filter-bar .form-select,
+.browse-filter-bar .form-input {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.85rem;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 0.4rem;
+    align-items: flex-end;
+    flex-shrink: 0;
+}
+
+.filter-actions .btn-primary,
+.filter-actions .btn-secondary {
+    white-space: nowrap;
+    padding: 0.38rem 0.9rem;
+    font-size: 0.88rem;
 }
 
 @media (max-width: 900px) {
-    .browse-layout {
-        grid-template-columns: 1fr;
+    .filter-row {
+        gap: 0.4rem 0.5rem;
     }
 
-    .browse-filters {
-        position: static;
+    .filter-item,
+    .filter-item--narrow {
+        flex: 1 1 calc(50% - 0.5rem);
+        max-width: none;
+    }
+
+    .filter-item--wide {
+        flex: 1 1 100%;
+        max-width: none;
+    }
+
+    .filter-actions {
+        width: 100%;
+    }
+
+    .filter-actions .btn-primary,
+    .filter-actions .btn-secondary {
+        flex: 1;
+        text-align: center;
     }
 }

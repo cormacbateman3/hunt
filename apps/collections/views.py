@@ -7,6 +7,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.core.forms import ReferenceDataSuggestionForm
+from apps.core.constants import FORM_LICENSE_TYPE_CATEGORIES, LICENSE_TYPE_CATEGORY_CHOICES
 from apps.core.models import GeographicUnit, LicenseType, State
 from apps.listings.models import ERA_LABEL_CHOICES
 from apps.listings.views import _era_to_year_range
@@ -177,7 +178,6 @@ def browse_collections(request):
     county_id = request.GET.get('county_id', '')
     year_min = request.GET.get('year_min', '')
     year_max = request.GET.get('year_max', '')
-    license_type_id = request.GET.get('license_type_id', '')
     era = request.GET.get('era', '')
     owner_search = request.GET.get('owner', '').strip()
     sort = request.GET.get('sort', 'newest')
@@ -198,8 +198,10 @@ def browse_collections(request):
             qs = qs.filter(license_year__lte=int(year_max))
         except ValueError:
             pass
-    if license_type_id and license_type_id.isdigit():
-        qs = qs.filter(license_types__id=license_type_id)
+    for cat in FORM_LICENSE_TYPE_CATEGORIES:
+        cat_id = request.GET.get(f'{cat}_id', '')
+        if cat_id and cat_id.isdigit():
+            qs = qs.filter(license_types__id=cat_id)
     if era:
         era_years = _era_to_year_range(era)
         if era_years:
@@ -228,19 +230,41 @@ def browse_collections(request):
     page_obj = paginator.get_page(request.GET.get('page'))
 
     default_state = State.objects.filter(is_primary_default=True).first() or State.objects.order_by('name').first()
-    selected_state_id = state_id
-    selected_state = State.objects.filter(pk=selected_state_id).first() if selected_state_id and selected_state_id.isdigit() else default_state
+    if 'state_id' in request.GET:
+        selected_state = State.objects.filter(pk=state_id).first() if state_id and state_id.isdigit() else None
+    else:
+        selected_state = default_state
     counties = GeographicUnit.objects.filter(state=selected_state).order_by('sort_order', 'name') if selected_state else GeographicUnit.objects.none()
-    license_types = LicenseType.objects.filter(is_system_value=True).order_by('category', 'name')
     states = State.objects.order_by('-is_primary_default', 'name')
+
+    category_labels = dict(LICENSE_TYPE_CATEGORY_CHOICES)
+    if selected_state:
+        all_types = LicenseType.objects.filter(
+            is_system_value=True,
+        ).filter(
+            Q(state=selected_state) | Q(state__isnull=True) | Q(state__code='FD')
+        ).order_by('category', 'name').distinct()
+        all_types_list = list(all_types)
+    else:
+        all_types_list = []
+    license_type_groups = []
+    for cat in FORM_LICENSE_TYPE_CATEGORIES:
+        types = [lt for lt in all_types_list if lt.category == cat]
+        if types:
+            license_type_groups.append({
+                'category': cat,
+                'label': category_labels.get(cat, cat.replace('_', ' ').title()),
+                'types': types,
+                'filter_key': f'{cat}_id',
+                'selected_id': request.GET.get(f'{cat}_id', ''),
+            })
 
     filters = {
         'search': search,
-        'state_id': state_id or (str(default_state.id) if default_state else ''),
+        'state_id': request.GET.get('state_id', str(default_state.id) if default_state else ''),
         'county_id': county_id,
         'year_min': year_min,
         'year_max': year_max,
-        'license_type_id': license_type_id,
         'era': era,
         'owner': owner_search,
         'sort': sort,
@@ -254,7 +278,7 @@ def browse_collections(request):
         'states': states,
         'selected_state': selected_state,
         'counties': counties,
-        'license_types': license_types,
+        'license_type_groups': license_type_groups,
         'era_choices': ERA_LABEL_CHOICES,
         'filters': filters,
         'query_string': query_params.urlencode(),

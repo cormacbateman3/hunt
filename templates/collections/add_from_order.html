@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load core_tags %}
 
 {% block title %}Add to Collection | KeystoneBid{% endblock %}
 
@@ -66,16 +67,18 @@
             <h2 style="font-size: 1.1rem; margin: 0;">Item Taxonomy</h2>
 
             {% for field_name, other_name, heading in taxonomy_fields %}
+                {% with field=form|bound_field:field_name other_field=form|bound_field:other_name %}
                 <div style="display: grid; gap: 0.45rem;">
-                    <label class="form-label" for="{{ form[field_name].id_for_label }}">{{ heading }}</label>
-                    {{ form[field_name] }}
-                    {{ form[field_name].errors }}
+                    <label class="form-label" for="{{ field.id_for_label }}">{{ heading }}</label>
+                    {{ field }}
+                    {{ field.errors }}
                     <div data-other-wrapper="{{ field_name }}" style="display: none;">
-                        <label class="form-label" for="{{ form[other_name].id_for_label }}">{{ heading }} other</label>
-                        {{ form[other_name] }}
-                        {{ form[other_name].errors }}
+                        <label class="form-label" for="{{ other_field.id_for_label }}">{{ heading }} other</label>
+                        {{ other_field }}
+                        {{ other_field.errors }}
                     </div>
                 </div>
+                {% endwith %}
             {% endfor %}
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
