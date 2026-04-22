@@ -116,8 +116,6 @@ class BaseListingListView(ListView):
         county_id = self.request.GET.get('county_id')
         year_min = self.request.GET.get('year_min')
         year_max = self.request.GET.get('year_max')
-        condition = self.request.GET.get('condition')
-        era = self.request.GET.get('era')
         search = self.request.GET.get('search')
 
         if state_id and state_id.isdigit():
@@ -125,26 +123,27 @@ class BaseListingListView(ListView):
         if county_id and county_id.isdigit():
             queryset = queryset.filter(county_ref_id=county_id)
         for cat in FORM_LICENSE_TYPE_CATEGORIES:
-            cat_id = self.request.GET.get(f'{cat}_id')
-            if cat_id and cat_id.isdigit():
-                queryset = queryset.filter(license_types__id=cat_id)
+            cat_ids = [v for v in self.request.GET.getlist(f'{cat}_id') if v.isdigit()]
+            if cat_ids:
+                queryset = queryset.filter(license_types__id__in=cat_ids)
         if year_min:
             queryset = queryset.filter(license_year__gte=year_min)
         if year_max:
             queryset = queryset.filter(license_year__lte=year_max)
-        if condition:
-            queryset = queryset.filter(condition_grade=condition)
-        if era:
-            # Items whose computed effective_era matches: either year-derived or explicit era_label
-            era_years = _era_to_year_range(era)
-            if era_years:
-                year_from, year_to = era_years
-                queryset = queryset.filter(
-                    Q(license_year__gte=year_from, license_year__lte=year_to)
-                    | Q(license_year__isnull=True, era_label=era)
-                )
-            else:
-                queryset = queryset.filter(era_label=era, license_year__isnull=True)
+        conditions = [v for v in self.request.GET.getlist('condition') if v]
+        if conditions:
+            queryset = queryset.filter(condition_grade__in=conditions)
+        eras = [v for v in self.request.GET.getlist('era') if v]
+        if eras:
+            era_q = Q()
+            for era in eras:
+                era_years = _era_to_year_range(era)
+                if era_years:
+                    year_from, year_to = era_years
+                    era_q |= Q(license_year__gte=year_from, license_year__lte=year_to) | Q(license_year__isnull=True, era_label=era)
+                else:
+                    era_q |= Q(era_label=era, license_year__isnull=True)
+            queryset = queryset.filter(era_q)
         if search:
             queryset = queryset.filter(
                 Q(title__icontains=search)
@@ -190,6 +189,7 @@ class BaseListingListView(ListView):
                     'types': types,
                     'filter_key': f'{cat}_id',
                     'selected_id': self.request.GET.get(f'{cat}_id', ''),
+                    'selected_ids': self.request.GET.getlist(f'{cat}_id'),
                 })
         context['license_type_groups'] = license_type_groups
 
@@ -202,7 +202,9 @@ class BaseListingListView(ListView):
             'year_min': self.request.GET.get('year_min', ''),
             'year_max': self.request.GET.get('year_max', ''),
             'condition': self.request.GET.get('condition', ''),
+            'condition_list': self.request.GET.getlist('condition'),
             'era': self.request.GET.get('era', ''),
+            'era_list': self.request.GET.getlist('era'),
             'search': self.request.GET.get('search', ''),
         }
         context['filters'] = filters
@@ -525,11 +527,15 @@ def listing_create(request):
                 _normalize_listing_image_sort_order(listing)
             else:
                 listing.delete()
-                return render(
-                    request,
-                    'listings/listing_create.html',
-                    {'form': form, 'image_formset': image_formset},
-                )
+                return render(request, 'listings/listing_create.html', {
+                    'form': form,
+                    'image_formset': image_formset,
+                    'taxonomy_fields': TAXONOMY_FIELDS,
+                    'taxonomy_field_names_json': json.dumps([item[0] for item in TAXONOMY_FIELDS]),
+                    'suggestion_form': ReferenceDataSuggestionForm(
+                        initial={'target_model': 'other', 'suggestion_type': 'new_value'}
+                    ),
+                })
 
             if listing.status == 'scheduled':
                 messages.success(request, f'Listing scheduled to go live on {listing.scheduled_at:%b %-d, %Y at %-I:%M %p}.')

@@ -199,19 +199,20 @@ def browse_collections(request):
         except ValueError:
             pass
     for cat in FORM_LICENSE_TYPE_CATEGORIES:
-        cat_id = request.GET.get(f'{cat}_id', '')
-        if cat_id and cat_id.isdigit():
-            qs = qs.filter(license_types__id=cat_id)
-    if era:
-        era_years = _era_to_year_range(era)
-        if era_years:
-            year_from, year_to = era_years
-            qs = qs.filter(
-                Q(license_year__gte=year_from, license_year__lte=year_to)
-                | Q(license_year__isnull=True, era_label=era)
-            )
-        else:
-            qs = qs.filter(era_label=era, license_year__isnull=True)
+        cat_ids = [v for v in request.GET.getlist(f'{cat}_id') if v.isdigit()]
+        if cat_ids:
+            qs = qs.filter(license_types__id__in=cat_ids)
+    eras = [v for v in request.GET.getlist('era') if v]
+    if eras:
+        era_q = Q()
+        for era_val in eras:
+            era_years = _era_to_year_range(era_val)
+            if era_years:
+                year_from, year_to = era_years
+                era_q |= Q(license_year__gte=year_from, license_year__lte=year_to) | Q(license_year__isnull=True, era_label=era_val)
+            else:
+                era_q |= Q(era_label=era_val, license_year__isnull=True)
+        qs = qs.filter(era_q)
     if owner_search:
         qs = qs.filter(
             Q(owner__username__icontains=owner_search)
@@ -257,6 +258,7 @@ def browse_collections(request):
                 'types': types,
                 'filter_key': f'{cat}_id',
                 'selected_id': request.GET.get(f'{cat}_id', ''),
+                'selected_ids': request.GET.getlist(f'{cat}_id'),
             })
 
     filters = {
@@ -266,6 +268,7 @@ def browse_collections(request):
         'year_min': year_min,
         'year_max': year_max,
         'era': era,
+        'era_list': request.GET.getlist('era'),
         'owner': owner_search,
         'sort': sort,
     }

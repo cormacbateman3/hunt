@@ -5,6 +5,108 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/pages/listing.css' %}">
+<style>
+/* ── Image upload zone ── */
+.img-zone { margin-bottom: 0.5rem; }
+
+.img-drop-area {
+    border: 2px dashed var(--color-border, #d4cfc4);
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+    transition: border-color 0.15s, background 0.15s;
+    cursor: pointer;
+    background: #fafaf7;
+}
+
+.img-drop-area.drag-over {
+    border-color: var(--color-forest-green);
+    background: rgba(26,92,13,0.04);
+}
+
+.img-empty-state { padding: 0.5rem 0; }
+
+.img-empty-icon {
+    font-size: 2rem;
+    color: var(--color-muted);
+    margin-bottom: 0.35rem;
+}
+
+.img-empty-state p { font-size: 0.9rem; color: var(--color-muted); margin: 0.2rem 0; }
+
+.img-pick-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--color-forest-green); font-weight: 600; font-size: 0.9rem;
+    text-decoration: underline; padding: 0;
+}
+
+.img-pick-btn:hover { color: #0f3a06; }
+
+.img-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 0.6rem;
+    margin-top: 0.7rem;
+}
+
+.img-thumb {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid var(--color-border, #d4cfc4);
+    aspect-ratio: 1;
+    cursor: grab;
+    background: #f0ede6;
+}
+
+.img-thumb:first-child { border-color: var(--color-forest-green); }
+
+.img-thumb img {
+    width: 100%; height: 100%;
+    object-fit: cover; display: block;
+}
+
+.img-thumb.drag-over { border-color: var(--color-aged-amber); opacity: 0.75; }
+.img-thumb.dragging  { opacity: 0.4; }
+
+.img-featured-badge {
+    position: absolute; top: 4px; left: 4px;
+    background: var(--color-forest-green); color: #fff;
+    font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.04em; padding: 2px 5px; border-radius: 4px;
+    pointer-events: none;
+}
+
+.img-remove-btn {
+    position: absolute; top: 4px; right: 4px;
+    background: rgba(0,0,0,0.55); color: #fff;
+    border: none; border-radius: 50%;
+    width: 22px; height: 22px;
+    font-size: 0.85rem; line-height: 1;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.15s;
+    padding: 0;
+}
+
+.img-thumb:hover .img-remove-btn,
+.img-thumb:focus-within .img-remove-btn { opacity: 1; }
+
+/* Always visible on touch devices */
+@media (pointer: coarse) {
+    .img-remove-btn { opacity: 0.85; }
+}
+
+.img-add-more {
+    border-radius: 8px;
+    border: 2px dashed var(--color-border, #d4cfc4);
+    aspect-ratio: 1;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; background: #fafaf7;
+    color: var(--color-muted); font-size: 1.5rem;
+    transition: border-color 0.1s;
+}
+.img-add-more:hover { border-color: var(--color-forest-green); color: var(--color-forest-green); }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -14,14 +116,14 @@
         Pennsylvania remains the default. Switch states only when needed and the form will refresh its reference-data options in place.
     </p>
 
-    <form method="post" enctype="multipart/form-data">
+    <form method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
         {% if form.non_field_errors %}
             <div class="alert alert-error" style="margin-bottom: 1rem;">{{ form.non_field_errors }}</div>
         {% endif %}
 
-        <!-- Section 1: Required fields -->
         <div style="display: grid; gap: 0.85rem;">
+            <!-- 1. List from collection (optional) -->
             <div>
                 <label class="form-label" for="{{ form.source_collection_item.id_for_label }}">List from collection (optional)</label>
                 {{ form.source_collection_item }}
@@ -30,6 +132,8 @@
                 {% endif %}
                 {{ form.source_collection_item.errors }}
             </div>
+
+            <!-- 2. Listing type + state -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
                 <div>
                     <label class="form-label" for="{{ form.listing_type.id_for_label }}">Listing type</label>
@@ -42,16 +146,54 @@
                     {{ form.state.errors }}
                 </div>
             </div>
+
+            <!-- 3. Image upload zone -->
+            <div>
+                <label class="form-label" style="margin-bottom: 0.35rem; display: block;">
+                    Images <span style="font-weight: 400; color: var(--color-muted);">(up to 5 — first becomes the featured photo)</span>
+                </label>
+                <div class="img-zone" id="img-zone">
+                    <div class="img-drop-area" id="img-drop">
+                        <div class="img-empty-state" id="img-empty">
+                            <div class="img-empty-icon">&#128444;</div>
+                            <p>Drag &amp; drop up to 5 images here</p>
+                            <p>or <button type="button" class="img-pick-btn" id="img-pick-btn">choose files from device</button></p>
+                            <p style="font-size: 0.8rem; color: var(--color-muted);">JPG, PNG, WEBP accepted</p>
+                        </div>
+                        <div class="img-grid" id="img-grid" style="display:none;"></div>
+                    </div>
+                    <!-- Hidden native inputs: featured_image + image formset -->
+                    <div id="img-native" style="display:none;">
+                        {{ form.featured_image }}
+                        {{ image_formset.management_form }}
+                        {% for img_form in image_formset %}
+                            {{ img_form.image }}
+                            {{ img_form.sort_order }}
+                            {{ img_form.id }}
+                            {% if img_form.DELETE %}{{ img_form.DELETE }}{% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                {% if form.featured_image.errors %}
+                    <div style="color: var(--color-error); font-size: 0.85rem; margin-top: 0.2rem;">{{ form.featured_image.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- 4. Title -->
             <div>
                 <label class="form-label" for="{{ form.title.id_for_label }}">Title</label>
                 {{ form.title }}
                 {{ form.title.errors }}
             </div>
+
+            <!-- 5. Description -->
             <div>
                 <label class="form-label" for="{{ form.description.id_for_label }}">Description / condition notes</label>
                 {{ form.description }}
                 {{ form.description.errors }}
             </div>
+
+            <!-- 6. Year + Era -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
                 <div>
                     <label class="form-label" for="{{ form.license_year.id_for_label }}">License year</label>
@@ -67,6 +209,8 @@
                     {{ form.era_label.errors }}
                 </div>
             </div>
+
+            <!-- 7. County + Condition -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
                 <div>
                     <label class="form-label" id="county-ref-label" for="{{ form.county_ref.id_for_label }}">{{ form.county_ref.label }}</label>
@@ -80,6 +224,7 @@
                 </div>
             </div>
 
+            <!-- 8. Item Taxonomy -->
             <hr style="margin: 0.5rem 0; border: 0; border-top: 1px solid var(--color-border);">
             <h2 style="font-size: 1.1rem; margin: 0;">Item Taxonomy</h2>
             <p style="color: var(--color-muted); margin: 0;">Fill at least one section to identify what the item is.</p>
@@ -123,7 +268,7 @@
             </div>
         </div>
 
-        <!-- Section 2: Optional fields (collapsed) -->
+        <!-- Optional details -->
         <details style="margin-top: 1.25rem;" {% if form.serial_number.value %}open{% endif %}>
             <summary style="cursor: pointer; font-size: 1.05rem; font-weight: 600; margin-bottom: 0.5rem;">
                 Optional details
@@ -138,7 +283,7 @@
             </div>
         </details>
 
-        <!-- Section 3: Listing details (pricing / settings) -->
+        <!-- Listing details (pricing / settings) -->
         <div style="margin-top: 1.25rem; display: grid; gap: 0.85rem;">
             <hr style="margin: 0; border: 0; border-top: 1px solid var(--color-border);">
             <h2 style="font-size: 1.1rem; margin: 0;">Listing details</h2>
@@ -208,12 +353,6 @@
                     {{ form.local_pickup_location.errors }}
                 </div>
             </div>
-
-            <div>
-                <label class="form-label" for="{{ form.featured_image.id_for_label }}">Featured image</label>
-                {{ form.featured_image }}
-                {{ form.featured_image.errors }}
-            </div>
         </div>
 
         <details style="margin-top: 1rem;">
@@ -224,39 +363,6 @@
         </details>
 
         <hr style="margin: 1.2rem 0; border: 0; border-top: 1px solid var(--color-border);">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.75rem;">Additional images</h2>
-        {{ image_formset.management_form }}
-        {% if image_formset.non_form_errors %}
-            <div class="alert alert-error" style="margin-bottom: 0.8rem;">
-                {{ image_formset.non_form_errors }}
-            </div>
-        {% endif %}
-        <div style="display: grid; gap: 0.75rem;">
-            {% for image_form in image_formset %}
-                <div style="display: grid; grid-template-columns: 1fr auto; gap: 0.75rem; align-items: center;" data-image-row draggable="true">
-                    <div>
-                        <label class="form-label" for="{{ image_form.image.id_for_label }}">
-                            Additional image {{ forloop.counter }}
-                        </label>
-                        {{ image_form.image }}
-                        {{ image_form.image.errors }}
-                        {{ image_form.sort_order }}
-                        {{ image_form.id }}
-                    </div>
-                    <div style="display: grid; gap: 0.35rem;">
-                        <button type="button" class="btn-secondary" data-move-up>Move up</button>
-                        <button type="button" class="btn-secondary" data-move-down>Move down</button>
-                    </div>
-                    {% if image_form.DELETE %}
-                        <label class="form-label" style="margin: 0;">
-                            Remove
-                            {{ image_form.DELETE }}
-                        </label>
-                    {% endif %}
-                </div>
-            {% endfor %}
-        </div>
-
         <div style="margin-top: 1.25rem;">
             <button type="submit" class="btn-primary">Create listing</button>
             <a href="{% url 'listings:auction_house' %}" style="margin-left: 0.75rem; color: var(--color-aged-amber);">
@@ -270,12 +376,12 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    /* ── Listing type panels ── */
     const listingType = document.getElementById('{{ form.listing_type.id_for_label }}');
     const stateSelect = document.getElementById('{{ form.state.id_for_label }}');
     const geoSelect = document.getElementById('{{ form.county_ref.id_for_label }}');
     const geoLabel = document.getElementById('county-ref-label');
     const licenseYearInput = document.getElementById('{{ form.license_year.id_for_label }}');
-    const eraLabelField = document.getElementById('era-label-field');
     const eraRequired = document.getElementById('era-label-required');
     const taxonomyFields = {{ taxonomy_field_names_json|safe }};
 
@@ -310,7 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!field || !wrapper) return;
         let show = false;
         if (field.multiple) {
-            show = Array.from(field.selectedOptions).some((option) => option.value === 'other' || option.text.trim().toLowerCase() === 'other');
+            show = Array.from(field.selectedOptions).some(o => o.value === 'other' || o.text.trim().toLowerCase() === 'other');
         } else {
             const selected = field.options[field.selectedIndex];
             show = selected && selected.text.trim().toLowerCase() === 'other';
@@ -365,40 +471,147 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     loadReferenceData();
 
-    const rows = () => Array.from(document.querySelectorAll('[data-image-row]'));
-    const applySort = () => {
-        rows().forEach((row, index) => {
-            const input = row.querySelector('input[name$="-sort_order"]');
-            if (input) input.value = index;
-        });
-    };
-    document.querySelectorAll('[data-move-up]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-            const row = btn.closest('[data-image-row]');
-            const prev = row.previousElementSibling;
-            if (prev) row.parentNode.insertBefore(row, prev);
-            applySort();
-        });
+    /* ── Image upload zone ── */
+    const SLOT_IDS = [
+        'id_featured_image',
+        'id_images-0-image',
+        'id_images-1-image',
+        'id_images-2-image',
+        'id_images-3-image',
+    ];
+    const MAX_IMAGES = 5;
+    let staged = []; // {file, previewUrl}
+    let dragIdx = null;
+
+    const dropArea = document.getElementById('img-drop');
+    const emptyState = document.getElementById('img-empty');
+    const grid = document.getElementById('img-grid');
+    const pickBtn = document.getElementById('img-pick-btn');
+
+    // Hidden file picker (multiple)
+    const filePicker = document.createElement('input');
+    filePicker.type = 'file';
+    filePicker.accept = 'image/*';
+    filePicker.multiple = true;
+
+    pickBtn.addEventListener('click', () => filePicker.click());
+    filePicker.addEventListener('change', () => {
+        addFiles(Array.from(filePicker.files));
+        filePicker.value = '';
     });
-    document.querySelectorAll('[data-move-down]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-            const row = btn.closest('[data-image-row]');
-            const next = row.nextElementSibling;
-            if (next) row.parentNode.insertBefore(next, row);
-            applySort();
-        });
+
+    dropArea.addEventListener('dragover', (e) => { e.preventDefault(); dropArea.classList.add('drag-over'); });
+    dropArea.addEventListener('dragleave', () => dropArea.classList.remove('drag-over'));
+    dropArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropArea.classList.remove('drag-over');
+        const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+        addFiles(files);
     });
-    let dragged = null;
-    rows().forEach((row) => {
-        row.addEventListener('dragstart', () => { dragged = row; });
-        row.addEventListener('dragover', (event) => event.preventDefault());
-        row.addEventListener('drop', () => {
-            if (!dragged || dragged === row) return;
-            row.parentNode.insertBefore(dragged, row);
-            applySort();
+
+    function addFiles(files) {
+        const remaining = MAX_IMAGES - staged.length;
+        files.slice(0, remaining).forEach(file => {
+            staged.push({ file, previewUrl: URL.createObjectURL(file) });
         });
+        render();
+    }
+
+    function assignToInputs() {
+        SLOT_IDS.forEach((id, i) => {
+            const input = document.getElementById(id);
+            if (!input) return;
+            const dt = new DataTransfer();
+            if (staged[i]) dt.items.add(staged[i].file);
+            input.files = dt.files;
+        });
+        for (let i = 0; i < 4; i++) {
+            const sortInput = document.getElementById(`id_images-${i}-sort_order`);
+            if (sortInput) sortInput.value = i;
+        }
+    }
+
+    function render() {
+        grid.innerHTML = '';
+        staged.forEach((item, idx) => {
+            const thumb = document.createElement('div');
+            thumb.className = 'img-thumb';
+            thumb.draggable = true;
+            thumb.dataset.idx = idx;
+
+            const img = document.createElement('img');
+            img.src = item.previewUrl;
+            img.alt = `Image ${idx + 1}`;
+            thumb.appendChild(img);
+
+            if (idx === 0) {
+                const badge = document.createElement('span');
+                badge.className = 'img-featured-badge';
+                badge.textContent = 'Featured';
+                thumb.appendChild(badge);
+            }
+
+            const rmBtn = document.createElement('button');
+            rmBtn.type = 'button';
+            rmBtn.className = 'img-remove-btn';
+            rmBtn.title = 'Remove image';
+            rmBtn.textContent = '✕';
+            rmBtn.dataset.idx = idx;
+            thumb.appendChild(rmBtn);
+
+            // Thumb drag events
+            thumb.addEventListener('dragstart', () => { dragIdx = idx; thumb.classList.add('dragging'); });
+            thumb.addEventListener('dragend', () => { thumb.classList.remove('dragging'); dragIdx = null; });
+            thumb.addEventListener('dragover', (e) => { e.preventDefault(); thumb.classList.add('drag-over'); });
+            thumb.addEventListener('dragleave', () => thumb.classList.remove('drag-over'));
+            thumb.addEventListener('drop', (e) => {
+                e.preventDefault();
+                thumb.classList.remove('drag-over');
+                if (dragIdx === null || dragIdx === idx) return;
+                const [moved] = staged.splice(dragIdx, 1);
+                staged.splice(idx, 0, moved);
+                render();
+            });
+
+            grid.appendChild(thumb);
+        });
+
+        // "Add more" slot
+        if (staged.length < MAX_IMAGES) {
+            const addMore = document.createElement('div');
+            addMore.className = 'img-add-more';
+            addMore.title = 'Add more images';
+            addMore.textContent = '+';
+            addMore.addEventListener('click', () => filePicker.click());
+            grid.appendChild(addMore);
+        }
+
+        const hasImages = staged.length > 0;
+        grid.style.display = hasImages ? 'grid' : 'none';
+        emptyState.style.display = hasImages ? 'none' : '';
+        assignToInputs();
+    }
+
+    // Remove button delegation
+    grid.addEventListener('click', (e) => {
+        const btn = e.target.closest('.img-remove-btn');
+        if (!btn) return;
+        const idx = parseInt(btn.dataset.idx, 10);
+        if (!confirm('Remove this image?')) return;
+        URL.revokeObjectURL(staged[idx].previewUrl);
+        staged.splice(idx, 1);
+        render();
     });
-    applySort();
+
+    // Click on drop area (not on a thumb) opens picker
+    dropArea.addEventListener('click', (e) => {
+        if (e.target === dropArea || e.target === grid || e.target === emptyState) return;
+        if (!e.target.closest('.img-thumb') && !e.target.closest('.img-add-more') && !e.target.closest('.img-pick-btn')) {
+            filePicker.click();
+        }
+    });
+
+    render(); // initial call
 });
 </script>
 {% endblock %}

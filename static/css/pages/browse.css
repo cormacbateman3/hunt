@@ -25,40 +25,40 @@
     margin: 0;
 }
 
-/* Horizontal filter bar */
+/* ── Horizontal filter bar ──────────────────────────────────────── */
 .browse-filter-bar {
-    padding: 0.75rem 1rem;
+    padding: 0.6rem 1rem;
+    margin-bottom: 1.25rem;
+}
+
+/* Scroll wrapper — scrolls horizontally, doesn't clip dropdown panels */
+.filter-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px; /* keeps scrollbar off content */
 }
 
 .filter-row {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem 0.65rem;
+    flex-wrap: nowrap;
+    gap: 0.45rem 0.6rem;
     align-items: flex-end;
+    min-width: max-content;
 }
 
 .filter-item {
     display: flex;
     flex-direction: column;
     gap: 0.15rem;
-    flex: 1 1 120px;
-    min-width: 100px;
-    max-width: 190px;
+    flex: 0 0 auto;
+    width: 130px;
 }
 
-.filter-item--wide {
-    flex: 2 1 200px;
-    max-width: 280px;
-}
-
-.filter-item--narrow {
-    flex: 0 1 85px;
-    min-width: 72px;
-    max-width: 105px;
-}
+.filter-item--wide  { width: 180px; }
+.filter-item--narrow { width: 80px; }
 
 .filter-item > .form-label {
-    font-size: 0.7rem;
+    font-size: 0.68rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -69,8 +69,9 @@
 
 .browse-filter-bar .form-select,
 .browse-filter-bar .form-input {
-    padding: 0.35rem 0.5rem;
-    font-size: 0.85rem;
+    padding: 0.32rem 0.45rem;
+    font-size: 0.82rem;
+    width: 100%;
 }
 
 .filter-actions {
@@ -78,38 +79,89 @@
     gap: 0.4rem;
     align-items: flex-end;
     flex-shrink: 0;
+    padding-left: 0.25rem;
 }
 
 .filter-actions .btn-primary,
 .filter-actions .btn-secondary {
     white-space: nowrap;
-    padding: 0.38rem 0.9rem;
-    font-size: 0.88rem;
+    padding: 0.35rem 0.85rem;
+    font-size: 0.85rem;
 }
 
-@media (max-width: 900px) {
-    .filter-row {
-        gap: 0.4rem 0.5rem;
-    }
-
-    .filter-item,
-    .filter-item--narrow {
-        flex: 1 1 calc(50% - 0.5rem);
-        max-width: none;
-    }
-
-    .filter-item--wide {
-        flex: 1 1 100%;
-        max-width: none;
-    }
-
-    .filter-actions {
-        width: 100%;
-    }
-
-    .filter-actions .btn-primary,
-    .filter-actions .btn-secondary {
-        flex: 1;
-        text-align: center;
-    }
+/* ── Custom multi-select dropdown ──────────────────────────────── */
+.ms-trigger {
+    width: 100%;
+    text-align: left;
+    padding: 0.32rem 0.45rem;
+    font-size: 0.82rem;
+    background: #fff;
+    border: 1px solid var(--color-border, #d4cfc4);
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--color-text, #2c2a26);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.4;
 }
+
+.ms-trigger:focus {
+    outline: 2px solid var(--color-forest-green);
+    outline-offset: 1px;
+}
+
+.ms-trigger[data-active="true"] {
+    border-color: var(--color-forest-green);
+    font-weight: 600;
+}
+
+/* Panel is appended to body at runtime, absolute positioned */
+.ms-panel {
+    position: absolute;
+    z-index: 500;
+    background: #fff;
+    border: 1px solid var(--color-border, #d4cfc4);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    padding: 0.4rem 0;
+    min-width: 160px;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.ms-option {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.83rem;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.ms-option:hover {
+    background: var(--color-surface, #f7f5f0);
+}
+
+.ms-option input[type="checkbox"] {
+    flex-shrink: 0;
+    cursor: pointer;
+    accent-color: var(--color-forest-green);
+}
+
+.ms-clear {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.3rem 0.75rem;
+    font-size: 0.8rem;
+    color: var(--color-muted);
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-top: 1px solid var(--color-border, #d4cfc4);
+    margin-top: 0.25rem;
+}
+
+.ms-clear:hover { color: var(--color-error, #b91c1c); }

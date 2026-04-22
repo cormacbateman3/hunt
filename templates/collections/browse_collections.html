@@ -15,74 +15,76 @@
 </div>
 
 <div class="card browse-filter-bar">
-    <form method="get" class="filter-row">
-        <div class="filter-item filter-item--wide">
-            <label class="form-label" for="search">Search</label>
-            <input class="form-input" id="search" name="search" value="{{ filters.search }}" placeholder="Title, description…">
+    <form method="get" id="browse-filter-form">
+    <div class="filter-scroll">
+        <div class="filter-row">
+            <div class="filter-item filter-item--wide">
+                <label class="form-label" for="search">Search</label>
+                <input class="form-input" id="search" name="search" value="{{ filters.search }}" placeholder="Title, description…">
+            </div>
+            <div class="filter-item">
+                <label class="form-label" for="owner">Collector</label>
+                <input class="form-input" id="owner" name="owner" value="{{ filters.owner }}" placeholder="Username">
+            </div>
+            <div class="filter-item">
+                <label class="form-label" for="state_id">State</label>
+                <select class="form-select" id="state_id" name="state_id">
+                    <option value="" {% if not filters.state_id %}selected{% endif %}>Any</option>
+                    {% for state in states %}
+                        <option value="{{ state.id }}" {% if filters.state_id == state.id|stringformat:'s' %}selected{% endif %}>{{ state.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-item">
+                <label class="form-label" for="county_id">{{ selected_state.issuance_unit_label|default:"County" }}</label>
+                <select class="form-select" id="county_id" name="county_id">
+                    <option value="">Any</option>
+                    {% for county in counties %}
+                        <option value="{{ county.id }}" {% if filters.county_id == county.id|stringformat:'s' %}selected{% endif %}>{{ county.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% for group in license_type_groups %}
+            <div class="filter-item">
+                <label class="form-label">{{ group.label }}</label>
+                <select class="form-select" id="{{ group.filter_key }}" name="{{ group.filter_key }}" multiple data-ms>
+                    {% for lt in group.types %}
+                        <option value="{{ lt.id }}" {% if lt.id|stringformat:'s' in group.selected_ids %}selected{% endif %}>{{ lt.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endfor %}
+            <div class="filter-item">
+                <label class="form-label">Era</label>
+                <select class="form-select" id="era" name="era" multiple data-ms>
+                    {% for value, label in era_choices %}
+                        <option value="{{ value }}" {% if value in filters.era_list %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="filter-item filter-item--narrow">
+                <label class="form-label" for="year_min">Year from</label>
+                <input class="form-input" id="year_min" type="number" name="year_min" value="{{ filters.year_min }}" placeholder="1930">
+            </div>
+            <div class="filter-item filter-item--narrow">
+                <label class="form-label" for="year_max">Year to</label>
+                <input class="form-input" id="year_max" type="number" name="year_max" value="{{ filters.year_max }}" placeholder="2000">
+            </div>
+            <div class="filter-item">
+                <label class="form-label" for="sort">Sort</label>
+                <select class="form-select" id="sort" name="sort">
+                    <option value="newest"   {% if filters.sort == 'newest' %}selected{% endif %}>Newest</option>
+                    <option value="year_desc" {% if filters.sort == 'year_desc' %}selected{% endif %}>Year ↓</option>
+                    <option value="year_asc"  {% if filters.sort == 'year_asc' %}selected{% endif %}>Year ↑</option>
+                    <option value="owner_az"  {% if filters.sort == 'owner_az' %}selected{% endif %}>Collector A–Z</option>
+                </select>
+            </div>
+            <div class="filter-actions">
+                <button class="btn-primary" type="submit">Apply</button>
+                <a class="btn-secondary" href="{% url 'collections:browse' %}">Reset</a>
+            </div>
         </div>
-        <div class="filter-item">
-            <label class="form-label" for="owner">Collector</label>
-            <input class="form-input" id="owner" name="owner" value="{{ filters.owner }}" placeholder="Username">
-        </div>
-        <div class="filter-item">
-            <label class="form-label" for="state_id">State</label>
-            <select class="form-select" id="state_id" name="state_id">
-                <option value="" {% if not filters.state_id %}selected{% endif %}>Any</option>
-                {% for state in states %}
-                    <option value="{{ state.id }}" {% if filters.state_id == state.id|stringformat:'s' %}selected{% endif %}>{{ state.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="filter-item">
-            <label class="form-label" for="county_id">{{ selected_state.issuance_unit_label|default:"County" }}</label>
-            <select class="form-select" id="county_id" name="county_id">
-                <option value="">Any</option>
-                {% for county in counties %}
-                    <option value="{{ county.id }}" {% if filters.county_id == county.id|stringformat:'s' %}selected{% endif %}>{{ county.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        {% for group in license_type_groups %}
-        <div class="filter-item">
-            <label class="form-label" for="{{ group.filter_key }}">{{ group.label }}</label>
-            <select class="form-select" id="{{ group.filter_key }}" name="{{ group.filter_key }}">
-                <option value="">Any</option>
-                {% for lt in group.types %}
-                    <option value="{{ lt.id }}" {% if group.selected_id == lt.id|stringformat:'s' %}selected{% endif %}>{{ lt.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        {% endfor %}
-        <div class="filter-item">
-            <label class="form-label" for="era">Era</label>
-            <select class="form-select" id="era" name="era">
-                <option value="">Any</option>
-                {% for value, label in era_choices %}
-                    <option value="{{ value }}" {% if filters.era == value %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="filter-item filter-item--narrow">
-            <label class="form-label" for="year_min">Year from</label>
-            <input class="form-input" id="year_min" type="number" name="year_min" value="{{ filters.year_min }}" placeholder="1930">
-        </div>
-        <div class="filter-item filter-item--narrow">
-            <label class="form-label" for="year_max">Year to</label>
-            <input class="form-input" id="year_max" type="number" name="year_max" value="{{ filters.year_max }}" placeholder="2000">
-        </div>
-        <div class="filter-item">
-            <label class="form-label" for="sort">Sort</label>
-            <select class="form-select" id="sort" name="sort">
-                <option value="newest" {% if filters.sort == 'newest' %}selected{% endif %}>Newest</option>
-                <option value="year_desc" {% if filters.sort == 'year_desc' %}selected{% endif %}>Year ↓</option>
-                <option value="year_asc" {% if filters.sort == 'year_asc' %}selected{% endif %}>Year ↑</option>
-                <option value="owner_az" {% if filters.sort == 'owner_az' %}selected{% endif %}>Collector A–Z</option>
-            </select>
-        </div>
-        <div class="filter-actions">
-            <button class="btn-primary" type="submit">Apply</button>
-            <a class="btn-secondary" href="{% url 'collections:browse' %}">Reset</a>
-        </div>
+    </div>
     </form>
 </div>
 
@@ -177,7 +179,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         LT_CATS.forEach(cat => {
             const sel = document.getElementById(cat + '_id');
-            if (sel) sel.innerHTML = '<option value="">Any</option>';
+            if (sel) {
+                sel.innerHTML = '';
+                if (sel._msTrigger) { sel._msTrigger.textContent = 'Any'; sel._msTrigger.dataset.active = 'false'; }
+            }
         });
 
         if (!stateId) return;
@@ -206,8 +211,88 @@ document.addEventListener('DOMContentLoaded', () => {
                 opt.textContent = lt.name;
                 sel.appendChild(opt);
             });
+            if (sel._msRebuild) sel._msRebuild();
         });
     });
+
+    /* ── Custom multi-select ── */
+    let openPanel = null;
+
+    function closeAll() {
+        if (openPanel) { openPanel.remove(); openPanel = null; }
+    }
+
+    document.addEventListener('click', closeAll);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAll(); });
+
+    function buildMultiSelect(selectEl) {
+        const wrapper = selectEl.parentElement;
+        selectEl.style.display = 'none';
+        const trigger = document.createElement('button');
+        trigger.type = 'button';
+        trigger.className = 'ms-trigger';
+        selectEl._msTrigger = trigger;
+        wrapper.appendChild(trigger);
+
+        function updateLabel() {
+            const checked = Array.from(selectEl.selectedOptions).filter(o => o.value);
+            trigger.textContent = checked.length === 0 ? 'Any' : `${checked.length} selected`;
+            trigger.dataset.active = checked.length > 0 ? 'true' : 'false';
+        }
+        updateLabel();
+
+        function buildPanel() {
+            const panel = document.createElement('div');
+            panel.className = 'ms-panel';
+            Array.from(selectEl.options).forEach(opt => {
+                if (!opt.value) return;
+                const lbl = document.createElement('label');
+                lbl.className = 'ms-option';
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.value = opt.value;
+                cb.checked = opt.selected;
+                cb.addEventListener('change', () => { opt.selected = cb.checked; updateLabel(); });
+                lbl.appendChild(cb);
+                lbl.appendChild(document.createTextNode(' ' + opt.text));
+                panel.appendChild(lbl);
+            });
+            const clearBtn = document.createElement('button');
+            clearBtn.type = 'button';
+            clearBtn.className = 'ms-clear';
+            clearBtn.textContent = 'Clear selection';
+            clearBtn.addEventListener('click', e => {
+                e.stopPropagation();
+                Array.from(selectEl.options).forEach(o => { o.selected = false; });
+                updateLabel();
+                closeAll();
+            });
+            panel.appendChild(clearBtn);
+            panel.addEventListener('click', e => e.stopPropagation());
+            return panel;
+        }
+
+        selectEl._msRebuild = () => {
+            if (openPanel && openPanel._owner === selectEl) { openPanel.remove(); openPanel = null; }
+            updateLabel();
+        };
+
+        trigger.addEventListener('click', e => {
+            e.stopPropagation();
+            if (openPanel && openPanel._owner === selectEl) { closeAll(); return; }
+            closeAll();
+            const panel = buildPanel();
+            panel._owner = selectEl;
+            document.body.appendChild(panel);
+            const rect = trigger.getBoundingClientRect();
+            panel.style.top  = (rect.bottom + window.scrollY + 2) + 'px';
+            panel.style.left = (rect.left + window.scrollX) + 'px';
+            panel.style.minWidth = rect.width + 'px';
+            openPanel = panel;
+        });
+    }
+
+    document.querySelectorAll('select[data-ms]').forEach(buildMultiSelect);
 });
 </script>
 {% endblock %}
