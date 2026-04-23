@@ -1,4 +1,4 @@
-# KeystoneBid
+# KeystoneBidgit status
 
 Pennsylvania antique hunting license marketplace built with Django.
 
