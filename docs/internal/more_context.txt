@@ -1,0 +1,33 @@
+All doc updates are in data_model_img_prefill_plan.md: research assignments R1–R6 at the top with exact CSV structures, a "Data model structure" section with the diagram below, a "Maintenance workflow" section, and a new T11 governance task. Now your four questions:
+
+1. The structure, in fact/dimension terms. Your item (Listing/CollectionItem) is the fact row — grain: one row = one physical artifact. The part breaking your visualization is that LicenseType is one physical table holding six logical dimensions, partitioned by its category column and reached through a single M2M bridge instead of six FK columns:
+
+
+REFERENCE (dimension) SIDE                              ITEM (fact) SIDE
+──────────────────────────                              ────────────────
+State ──1:N──> GeographicUnit                           Listing / CollectionItem
+  │            (County/GMU/… + one                      grain: 1 row = 1 physical artifact
+  │             'Statewide' row per state)                     │
+  │                     ▲                                      │
+  │                     └────────── FK county_ref ─────────────┤
+  ├──────────────────────────────── FK state ──────────────────┤
+  │                                                            │
+  └──1:N──> LicenseType  <──────── M2M license_types ──────────┤
+            one table = 6 logical dimensions                   │
+            split by `category`:                               │  inline (degenerate) dims:
+              residency / holder_eligibility /                 │    license_year, era_label, shape,
+              activity_scope / duration /                      │    colors, condition_grade,
+              addon_type (multi) / material                    │    serial_number, resident_status
+            + T3/T4 facets on addon rows:                      │  NEW: item_kind, addons_attached
+              species, method, instrument, years               │
+Your "lowest level builds up" instinct only truly applies to geography (State → Unit). The license-type dimensions are deliberately flat, state-scoped value lists — the state FK is scoping, not a hierarchy level. So yes, your read is right: state is the only hard dynamic today; item_kind adds the second structural axis, and year ranges add a soft third.
+
+2. Dependencies are soft on purpose — and your non-resident example is the proof. The intuitive rule "non-resident → no county, statewide" is actually wrong for PA: nonresident artifacts print "OUT-OF-STATE Co. 68" — they carry a unit. That's why the model treats dimensions as independent descriptors of what's printed on the artifact rather than a constrained catalog of legal products: sellers tag what they can read off a 60-year-old item, and hard combinatorial rules would block legitimate oddities. The doc now has a table of every cross-dimension dependency and whether it's hard (state scoping, unit-belongs-to-state, year floor) or soft (year↔addon plausibility, nonresident hints, prefill inferences). One more thing worth knowing: the product grain you're missing does exist — each raw license_classes.csv row is a product (Resident × Hunting × Annual = "PA Resident Hunting License"). The cleaning script explodes those combos and throws the product row away — same harm as the facet flattening. We shouldn't build a LicenseProduct table now, but that file stays authoritative so a future product dimension costs nothing to derive.
+
+3. Lot — you're right, and that's already the plan. "Lot is a feature of the listing, not the license" is exactly decision 1 in the doc (now marked confirmed): 10.15's inventory_format on Listing owns it, with contents in ListingLotItem. Your dependency instinct is also the reason: when lot is selected, the single-artifact fields collapse because the listing isn't describing one artifact anymore — the per-item dimensions belong to the lot's contents, not the listing. That collapse logic lives in the listing form (10.15), never in the item taxonomy.
+
+4. states.csv years — correct reading. min_license_year is the state-level artifact floor ("earliest known license year for this state," already enforced in form validation), and licensing_start_year is when licensing legally began (context only). Neither says anything about a specific product — that's precisely the level T4 adds: LicenseType.first_year/last_year. So time becomes a clean two-level hierarchy matching your instinct: state floor → product span → the item's actual year.
+
+On maintenance/governance — agreed it's a dev workaround, and the doc now has a two-phase plan (plus T11). Phase A ships with this work: ref_data/ is the only hand-edited layer; seeders stop clobbering (create-missing-only + drift report by default, --overwrite for dev resets — without this, the admin year/facet edits you've started making get silently erased on the next seed); a ReferenceDataSuggestion admin action "Approve → create/update LicenseType" (the missing back half of your Filter Cleanliness Rule); and a "Merge into…" admin action for dupes. Colors/shapes stay code constants in constants.py as the single source (10.8 already extends them in code) — the duplicate lists come out of the cleaning script. Phase B at 10.18 inverts the flow: a manage.py export_reference_data command writes DB → CSV so admin edits get versioned in git, and from beta onward the DB is the system of record with CSVs as bootstrap/backup only.
+
+The research assignments are ordered by priority: R1 (county numbers + Co. 68, ~30 min, do first), R2 (PA historical rows — the single highest-leverage item, with five pre-drafted CSV rows where you just replace the TBDs), R3 (year ranges, floors matter most), then R4/R5, with R6 (gold labels) parallel in the prefill workstream.

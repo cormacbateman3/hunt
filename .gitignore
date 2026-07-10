@@ -34,6 +34,7 @@ db.sqlite3-journal
 # Environment
 .env
 .venv
+.venv-1
 env/
 venv/
 ENV/
@@ -68,3 +69,8 @@ logs/
 
 # OS
 Thumbs.db
+
+# Other
+claude.md
+#docs/internal/
+#utilities/references/

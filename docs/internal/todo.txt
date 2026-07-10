@@ -1,0 +1,143 @@
+#TODO
+
+I'm realizing that trades don't need their own browse page and that trades should be eligible in The General Store (but still not available in The Auction House). So basically what we can do instead is in The General Store there are 3 possible options for items - buyers can Offer Trade, Make Offer (negotiate a lower price), or Buy Now. All configurable by the seller (except Buy Now because if listing in The General Store have to at minimum have buy now). So basically then for trades every item has a setting by the owner for 'Is Tradeable' meaning in their collection or in The General Store. When something is actively listed on The Auction House it is automatically not tradeable. The Trading Block terminology doesn't go away - there just is no longer any seperate browse for it. You can initiate trades either through The General Store, or collections (in the Collection Browse or collections on a user profile). Trades are then routed to the current view (of the four sections - users collection, what they are trading, what they are receiving, the other users colelction).
+
+Trading block
+- add multiple items to trade
+- add search
+- drop and drop not sticky
+- only proposer can include cash add-on currently. they should be able to ask for cash add-on from other trader too.
+- shipping options needs to be wired up for trades. the shipping type (USPS, UPS, FEDEX) needs to be sent in the trade offer. Both parties use the same shipping type. Each party pays for what they are shipping on their side.
+
+Add Offer feature to The General Store
+- Buyers can make an offer below the list price, basically just starting a negotiation
+- Buyers proposing offer is binding. If the seller accepts the offer, then the item is automatically purchased by the buyer for the purchase price.
+- Sellers can counteroffer a buyer offer
+- Sellers cannot send the original offer (leads to sellers spamming)
+- Optional - sellers have the option to 'Allow Offers' in the listing form
+
+Seller shouldn't be able to list without having address added/verified. I just did a test buy as a buyer and since the seller didn't have an addressed set up i got an error message "Shipping setup required before payment: Buyer and seller must both have default shipping addresses configured." This is a bug. The buyer would be at risk of having enforcement (getting a strike) for non-payment when it is the seller holding up the order. the listing i tried to buy the seller was keystonebid_demo - meaning it was seeded so this might not be an issue.
+
+syntax error when selecting "Message Seller."
+
+syntax error when selecting user profile (this was when trying to select the keystonebid_demo profile though).
+
+Verify phone links to nothing.
+
+need to add an icon and better naming in the browser tab.
+
+Collection item - no option to click on it and go to the details.
+
+Favorite Listings - in My Favorites page in Favorited Listings (or Favorited Collection Items) the text doesn't look like a hyperlink it just looks like plain text so you wouldn't think to click it. also why text here why not image card and like title text small below the image.
+
+On filters don't love the apply button - why not automatic on select. also the apply and reset shouldn't be all the way on the right because then have to scroll right to apply anything. i do like the reset button.
+
+min year in filters isn't being enforced dynamically by state.
+
+validate max year - should be 25 years in the past (dynamic, relative to the current year).
+
+Add "The" before all the marketplace names - "The General Store"
+
+
+
+Filters
+- Fix placement/location (horizontal)
+- Add multi-select
+- Add value counts (small in parenthesis next to value's name).
+
+Add cart feature
+- currently for Buy Now items (such as in The General Store) purchases are made with one click. The item is then delisted and the user is prompted to pay. This seems backwards. Any good site I've seen, you'll typically add the item to your cart, proceed to checkout, and complete payment. Only then should the listing be taken down. One click on buy is also super unexpected for the buyer. Workflow needs to be evaluated for all three marketplaces (The Auction House, The General Store, The Trading Block).
+
+Collection browse views.
+- search by collections and users.
+
+
+
+User locations - users can add multiple locations to their profile, or 'Address Book'. set primary/default. Add address search and validation. can just use something from google like Place Autocomplete Address Form.
+  git clone https://github.com/googlemaps-samples/js-api-samples.git
+  cd samples/places-autocomplete-addressform
+  npm i
+  npm start
+
+User locations - on profile automatically adds suffix "PA" - which assumes all users and locations are PA. I'm from Maryland, so my location says Towson, MD, PA.
+
+Listing form - add shipping options (size, weight, ship from). shipping location drop down should show the values from the user's address book saved in their user settings. shipping type options needs to be wired up (USPS Ground Advantage, UPS, Fedex 2-Day, etc). User can determine who pays (buyer pays or seller pays which would mean free shipping).
+
+Listing form - move Issuing State Field below the Images.
+
+Listing form - clean up required/optional fields.
+
+Listing form - clean up order and grouping.
+
+Listing form - when you reorder an image it duplicates the image.
+
+Listing form - removing an image get a messy chrome message back confirming you want to remove the image "Remove this image?" the confirmation is fine, it's just the default web browser message that looks sloppy.
+
+Listing form - licenses can have multiple Add-on Type's.
+
+Listing form - let's clean up Era. Put "(Circa)" next to the label. This is really for when the year is not known. We still do want to fill it in if the year is known, but we can fill this in automatically if the License year is filled in.
+
+Listing form - min year is not being enforced (by issuing state). It lets me enter 1912.
+
+Listing form - max year is not being enforced (by issuing state). It lets me enter 2026.
+
+Listing form - Color(s) is not intuitive for multi-select. you have to hold down ctrl to select multiple.
+
+Listing form - group different sections into collapsible and expandable groupings. The main attributes should always be expanded and should not have the option to collapse - meaning List from collection (optional), Listing type, Issuing state, Images, Title, Description / condition notes, License year, Era, County, Condition grade. The other ones can be auto-collapse on initial page load/open.
+
+Listing form - this message at the top of the form is sloppy and not super informative way more dev facing (in the sense that the default we have been using is Pennsylvania). this message: "Pennsylvania remains the default. Switch states only when needed and the form will refresh its reference-data options in place".
+
+Listing form - add listing form templates (can just default setting values like shipping options, this can be done in user profile page where they set the rest of their other account settings).
+
+Listing form - In the Price input box, the up and down toggle arrows increment by 1 cent. Let's change it to 1 dollar. Also in the hint for the Price Input box it is currently 75.00, add dollar sign before so hint would be "$75.00"
+
+Listing form - In the Listing type, The Trading Block is an option. That shouldn't be possible because trade items come from collections (basically the user's inventory).
+
+Listing form - "Is a value missing?" I want this to be subtle somehow maybe like an info icon where we expand a bit like 'Suggest an addition if an option is missing from the available values.'
+
+Listing form - In the 'Is a value missing?' form, when the Suggestion type is "New Value" the form still asks for Current Value, which isn't applicable if the proposed value is new. Same with Suggestion type "Other" like we don't know what they are going to suggest so a free text box might be better.
+
+Listing form - In the 'Is a value missing?' form, just need more directions, like pop out info, on what this is and how to use it.
+
+Listing form - Create listing button is not working. If it isn't listing because of an error for the values i put in the test for the listing form, there is really no messages on what the error is to clear the validation check.
+
+the Auction House - for bids lets add bid increment as an option. Meaning how much more does the next bid need to be over the current bid. Pass this as a listing option for the seller.
+
+add a few more color options.
+
+finish dev on image prefill model.
+
+add out of state as option for geographic county or unit. this is applicable when the residency is Nonresident because they obviously won't be purchasing their home county license. PA even has a county number for this it is OUT-OF-STATE Co. 68.
+
+Provenance
+- For a listing or collection item, upload pdf and show under item details (or subtab under item details) with provenance chain.
+
+Customize user profile views for their collection. Offer a few different configurable options - like different visuals. Section is divided into 4 containers, and users can configure what goes into each. Have a default style though. 
+
+Figure out the map search.
+
+On home page, add changing messages, 'Welcome Back <name>' etc.
+
+FAQs - main source that explains to users how to use the platform and policies.
+
+Improve condition categories. After launch we will be adding an automtic grading model but until then want something a bit better than the current values.
+
+Brand store.
+
+User following
+- simple eBay like (profile only shows follower count, not who, and not who you are following)
+- add 'Following' as filter
+
+Report a bug form.
+
+The map search currenly doesn't load. think I want to take it out of the individual browsing pages. instead we'll put an engaging map at the bottom of the home page. It will be of the whole US by county or geographic unit. Users can then like zoom in and see what is on the site (either listings or collections) and we'll like have links to them. will work out details when we get to this part.
+
+Finally, after workflows, apps, and features are implemented then make improvements to ui
+- full clean up of UI/UX. better navigation. several things can be grouped. make home page more engaging.
+
+
+
+
+-- more (06212026)
+adjust text size
+multi page listing form
