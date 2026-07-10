@@ -66,6 +66,8 @@ REQUIRED_ADDON_COLUMNS = {
     'hunting_method',
     'is_federal',
     'is_mandatory',
+    'approx_first_year',
+    'approx_last_year',
 }
 
 CONTROLLED_MATERIALS = [
@@ -76,34 +78,19 @@ CONTROLLED_MATERIALS = [
     'Fabric/Canvas',
     'Plastic',
 ]
-CONTROLLED_SHAPES = [
-    'Rectangle',
-    'Square',
-    'Button/Disc',
-    'Tag (with hole)',
-    'Strip',
-    'Irregular/Custom',
-]
-CONTROLLED_COLORS = [
-    'Orange',
-    'Yellow',
-    'Red',
-    'Crimson/Dark Red',
-    'Forest Green',
-    'Lime/Bright Green',
-    'Blue',
-    'Navy',
-    'White',
-    'Cream/Ivory',
-    'Gray',
-    'Silver',
-    'Brown/Tan',
-    'Gold',
-    'Pink',
-    'Purple',
-    'Black',
-    'Multi-color',
-]
+
+# Raw addon_type column -> instrument facet. shape/colors form vocab lives in
+# apps/core/constants.py only (SHAPE_CHOICES / COLOR_CHOICES) — no taxonomy rows.
+INSTRUMENT_MAP = {
+    'stamp': 'stamp',
+    'tag': 'tag',
+    'permit': 'permit',
+    'license': 'license',
+    'access pass': 'permit',
+    'habitat fee': 'fee',
+    'harvest record': 'certification',
+    'other': '',
+}
 
 
 def slugify(text):
@@ -183,7 +170,7 @@ def build_geographic_units(rows):
     return cleaned
 
 
-def add_license_type(rows, seen, state_abbrev, name, category):
+def add_license_type(rows, seen, state_abbrev, name, category, facets=None):
     clean_name = name.strip()
     if not clean_name or clean_name.lower() in {'', 'n/a', 'na', 'unknown'}:
         return
@@ -193,15 +180,37 @@ def add_license_type(rows, seen, state_abbrev, name, category):
     if key in seen:
         return
     seen.add(key)
-    rows.append(
-        {
-            'state_abbrev': state_abbrev,
-            'name': clean_name,
-            'category': category,
-            'slug': slugify(f'{state_abbrev or "universal"}-{category}-{clean_name}'),
-            'is_system_value': 'True',
-        }
-    )
+    row = {
+        'state_abbrev': state_abbrev,
+        'name': clean_name,
+        'category': category,
+        'slug': slugify(f'{state_abbrev or "universal"}-{category}-{clean_name}'),
+        'is_system_value': 'True',
+        'target_species': '',
+        'hunting_method': '',
+        'instrument': '',
+        'first_year': '',
+        'last_year': '',
+    }
+    if facets:
+        row.update(facets)
+    rows.append(row)
+
+
+def addon_facets(row):
+    """Facet columns for an addons_permits.csv row (addon_type category only)."""
+    raw_instrument = row['addon_type'].strip().lower()
+    if raw_instrument not in INSTRUMENT_MAP:
+        raise ValueError(f'Unknown addon_type/instrument value: {row["addon_type"]!r} ({row["addon_name"]})')
+    species = row['target_species'].strip()
+    method = row['hunting_method'].strip()
+    return {
+        'target_species': '' if species.lower() == 'any' else species,
+        'hunting_method': '' if method.lower() == 'any' else method,
+        'instrument': INSTRUMENT_MAP[raw_instrument],
+        'first_year': row['approx_first_year'].strip(),
+        'last_year': row['approx_last_year'].strip(),
+    }
 
 
 def build_license_types(license_class_rows, addon_rows):
@@ -217,14 +226,10 @@ def build_license_types(license_class_rows, addon_rows):
 
     for row in addon_rows:
         state_abbrev = 'FD' if row['state_abbrev'].strip().upper() == 'FEDERAL' else row['state_abbrev'].strip()
-        add_license_type(cleaned, seen, state_abbrev, row['addon_name'], 'addon_type')
+        add_license_type(cleaned, seen, state_abbrev, row['addon_name'], 'addon_type', facets=addon_facets(row))
 
     for material in CONTROLLED_MATERIALS:
         add_license_type(cleaned, seen, '', material, 'material')
-    for shape in CONTROLLED_SHAPES:
-        add_license_type(cleaned, seen, '', shape, 'shape')
-    for color in CONTROLLED_COLORS:
-        add_license_type(cleaned, seen, '', color, 'colors')
 
     for category in (
         'residency',
@@ -233,8 +238,6 @@ def build_license_types(license_class_rows, addon_rows):
         'duration',
         'addon_type',
         'material',
-        'shape',
-        'colors',
     ):
         add_license_type(cleaned, seen, '', 'Other', category)
 
@@ -302,7 +305,10 @@ def main():
     )
     write_csv(
         LICENSE_TYPES_OUT,
-        ['state_abbrev', 'name', 'category', 'slug', 'is_system_value'],
+        [
+            'state_abbrev', 'name', 'category', 'slug', 'is_system_value',
+            'target_species', 'hunting_method', 'instrument', 'first_year', 'last_year',
+        ],
         cleaned_license_types,
     )
 
