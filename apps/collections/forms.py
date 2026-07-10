@@ -52,6 +52,8 @@ class CollectionItemForm(forms.ModelForm):
     class Meta:
         model = CollectionItem
         fields = [
+            'item_kind',
+            'addons_attached',
             'title',
             'description',
             'state',
@@ -73,6 +75,8 @@ class CollectionItemForm(forms.ModelForm):
             'era_label',
         ]
         widgets = {
+            'item_kind': forms.RadioSelect(),
+            'addons_attached': forms.NullBooleanSelect(attrs={'class': 'form-select'}),
             'title': forms.TextInput(attrs={'class': 'form-input'}),
             'description': forms.Textarea(attrs={'class': 'form-input', 'rows': 4}),
             'license_year': forms.NumberInput(attrs={'class': 'form-input'}),
@@ -136,6 +140,10 @@ class CollectionItemForm(forms.ModelForm):
             self.add_error('license_year', f'Earliest known hunting license year for {state.name} is {state.min_license_year}.')
         if year and year > 2000:
             self.add_error('license_year', 'License year cannot exceed 2000.')
+
+        # addons_attached only applies to a license with add-ons
+        if cleaned_data.get('item_kind') == 'addon':
+            cleaned_data['addons_attached'] = None
 
         # era_label is required when license_year is not provided
         era_label = cleaned_data.get('era_label')

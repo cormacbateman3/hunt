@@ -13,6 +13,7 @@ class ListingImageInline(admin.TabularInline):
 class ListingAdmin(admin.ModelAdmin):
     list_display = (
         'title',
+        'item_kind',
         'listing_type',
         'seller',
         'state',
@@ -24,7 +25,7 @@ class ListingAdmin(admin.ModelAdmin):
         'status',
         'created_at',
     )
-    list_filter = ('listing_type', 'status', 'condition_grade', 'state', 'license_year', 'created_at')
+    list_filter = ('item_kind', 'listing_type', 'status', 'condition_grade', 'state', 'license_year', 'created_at')
     search_fields = ('title', 'description', 'county', 'seller__username')
     readonly_fields = ('created_at', 'updated_at', 'current_bid', 'listing_completeness_score')
     filter_horizontal = ('license_types',)
@@ -33,10 +34,10 @@ class ListingAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Listing Information', {
-            'fields': ('seller', 'listing_type', 'title', 'description', 'featured_image', 'source_collection_item')
+            'fields': ('seller', 'listing_type', 'item_kind', 'addons_attached', 'title', 'description', 'featured_image', 'source_collection_item')
         }),
         ('Reference Data', {
-            'fields': ('state', 'county_ref', 'is_statewide', 'license_types', 'shape', 'colors', 'condition_grade', 'listing_completeness_score')
+            'fields': ('category', 'state', 'county_ref', 'is_statewide', 'license_types', 'shape', 'colors', 'condition_grade', 'listing_completeness_score')
         }),
         ('Legacy Snapshots', {
             'fields': ('county', 'license_type', 'resident_status'),

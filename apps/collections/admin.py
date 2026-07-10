@@ -11,8 +11,8 @@ class CollectionItemImageInline(admin.TabularInline):
 
 @admin.register(CollectionItem)
 class CollectionItemAdmin(admin.ModelAdmin):
-    list_display = ('title', 'owner', 'state', 'county', 'license_year', 'condition_grade', 'is_public', 'trade_eligible')
-    list_filter = ('state', 'is_public', 'trade_eligible', 'condition_grade', 'created_at')
+    list_display = ('title', 'owner', 'item_kind', 'state', 'county', 'license_year', 'condition_grade', 'is_public', 'trade_eligible')
+    list_filter = ('item_kind', 'state', 'is_public', 'trade_eligible', 'condition_grade', 'created_at')
     search_fields = ('title', 'description', 'owner__username')
     inlines = [CollectionItemImageInline]
     readonly_fields = ('created_at', 'updated_at')

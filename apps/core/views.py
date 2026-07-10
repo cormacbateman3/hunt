@@ -42,7 +42,10 @@ def geo_units_api(request):
 
 def license_types_api(request):
     state = _selected_state_from_code(request.GET.get('state', ''))
-    queryset = LicenseType.objects.filter(is_system_value=True)
+    year_param = request.GET.get('year', '')
+    year = int(year_param) if year_param.isdigit() else None
+
+    queryset = LicenseType.objects.filter(is_system_value=True).select_related('state')
     if state:
         queryset = queryset.filter(Q(state=state) | Q(state__isnull=True) | Q(state__code='FD'))
     else:
@@ -51,16 +54,38 @@ def license_types_api(request):
     for license_type in queryset.distinct().order_by('category', 'name'):
         if license_type.category not in grouped:
             continue
-        grouped[license_type.category].append(
-            {
-                'id': license_type.id,
-                'name': license_type.name,
-                'is_other': license_type.name.lower() == 'other',
-            }
-        )
+        entry = {
+            'id': license_type.id,
+            'name': license_type.name,
+            'is_other': license_type.name.lower() == 'other',
+        }
+        if license_type.category == 'addon_type':
+            entry.update(
+                {
+                    'target_species': license_type.target_species,
+                    'hunting_method': license_type.hunting_method,
+                    'instrument': license_type.instrument,
+                    'first_year': license_type.first_year,
+                    'last_year': license_type.last_year,
+                    'is_federal': bool(license_type.state_id and license_type.state.code == 'FD'),
+                }
+            )
+            if year is not None:
+                entry['out_of_range'] = bool(
+                    (license_type.first_year and year < license_type.first_year)
+                    or (license_type.last_year and year > license_type.last_year)
+                )
+        grouped[license_type.category].append(entry)
+
+    if year is not None:
+        # Era-appropriate options first; the flag lets the form soft-warn
+        # on out-of-range selections without a second call.
+        grouped['addon_type'].sort(key=lambda e: (e.get('out_of_range', False), e['name'].lower()))
+
     return JsonResponse(
         {
             'state': state.code if state else '',
+            'year': year,
             'results': grouped,
         }
     )

@@ -4,6 +4,8 @@ Scope: Adds the missing top levels of the item hierarchy (department → categor
 
 2026-07-10 update: research results folded in (see "Research results" below — two corrections), plus four additions: **T12** department→category top level, **T13** two-page create flow + standardized image slots, **T14** admin general ledger, and the corrected Out-of-State/Co. 68 note.
 
+**Execution status (2026-07-10, branch `feature/alpha-p3-t0-t14`):** T0, T1, T2, T3, T4, T5, T6a, T7, T10, T11 Phase A, and T12 are **shipped and verified on SQLite** (research applied to ref_data, migrations + backfill run, seeders drift-free and idempotent, API year-gating live, forms/admin wired). Remaining: **T8** (prefill schema/resolver — unblocks 10.5) + R6 gold labels; T6b/T9/T13 ride 10.8; T13 lot images ride 10.15; T14 rides 10.18. Postgres sanity check pending a staging DB.
+
 Domain rationale: The marketplace trades physical artifacts, not legal privileges. A base license (PA back tag), a standalone stamp/tag (Federal Duck Stamp, antlerless paper license), and a license with species tags still attached are three different things that currently all flatten into the same dimension set. `item_kind` disambiguates; the existing `addon_type` M2M is reinterpreted by kind (license → "privileges attached/included on this item"; addon → "what this item is").
 
 This revision follows a full repo review (2026-06-11). It records what the current system already does, what dev plan 10.5+ already covers, what new data actually needs collecting, and the refined tasks.

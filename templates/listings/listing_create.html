@@ -133,6 +133,19 @@
                 {{ form.source_collection_item.errors }}
             </div>
 
+            <!-- 1b. Item kind -->
+            <div>
+                <label class="form-label">What is this item?</label>
+                <div style="display: flex; gap: 1.25rem; flex-wrap: wrap;">
+                    {% for radio in form.item_kind %}
+                        <label style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 400; margin: 0; cursor: pointer;">
+                            {{ radio.tag }}<span>{{ radio.choice_label }}</span>
+                        </label>
+                    {% endfor %}
+                </div>
+                {{ form.item_kind.errors }}
+            </div>
+
             <!-- 2. Listing type + state -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
                 <div>
@@ -243,6 +256,13 @@
                 </div>
                 {% endwith %}
             {% endfor %}
+
+            <div id="addons-attached-field">
+                <label class="form-label" for="{{ form.addons_attached.id_for_label }}">Add-ons attached / intact?</label>
+                {{ form.addons_attached }}
+                <small style="color: var(--color-muted);">For a license with add-ons: are the tags/stamps still physically attached? Leave Unknown if unsure.</small>
+                {{ form.addons_attached.errors }}
+            </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
                 <div>

@@ -1,0 +1,30 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<h1>Merge license types</h1>
+<p>
+    Pick the row to <strong>keep</strong>. Every other selected row will have its
+    listing and collection-item references repointed to the survivor, then be deleted.
+    This cannot be undone.
+</p>
+<form method="post">
+    {% csrf_token %}
+    <ul style="list-style: none; padding: 0;">
+        {% for obj in queryset %}
+        <li style="margin-bottom: 0.5rem;">
+            <label>
+                <input type="radio" name="survivor" value="{{ obj.pk }}" {% if forloop.first %}checked{% endif %}>
+                <strong>{{ obj }}</strong> — {{ obj.get_category_display }}
+                ({{ obj.listings.count }} listing ref{{ obj.listings.count|pluralize }},
+                {{ obj.collection_items.count }} collection ref{{ obj.collection_items.count|pluralize }})
+            </label>
+            <input type="hidden" name="{{ action_checkbox_name }}" value="{{ obj.pk }}">
+        </li>
+        {% endfor %}
+    </ul>
+    <input type="hidden" name="action" value="merge_license_types">
+    <input type="hidden" name="apply" value="1">
+    <input type="submit" class="default" value="Merge into selected survivor">
+    <a class="button cancel-link" href="../">Cancel</a>
+</form>
+{% endblock %}

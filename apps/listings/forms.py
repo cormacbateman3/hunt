@@ -115,6 +115,8 @@ class ListingForm(forms.ModelForm):
         model = Listing
         fields = [
             'listing_type',
+            'item_kind',
+            'addons_attached',
             'source_collection_item',
             'title',
             'description',
@@ -145,6 +147,8 @@ class ListingForm(forms.ModelForm):
         ]
         widgets = {
             'listing_type': forms.Select(attrs={'class': 'form-select'}),
+            'item_kind': forms.RadioSelect(),
+            'addons_attached': forms.NullBooleanSelect(attrs={'class': 'form-select'}),
             'title': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g., 1942 Adams County Resident Hunting License'}),
             'description': forms.Textarea(attrs={'class': 'form-input', 'placeholder': 'Describe the license condition, notable features, provenance, and any context collectors should know.', 'rows': 6}),
             'license_year': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '1942 (leave blank if unknown)'}),
@@ -207,6 +211,9 @@ class ListingForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+        # addons_attached only applies to a license with add-ons
+        if cleaned_data.get('item_kind') == 'addon':
+            cleaned_data['addons_attached'] = None
         state = cleaned_data.get('state')
         county_ref = cleaned_data.get('county_ref')
         license_year = cleaned_data.get('license_year')
