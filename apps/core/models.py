@@ -3,11 +3,50 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from apps.core.constants import (
+    INSTRUMENT_CHOICES,
     LICENSE_TYPE_CATEGORY_CHOICES,
     SUGGESTION_STATUS_CHOICES,
     SUGGESTION_TARGET_MODEL_CHOICES,
     SUGGESTION_TYPE_CHOICES,
 )
+
+
+class ItemCategory(models.Model):
+    """
+    Top of the item hierarchy: department -> category.
+
+    One seeded row for now (Sporting Antiques -> Licenses & Permits). The
+    department stays a label field on this table until a second department
+    actually exists. Not exposed on forms or browse while there is only one
+    category — items are stamped via the FK default.
+    """
+
+    department = models.CharField(max_length=60, default='Sporting Antiques')
+    name = models.CharField(max_length=80, unique=True)
+    slug = models.SlugField(max_length=100, unique=True)
+    sort_order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'Item Category'
+        verbose_name_plural = 'Item Categories'
+        ordering = ['sort_order', 'name']
+
+    def __str__(self):
+        return f'{self.department} — {self.name}'
+
+
+def get_default_item_category():
+    """Default pk for item category FKs — the single seeded category."""
+    category, _ = ItemCategory.objects.get_or_create(
+        slug='licenses-permits',
+        defaults={
+            'department': 'Sporting Antiques',
+            'name': 'Licenses & Permits',
+            'sort_order': 1,
+        },
+    )
+    return category.pk
 
 
 class State(models.Model):
@@ -117,6 +156,31 @@ class LicenseType(models.Model):
     )
     slug = models.SlugField(max_length=150)
     is_system_value = models.BooleanField(default=True)
+
+    # Facets — populated only where category='addon_type'
+    target_species = models.CharField(
+        max_length=50, blank=True,
+        help_text='e.g. Deer, Antlerless Deer, Turkey, Waterfowl (addon rows only)',
+    )
+    hunting_method = models.CharField(
+        max_length=30, blank=True,
+        help_text='Only methods visible on the artifact: Archery, Muzzleloader, Firearm',
+    )
+    instrument = models.CharField(
+        max_length=20, choices=INSTRUMENT_CHOICES, blank=True,
+        help_text='What the artifact physically is (addon rows only)',
+    )
+
+    # Product year span — soft bounds: they gate suggestions, ordering, and
+    # prefill matching, never validity. Null = unbounded/unknown.
+    first_year = models.IntegerField(
+        null=True, blank=True,
+        help_text='First year this product existed under this name/form',
+    )
+    last_year = models.IntegerField(
+        null=True, blank=True,
+        help_text='Last year issued (blank = still issued or unknown)',
+    )
 
     class Meta:
         verbose_name = 'License Type'

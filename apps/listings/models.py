@@ -2,7 +2,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.urls import reverse
-from apps.core.constants import COLOR_CHOICES, FORM_LICENSE_TYPE_CATEGORIES, RESIDENT_STATUS_CHOICES, SHAPE_CHOICES
+from apps.core.constants import COLOR_CHOICES, FORM_LICENSE_TYPE_CATEGORIES, ITEM_KIND_CHOICES, RESIDENT_STATUS_CHOICES, SHAPE_CHOICES
+from apps.core.models import get_default_item_category
 
 
 ERA_LABEL_CHOICES = [
@@ -68,6 +69,22 @@ class Listing(models.Model):
     # Listing type
     listing_type = models.CharField(
         max_length=20, choices=LISTING_TYPE_CHOICES, default='auction'
+    )
+
+    # Item hierarchy: category (department -> category, single seeded value
+    # for now) and kind (what the artifact is). addon_type M2M reads as
+    # "attached/included add-ons" for a license, "what this item is" for an addon.
+    category = models.ForeignKey(
+        'core.ItemCategory', on_delete=models.PROTECT,
+        default=get_default_item_category, related_name='listings',
+    )
+    item_kind = models.CharField(
+        max_length=20, choices=ITEM_KIND_CHOICES, default='license',
+        help_text='Base license vs. standalone stamp/tag/permit',
+    )
+    addons_attached = models.BooleanField(
+        null=True, blank=True,
+        help_text='For licenses with add-ons: True = tags/stamps still physically attached; False = detached/used; null = unknown',
     )
 
     # Basic Information

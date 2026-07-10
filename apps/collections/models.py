@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
-from apps.core.models import GeographicUnit, LicenseType
-from apps.core.constants import COLOR_CHOICES, FORM_LICENSE_TYPE_CATEGORIES, RESIDENT_STATUS_CHOICES, SHAPE_CHOICES
+from apps.core.models import GeographicUnit, LicenseType, get_default_item_category
+from apps.core.constants import COLOR_CHOICES, FORM_LICENSE_TYPE_CATEGORIES, ITEM_KIND_CHOICES, RESIDENT_STATUS_CHOICES, SHAPE_CHOICES
 from apps.listings.models import ERA_LABEL_CHOICES, _year_to_era
 
 
@@ -18,6 +18,18 @@ class CollectionItem(models.Model):
     ]
 
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='collection_items')
+    category = models.ForeignKey(
+        'core.ItemCategory', on_delete=models.PROTECT,
+        default=get_default_item_category, related_name='collection_items',
+    )
+    item_kind = models.CharField(
+        max_length=20, choices=ITEM_KIND_CHOICES, default='license',
+        help_text='Base license vs. standalone stamp/tag/permit',
+    )
+    addons_attached = models.BooleanField(
+        null=True, blank=True,
+        help_text='For licenses with add-ons: True = tags/stamps still physically attached; False = detached/used; null = unknown',
+    )
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     license_year = models.IntegerField(null=True, blank=True, help_text="Year the license was issued")

@@ -4,6 +4,20 @@ RESIDENT_STATUS_CHOICES = [
     ('unknown', 'Unknown'),
 ]
 
+ITEM_KIND_CHOICES = [
+    ('license', 'License'),
+    ('addon', 'Add-on / Stamp / Tag'),
+]
+
+INSTRUMENT_CHOICES = [
+    ('stamp', 'Stamp'),
+    ('tag', 'Tag'),
+    ('permit', 'Permit'),
+    ('license', 'License'),
+    ('fee', 'Fee'),
+    ('certification', 'Certification'),
+]
+
 LICENSE_TYPE_CATEGORY_CHOICES = [
     ('residency', 'Residency'),
     ('holder_eligibility', 'Holder Eligibility'),
