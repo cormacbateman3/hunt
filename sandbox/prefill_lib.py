@@ -65,6 +65,7 @@ MAX_IMAGE_EDGE = 1120
 AUTO_CROP = True
 
 ALLOW_INFERENCE = True       # curated, flagged domain inferences, capped at 'medium'
+SECOND_PASS = True           # constrained text-only re-match for unmatched add-ons (fires on misses only)
 FUZZY_FLOOR = 88             # below this we never prefill a value; route to a suggestion
 GEO_NAME_FLOOR = 90
 CURRENT_YEAR = datetime.now().year
@@ -125,9 +126,19 @@ class ReferenceData:
         self.lt: dict[tuple[str, str], list[dict]] = defaultdict(list)
         for t in LicenseType.objects.select_related("state").all():
             ab = t.state.code if t.state else ""
-            self.lt[(ab, t.category)].append(
-                {"id": t.id, "name": t.name, "norm": _norm(t.name), "slug": t.slug}
-            )
+            rec = {"id": t.id, "name": t.name, "norm": _norm(t.name), "slug": t.slug}
+            if t.category == "addon_type":
+                rec.update(
+                    {
+                        "species": t.target_species,
+                        "species_norm": _norm(t.target_species),
+                        "method_norm": _norm(t.hunting_method),
+                        "instrument": t.instrument,
+                        "first_year": t.first_year,
+                        "last_year": t.last_year,
+                    }
+                )
+            self.lt[(ab, t.category)].append(rec)
 
     def state(self, text: Any) -> dict | None:
         key = _norm(text)
@@ -136,7 +147,7 @@ class ReferenceData:
 
     def license_candidates(self, abbrev: str, category: str) -> list[dict]:
         out, seen = [], set()
-        for ab in (abbrev, ""):                       # state-specific then universal
+        for ab in (abbrev, "", "FD"):                 # state-specific, universal, federal
             for rec in self.lt.get((ab, category), []):
                 if rec["id"] not in seen:
                     out.append(rec)
@@ -181,8 +192,20 @@ CONCEPT_ALIASES: dict[str, tuple[str, str]] = {
     "TROUT": ("addon_type", "Trout"),
 }
 
+def _alias(text: Any) -> tuple[str, str] | None:
+    """Alias lookup that also tries the space-collapsed key (MUZZLE LOADER -> MUZZLELOADER)."""
+    nt = _norm(text)
+    return CONCEPT_ALIASES.get(nt) or CONCEPT_ALIASES.get(nt.replace(" ", ""))
+
+
 # tokens too common to disambiguate an add-on on their own
 STOP_TOKENS = {"TAG", "TAGS", "PERMIT", "STAMP", "LICENSE", "BIRD", "SPECIAL", "RECORD", "STATE", "RESIDENT"}
+
+# instrument words printed on artifacts -> instrument facet value
+INSTRUMENT_WORDS = {
+    "TAG": "tag", "TAGS": "tag", "STAMP": "stamp", "PERMIT": "permit",
+    "LICENSE": "license", "LICENCE": "license", "CERTIFICATION": "certification", "FEE": "fee",
+}
 
 # add-ons that imply a hunting license (used for the activity_scope inference)
 HUNTING_ADDON_KEYWORDS = {"ANTLERLESS", "DEER", "TURKEY", "BEAR", "PHEASANT", "ARCHERY", "MUZZLELOADER", "ELK", "DMAP"}
@@ -248,9 +271,10 @@ EXTRACTION_TOOL = {
     "input_schema": {
         "type": "object",
         "properties": {
+            "item_kind": {"type": ["string", "null"], "enum": ["license", "addon", "lot", "unknown", None], "description": "license = a base license, with or without attached tags/stamps; addon = a standalone stamp, tag, permit, or privilege paper that is NOT a base license; lot = multiple distinct physical items photographed together; unknown if unclear."},
             "state_name_or_abbrev": {"type": ["string", "null"], "description": 'State exactly as printed, incl. historical forms like "PENNA.", "MICH."'},
             "license_year": {"type": ["integer", "null"], "description": "Four-digit year as printed. Only derive a 2-digit year when the century is unambiguous."},
-            "era_guess": {"type": ["string", "null"], "enum": ["Pre-1920", "1920s", "1930s", "1940s", "1950s", "1960s", "1970s", "1980s", "1990s", "2000s", None], "description": "Decade only when no explicit year is visible."},
+            "era_guess": {"type": ["string", "null"], "enum": ["Pre-1920", "1920s", "1930s", "1940s", "1950s", "1960s", "1970s", "1980s", "1990s", "2000s", None], "description": "Decade ONLY when no explicit year is visible. Omit entirely when license_year is read."},
             "geographic_unit_name": {"type": ["string", "null"], "description": 'County/unit name OR number exactly as printed, e.g. "Lancaster", "Co. 36", "COUNTY NUMBER 36", "GMU 12". Transcribe the number; do not convert it to a name. Null if statewide.'},
             "is_statewide": {"type": "boolean", "description": "True only if the license explicitly covers the whole state with no county/unit restriction."},
             "residency": {"type": ["string", "null"], "description": 'Residency exactly as printed; keep any "Non-" prefix, e.g. "Resident", "Non-Resident".'},
@@ -258,15 +282,16 @@ EXTRACTION_TOOL = {
             "activity_scope": {"type": ["string", "null"], "description": 'Base activity, e.g. "Hunter", "Hunting", "Trapping", "Hunting and Fishing". Do NOT put species tags/stamps here.'},
             "duration": {"type": ["string", "null"], "description": 'Validity period if printed, e.g. "Annual", "7-Day".'},
             "addon_type": {"type": "array", "items": {"type": "string"}, "maxItems": 4, "description": 'Add-on stamps/tags/permits printed on the item — a license can have several, e.g. ["Turkey Tag", "Antlerless Deer"]. Species tags (deer, turkey, bear, duck) belong here, NOT in activity_scope.'},
-            "serial_number": {"type": ["string", "null"], "description": 'License/serial number exactly as printed, character-by-character. Some PA tags print a single letter (e.g. "F") ABOVE or beside the number that is part of the serial — include it, e.g. "F 25009". Never infer missing digits.'},
+            "serial_number": {"type": ["string", "null"], "description": 'License/serial number exactly as printed, character-by-character, PRESERVING the printed position of any letter: a letter before the digits stays a prefix ("F 25009"), a letter after stays a suffix ("23560 G"). Never reorder, never infer missing digits.'},
             "material": {"type": ["string", "null"], "enum": ["Paper/Cardstock", "Metal Button", "Metal Tag", "Celluloid", "Fabric/Canvas", "Plastic", None]},
             "shape": {"type": ["string", "null"], "enum": ["Rectangle", "Square", "Button/Disc", "Tag (with hole)", "Strip", "Irregular/Custom", None]},
             "dominant_colors": {"type": "array", "items": {"type": "string"}, "maxItems": 3, "description": 'Up to 3 dominant colors, most prominent first. Prefer single basic color words ("blue", "tan", "gold"), not combos like "yellow/gold".'},
             "raw_text_transcription": {"type": "string", "description": "ONLY text physically printed on the item, in reading order. Never add common license phrases from memory. Omit illegible words rather than guess."},
+            "context_text": {"type": ["string", "null"], "description": "Text visible in the photo but NOT printed on the item itself: collector mat/frame annotations, labels, handwriting on backing paper. Never mix this into raw_text_transcription."},
             "inferred_fields": {"type": "array", "items": {"type": "string"}, "description": 'Names of any fields filled by inference from the license type rather than printed text (e.g. "duration"). Empty if everything was read from the item.'},
             "per_field_confidence": {"type": "object", "description": "Numeric 0.0-1.0 per populated field. Omit null fields."},
         },
-        "required": ["raw_text_transcription", "per_field_confidence", "addon_type", "dominant_colors", "inferred_fields"],
+        "required": ["raw_text_transcription", "per_field_confidence", "addon_type", "dominant_colors", "inferred_fields", "item_kind"],
     },
 }
 
@@ -274,16 +299,30 @@ SYSTEM_PROMPT = """You are an expert cataloger of antique US hunting and fishing
 
 TRANSCRIPTION (raw_text_transcription) — be strict:
 - Include ONLY words, numbers, and marks physically printed on the item, in reading order.
+- Check ALL orientations: antique tags often print text vertically or along the edges
+  (e.g. a state name running up the left edge). Rotate mentally and read edge text too.
 - Never add phrases you expect to be there. If you cannot read something, leave it out.
-- Never hallucinate or complete serial numbers; transcribe them character-by-character.
-- Some PA tags print a single letter (e.g. "F") above/beside the number — it is part of the serial.
+- Never hallucinate or complete serial numbers; transcribe them character-by-character,
+  preserving letter position (prefix "F 25009" vs suffix "23560 G" are different serials).
+- Collector mat/frame annotations, labels, or handwriting on backing paper are NOT item
+  text — put them in context_text, never in raw_text_transcription.
+
+ITEM KIND (item_kind):
+- "license" = a base license, with or without attached tags/stamps.
+- "addon" = a standalone stamp, tag, permit, or privilege paper that is not a base license
+  (e.g. a Federal Duck Stamp alone, a paper antlerless deer license, a detached tag).
+- "lot" = multiple distinct physical items photographed together.
 
 STRUCTURED FIELDS:
 - Fill from the printed text whenever possible.
 - Species tags and stamps (deer, antlerless, turkey, bear, duck/waterfowl, trout) go in addon_type (a list), NOT activity_scope.
-- A license can have multiple add-ons — list them all.
+- Every attached or detachable tag portion (anything reading "ATTACH THIS TAG", a numbered
+  species coupon, an integral tag) is an add-on — list them ALL, even faint ones.
 - residency: keep the full "Non-" prefix if present.
 - geographic_unit_name: if a county NUMBER is shown ("Co. 36", "COUNTY NUMBER 36"), transcribe the number; do not convert it to a name.
+- material rubric: "Metal Button" = a round pinback button; stamped flat metal (rectangle,
+  shield, tag with a hole) = "Metal Tag".
+- era_guess: only when no year is readable; omit it when license_year is filled.
 
 INFERENCE — allowed but must be flagged:
 - You MAY infer a field from the license's evident type when it is essentially certain (e.g. a resident hunting tag is Annual; "HUNTER" implies general Hunting).
@@ -370,9 +409,14 @@ def conf_of(raw: dict, field: str) -> float:
     if isinstance(v, dict):
         v = v.get("value", v.get("confidence", 0))
     try:
-        return max(0.0, min(1.0, float(v)))
+        conf = max(0.0, min(1.0, float(v)))
     except (TypeError, ValueError):
-        return 0.0
+        conf = 0.0
+    # Inferred-but-unscored: the model listed the field in inferred_fields but
+    # omitted it from per_field_confidence — 0 would wrongly bury a real value.
+    if conf == 0.0 and field in set(raw.get("inferred_fields") or []):
+        return 0.65
+    return conf
 
 
 def _blank(source: Any = None, conf: float = 0.0) -> dict:
@@ -482,7 +526,7 @@ def resolve_dimension(raw: dict, field: str, abbrev: str, ref: ReferenceData) ->
     conf = conf_of(raw, field)
     if not text:
         return _blank(None, conf), None
-    alias = CONCEPT_ALIASES.get(_norm(text))
+    alias = _alias(text)
     if alias:
         dim, canonical = alias
         if dim != field:
@@ -491,7 +535,143 @@ def resolve_dimension(raw: dict, field: str, abbrev: str, ref: ReferenceData) ->
     return match_vocab(text, ref.license_candidates(abbrev, field), conf), None
 
 
-def resolve_addons(raw: dict, abbrev: str, ref: ReferenceData, reroutes: list[tuple]) -> dict:
+def _addon_in_range(c: dict, year: int | None) -> bool:
+    if not year:
+        return True
+    if c.get("first_year") and year < c["first_year"]:
+        return False
+    if c.get("last_year") and year > c["last_year"]:
+        return False
+    return True
+
+
+def match_addon_item(text: Any, conf: float, candidates: list[dict], year: int | None) -> dict:
+    """Add-on matcher: era gate -> exact name -> species facet -> layered name fallback.
+
+    Candidates outside first_year/last_year for a resolved year are rejected outright —
+    a modern permit can never match a mid-century artifact.
+    """
+    if not text or not candidates:
+        return _blank(text, conf)
+    cands = [c for c in candidates if _addon_in_range(c, year)]
+    if not cands:
+        return _blank(text, conf)
+
+    alias = _alias(text)
+    query = alias[1] if (alias and alias[0] == "addon_type") else str(text)
+    nt = _norm(query)
+
+    for c in cands:                                        # 1. exact name
+        if c["norm"] == nt:
+            return _hit(c, text, conf, 100)
+
+    # 2. species facet first: what the artifact is about beats fuzzy name overlap
+    orig_tokens = set(_norm(text).split())
+    instrument = next((INSTRUMENT_WORDS[t] for t in orig_tokens if t in INSTRUMENT_WORDS), "")
+    species_tokens = set(nt.split()) - set(INSTRUMENT_WORDS) - STOP_TOKENS
+    if species_tokens:
+        scored = []
+        for c in cands:
+            facet = set(c.get("species_norm", "").split())
+            if not facet:
+                continue
+            if facet == species_tokens:
+                s = 3
+            elif species_tokens <= facet or facet <= species_tokens:
+                s = 2
+            elif facet & species_tokens:
+                s = 1
+            else:
+                continue
+            if instrument and c.get("instrument") == instrument:
+                s += 2                                     # printed instrument word agrees
+            elif instrument and c.get("instrument") and c["instrument"] != instrument:
+                s -= 1
+            scored.append((s, c))
+        if scored:
+            best = max(s for s, _ in scored)
+            top = [c for s, c in scored if s == best]
+            if best >= 3:
+                if len(top) == 1:
+                    return _hit(top[0], text, conf, 95)
+                hit = process.extractOne(nt, [c["norm"] for c in top], scorer=fuzz.token_sort_ratio)
+                return _hit(top[hit[2]], text, conf, 92)
+
+    res = match_vocab(query, cands, conf)                  # 3. layered name fallback
+    res["source_text"] = text
+    return res
+
+
+SECOND_PASS_TOOL = {
+    "name": "match_addons",
+    "description": "Match extracted add-on texts against the closed candidate list.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "matches": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "text": {"type": "string"},
+                        "candidate_id": {"type": ["integer", "null"]},
+                    },
+                    "required": ["text", "candidate_id"],
+                },
+            }
+        },
+        "required": ["matches"],
+    },
+}
+
+
+def second_pass_addons(client, transcription: str, unmatched: list[str],
+                       candidates: list[dict], year: int | None) -> tuple[dict[str, dict], float]:
+    """Constrained re-match for add-ons that missed: a text-only call choosing from a
+    closed id list with an explicit none-option. Returns ({text: candidate}, cost)."""
+    if client is None or not unmatched or not candidates:
+        return {}, 0.0
+    by_id = {c["id"]: c for c in candidates}
+    listing = "\n".join(
+        f'{c["id"]}: {c["name"]}' + (f' [{c["species"]}]' if c.get("species") else "")
+        for c in candidates
+    )
+    year_note = f" The item is from {year}." if year else ""
+    prompt = (
+        "These add-on texts were read from an antique US hunting license but did not "
+        f"match our taxonomy.{year_note}\n\nTexts:\n"
+        + "\n".join(f"- {t}" for t in unmatched)
+        + "\n\nCandidate products (id: name [species]):\n" + listing
+        + "\n\nFor each text pick the candidate that denotes the SAME product "
+        "(spelling/synonym/era variants count), or null if none truly matches. "
+        "Never force a match."
+    )
+    try:
+        resp = client.messages.create(
+            model=MODEL_ID,
+            max_tokens=300,
+            tools=[SECOND_PASS_TOOL],
+            tool_choice={"type": "tool", "name": SECOND_PASS_TOOL["name"]},
+            messages=[{"role": "user", "content": prompt}],
+        )
+        block = next((b for b in resp.content if getattr(b, "type", None) == "tool_use"), None)
+        if block is None:
+            return {}, 0.0
+        u = resp.usage
+        cost = (int(u.input_tokens or 0) * PRICE["input"] + int(u.output_tokens or 0) * PRICE["output"]) / 1_000_000
+        data = block.input if isinstance(block.input, dict) else dict(block.input)
+        out = {}
+        for m in data.get("matches") or []:
+            cand = by_id.get(m.get("candidate_id"))
+            if cand is not None and m.get("text"):
+                out[_norm(m["text"])] = cand
+        return out, round(cost, 6)
+    except Exception:  # noqa: BLE001
+        return {}, 0.0
+
+
+def resolve_addons(raw: dict, abbrev: str, ref: ReferenceData, reroutes: list[tuple],
+                   year: int | None = None, client=None) -> dict:
     cands = ref.license_candidates(abbrev, "addon_type")
     base_conf = conf_of(raw, "addon_type")
     sources: list[tuple[str, float, bool]] = [(it, base_conf, False) for it in (raw.get("addon_type") or [])]
@@ -500,9 +680,7 @@ def resolve_addons(raw: dict, abbrev: str, ref: ReferenceData, reroutes: list[tu
             sources.append((text, conf, True))            # came in under the wrong dimension
     out, seen = [], set()
     for text, conf, rerouted in sources:
-        alias = CONCEPT_ALIASES.get(_norm(text))
-        query = alias[1] if (alias and alias[0] == "addon_type") else text
-        res = match_vocab(query, cands, conf)
+        res = match_addon_item(text, conf, cands, year)
         res["source_text"] = text
         if rerouted and res["value"] is not None:
             res["inferred"] = True
@@ -513,16 +691,36 @@ def resolve_addons(raw: dict, abbrev: str, ref: ReferenceData, reroutes: list[tu
         out.append(res)
     if not out:
         return _blank(None, base_conf)
+
+    # Second pass: only for items that missed, against the era-gated candidate list.
+    sp_cost = 0.0
+    misses = [r for r in out if r["value"] is None and r.get("source_text")]
+    if SECOND_PASS and client is not None and misses:
+        gated = [c for c in cands if _addon_in_range(c, year)]
+        mapping, sp_cost = second_pass_addons(
+            client, raw.get("raw_text_transcription", ""),
+            [str(r["source_text"]) for r in misses], gated, year,
+        )
+        for r in misses:
+            cand = mapping.get(_norm(r["source_text"]))
+            if cand is not None and cand["id"] not in {x["value"] for x in out if x["value"] is not None}:
+                r.update(_hit(cand, r["source_text"], max(r["conf"], 0.7), 90))
+                r["tier"] = _cap(r["tier"], "medium")     # model-chosen from a closed set
+                r["second_pass"] = True
+
+    # Per-item results are the contract; the aggregate reflects the BEST match so a
+    # good item is never hidden by an unmatched sibling (the old _min_tier bug).
     matched = [r for r in out if r["value"] is not None]
     return {
         "value": [r["value"] for r in matched],
         "name": ", ".join(r["name"] for r in matched) or None,
         "source_text": ", ".join(str(r["source_text"]) for r in out if r["source_text"]),
-        "score": min((r["score"] for r in out), default=0),
+        "score": max((r["score"] for r in matched), default=0),
         "conf": base_conf,
-        "tier": _min_tier([r["tier"] for r in out]),
+        "tier": ORDER[max((ORDER.index(r["tier"]) for r in matched), default=0)],
         "inferred": any(r["inferred"] for r in out),
         "items": out,
+        "second_pass_cost_usd": sp_cost,
     }
 
 
@@ -558,6 +756,23 @@ def resolve_shape(value: Any, conf: float) -> dict:
             "conf": conf, "tier": tier_for(conf, 100), "inferred": False}
 
 
+SERIAL_INTERIOR_O_RE = re.compile(r"(?<=\d)O(?=\d)")
+
+
+def validate_serial(field: dict, abbrev: str) -> dict:
+    """Domain prior: PA back-tag serials are digits with at most one letter, so an
+    interior O between digits is almost certainly a zero. Auto-correct and flag."""
+    val = field.get("value")
+    if not val or abbrev != "PA":
+        return field
+    s = str(val).strip().upper()
+    corrected = SERIAL_INTERIOR_O_RE.sub("0", s)
+    if corrected != s:
+        field = dict(field)
+        field.update({"value": corrected, "name": corrected, "corrected_from": s, "tier": "low"})
+    return field
+
+
 def apply_inferences(fields: dict, abbrev: str, ref: ReferenceData) -> None:
     """Curated, flagged inferences for EMPTY fields only (ALLOW_INFERENCE gate)."""
     addons = fields.get("addon_type", {})
@@ -581,32 +796,70 @@ def apply_inferences(fields: dict, abbrev: str, ref: ReferenceData) -> None:
             fields["duration"] = ann
 
 
-def resolve(raw: dict, ref: ReferenceData) -> dict:
-    """Resolve a raw VLM extraction into a tier-tagged, form-ready payload."""
+def resolve(raw: dict, ref: ReferenceData, client=None) -> dict:
+    """Resolve a raw VLM extraction into a tier-tagged, form-ready payload.
+
+    `client` is optional — when present, unmatched add-ons get the constrained
+    second-pass re-match (SECOND_PASS gate)."""
+    kind = str(raw.get("item_kind") or "unknown").lower()
     state = ref.state(raw.get("state_name_or_abbrev"))
     sconf = conf_of(raw, "state_name_or_abbrev")
+    state_inferred = False
+
+    # Domain prior: the "Co. NN / COUNTY NUMBER NN" format is uniquely PA
+    # (1913-1937 county-numbered tags) — resolves state even when no state name was read.
+    if state is None:
+        blob = f'{raw.get("geographic_unit_name") or ""} {raw.get("raw_text_transcription") or ""}'
+        if COUNTY_NUM_RE.search(blob):
+            state = ref.states_by_key.get("PA")
+            if state:
+                state_inferred = True
+                sconf = max(sconf, 0.7)
     abbrev = state["abbrev"] if state else ""
 
     fields: dict[str, dict] = {}
-    fields["state"] = (
-        {"value": state["id"], "name": state["name"], "source_text": raw.get("state_name_or_abbrev"),
-         "score": 100, "conf": sconf, "tier": tier_for(sconf, 100), "inferred": False}
-        if state else _blank(raw.get("state_name_or_abbrev"), sconf)
-    )
+    if state:
+        fields["state"] = {
+            "value": state["id"], "name": state["name"],
+            "source_text": raw.get("state_name_or_abbrev") or ("(inferred: COUNTY NUMBER format => PA)" if state_inferred else None),
+            "score": 100, "conf": sconf,
+            "tier": _cap(tier_for(sconf, 100), "medium") if state_inferred else tier_for(sconf, 100),
+            "inferred": state_inferred,
+        }
+    else:
+        fields["state"] = _blank(raw.get("state_name_or_abbrev"), sconf)
     fields["geographic_unit"] = resolve_geo(raw, abbrev, ref)
     fields["license_year"] = resolve_year(raw, state)
-    fields["era_guess"] = _direct(raw.get("era_guess"), conf_of(raw, "era_guess"), max_tier="medium")
-    fields["serial_number"] = _direct(raw.get("serial_number"), conf_of(raw, "serial_number"), max_tier="low")
+
+    year_value = fields["license_year"]["value"]
+    year_ok = year_value is not None and fields["license_year"]["tier"] != "unmatched"
+    year = int(year_value) if year_ok else None
+
+    # era is redundant (and confusing to render) once a real year resolved
+    fields["era_guess"] = _blank(None, 0.0) if year_ok else _direct(
+        raw.get("era_guess"), conf_of(raw, "era_guess"), max_tier="medium",
+    )
+    fields["serial_number"] = validate_serial(
+        _direct(raw.get("serial_number"), conf_of(raw, "serial_number"), max_tier="low"), abbrev,
+    )
     fields["is_statewide"] = _direct(raw.get("is_statewide"), conf_of(raw, "is_statewide"))
+    fields["item_kind"] = _direct(
+        kind if kind in {"license", "addon"} else None, conf_of(raw, "item_kind"),
+    )
 
     reroutes: list[tuple] = []
     for field in SINGLE_DIMENSIONS:
+        # A standalone add-on has no activity scope or duration of its own —
+        # never prefill them (acceptance #8); the addon_type IS the item.
+        if kind == "addon" and field in {"activity_scope", "duration"}:
+            fields[field] = _blank(None, 0.0)
+            continue
         res, rr = resolve_dimension(raw, field, abbrev, ref)
         fields[field] = res
         if rr:
             reroutes.append(rr)
 
-    fields["addon_type"] = resolve_addons(raw, abbrev, ref, reroutes)
+    fields["addon_type"] = resolve_addons(raw, abbrev, ref, reroutes, year=year, client=client)
     fields["colors"] = resolve_colors(raw.get("dominant_colors"), conf_of(raw, "dominant_colors"))
     fields["shape"] = resolve_shape(raw.get("shape"), conf_of(raw, "shape"))
 
@@ -615,7 +868,15 @@ def resolve(raw: dict, ref: ReferenceData) -> dict:
             fields[f]["inferred"] = True
             fields[f]["tier"] = _cap(fields[f]["tier"], "medium")
 
-    if ALLOW_INFERENCE:
+    if ALLOW_INFERENCE and kind != "addon":
         apply_inferences(fields, abbrev, ref)
 
-    return {"state_abbrev": abbrev, "fields": fields, "raw_text": raw.get("raw_text_transcription", "")}
+    return {
+        "state_abbrev": abbrev,
+        "item_kind": kind,
+        "lot_detected": kind == "lot",                    # UI guidance only — never written to the DB
+        "fields": fields,
+        "raw_text": raw.get("raw_text_transcription", ""),
+        "context_text": raw.get("context_text") or "",
+        "second_pass_cost_usd": fields["addon_type"].get("second_pass_cost_usd", 0.0),
+    }
