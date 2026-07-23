@@ -57,7 +57,7 @@
                 // on create forms only user edits after load count as dirty.
                 if (cfg.protectInitial && this.initial[field]) this.dirty[field] = true;
                 const mark = () => { if (!this.applying) this.dirty[field] = true; };
-                (spec.kind === 'radio' ? this.radios(field) : [node]).forEach(n => {
+                ((spec.kind === 'radio' || spec.kind === 'checklist') ? this.group(field) : [node]).forEach(n => {
                     n.addEventListener('input', mark);
                     n.addEventListener('change', mark);
                 });
@@ -77,20 +77,25 @@
         node(field) {
             const spec = this.cfg.fields[field];
             if (!spec) return null;
-            if (spec.kind === 'radio') return this.radios(field)[0] || null;
+            if (spec.kind === 'radio' || spec.kind === 'checklist') return this.group(field)[0] || null;
             return el(spec.sel);
         }
 
-        radios(field) {
+        group(field) {
             const spec = this.cfg.fields[field];
-            return Array.from(this.form.querySelectorAll(`input[type=radio][name=${spec.name}]`));
+            return Array.from(this.form.querySelectorAll(`input[name=${spec.name}]`));
         }
+
+        radios(field) { return this.group(field); }
 
         read(field) {
             const spec = this.cfg.fields[field];
             if (spec.kind === 'radio') {
                 const checked = this.radios(field).find(r => r.checked);
                 return checked ? checked.value : '';
+            }
+            if (spec.kind === 'checklist') {
+                return this.group(field).filter(i => i.checked).map(i => i.value).join(',');
             }
             const node = el(spec.sel);
             if (!node) return '';
@@ -198,18 +203,32 @@
         async applyAddons(addonField, hints) {
             const items = (addonField && addonField.items) || [];
             if (!items.length) return;
-            const matched = items.filter(i => i.value !== null)
-                .sort((a, b) => (b.tier === 'high') - (a.tier === 'high'));
-            const best = matched[0];
-            if (best && !this.dirty.addon_type && (best.tier === 'high' || best.tier === 'medium')) {
-                const ok = await this.set('addon_type', best);
-                if (ok) {
-                    this.applied.addon_type = { suggested: best.value, tier: best.tier, name: best.name };
-                    if (best.tier === 'medium' || best.second_pass) this.badge('addon_type', best);
+            const matched = items.filter(i => i.value !== null && (i.tier === 'high' || i.tier === 'medium'));
+            const spec = this.cfg.fields.addon_type || {};
+            if (matched.length && !this.dirty.addon_type) {
+                if (spec.kind === 'checklist') {
+                    const ok = await this.set('addon_type', { value: matched.map(i => i.value) });
+                    if (ok) {
+                        this.applied.addon_type = {
+                            suggested: matched.map(i => i.value),
+                            tier: matched.some(i => i.tier === 'medium') ? 'medium' : 'high',
+                            name: matched.map(i => i.name).join(', '),
+                        };
+                        if (matched.some(i => i.tier === 'medium' || i.second_pass)) {
+                            this.badge('addon_type', { source_text: matched.map(i => i.source_text).join(', '), name: '' });
+                        }
+                    }
+                } else {
+                    const best = matched[0];
+                    const ok = await this.set('addon_type', best);
+                    if (ok) {
+                        this.applied.addon_type = { suggested: best.value, tier: best.tier, name: best.name };
+                        if (best.tier === 'medium' || best.second_pass) this.badge('addon_type', best);
+                    }
+                    for (const item of matched.slice(1)) {
+                        hints.push({ kind: 'addon-extra', name: item.name, tier: item.tier });
+                    }
                 }
-            }
-            for (const item of matched.slice(1)) {
-                hints.push({ kind: 'addon-extra', name: item.name, tier: item.tier });
             }
             for (const item of items.filter(i => i.value === null && i.source_text)) {
                 hints.push({ kind: 'unmatched', field: 'addon_type', source: String(item.source_text) });
@@ -218,6 +237,19 @@
 
         async set(field, data) {
             const spec = this.cfg.fields[field];
+            if (spec.kind === 'checklist') {
+                const values = (Array.isArray(data.value) ? data.value : [data.value]).map(String);
+                await this.waitForGroupValue(field, values[0]);
+                let hit = false;
+                this.group(field).forEach((input) => {
+                    if (values.includes(input.value)) {
+                        input.checked = true;
+                        hit = true;
+                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                });
+                return hit;
+            }
             if (spec.kind === 'radio') {
                 const radio = this.radios(field).find(r => r.value === String(data.value));
                 if (!radio) return false;
@@ -255,6 +287,17 @@
             return true;
         }
 
+        waitForGroupValue(field, value, tries = 30) {
+            return new Promise(resolve => {
+                const check = n => {
+                    if (this.group(field).some(i => i.value === String(value))) return resolve(true);
+                    if (n <= 0) return resolve(false);
+                    setTimeout(() => check(n - 1), 100);
+                };
+                check(tries);
+            });
+        }
+
         waitForOption(node, value, tries = 30) {
             return new Promise(resolve => {
                 const check = n => {
@@ -268,7 +311,9 @@
 
         badge(field, data) {
             const spec = this.cfg.fields[field];
-            const anchor = spec.kind === 'radio' ? this.radios(field).slice(-1)[0].parentElement : el(spec.sel);
+            const anchor = (spec.kind === 'radio' || spec.kind === 'checklist')
+                ? (this.group(field).slice(-1)[0] || {}).parentElement
+                : el(spec.sel);
             if (!anchor || anchor.parentElement.querySelector(`[data-prefill-badge="${field}"]`)) return;
             const badge = document.createElement('span');
             badge.className = 'prefill-badge';

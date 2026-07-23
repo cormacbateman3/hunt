@@ -58,9 +58,11 @@ def _prefill_from_collection_item(collection_item):
     return initial
 
 
-def _copy_collection_images_to_listing(listing):
+def _copy_collection_images_to_listing(listing, uploaded_any=False):
+    # When the seller uploaded their own photos, never mix in collection copies —
+    # that overlap read as "reorder duplicates my images" (10.8 bug).
     source = listing.source_collection_item
-    if not source:
+    if not source or uploaded_any:
         return
     source_images = list(source.images.order_by('sort_order', 'uploaded_at'))
     if not source_images:
@@ -532,7 +534,7 @@ def listing_create(request):
             )
             if image_formset.is_valid():
                 image_formset.save()
-                _copy_collection_images_to_listing(listing)
+                _copy_collection_images_to_listing(listing, uploaded_any=bool(request.FILES))
                 _normalize_listing_image_sort_order(listing)
                 _link_prefill_job(request, listing)
             else:
@@ -553,19 +555,35 @@ def listing_create(request):
                 messages.success(request, 'Listing created successfully!')
             return redirect('listings:detail', pk=listing.pk)
     else:
+        # Two-page create flow (10.8/T13): page 1 is a light config step —
+        # marketplace + source — page 2 is the details form shaped by it.
+        config_type = request.GET.get('listing_type', '')
+        if config_type not in ('auction', 'buy_now'):
+            return render(request, 'listings/listing_create_config.html', {
+                'collection_items': request.user.collection_items.order_by('-created_at'),
+                'preselected_item': request.GET.get('from_collection', ''),
+            })
+
         source_id = request.GET.get('from_collection')
         if source_id and source_id.isdigit():
             source_item = get_object_or_404(
                 request.user.collection_items.select_related('state', 'county').prefetch_related('license_types'),
                 pk=int(source_id),
             )
-            form = ListingForm(initial=_prefill_from_collection_item(source_item), user=request.user)
+            initial = _prefill_from_collection_item(source_item)
+            initial['listing_type'] = config_type
+            form = ListingForm(initial=initial, user=request.user)
         else:
-            form = ListingForm(user=request.user)
+            form = ListingForm(initial={'listing_type': config_type}, user=request.user)
 
+    config_listing_type = (
+        form.data.get('listing_type') if form.is_bound else form.initial.get('listing_type')
+    ) or ''
     context = {
         'form': form,
         'image_formset': image_formset,
+        'config_listing_type': config_listing_type,
+        'config_listing_type_label': dict(Listing.LISTING_TYPE_CHOICES).get(config_listing_type, ''),
         'taxonomy_fields': TAXONOMY_FIELDS,
         'taxonomy_field_names_json': json.dumps([item[0] for item in TAXONOMY_FIELDS]),
         'suggestion_form': ReferenceDataSuggestionForm(

@@ -67,7 +67,7 @@
                 </div>
                 <div id="era-label-field">
                     <label class="form-label" for="{{ form.era_label.id_for_label }}">
-                        Era <span id="era-label-required" style="color: var(--color-error); display: none;">*</span>
+                        Era (Circa) <span id="era-label-required" style="color: var(--color-error); display: none;">*</span>
                     </label>
                     {{ form.era_label }}
                     <small style="color: var(--color-muted);">{{ form.era_label.help_text }}</small>
@@ -92,8 +92,8 @@
 
             {% for field_name, other_name, heading in taxonomy_fields %}
                 {% with field=form|bound_field:field_name other_field=form|bound_field:other_name %}
-                <div style="display: grid; gap: 0.45rem;">
-                    <label class="form-label" for="{{ field.id_for_label }}">{{ heading }}</label>
+                <div style="display: grid; gap: 0.45rem;" data-taxonomy-field="{{ field_name }}">
+                    <label class="form-label" for="{{ field.id_for_label }}" data-taxonomy-label="{{ field_name }}">{{ heading }}</label>
                     {{ field }}
                     {{ field.errors }}
                     <div data-other-wrapper="{{ field_name }}" style="display: none;">
@@ -218,6 +218,8 @@
             </div>
         </details>
 
+        <hr style="margin: 1.2rem 0; border: 0; border-top: 1px solid var(--color-border);">
+        <h2 style="font-size: 1.1rem; margin-bottom: 0.5rem;">Shipping</h2>
         {% include 'listings/_shipping_section.html' %}
 
         <details style="margin-top: 1rem;">
@@ -286,7 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
             activity_scope: { kind: 'select', sel: '#id_activity_scope' },
             duration: { kind: 'select', sel: '#id_duration' },
             material: { kind: 'select', sel: '#id_material' },
-            addon_type: { kind: 'select', sel: '#id_addon_type' },
+            addon_type: { kind: 'checklist', name: 'addon_type' },
             shape: { kind: 'select', sel: '#{{ form.shape.id_for_label }}' },
             colors: { kind: 'multiselect', sel: '#{{ form.colors.id_for_label }}' },
             serial_number: { kind: 'input', sel: '#{{ form.serial_number.id_for_label }}' },
@@ -329,12 +331,36 @@ document.addEventListener('DOMContentLoaded', () => {
         togglePickup();
     }
 
+    const rebuildChecklist = (container, name, items) => {
+        const checked = Array.from(container.querySelectorAll('input:checked')).map(i => i.value);
+        container.innerHTML = '';
+        items.forEach((item, i) => {
+            const label = document.createElement('label');
+            label.className = 'chip-option';
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.name = name;
+            input.value = item.id;
+            input.id = `id_${name}_${i}`;
+            if (checked.includes(String(item.id))) input.checked = true;
+            label.appendChild(input);
+            label.appendChild(document.createTextNode(' ' + item.name));
+            container.appendChild(label);
+        });
+    };
+
     const updateOtherWrapper = (fieldName) => {
         const field = document.getElementById(`id_${fieldName}`);
         const wrapper = document.querySelector(`[data-other-wrapper="${fieldName}"]`);
         if (!field || !wrapper) return;
         let show = false;
-        if (field.multiple) {
+        if (field.tagName !== 'SELECT') {
+            show = Array.from(field.querySelectorAll('input:checked')).some((input) => {
+                const label = input.closest('label');
+                const text = label ? label.textContent.trim().toLowerCase() : '';
+                return text === 'other' || input.value === 'other';
+            });
+        } else if (field.multiple) {
             show = Array.from(field.selectedOptions).some((option) => option.value === 'other' || option.text.trim().toLowerCase() === 'other');
         } else {
             const selected = field.options[field.selectedIndex];
@@ -365,15 +391,20 @@ document.addEventListener('DOMContentLoaded', () => {
         taxonomyFields.forEach((fieldName) => {
             const field = document.getElementById(`id_${fieldName}`);
             if (!field) return;
-            const currentValue = field.value;
-            field.innerHTML = `<option value="">Select ${fieldName.replace('_', ' ')}</option>`;
-            (licenseTypeData.results[fieldName] || []).forEach((item) => {
-                const option = document.createElement('option');
-                option.value = item.id;
-                option.textContent = item.name;
-                if (String(item.id) === currentValue) option.selected = true;
-                field.appendChild(option);
-            });
+            const items = licenseTypeData.results[fieldName] || [];
+            if (field.tagName !== 'SELECT') {
+                rebuildChecklist(field, fieldName, items);
+            } else {
+                const currentValue = field.value;
+                field.innerHTML = `<option value="">Select ${fieldName.replace('_', ' ')}</option>`;
+                items.forEach((item) => {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = item.name;
+                    if (String(item.id) === currentValue) option.selected = true;
+                    field.appendChild(option);
+                });
+            }
             updateOtherWrapper(fieldName);
         });
     };
@@ -424,6 +455,42 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
     applySort();
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    /* 10.8 shared: item-kind sections (T6b) + Era (Circa) autofill */
+    const kindRadios = Array.from(document.querySelectorAll('input[name="item_kind"]'));
+    const BASE_DIMS = ['residency', 'holder_eligibility', 'activity_scope', 'duration'];
+    const addonLabel = document.querySelector('[data-taxonomy-label="addon_type"]');
+    const addonsAttachedField = document.getElementById('addons-attached-field');
+    const applyKind = () => {
+        const kind = (kindRadios.find(r => r.checked) || {}).value || 'license';
+        BASE_DIMS.forEach((name) => {
+            const wrap = document.querySelector(`[data-taxonomy-field="${name}"]`);
+            if (wrap) wrap.style.display = kind === 'addon' ? 'none' : '';
+        });
+        if (addonLabel) addonLabel.textContent = kind === 'addon' ? 'What is this item?' : 'Attached / included add-ons';
+        if (addonsAttachedField) addonsAttachedField.style.display = kind === 'addon' ? 'none' : '';
+    };
+    kindRadios.forEach(r => r.addEventListener('change', applyKind));
+    if (kindRadios.length) applyKind();
+
+    const yearInput = document.getElementById('id_license_year');
+    const eraSelect = document.getElementById('id_era_label');
+    if (yearInput && eraSelect) {
+        const eraFromYear = (raw) => {
+            const y = parseInt(raw, 10);
+            if (!y) return '';
+            if (y < 1920) return 'Pre-1920';
+            if (y === 2000) return '2000';
+            return `${Math.floor(y / 10) * 10}s`;
+        };
+        yearInput.addEventListener('input', () => {
+            const era = eraFromYear(yearInput.value.trim());
+            if (era && [...eraSelect.options].some(o => o.value === era)) eraSelect.value = era;
+        });
+    }
 });
 </script>
 {% endblock %}

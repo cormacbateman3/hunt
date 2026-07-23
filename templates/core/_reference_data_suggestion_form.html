@@ -1,32 +1,61 @@
-<form method="post" action="{% url 'core:suggestion_create' %}" style="display: grid; gap: 0.6rem;">
+<p style="color: var(--color-muted); font-size: 0.85rem; margin: 0 0 0.6rem;">
+    Spotted a value we're missing — a license type, county, or era detail? Suggest it here
+    and an admin will review it. Approved values join the official lists for everyone.
+</p>
+<form method="post" action="{% url 'core:suggestion_create' %}" style="display: grid; gap: 0.6rem;" data-suggestion-form>
     {% csrf_token %}
     <input type="hidden" name="next" value="{{ request.path }}">
-    <div>
-        <label class="form-label" for="id_suggestion_type">Suggestion type</label>
-        {{ suggestion_form.suggestion_type }}
-    </div>
-    <div>
-        <label class="form-label" for="id_target_model">Target model</label>
-        {{ suggestion_form.target_model }}
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem;">
+        <div>
+            <label class="form-label" for="id_suggestion_type">What kind of suggestion?</label>
+            {{ suggestion_form.suggestion_type }}
+        </div>
+        <div>
+            <label class="form-label" for="id_target_model">What does it apply to?</label>
+            {{ suggestion_form.target_model }}
+        </div>
     </div>
     {{ suggestion_form.target_id }}
     <div>
-        <label class="form-label" for="id_field_name">Field name</label>
+        <label class="form-label" for="id_field_name">Field name <span style="color: var(--color-muted); font-weight: 400;">(e.g. addon_type, county)</span></label>
         {{ suggestion_form.field_name }}
     </div>
-    <div>
-        <label class="form-label" for="id_current_value">Current value</label>
+    <div data-suggestion-current style="display: none;">
+        <label class="form-label" for="id_current_value">Current (incorrect) value</label>
         {{ suggestion_form.current_value }}
     </div>
     <div>
-        <label class="form-label" for="id_proposed_value">Proposed value</label>
+        <label class="form-label" for="id_proposed_value" data-proposed-label>Proposed value</label>
         {{ suggestion_form.proposed_value }}
     </div>
     <div>
-        <label class="form-label" for="id_source_or_evidence">Source or evidence</label>
+        <label class="form-label" for="id_source_or_evidence">Source or evidence <span style="color: var(--color-muted); font-weight: 400;">(a link, book, or "printed on my 1942 license")</span></label>
         {{ suggestion_form.source_or_evidence }}
     </div>
     <div>
         <button type="submit" class="btn-secondary">Submit suggestion</button>
     </div>
 </form>
+<script>
+(function () {
+    /* New Value needs no "current value"; Other becomes a free-text description. */
+    document.querySelectorAll('[data-suggestion-form]').forEach((form) => {
+        const typeSelect = form.querySelector('#id_suggestion_type');
+        if (!typeSelect || form.dataset.suggestionWired) return;
+        form.dataset.suggestionWired = '1';
+        const currentRow = form.querySelector('[data-suggestion-current]');
+        const proposedLabel = form.querySelector('[data-proposed-label]');
+        const update = () => {
+            const value = typeSelect.value;
+            if (currentRow) currentRow.style.display = value === 'correction' ? '' : 'none';
+            if (proposedLabel) {
+                proposedLabel.textContent = value === 'other'
+                    ? 'Tell us what you found (free text)'
+                    : 'Proposed value';
+            }
+        };
+        typeSelect.addEventListener('change', update);
+        update();
+    });
+})();
+</script>

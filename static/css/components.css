@@ -412,3 +412,57 @@
 }
 .prefill-chip:disabled { opacity: 0.6; cursor: default; }
 .prefill-chip-static { cursor: default; background: var(--color-parchment, #f7f3e8); }
+
+/* ---------- 10.8 form overhaul: chip checkboxes + modal + back badge ---------- */
+.chip-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+.chip-checkboxes > div { display: contents; }
+.chip-checkboxes label,
+.chip-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.7rem;
+    border: 1px solid var(--color-border, #d8cfba);
+    border-radius: 999px;
+    background: #fff;
+    font-size: 0.85rem;
+    font-weight: 400;
+    cursor: pointer;
+    margin: 0;
+    user-select: none;
+}
+.chip-checkboxes label:has(input:checked),
+.chip-option:has(input:checked) {
+    background: var(--color-forest-green, #35502f);
+    border-color: var(--color-forest-green, #35502f);
+    color: #fff;
+}
+.chip-checkboxes input[type="checkbox"] { accent-color: var(--color-forest-green, #35502f); }
+.kb-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(30, 30, 25, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.kb-modal {
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid var(--color-border, #d8cfba);
+    padding: 1.1rem 1.3rem;
+    max-width: 340px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+}
+.kb-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.9rem;
+}
+.img-back-badge { background: var(--color-aged-amber, #a9852f); }

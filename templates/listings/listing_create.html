@@ -113,11 +113,23 @@
 <section class="card" style="max-width: 960px; margin: 0 auto;">
     <h1 style="margin-bottom: 0.75rem;">Create listing</h1>
     <p style="margin-bottom: 1rem; color: var(--color-muted);">
-        Pennsylvania remains the default. Switch states only when needed and the form will refresh its reference-data options in place.
+        Describe the item as it's printed — a photo can pre-fill most of this for you.
     </p>
 
     <form method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
+        {% if form.errors or image_formset.non_form_errors %}
+            <div class="alert alert-error" role="alert" style="margin-bottom: 1rem;">
+                <strong>Your listing wasn't saved — please fix the following:</strong>
+                <ul style="margin: 0.35rem 0 0 1.1rem;">
+                    {% for field in form %}{% for error in field.errors %}
+                        <li><a href="#{{ field.id_for_label }}" style="color: inherit;">{{ field.label }}: {{ error }}</a></li>
+                    {% endfor %}{% endfor %}
+                    {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+                    {% for error in image_formset.non_form_errors %}<li>{{ error }}</li>{% endfor %}
+                </ul>
+            </div>
+        {% endif %}
         {% if form.non_field_errors %}
             <div class="alert alert-error" style="margin-bottom: 1rem;">{{ form.non_field_errors }}</div>
         {% endif %}
@@ -146,24 +158,21 @@
                 {{ form.item_kind.errors }}
             </div>
 
-            <!-- 2. Listing type + state -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
-                <div>
-                    <label class="form-label" for="{{ form.listing_type.id_for_label }}">Listing type</label>
-                    {{ form.listing_type }}
-                    {{ form.listing_type.errors }}
-                </div>
-                <div>
-                    <label class="form-label" for="{{ form.state.id_for_label }}">Issuing state</label>
-                    {{ form.state }}
-                    {{ form.state.errors }}
-                </div>
+            <!-- 2. Marketplace (chosen on the config page; the hidden select keeps the panel JS working) -->
+            <div>
+                <span class="form-label" style="display: block;">Selling in</span>
+                <p style="margin: 0;">
+                    <strong>{{ config_listing_type_label|default:'The General Store' }}</strong>
+                    <a href="{% url 'listings:create' %}" style="margin-left: 0.6rem; font-size: 0.85rem; color: var(--color-aged-amber);">change</a>
+                </p>
+                <div style="display: none;">{{ form.listing_type }}</div>
+                {{ form.listing_type.errors }}
             </div>
 
             <!-- 3. Image upload zone -->
             <div>
                 <label class="form-label" style="margin-bottom: 0.35rem; display: block;">
-                    Images <span style="font-weight: 400; color: var(--color-muted);">(up to 5 — first becomes the featured photo)</span>
+                    Images <span style="font-weight: 400; color: var(--color-muted);">(up to 5 — first is the Featured/front photo, second the back)</span>
                 </label>
                 <div class="img-zone" id="img-zone">
                     <div class="img-drop-area" id="img-drop">
@@ -194,6 +203,13 @@
                 <div id="prefill-panel"></div>
             </div>
 
+            <!-- 3b. Issuing state (below images — 10.8) -->
+            <div>
+                <label class="form-label" for="{{ form.state.id_for_label }}">Issuing state</label>
+                {{ form.state }}
+                {{ form.state.errors }}
+            </div>
+
             <!-- 4. Title -->
             <div>
                 <label class="form-label" for="{{ form.title.id_for_label }}">Title</label>
@@ -217,7 +233,7 @@
                 </div>
                 <div id="era-label-field">
                     <label class="form-label" for="{{ form.era_label.id_for_label }}">
-                        Era <span id="era-label-required" style="color: var(--color-error); display: none;">*</span>
+                        Era (Circa) <span id="era-label-required" style="color: var(--color-error); display: none;">*</span>
                     </label>
                     {{ form.era_label }}
                     <small style="color: var(--color-muted);">{{ form.era_label.help_text }}</small>
@@ -239,55 +255,58 @@
                 </div>
             </div>
 
-            <!-- 8. Item Taxonomy -->
-            <hr style="margin: 0.5rem 0; border: 0; border-top: 1px solid var(--color-border);">
-            <h2 style="font-size: 1.1rem; margin: 0;">Item Taxonomy</h2>
-            <p style="color: var(--color-muted); margin: 0;">Fill at least one section to identify what the item is.</p>
+            <!-- 8. Item taxonomy — collapsible (10.8); opens itself when it holds errors -->
+            <details id="taxonomy-details" {% if form.errors %}open{% endif %} style="border: 1px solid var(--color-border); border-radius: 8px; padding: 0.75rem;">
+                <summary style="cursor: pointer; font-size: 1.05rem; font-weight: 600;">
+                    Item taxonomy <span style="font-weight: 400; color: var(--color-muted); font-size: 0.85rem;">— identify what the item is (optional but boosts completeness)</span>
+                </summary>
+                <div style="display: grid; gap: 0.85rem; margin-top: 0.75rem;">
+                    {% for field_name, other_name, heading in taxonomy_fields %}
+                        {% with field=form|bound_field:field_name other_field=form|bound_field:other_name %}
+                        <div style="display: grid; gap: 0.45rem;" data-taxonomy-field="{{ field_name }}">
+                            <label class="form-label" for="{{ field.id_for_label }}" data-taxonomy-label="{{ field_name }}">{{ heading }}</label>
+                            {{ field }}
+                            {{ field.errors }}
+                            <div data-other-wrapper="{{ field_name }}" style="display: none;">
+                                <label class="form-label" for="{{ other_field.id_for_label }}">{{ heading }} other</label>
+                                {{ other_field }}
+                                {{ other_field.errors }}
+                            </div>
+                        </div>
+                        {% endwith %}
+                    {% endfor %}
 
-            {% for field_name, other_name, heading in taxonomy_fields %}
-                {% with field=form|bound_field:field_name other_field=form|bound_field:other_name %}
-                <div style="display: grid; gap: 0.45rem;">
-                    <label class="form-label" for="{{ field.id_for_label }}">{{ heading }}</label>
-                    {{ field }}
-                    {{ field.errors }}
-                    <div data-other-wrapper="{{ field_name }}" style="display: none;">
-                        <label class="form-label" for="{{ other_field.id_for_label }}">{{ heading }} other</label>
-                        {{ other_field }}
-                        {{ other_field.errors }}
+                    <div id="addons-attached-field">
+                        <label class="form-label" for="{{ form.addons_attached.id_for_label }}">Add-ons attached / intact?</label>
+                        {{ form.addons_attached }}
+                        <small style="color: var(--color-muted);">For a license with add-ons: are the tags/stamps still physically attached? Leave Unknown if unsure.</small>
+                        {{ form.addons_attached.errors }}
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+                        <div>
+                            <label class="form-label" for="{{ form.shape.id_for_label }}">Shape</label>
+                            {{ form.shape }}
+                            {{ form.shape.errors }}
+                            <div data-other-wrapper="shape" style="display: none; margin-top: 0.45rem;">
+                                <label class="form-label" for="{{ form.shape_other.id_for_label }}">Shape other</label>
+                                {{ form.shape_other }}
+                                {{ form.shape_other.errors }}
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label" for="{{ form.colors.id_for_label }}">Color(s)</label>
+                            {{ form.colors }}
+                            {{ form.colors.errors }}
+                            <div data-other-wrapper="colors" style="display: none; margin-top: 0.45rem;">
+                                <label class="form-label" for="{{ form.colors_other.id_for_label }}">Color other</label>
+                                {{ form.colors_other }}
+                                {{ form.colors_other.errors }}
+                            </div>
+                        </div>
                     </div>
                 </div>
-                {% endwith %}
-            {% endfor %}
-
-            <div id="addons-attached-field">
-                <label class="form-label" for="{{ form.addons_attached.id_for_label }}">Add-ons attached / intact?</label>
-                {{ form.addons_attached }}
-                <small style="color: var(--color-muted);">For a license with add-ons: are the tags/stamps still physically attached? Leave Unknown if unsure.</small>
-                {{ form.addons_attached.errors }}
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
-                <div>
-                    <label class="form-label" for="{{ form.shape.id_for_label }}">Shape</label>
-                    {{ form.shape }}
-                    {{ form.shape.errors }}
-                    <div data-other-wrapper="shape" style="display: none; margin-top: 0.45rem;">
-                        <label class="form-label" for="{{ form.shape_other.id_for_label }}">Shape other</label>
-                        {{ form.shape_other }}
-                        {{ form.shape_other.errors }}
-                    </div>
-                </div>
-                <div>
-                    <label class="form-label" for="{{ form.colors.id_for_label }}">Color(s)</label>
-                    {{ form.colors }}
-                    {{ form.colors.errors }}
-                    <div data-other-wrapper="colors" style="display: none; margin-top: 0.45rem;">
-                        <label class="form-label" for="{{ form.colors_other.id_for_label }}">Color other</label>
-                        {{ form.colors_other }}
-                        {{ form.colors_other.errors }}
-                    </div>
-                </div>
-            </div>
+            </details>
         </div>
 
         <!-- Optional details -->
@@ -328,6 +347,12 @@
                     {{ form.duration_days }}
                     {{ form.duration_days.errors }}
                 </div>
+                <div data-listing-panel="auction">
+                    <label class="form-label" for="{{ form.bid_increment.id_for_label }}">Bid increment ($)</label>
+                    {{ form.bid_increment }}
+                    <small style="color: var(--color-muted);">Each new bid must beat the current bid by at least this much.</small>
+                    {{ form.bid_increment.errors }}
+                </div>
                 <div data-listing-panel="buy_now">
                     <label class="form-label" for="{{ form.buy_now_price.id_for_label }}">Buy now price ($)</label>
                     {{ form.buy_now_price }}
@@ -346,38 +371,45 @@
                 {{ form.allow_cash.errors }}
             </div>
 
-            <hr style="margin: 0.5rem 0; border: 0; border-top: 1px solid var(--color-border);">
-            <h2 style="font-size: 1.1rem; margin: 0;">Listing options</h2>
-
-            <div data-listing-panel="auction" data-listing-panel-also="buy_now">
-                <label class="form-label" for="{{ form.scheduled_at.id_for_label }}">Schedule go-live (optional)</label>
-                {{ form.scheduled_at }}
-                {% if form.scheduled_at.help_text %}<small style="color: var(--color-muted);">{{ form.scheduled_at.help_text }}</small>{% endif %}
-                {{ form.scheduled_at.errors }}
-            </div>
-            <div data-listing-panel="auction">
-                <label class="form-label" for="{{ form.auto_relist.id_for_label }}">
-                    {{ form.auto_relist }} Auto-relist if unsold
-                </label>
-                {% if form.auto_relist.help_text %}<small style="color: var(--color-muted);">{{ form.auto_relist.help_text }}</small>{% endif %}
-                {{ form.auto_relist.errors }}
-            </div>
-            <div>
-                <label class="form-label" for="{{ form.local_pickup_available.id_for_label }}">
-                    {{ form.local_pickup_available }} Offer local pickup
-                </label>
-                {% if form.local_pickup_available.help_text %}<small style="color: var(--color-muted);">{{ form.local_pickup_available.help_text }}</small>{% endif %}
-                {{ form.local_pickup_available.errors }}
-                <div id="local-pickup-location-wrapper" style="margin-top: 0.45rem; display: none;">
-                    <label class="form-label" for="{{ form.local_pickup_location.id_for_label }}">Pickup location</label>
-                    {{ form.local_pickup_location }}
-                    {% if form.local_pickup_location.help_text %}<small style="color: var(--color-muted);">{{ form.local_pickup_location.help_text }}</small>{% endif %}
-                    {{ form.local_pickup_location.errors }}
+            <details style="margin-top: 0.25rem;" {% if form.scheduled_at.errors or form.local_pickup_location.errors %}open{% endif %}>
+                <summary style="cursor: pointer; font-size: 1.05rem; font-weight: 600;">Listing options</summary>
+                <div style="display: grid; gap: 0.85rem; margin-top: 0.75rem;">
+                    <div data-listing-panel="auction" data-listing-panel-also="buy_now">
+                        <label class="form-label" for="{{ form.scheduled_at.id_for_label }}">Schedule go-live (optional)</label>
+                        {{ form.scheduled_at }}
+                        {% if form.scheduled_at.help_text %}<small style="color: var(--color-muted);">{{ form.scheduled_at.help_text }}</small>{% endif %}
+                        {{ form.scheduled_at.errors }}
+                    </div>
+                    <div data-listing-panel="auction">
+                        <label class="form-label" for="{{ form.auto_relist.id_for_label }}">
+                            {{ form.auto_relist }} Auto-relist if unsold
+                        </label>
+                        {% if form.auto_relist.help_text %}<small style="color: var(--color-muted);">{{ form.auto_relist.help_text }}</small>{% endif %}
+                        {{ form.auto_relist.errors }}
+                    </div>
+                    <div>
+                        <label class="form-label" for="{{ form.local_pickup_available.id_for_label }}">
+                            {{ form.local_pickup_available }} Offer local pickup
+                        </label>
+                        {% if form.local_pickup_available.help_text %}<small style="color: var(--color-muted);">{{ form.local_pickup_available.help_text }}</small>{% endif %}
+                        {{ form.local_pickup_available.errors }}
+                        <div id="local-pickup-location-wrapper" style="margin-top: 0.45rem; display: none;">
+                            <label class="form-label" for="{{ form.local_pickup_location.id_for_label }}">Pickup location</label>
+                            {{ form.local_pickup_location }}
+                            {% if form.local_pickup_location.help_text %}<small style="color: var(--color-muted);">{{ form.local_pickup_location.help_text }}</small>{% endif %}
+                            {{ form.local_pickup_location.errors }}
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </details>
         </div>
 
-        {% include 'listings/_shipping_section.html' %}
+        <details style="margin-top: 1rem;" {% if form.ship_from_address.errors or form.package_weight_oz.errors or form.shipping_service.errors %}open{% endif %}>
+            <summary style="cursor: pointer; font-size: 1.05rem; font-weight: 600;">Shipping</summary>
+            <div style="display: grid; gap: 0.85rem; margin-top: 0.75rem;">
+                {% include 'listings/_shipping_section.html' %}
+            </div>
+        </details>
 
         <details style="margin-top: 1rem;">
             <summary style="cursor: pointer; color: var(--color-aged-amber);">Is a value missing?</summary>
@@ -421,7 +453,7 @@ document.addEventListener('DOMContentLoaded', () => {
             activity_scope: { kind: 'select', sel: '#id_activity_scope' },
             duration: { kind: 'select', sel: '#id_duration' },
             material: { kind: 'select', sel: '#id_material' },
-            addon_type: { kind: 'select', sel: '#id_addon_type' },
+            addon_type: { kind: 'checklist', name: 'addon_type' },
             shape: { kind: 'select', sel: '#{{ form.shape.id_for_label }}' },
             colors: { kind: 'multiselect', sel: '#{{ form.colors.id_for_label }}' },
             serial_number: { kind: 'input', sel: '#{{ form.serial_number.id_for_label }}' },
@@ -440,14 +472,44 @@ document.addEventListener('DOMContentLoaded', () => {
     const eraRequired = document.getElementById('era-label-required');
     const taxonomyFields = {{ taxonomy_field_names_json|safe }};
 
+    const eraSelect = document.getElementById('{{ form.era_label.id_for_label }}');
+    const eraFromYear = (raw) => {
+        const y = parseInt(raw, 10);
+        if (!y) return '';
+        if (y < 1920) return 'Pre-1920';
+        if (y === 2000) return '2000';
+        return `${Math.floor(y / 10) * 10}s`;
+    };
     const toggleEraRequired = () => {
         const yearKnown = licenseYearInput && licenseYearInput.value.trim() !== '';
         if (eraRequired) eraRequired.style.display = yearKnown ? 'none' : '';
+        // Era (Circa) auto-fills from a known year; stays editable when unknown.
+        if (yearKnown && eraSelect) {
+            const era = eraFromYear(licenseYearInput.value.trim());
+            if (era && [...eraSelect.options].some(o => o.value === era)) eraSelect.value = era;
+        }
     };
     if (licenseYearInput) {
         licenseYearInput.addEventListener('input', toggleEraRequired);
         toggleEraRequired();
     }
+
+    // T6b: item kind drives which taxonomy dimensions apply
+    const kindRadios = Array.from(document.querySelectorAll('input[name="item_kind"]'));
+    const BASE_DIMS = ['residency', 'holder_eligibility', 'activity_scope', 'duration'];
+    const addonLabel = document.querySelector('[data-taxonomy-label="addon_type"]');
+    const addonsAttachedField = document.getElementById('addons-attached-field');
+    const applyKind = () => {
+        const kind = (kindRadios.find(r => r.checked) || {}).value || 'license';
+        BASE_DIMS.forEach((name) => {
+            const wrap = document.querySelector(`[data-taxonomy-field="${name}"]`);
+            if (wrap) wrap.style.display = kind === 'addon' ? 'none' : '';
+        });
+        if (addonLabel) addonLabel.textContent = kind === 'addon' ? 'What is this item?' : 'Attached / included add-ons';
+        if (addonsAttachedField) addonsAttachedField.style.display = kind === 'addon' ? 'none' : '';
+    };
+    kindRadios.forEach(r => r.addEventListener('change', applyKind));
+    applyKind();
 
     const togglePanels = () => {
         const value = listingType.value;
@@ -470,13 +532,38 @@ document.addEventListener('DOMContentLoaded', () => {
         const wrapper = document.querySelector(`[data-other-wrapper="${fieldName}"]`);
         if (!field || !wrapper) return;
         let show = false;
-        if (field.multiple) {
+        if (field.tagName !== 'SELECT') {
+            // checkbox chip group (addon_type, colors)
+            show = Array.from(field.querySelectorAll('input:checked')).some((input) => {
+                const label = input.closest('label');
+                const text = label ? label.textContent.trim().toLowerCase() : '';
+                return text === 'other' || input.value === 'other';
+            });
+        } else if (field.multiple) {
             show = Array.from(field.selectedOptions).some(o => o.value === 'other' || o.text.trim().toLowerCase() === 'other');
         } else {
             const selected = field.options[field.selectedIndex];
             show = selected && selected.text.trim().toLowerCase() === 'other';
         }
         wrapper.style.display = show ? '' : 'none';
+    };
+
+    const rebuildChecklist = (container, name, items) => {
+        const checked = Array.from(container.querySelectorAll('input:checked')).map(i => i.value);
+        container.innerHTML = '';
+        items.forEach((item, i) => {
+            const label = document.createElement('label');
+            label.className = 'chip-option';
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.name = name;
+            input.value = item.id;
+            input.id = `id_${name}_${i}`;
+            if (checked.includes(String(item.id))) input.checked = true;
+            label.appendChild(input);
+            label.appendChild(document.createTextNode(' ' + item.name));
+            container.appendChild(label);
+        });
     };
 
     const loadReferenceData = async () => {
@@ -501,15 +588,20 @@ document.addEventListener('DOMContentLoaded', () => {
         taxonomyFields.forEach((fieldName) => {
             const field = document.getElementById(`id_${fieldName}`);
             if (!field) return;
-            const currentValue = field.value;
-            field.innerHTML = `<option value="">Select ${fieldName.replace('_', ' ')}</option>`;
-            (licenseTypeData.results[fieldName] || []).forEach((item) => {
-                const option = document.createElement('option');
-                option.value = item.id;
-                option.textContent = item.name;
-                if (String(item.id) === currentValue) option.selected = true;
-                field.appendChild(option);
-            });
+            const items = licenseTypeData.results[fieldName] || [];
+            if (field.tagName !== 'SELECT') {
+                rebuildChecklist(field, fieldName, items);
+            } else {
+                const currentValue = field.value;
+                field.innerHTML = `<option value="">Select ${fieldName.replace('_', ' ')}</option>`;
+                items.forEach((item) => {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = item.name;
+                    if (String(item.id) === currentValue) option.selected = true;
+                    field.appendChild(option);
+                });
+            }
             updateOtherWrapper(fieldName);
         });
     };
@@ -567,9 +659,27 @@ document.addEventListener('DOMContentLoaded', () => {
     function addFiles(files) {
         const remaining = MAX_IMAGES - staged.length;
         files.slice(0, remaining).forEach(file => {
+            // re-dropping the same photo must not duplicate it (10.8)
+            if (staged.some(s => s.file.name === file.name && s.file.size === file.size)) return;
             staged.push({ file, previewUrl: URL.createObjectURL(file) });
         });
         render();
+    }
+
+    function kbConfirm(message) {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.className = 'kb-modal-overlay';
+            overlay.innerHTML = '<div class="kb-modal"><p>' + message + '</p>'
+                + '<div class="kb-modal-actions">'
+                + '<button type="button" class="btn-secondary" data-cancel>Cancel</button>'
+                + '<button type="button" class="btn-primary" data-ok>Remove</button>'
+                + '</div></div>';
+            document.body.appendChild(overlay);
+            overlay.querySelector('[data-ok]').addEventListener('click', () => { overlay.remove(); resolve(true); });
+            overlay.querySelector('[data-cancel]').addEventListener('click', () => { overlay.remove(); resolve(false); });
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); resolve(false); } });
+        });
     }
 
     function assignToInputs() {
@@ -608,6 +718,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const badge = document.createElement('span');
                 badge.className = 'img-featured-badge';
                 badge.textContent = 'Featured';
+                thumb.appendChild(badge);
+            } else if (idx === 1) {
+                const badge = document.createElement('span');
+                badge.className = 'img-featured-badge img-back-badge';
+                badge.textContent = 'Back';
                 thumb.appendChild(badge);
             }
 
@@ -653,11 +768,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Remove button delegation
-    grid.addEventListener('click', (e) => {
+    grid.addEventListener('click', async (e) => {
         const btn = e.target.closest('.img-remove-btn');
         if (!btn) return;
         const idx = parseInt(btn.dataset.idx, 10);
-        if (!confirm('Remove this image?')) return;
+        if (!await kbConfirm('Remove this image?')) return;
         URL.revokeObjectURL(staged[idx].previewUrl);
         staged.splice(idx, 1);
         render();

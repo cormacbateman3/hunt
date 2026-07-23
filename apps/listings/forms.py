@@ -1,4 +1,5 @@
 from datetime import timedelta
+from decimal import Decimal
 
 from django import forms
 from django.db.models import Q
@@ -193,6 +194,9 @@ class ListingForm(forms.ModelForm):
         self.fields['source_collection_item'].queryset = CollectionItem.objects.none()
         self.fields['featured_image'].required = False
         self.fields['license_year'].required = False
+        # Model defaults cover these — never block a submit on them.
+        for optional_field in ('bid_increment', 'shipping_service', 'shipping_payer'):
+            self.fields[optional_field].required = False
 
         # Trade is not a listing type (10.10: trades start from collections);
         # legacy trade rows keep the option only while being edited.
@@ -263,6 +267,13 @@ class ListingForm(forms.ModelForm):
         # addons_attached only applies to a license with add-ons
         if cleaned_data.get('item_kind') == 'addon':
             cleaned_data['addons_attached'] = None
+        # Optional-with-model-default fields: blank means "use the default"
+        if not cleaned_data.get('shipping_service'):
+            cleaned_data['shipping_service'] = 'cheapest'
+        if not cleaned_data.get('shipping_payer'):
+            cleaned_data['shipping_payer'] = 'buyer'
+        if not cleaned_data.get('bid_increment'):
+            cleaned_data['bid_increment'] = Decimal('1')
         state = cleaned_data.get('state')
         county_ref = cleaned_data.get('county_ref')
         license_year = cleaned_data.get('license_year')
