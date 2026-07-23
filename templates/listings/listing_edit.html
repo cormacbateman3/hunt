@@ -198,6 +198,8 @@
                 <label class="form-label" for="{{ form.featured_image.id_for_label }}">Featured image</label>
                 {{ form.featured_image }}
                 {{ form.featured_image.errors }}
+                <input type="hidden" name="prefill_job_id" id="prefill-job-id" value="">
+                <div id="prefill-panel"></div>
             </div>
         </div>
 
@@ -258,6 +260,38 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/prefill.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    KBPrefill.init({
+        createUrl: '{% url "prefill:create_job" %}',
+        correctionsUrlTemplate: '{% url "prefill:job_corrections" 0 %}',
+        suggestionUrl: '{% url "core:suggestion_create" %}',
+        source: 'listing',
+        protectInitial: true,   /* saved values are never overwritten on edit */
+        fileInput: '#{{ form.featured_image.id_for_label }}',
+        jobIdInput: '#prefill-job-id',
+        panel: '#prefill-panel',
+        form: 'form[enctype]',
+        fields: {
+            item_kind: { kind: 'radio', name: 'item_kind' },
+            state: { kind: 'select', sel: '#{{ form.state.id_for_label }}' },
+            license_year: { kind: 'input', sel: '#{{ form.license_year.id_for_label }}' },
+            era_guess: { kind: 'select', sel: '#{{ form.era_label.id_for_label }}' },
+            geographic_unit: { kind: 'select', sel: '#{{ form.county_ref.id_for_label }}' },
+            residency: { kind: 'select', sel: '#id_residency' },
+            holder_eligibility: { kind: 'select', sel: '#id_holder_eligibility' },
+            activity_scope: { kind: 'select', sel: '#id_activity_scope' },
+            duration: { kind: 'select', sel: '#id_duration' },
+            material: { kind: 'select', sel: '#id_material' },
+            addon_type: { kind: 'select', sel: '#id_addon_type' },
+            shape: { kind: 'select', sel: '#{{ form.shape.id_for_label }}' },
+            colors: { kind: 'multiselect', sel: '#{{ form.colors.id_for_label }}' },
+            serial_number: { kind: 'input', sel: '#{{ form.serial_number.id_for_label }}' },
+        },
+    });
+});
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const listingType = document.getElementById('{{ form.listing_type.id_for_label }}');

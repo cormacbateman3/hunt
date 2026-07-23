@@ -53,6 +53,9 @@
                 const node = this.node(field);
                 if (!node) continue;
                 this.initial[field] = this.read(field);
+                // On edit forms, saved values are protected (cfg.protectInitial);
+                // on create forms only user edits after load count as dirty.
+                if (cfg.protectInitial && this.initial[field]) this.dirty[field] = true;
                 const mark = () => { if (!this.applying) this.dirty[field] = true; };
                 (spec.kind === 'radio' ? this.radios(field) : [node]).forEach(n => {
                     n.addEventListener('input', mark);
@@ -61,7 +64,12 @@
             }
 
             this.fileInput.addEventListener('change', () => {
-                if (this.fileInput.files && this.fileInput.files[0]) this.start(this.fileInput.files[0]);
+                const file = this.fileInput.files && this.fileInput.files[0];
+                if (!file) return;
+                const key = file.name + ':' + file.size;    // drop zones re-assign on reorder
+                if (key === this.lastFileKey) return;
+                this.lastFileKey = key;
+                this.start(file);
             });
             this.form.addEventListener('submit', () => this.logCorrections());
         }

@@ -81,6 +81,16 @@ def _normalize_listing_image_sort_order(listing):
             image.save(update_fields=['sort_order'])
 
 
+def _link_prefill_job(request, listing):
+    """Attach the listing to the prefill job that filled its form (audit linkage)."""
+    job_id = request.POST.get('prefill_job_id', '')
+    if job_id.isdigit():
+        from apps.prefill.models import PrefillJob
+        PrefillJob.objects.filter(
+            pk=int(job_id), user=request.user, resulting_listing__isnull=True,
+        ).update(resulting_listing=listing)
+
+
 def _era_to_year_range(era):
     """Return (year_from, year_to) for an era label, or None if not mappable."""
     if era == 'Pre-1920':
@@ -525,6 +535,7 @@ def listing_create(request):
                 image_formset.save()
                 _copy_collection_images_to_listing(listing)
                 _normalize_listing_image_sort_order(listing)
+                _link_prefill_job(request, listing)
             else:
                 listing.delete()
                 return render(request, 'listings/listing_create.html', {
