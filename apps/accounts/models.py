@@ -96,10 +96,12 @@ class UserProfile(models.Model):
                 'fix_label': 'Add address',
             },
             {
+                # No phone-verification flow exists yet — no fix link until one
+                # ships (10.6: the old link pointed at a page with no phone UI).
                 'label': 'Phone verified',
                 'complete': self.phone_verified,
-                'fix_url': reverse('accounts:profile_edit'),
-                'fix_label': 'Verify phone',
+                'fix_url': None,
+                'fix_label': '',
             },
         ]
 

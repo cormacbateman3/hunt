@@ -18,7 +18,7 @@ def place_bid(listing, bidder, amount):
     """
 
     if listing.listing_type != 'auction':
-        return False, "Bids are only allowed on Auction House listings"
+        return False, "Bids are only allowed on The Auction House listings"
     allowed, restriction_reason = enforce_capability(bidder, 'bid')
     if not allowed:
         return False, restriction_reason

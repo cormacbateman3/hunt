@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Favorites | KeystoneBid{% endblock %}
+{% block title %}My Favorites | KeystoneBid{% endblock %}
 
 {% block content %}
 <section style="display: grid; gap: 1rem;">
@@ -11,29 +11,76 @@
 
     <article class="card">
         <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Favorited Listings</h2>
-        {% for favorite in listing_favorites %}
-            <p style="margin-bottom: 0.45rem;">
-                <a href="{% url 'listings:detail' favorite.listing.pk %}">{{ favorite.listing.title }}</a>
-                ({{ favorite.listing.get_listing_type_display }})
-            </p>
-        {% empty %}
-            <p>No favorited listings yet.</p>
-        {% endfor %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0.75rem;">
+            {% for favorite in listing_favorites %}
+                {% with listing=favorite.listing %}
+                <article style="border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden;">
+                    <a href="{% url 'listings:detail' listing.pk %}">
+                        {% if listing.featured_image %}
+                            <img src="{{ listing.featured_image.url }}" alt="{{ listing.title }}"
+                                 style="width: 100%; height: 130px; object-fit: cover; display: block;">
+                        {% else %}
+                            <div style="width: 100%; height: 130px; background: var(--color-parchment); display: flex; align-items: center; justify-content: center;">
+                                <span style="color: var(--color-muted); font-size: 0.8rem;">No image</span>
+                            </div>
+                        {% endif %}
+                    </a>
+                    <div style="padding: 0.5rem;">
+                        <p style="font-size: 0.88rem; font-weight: 600; margin-bottom: 0.2rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                            <a href="{% url 'listings:detail' listing.pk %}" style="color: inherit;">{{ listing.title }}</a>
+                        </p>
+                        <p style="font-size: 0.78rem; color: var(--color-muted); margin-bottom: 0.35rem;">{{ listing.get_listing_type_display }}</p>
+                        <form method="post" action="{% url 'favorites:toggle_listing' listing.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.path }}">
+                            <button type="submit" class="btn-secondary" style="font-size: 0.78rem; padding: 0.2rem 0.5rem; width: 100%;">Unfavorite</button>
+                        </form>
+                    </div>
+                </article>
+                {% endwith %}
+            {% empty %}
+                <p style="grid-column: 1 / -1;">No favorited listings yet.</p>
+            {% endfor %}
+        </div>
     </article>
 
     <article class="card">
         <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Favorited Collection Items</h2>
-        {% for favorite in collection_favorites %}
-            <p style="margin-bottom: 0.45rem;">
-                {{ favorite.collection_item.title }} by
-                <a href="{% url 'accounts:profile' favorite.collection_item.owner.username %}">
-                    {{ favorite.collection_item.owner.username }}
-                </a>
-            </p>
-        {% empty %}
-            <p>No favorited collection items yet.</p>
-        {% endfor %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0.75rem;">
+            {% for favorite in collection_favorites %}
+                {% with item=favorite.collection_item %}
+                <article style="border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden;">
+                    <a href="{% url 'collections:item_detail' item.pk %}">
+                        {% with primary=item.images.first %}
+                            {% if primary %}
+                                <img src="{{ primary.image.url }}" alt="{{ item.title }}"
+                                     style="width: 100%; height: 130px; object-fit: cover; display: block;">
+                            {% else %}
+                                <div style="width: 100%; height: 130px; background: var(--color-parchment); display: flex; align-items: center; justify-content: center;">
+                                    <span style="color: var(--color-muted); font-size: 0.8rem;">No image</span>
+                                </div>
+                            {% endif %}
+                        {% endwith %}
+                    </a>
+                    <div style="padding: 0.5rem;">
+                        <p style="font-size: 0.88rem; font-weight: 600; margin-bottom: 0.2rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                            <a href="{% url 'collections:item_detail' item.pk %}" style="color: inherit;">{{ item.title }}</a>
+                        </p>
+                        <p style="font-size: 0.78rem; color: var(--color-muted); margin-bottom: 0.35rem;">
+                            by <a href="{% url 'accounts:profile' item.owner.username %}" style="color: var(--color-aged-amber);">{{ item.owner.username }}</a>
+                        </p>
+                        <form method="post" action="{% url 'favorites:toggle_collection_item' item.pk %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.path }}">
+                            <button type="submit" class="btn-secondary" style="font-size: 0.78rem; padding: 0.2rem 0.5rem; width: 100%;">Unfavorite</button>
+                        </form>
+                    </div>
+                </article>
+                {% endwith %}
+            {% empty %}
+                <p style="grid-column: 1 / -1;">No favorited collection items yet.</p>
+            {% endfor %}
+        </div>
     </article>
 </section>
 {% endblock %}
-

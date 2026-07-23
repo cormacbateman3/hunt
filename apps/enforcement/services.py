@@ -216,8 +216,13 @@ def enforce_deterministic_policies(*, now=None):
         order_type='auction',
         status='pending_payment',
         created_at__lte=auction_due,
-    ).select_related('buyer', 'listing')
+    ).select_related('buyer', 'seller__profile', 'listing')
     for order in stale_auction_orders:
+        # Payment is blocked while the seller has no shipping address — that gap
+        # is never the buyer's fault, so no non-payment strike can accrue.
+        from apps.listings.services import seller_shipping_ready
+        if not seller_shipping_ready(order.seller):
+            continue
         _, was_created = issue_strike(
             user=order.buyer,
             reason='non_payment',

@@ -1,17 +1,21 @@
 <article class="card" style="display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.75rem;">
+    <a href="{% url 'collections:item_detail' item.pk %}" style="flex-shrink: 0;">
     {% with primary=item.images.first %}
         {% if primary %}
             <img src="{{ primary.image.url }}" alt="{{ item.title }}"
-                 style="width: 90px; height: 90px; object-fit: cover; border-radius: 6px; flex-shrink: 0;">
+                 style="width: 90px; height: 90px; object-fit: cover; border-radius: 6px;">
         {% else %}
-            <div style="width: 90px; height: 90px; background: var(--color-parchment); border-radius: 6px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;">
+            <div style="width: 90px; height: 90px; background: var(--color-parchment); border-radius: 6px; display: flex; align-items: center; justify-content: center;">
                 <span style="color: var(--color-muted); font-size: 0.75rem;">No image</span>
             </div>
         {% endif %}
     {% endwith %}
+    </a>
     <div style="flex: 1; min-width: 0;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
-            <h3 style="font-size: 1rem; margin-bottom: 0.2rem;">{{ item.title }}</h3>
+            <h3 style="font-size: 1rem; margin-bottom: 0.2rem;">
+                <a href="{% url 'collections:item_detail' item.pk %}" style="color: inherit;">{{ item.title }}</a>
+            </h3>
             {% if item.featured %}
                 <span style="background: var(--color-aged-amber); color: #fff; font-size: 0.7rem; padding: 0.15rem 0.4rem; border-radius: 3px; font-weight: 600; flex-shrink: 0;">Featured</span>
             {% endif %}
@@ -37,6 +41,7 @@
             {% endif %}
         </div>
         <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center;">
+            <a class="btn-secondary" href="{% url 'collections:item_detail' item.pk %}" style="font-size: 0.82rem; padding: 0.25rem 0.55rem;">View</a>
             <a class="btn-secondary" href="{% url 'collections:edit' item.pk %}" style="font-size: 0.82rem; padding: 0.25rem 0.55rem;">Edit</a>
             <a class="btn-secondary" href="{% url 'listings:create' %}?from_collection={{ item.pk }}" style="font-size: 0.82rem; padding: 0.25rem 0.55rem;">List for sale</a>
             <form method="post" action="{% url 'collections:feature_toggle' item.pk %}" style="display: inline;">

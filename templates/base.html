@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>{% block title %}KeystoneBid - Pennsylvania Antique Hunting License Marketplace{% endblock %}</title>
-
     {% load static %}
+    <title>{% block title %}KeystoneBid &middot; Antique Hunting License Marketplace{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{% static 'img/favicon.svg' %}">
+
     <link rel="stylesheet" href="{% static 'css/reset.css' %}">
     <link rel="stylesheet" href="{% static 'css/variables.css' %}">
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
@@ -30,19 +31,19 @@
                 <li>
                     <a href="{% url 'listings:auction_house' %}"
                        class="nav-primary-link {% if request.resolver_match.view_name == 'listings:auction_house' %}active{% endif %}">
-                        Auction House
+                        The Auction House
                     </a>
                 </li>
                 <li>
                     <a href="{% url 'listings:general_store' %}"
                        class="nav-primary-link {% if request.resolver_match.view_name == 'listings:general_store' %}active{% endif %}">
-                        General Store
+                        The General Store
                     </a>
                 </li>
                 <li>
                     <a href="{% url 'listings:trading_block' %}"
                        class="nav-primary-link {% if request.resolver_match.view_name == 'listings:trading_block' %}active{% endif %}">
-                        Trading Block
+                        The Trading Block
                     </a>
                 </li>
                 <li>

@@ -7,6 +7,7 @@ urlpatterns = [
     path('browse/', views.browse_collections, name='browse'),
     path('my/', views.my_collection, name='my_collection'),
     path('create/', views.collection_item_create, name='create'),
+    path('<int:pk>/', views.collection_item_detail, name='item_detail'),
     path('<int:pk>/edit/', views.collection_item_edit, name='edit'),
     path('<int:pk>/delete/', views.collection_item_delete, name='delete'),
     path('<int:pk>/feature-toggle/', views.feature_toggle, name='feature_toggle'),

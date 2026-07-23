@@ -287,26 +287,26 @@ class BaseListingListView(ListView):
 
 class ListingListView(BaseListingListView):
     section_title = 'Browse Listings'
-    section_description = 'All active listings across Auction House, General Store, and Trading Block.'
+    section_description = 'All active listings across The Auction House, The General Store, and The Trading Block.'
 
 
 class AuctionHouseListView(BaseListingListView):
     listing_type = 'auction'
-    section_title = 'Auction House'
+    section_title = 'The Auction House'
     section_description = 'Timed auctions with active bidding.'
     show_map_toggle = True
 
 
 class GeneralStoreListView(BaseListingListView):
     listing_type = 'buy_now'
-    section_title = 'General Store'
+    section_title = 'The General Store'
     section_description = 'Fixed-price listings with instant purchase intent.'
     show_map_toggle = True
 
 
 class TradingBlockListView(BaseListingListView):
     listing_type = 'trade'
-    section_title = 'Trading Block'
+    section_title = 'The Trading Block'
     section_description = 'Trade listings with structured negotiation.'
 
 

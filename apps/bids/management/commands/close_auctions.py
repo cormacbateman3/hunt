@@ -154,9 +154,25 @@ class Command(BaseCommand):
 
     def _maybe_relist(self, listing, now):
         """Auto-relist an unsold auction if eligible (4b)."""
+        from apps.listings.services import seller_shipping_ready
+
         if not listing.auto_relist:
             return
         if listing.relist_count >= 3:
+            return
+        if not seller_shipping_ready(listing.seller):
+            create_notification(
+                user=listing.seller,
+                notification_type='listing_activation_blocked',
+                message=(
+                    f'"{listing.title}" was not relisted: add a default shipping address '
+                    'in your Account settings first.'
+                ),
+                link_url=f'/listings/{listing.pk}/',
+            )
+            self.stdout.write(self.style.WARNING(
+                f'Relist blocked (no seller address): {listing.title} (pk={listing.pk})'
+            ))
             return
 
         # Estimate original duration from created_at → auction_end (minimum 1 day)

@@ -19,7 +19,7 @@
                     {% endif %}
                     {{ item.label }}
                 </span>
-                {% if not item.complete %}
+                {% if not item.complete and item.fix_url %}
                     <a href="{{ item.fix_url }}" class="btn-secondary" style="font-size: 0.8rem; padding: 0.2rem 0.6rem;">
                         {{ item.fix_label }} &rarr;
                     </a>

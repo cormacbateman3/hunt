@@ -53,8 +53,15 @@ def _snapshot_from_address(address):
 def ensure_order_snapshots(order):
     seller_address = getattr(order.seller.profile, 'shipping_address', None)
     buyer_address = getattr(order.buyer.profile, 'shipping_address', None)
-    if not seller_address or not buyer_address:
-        raise ShippoError('Buyer and seller must both have default shipping addresses configured.')
+    # Blame the right party: a seller-side gap must never read as the buyer's problem
+    # (and the buyer is exempt from non-payment strikes while it persists).
+    if not seller_address:
+        raise ShippoError(
+            "The seller hasn't set up a shipping address yet, so payment is on hold. "
+            "We've let them know — you won't be penalized for the wait."
+        )
+    if not buyer_address:
+        raise ShippoError('Add a default shipping address in your Account settings to continue.')
 
     updated = False
     if not order.ship_from_snapshot:

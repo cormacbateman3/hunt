@@ -250,9 +250,9 @@ class ListingForm(forms.ModelForm):
                 self.add_error('reserve_price', 'Reserve price must be at least the starting price.')
         elif listing_type == 'buy_now':
             if buy_now_price is None:
-                self.add_error('buy_now_price', 'Buy now price is required for General Store listings.')
+                self.add_error('buy_now_price', 'Buy now price is required for The General Store listings.')
         elif listing_type == 'trade' and not trade_notes:
-            self.add_error('trade_notes', 'Trade preferences are required for Trading Block listings.')
+            self.add_error('trade_notes', 'Trade preferences are required for The Trading Block listings.')
 
         if not featured_image:
             source_has_image = bool(source_collection_item and source_collection_item.images.exists())

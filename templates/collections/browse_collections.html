@@ -98,6 +98,7 @@
     <div class="listing-grid">
         {% for item in page_obj %}
             <article class="listing-card">
+                <a href="{% url 'collections:item_detail' item.pk %}">
                 {% with primary=item.images.first %}
                     {% if primary %}
                         <img class="listing-card-img" src="{{ primary.image.url }}" alt="{{ item.title }}" loading="lazy">
@@ -107,8 +108,11 @@
                         </div>
                     {% endif %}
                 {% endwith %}
+                </a>
                 <div class="listing-card-body">
-                    <h3 class="listing-card-title">{{ item.title }}</h3>
+                    <h3 class="listing-card-title">
+                        <a href="{% url 'collections:item_detail' item.pk %}" style="color: inherit;">{{ item.title }}</a>
+                    </h3>
                     <div class="listing-card-meta">
                         {% if item.state %}{{ item.state.code }}{% endif %}
                         {% if item.county %} · {{ item.county.name }}{% endif %}

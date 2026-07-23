@@ -34,9 +34,9 @@ class Listing(models.Model):
     """Auction listing for an antique Pennsylvania hunting license"""
 
     LISTING_TYPE_CHOICES = [
-        ('auction', 'Auction House'),
-        ('buy_now', 'General Store'),
-        ('trade', 'Trading Block'),
+        ('auction', 'The Auction House'),
+        ('buy_now', 'The General Store'),
+        ('trade', 'The Trading Block'),
     ]
 
     STATUS_CHOICES = [

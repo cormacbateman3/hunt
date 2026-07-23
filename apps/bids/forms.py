@@ -43,7 +43,7 @@ class BidForm(forms.ModelForm):
         cleaned_data = super().clean()
 
         if self.listing and self.listing.listing_type != 'auction':
-            raise forms.ValidationError("Bids are only allowed on Auction House listings")
+            raise forms.ValidationError("Bids are only allowed on The Auction House listings")
 
         # Check if user is the seller
         if self.bidder and self.listing and self.bidder == self.listing.seller:

@@ -215,6 +215,30 @@ def _get_or_create_demo_user(stdout):
         stdout.write(f'Created demo user: {DEMO_USERNAME}')
     else:
         stdout.write(f'Using existing demo user: {DEMO_USERNAME}')
+
+    # Demo listings must be fully sellable: without a default shipping address a
+    # buyer gets blocked at payment for a seller-side gap (the 10.6 gating bug).
+    from apps.accounts.models import Address
+    profile = user.profile
+    if not profile.shipping_address_id:
+        address, _ = Address.objects.get_or_create(
+            user=user,
+            line1='2001 Elmerton Ave',
+            defaults={
+                'full_name': 'Demo Seeder',
+                'city': 'Harrisburg',
+                'state': 'PA',
+                'postal_code': '17110',
+                'country': 'US',
+                'is_default': True,
+            },
+        )
+        profile.shipping_address = address
+        stdout.write('Added default shipping address for demo user.')
+    if not profile.email_verified or not profile.phone_verified:
+        profile.email_verified = True
+        profile.phone_verified = True
+    profile.save()
     return user
 
 

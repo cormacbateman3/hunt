@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.core.forms import ReferenceDataSuggestionForm
@@ -326,6 +327,32 @@ def collection_item_create(request):
         'suggestion_form': ReferenceDataSuggestionForm(
             initial={'target_model': 'other', 'suggestion_type': 'new_value'}
         ),
+    })
+
+
+def collection_item_detail(request, pk):
+    """Public detail page for a collection item (10.6: items are clickable)."""
+    item = get_object_or_404(
+        CollectionItem.objects.select_related('owner', 'state', 'county').prefetch_related('images', 'license_types'),
+        pk=pk,
+    )
+    is_owner = request.user.is_authenticated and item.owner_id == request.user.id
+    if not item.is_public and not is_owner:
+        raise Http404('Collection item not found.')
+
+    is_favorited = False
+    if request.user.is_authenticated and not is_owner:
+        is_favorited = item.favorites.filter(user=request.user).exists()
+
+    return render(request, 'collections/collection_item_detail.html', {
+        'item': item,
+        'is_owner': is_owner,
+        'is_favorited': is_favorited,
+        'taxonomy_groups': [
+            (label, item.license_types_for_category(category))
+            for category, _other, label in TAXONOMY_FIELDS
+            if item.license_types_for_category(category)
+        ],
     })
 
 

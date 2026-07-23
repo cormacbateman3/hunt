@@ -35,7 +35,7 @@
                     {% endif %}
                     {{ item.label }}
                 </span>
-                {% if not item.complete %}
+                {% if not item.complete and item.fix_url %}
                     <a href="{{ item.fix_url }}" style="color:var(--color-aged-amber); font-size:0.82rem; white-space:nowrap;">
                         {{ item.fix_label }} &rarr;
                     </a>

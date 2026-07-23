@@ -44,7 +44,12 @@
                 <a href="{% url 'accounts:profile_edit' %}" class="btn-secondary">Edit profile</a>
                 <a href="{% url 'collections:my_collection' %}" class="btn-secondary">Manage collection</a>
             {% else %}
-                <a href="{% url 'messaging:compose' %}?to={{ profile_user.username }}" class="btn-secondary">Message</a>
+                <form method="post" action="{% url 'messaging:start' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="recipient_id" value="{{ profile_user.pk }}">
+                    <input type="hidden" name="conversation_type" value="general">
+                    <button type="submit" class="btn-secondary">Message</button>
+                </form>
             {% endif %}
         </div>
     </article>
@@ -61,8 +66,8 @@
                 <article style="border: 1px solid var(--color-aged-amber); border-radius: 8px; overflow: hidden; position: relative;">
                     {% with primary=item.images.first %}
                         {% if primary %}
-                            <img src="{{ primary.image.url }}" alt="{{ item.title }}"
-                                 style="width: 100%; height: 130px; object-fit: cover; display: block;">
+                            <a href="{% url 'collections:item_detail' item.pk %}"><img src="{{ primary.image.url }}" alt="{{ item.title }}"
+                                 style="width: 100%; height: 130px; object-fit: cover; display: block;"></a>
                         {% else %}
                             <div style="width: 100%; height: 130px; background: var(--color-parchment); display: flex; align-items: center; justify-content: center;">
                                 <span style="color: var(--color-muted); font-size: 0.8rem;">No image</span>
@@ -70,7 +75,7 @@
                         {% endif %}
                     {% endwith %}
                     <div style="padding: 0.5rem;">
-                        <p style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.2rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">{{ item.title }}</p>
+                        <p style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.2rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;"><a href="{% url 'collections:item_detail' item.pk %}" style="color: inherit;">{{ item.title }}</a></p>
                         <p style="font-size: 0.8rem; color: var(--color-muted);">
                             {% if item.state %}{{ item.state.code }}{% endif %}{% if item.license_year %} · {{ item.license_year }}{% elif item.effective_era %} · {{ item.effective_era }}{% endif %}
                         </p>
