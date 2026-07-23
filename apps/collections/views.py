@@ -17,6 +17,16 @@ from .forms import CollectionItemForm, CollectionItemImageFormSet, WantedItemFor
 from .models import CollectionItem, CollectionItemImage, WantedItem
 
 
+def _link_prefill_job(request, item):
+    """Attach the item to the prefill job that filled its form (audit linkage)."""
+    job_id = request.POST.get('prefill_job_id', '')
+    if job_id.isdigit():
+        from apps.prefill.models import PrefillJob
+        PrefillJob.objects.filter(
+            pk=int(job_id), user=request.user, resulting_collection_item__isnull=True,
+        ).update(resulting_collection_item=item)
+
+
 TAXONOMY_FIELDS = [
     ('residency', 'residency_other', 'Residency'),
     ('holder_eligibility', 'holder_eligibility_other', 'Holder Eligibility'),
@@ -300,6 +310,7 @@ def collection_item_create(request):
             image_formset = CollectionItemImageFormSet(request.POST, request.FILES, instance=item)
             if image_formset.is_valid():
                 image_formset.save()
+                _link_prefill_job(request, item)
                 messages.success(request, 'Collection item created.')
                 return redirect('collections:my_collection')
             item.delete()

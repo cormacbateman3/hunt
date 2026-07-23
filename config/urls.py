@@ -25,6 +25,7 @@ urlpatterns = [
     path('favorites/', include('apps.favorites.urls')),
     path('messages/', include(('apps.messaging.urls', 'messaging'), namespace='messaging')),
     path('reviews/', include(('apps.reviews.urls', 'reviews'), namespace='reviews')),
+    path('', include(('apps.prefill.urls', 'prefill'), namespace='prefill')),
 
     # Homepage
     path('', TemplateView.as_view(template_name='home.html'), name='home'),

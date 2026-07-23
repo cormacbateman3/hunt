@@ -40,7 +40,14 @@ INSTALLED_APPS = [
     'apps.enforcement',
     'apps.messaging',
     'apps.reviews',
+    'apps.prefill',
 ]
+
+# Image prefill: 'local' runs the prefill/ package in-process (dev, Anthropic API);
+# 'lambda' invokes AWS Lambda -> Bedrock (wired in 10.19). Same package either way.
+PREFILL_BACKEND = os.getenv('PREFILL_BACKEND', 'local')
+PREFILL_RATE_PER_HOUR = 30
+PREFILL_RATE_PER_DAY = 200
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

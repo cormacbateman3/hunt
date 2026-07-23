@@ -1,0 +1,34 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<h1>Prefill analytics</h1>
+<p>Last {{ job_count }} completed job{{ job_count|pluralize }} &middot; total cost ${{ total_cost }}</p>
+
+<h2>Tier distribution by field</h2>
+<table>
+    <thead>
+        <tr><th>Field</th><th>High</th><th>Medium</th><th>Low</th><th>Unmatched</th></tr>
+    </thead>
+    <tbody>
+        {% for row in tier_rows %}
+        <tr>
+            <td>{{ row.field }}</td>
+            <td>{{ row.high }}</td>
+            <td>{{ row.medium }}</td>
+            <td>{{ row.low }}</td>
+            <td>{{ row.unmatched }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h2 style="margin-top: 1.5rem;">Top unmatched extractions</h2>
+<p>These drive taxonomy additions — route through ReferenceDataSuggestion / the License Type admin.</p>
+<ol>
+    {% for text, count in top_unmatched %}
+    <li>{{ text }} <strong>&times;{{ count }}</strong></li>
+    {% empty %}
+    <li>None recorded yet.</li>
+    {% endfor %}
+</ol>
+{% endblock %}

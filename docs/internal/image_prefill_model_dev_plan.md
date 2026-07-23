@@ -14,6 +14,19 @@ Image Prefill - Dev Plan
 > Remaining before this doc's Phase 0 starts: none — lift `sandbox/prefill_lib.py` +
 > `prefill_config/` into the `prefill/` package and build §§2-3 (PrefillJob, async+polling,
 > resolution service) per this spec.
+>
+> **Status update 2026-07-23 — productionized (collection form).** `prefill/` package
+> (pure logic, config in `prefill/config/`) + `apps/prefill` (models per §3, job/status/
+> corrections API per §2's contract — the local backend completes inline but the client
+> still polls the same endpoints, so the Lambda swap in 10.19 changes nothing client-side),
+> rate limits + image validation per §10, tier rendering + dirty-flag + correction logging
+> per §7 (`static/js/prefill.js`), unmatched→ReferenceDataSuggestion per §6, admin
+> analytics per §9. The sandbox notebook now runs through a thin shim over the same
+> package. Deviations from this spec: `image` is an ImageField (storage-backend agnostic;
+> becomes the S3 key under django-storages in 10.19) instead of `image_s3_key`; boto3/
+> django-storages deferred to 10.19; a constrained second-pass re-match (text-only, fires
+> on unmatched add-ons) was added beyond §5. Remaining: listing-form wiring, then §8
+> (Lambda) at 10.19.
 
 1. Architecture
 Three components, clean seam between them:

@@ -17,3 +17,7 @@ stripe==8.0.0
 
 # Static file serving
 whitenoise==6.6.0
+
+# Image prefill (local backend: Anthropic API + fuzzy matching)
+anthropic==0.96.0
+rapidfuzz==3.14.5
