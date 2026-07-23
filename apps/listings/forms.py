@@ -4,6 +4,7 @@ from django import forms
 from django.db.models import Q
 from django.utils import timezone
 
+from apps.accounts.models import Address
 from apps.collections.models import CollectionItem
 from apps.core.constants import COLOR_CHOICES, FORM_LICENSE_TYPE_CATEGORIES, SHAPE_CHOICES
 from apps.core.models import GeographicUnit, LicenseType, ReferenceDataSuggestion, State
@@ -110,6 +111,13 @@ class ListingForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'form-select'}),
         help_text='Required when license year is unknown.',
     )
+    ship_from_address = forms.ModelChoiceField(
+        queryset=Address.objects.none(),
+        required=False,
+        empty_label='Account default address',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        help_text='Where this item ships from.',
+    )
 
     class Meta:
         model = Listing
@@ -144,6 +152,13 @@ class ListingForm(forms.ModelForm):
             'serial_number',
             'era_label',
             'featured_image',
+            'ship_from_address',
+            'package_weight_oz',
+            'package_length_in',
+            'package_width_in',
+            'package_height_in',
+            'shipping_service',
+            'shipping_payer',
         ]
         widgets = {
             'listing_type': forms.Select(attrs={'class': 'form-select'}),
@@ -158,6 +173,12 @@ class ListingForm(forms.ModelForm):
             'buy_now_price': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '75.00', 'step': '0.01', 'min': '0.01'}),
             'trade_notes': forms.Textarea(attrs={'class': 'form-input', 'rows': 4, 'placeholder': 'What are you looking for in return?'}),
             'allow_cash': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+            'package_weight_oz': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '8.0', 'step': '0.5', 'min': '0.5'}),
+            'package_length_in': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '10', 'step': '0.5', 'min': '1'}),
+            'package_width_in': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '7', 'step': '0.5', 'min': '1'}),
+            'package_height_in': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '1', 'step': '0.5', 'min': '0.5'}),
+            'shipping_service': forms.Select(attrs={'class': 'form-select'}),
+            'shipping_payer': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -175,6 +196,11 @@ class ListingForm(forms.ModelForm):
 
         if self.user and self.user.is_authenticated:
             self.fields['source_collection_item'].queryset = CollectionItem.objects.filter(owner=self.user).order_by('-created_at')
+            self.fields['ship_from_address'].queryset = Address.objects.filter(user=self.user)
+            if not self.instance.pk and not self.initial.get('ship_from_address'):
+                profile = getattr(self.user, 'profile', None)
+                if profile and profile.shipping_address_id:
+                    self.fields['ship_from_address'].initial = profile.shipping_address_id
 
         if self.instance and self.instance.pk:
             self.fields['colors'].initial = self.instance.colors

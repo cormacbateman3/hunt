@@ -685,6 +685,7 @@ def buy_now_checkout_start(request, pk):
                     platform_fee_amount=platform_fee,
                     total_amount=total_amount,
                     status='pending_payment',
+                    shipping_payer=listing.shipping_payer,
                 )
 
         payment, _ = PaymentTransaction.objects.get_or_create(order=order)

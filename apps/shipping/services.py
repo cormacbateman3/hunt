@@ -51,7 +51,12 @@ def _snapshot_from_address(address):
 
 
 def ensure_order_snapshots(order):
-    seller_address = getattr(order.seller.profile, 'shipping_address', None)
+    # Ship-from: the listing's configured address wins; fall back to the
+    # seller's default. Buyer side is always their default address.
+    seller_address = (
+        getattr(order.listing, 'ship_from_address', None)
+        or getattr(order.seller.profile, 'shipping_address', None)
+    )
     buyer_address = getattr(order.buyer.profile, 'shipping_address', None)
     # Blame the right party: a seller-side gap must never read as the buyer's problem
     # (and the buyer is exempt from non-payment strikes while it persists).
@@ -84,6 +89,45 @@ def default_parcel():
     }
 
 
+def listing_parcel(listing):
+    """Parcel from the seller's listing config; defaults fill any gaps."""
+    parcel = default_parcel()
+    for key, field in (
+        ('weight_oz', 'package_weight_oz'),
+        ('length_in', 'package_length_in'),
+        ('width_in', 'package_width_in'),
+        ('height_in', 'package_height_in'),
+    ):
+        value = getattr(listing, field, None)
+        if value:
+            parcel[key] = _to_decimal(value)
+    return parcel
+
+
+def select_rate(rates, preferred_service='cheapest'):
+    """Pick the rate matching the seller's chosen service (cheapest within it);
+    fall back to the cheapest overall when the service returned no rates."""
+    def amount(rate):
+        return Decimal(str(rate.get('amount', '0')))
+
+    if preferred_service and preferred_service != 'cheapest':
+        matches = [
+            rate for rate in rates
+            if (rate.get('servicelevel') or {}).get('token', '') == preferred_service
+        ]
+        if matches:
+            return min(matches, key=amount)
+    return min(rates, key=amount)
+
+
+def apply_shipping_to_order(order, rate_amount):
+    """Write the quoted rate onto the order, honoring who pays: when the seller
+    pays, the buyer's total excludes shipping (the real cost stays on the Shipment)."""
+    order.shipping_amount = rate_amount if order.shipping_payer == 'buyer' else Decimal('0.00')
+    order.total_amount = order.item_amount + order.platform_fee_amount + order.shipping_amount
+    order.save(update_fields=['shipping_amount', 'total_amount', 'updated_at'])
+
+
 def _parcel_to_shippo(parcel):
     return {
         'length': str(parcel['length_in']),
@@ -96,8 +140,14 @@ def _parcel_to_shippo(parcel):
 
 
 def quote_order_shipping(order, parcel_data=None):
+    # Snapshot the listing's who-pays choice before any totals are computed.
+    listing_payer = getattr(order.listing, 'shipping_payer', 'buyer')
+    if order.shipping_payer != listing_payer:
+        order.shipping_payer = listing_payer
+        order.save(update_fields=['shipping_payer', 'updated_at'])
+
     ship_from, ship_to = ensure_order_snapshots(order)
-    parcel = parcel_data or default_parcel()
+    parcel = parcel_data or listing_parcel(order.listing)
     client = ShippoClient()
     shipment_payload = client.create_shipment(
         address_from=_address_to_shippo_payload(ship_from),
@@ -108,7 +158,7 @@ def quote_order_shipping(order, parcel_data=None):
     if not rates:
         raise ShippoError('No shipping rates were returned by Shippo.')
 
-    selected = min(rates, key=lambda r: Decimal(str(r.get('amount', '0'))))
+    selected = select_rate(rates, getattr(order.listing, 'shipping_service', 'cheapest'))
     rate_amount = _to_decimal(selected['amount'])
 
     shipment, _ = Shipment.objects.get_or_create(order=order)
@@ -125,18 +175,14 @@ def quote_order_shipping(order, parcel_data=None):
     shipment.package_height_in = parcel['height_in']
     shipment.save()
 
-    order.shipping_amount = rate_amount
-    order.total_amount = order.item_amount + order.platform_fee_amount + order.shipping_amount
-    order.save(update_fields=['shipping_amount', 'total_amount', 'updated_at'])
+    apply_shipping_to_order(order, rate_amount)
     return shipment
 
 
 def ensure_checkout_shipping_ready(order):
     shipment = Shipment.objects.filter(order=order).first()
     if shipment and shipment.rate_id and shipment.rate_amount is not None:
-        order.shipping_amount = shipment.rate_amount
-        order.total_amount = order.item_amount + order.platform_fee_amount + order.shipping_amount
-        order.save(update_fields=['shipping_amount', 'total_amount', 'updated_at'])
+        apply_shipping_to_order(order, shipment.rate_amount)
         ensure_order_snapshots(order)
         return shipment
     return quote_order_shipping(order)

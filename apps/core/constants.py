@@ -18,6 +18,22 @@ INSTRUMENT_CHOICES = [
     ('certification', 'Certification'),
 ]
 
+# Values are Shippo servicelevel tokens (except 'cheapest', which means
+# "pick the lowest rate returned").
+SHIPPING_SERVICE_CHOICES = [
+    ('cheapest', 'Best available (cheapest rate)'),
+    ('usps_ground_advantage', 'USPS Ground Advantage'),
+    ('usps_priority', 'USPS Priority Mail'),
+    ('ups_ground', 'UPS Ground'),
+    ('fedex_ground', 'FedEx Ground'),
+    ('fedex_2_day', 'FedEx 2-Day'),
+]
+
+SHIPPING_PAYER_CHOICES = [
+    ('buyer', 'Buyer pays shipping'),
+    ('seller', 'Seller pays (free shipping)'),
+]
+
 LICENSE_TYPE_CATEGORY_CHOICES = [
     ('residency', 'Residency'),
     ('holder_eligibility', 'Holder Eligibility'),

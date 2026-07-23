@@ -85,6 +85,20 @@ class UserProfileForm(forms.ModelForm):
 
 class AddressForm(forms.ModelForm):
     """Form for adding/editing a shipping address"""
+
+    def clean_state(self):
+        state = (self.cleaned_data.get('state') or '').strip().upper()
+        if len(state) != 2 or not state.isalpha():
+            raise forms.ValidationError('Use the two-letter state abbreviation (e.g. PA, MD).')
+        return state
+
+    def clean_postal_code(self):
+        import re
+        postal_code = (self.cleaned_data.get('postal_code') or '').strip()
+        if not re.fullmatch(r'\d{5}(-\d{4})?', postal_code):
+            raise forms.ValidationError('Enter a 5-digit ZIP code (or ZIP+4).')
+        return postal_code
+
     class Meta:
         model = Address
         fields = ['full_name', 'line1', 'line2', 'city', 'state', 'postal_code', 'phone']

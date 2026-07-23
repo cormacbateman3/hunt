@@ -1,0 +1,49 @@
+<hr style="margin: 0.5rem 0; border: 0; border-top: 1px solid var(--color-border);">
+<h2 style="font-size: 1.1rem; margin: 0;">Shipping</h2>
+<p style="color: var(--color-muted); margin: 0 0 0.5rem;">
+    Used to quote real rates at checkout. Leave package fields blank to use the
+    standard license-mailer defaults.
+</p>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+    <div>
+        <label class="form-label" for="{{ form.ship_from_address.id_for_label }}">Ship from</label>
+        {{ form.ship_from_address }}
+        {% if form.ship_from_address.help_text %}<small style="color: var(--color-muted);">{{ form.ship_from_address.help_text }} <a href="{% url 'accounts:address_add' %}">Manage addresses</a></small>{% endif %}
+        {{ form.ship_from_address.errors }}
+    </div>
+    <div>
+        <label class="form-label" for="{{ form.shipping_service.id_for_label }}">Carrier / service</label>
+        {{ form.shipping_service }}
+        {{ form.shipping_service.errors }}
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.85rem;">
+    <div>
+        <label class="form-label" for="{{ form.package_weight_oz.id_for_label }}">Weight (oz)</label>
+        {{ form.package_weight_oz }}
+        {{ form.package_weight_oz.errors }}
+    </div>
+    <div>
+        <label class="form-label" for="{{ form.package_length_in.id_for_label }}">Length (in)</label>
+        {{ form.package_length_in }}
+        {{ form.package_length_in.errors }}
+    </div>
+    <div>
+        <label class="form-label" for="{{ form.package_width_in.id_for_label }}">Width (in)</label>
+        {{ form.package_width_in }}
+        {{ form.package_width_in.errors }}
+    </div>
+    <div>
+        <label class="form-label" for="{{ form.package_height_in.id_for_label }}">Height (in)</label>
+        {{ form.package_height_in }}
+        {{ form.package_height_in.errors }}
+    </div>
+</div>
+
+<div>
+    <label class="form-label" for="{{ form.shipping_payer.id_for_label }}">Who pays shipping?</label>
+    {{ form.shipping_payer }}
+    {{ form.shipping_payer.errors }}
+</div>

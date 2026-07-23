@@ -304,7 +304,10 @@ def address_add(request):
     else:
         form = AddressForm()
 
-    return render(request, 'accounts/address_form.html', {'form': form, 'action': 'Add'})
+    return render(request, 'accounts/address_form.html', {
+        'form': form, 'action': 'Add',
+        'google_maps_api_key': settings.GOOGLE_MAPS_API_KEY,
+    })
 
 
 @login_required
@@ -320,7 +323,10 @@ def address_edit(request, pk):
     else:
         form = AddressForm(instance=address)
 
-    return render(request, 'accounts/address_form.html', {'form': form, 'action': 'Edit', 'address': address})
+    return render(request, 'accounts/address_form.html', {
+        'form': form, 'action': 'Edit', 'address': address,
+        'google_maps_api_key': settings.GOOGLE_MAPS_API_KEY,
+    })
 
 
 @login_required

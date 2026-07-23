@@ -94,6 +94,7 @@ class Command(BaseCommand):
                             'platform_fee_amount': 0,
                             'total_amount': winning_bid.amount,
                             'status': 'pending_payment',
+                            'shipping_payer': locked_listing.shipping_payer,
                         },
                     )
                     PaymentTransaction.objects.get_or_create(

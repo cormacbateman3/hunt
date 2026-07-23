@@ -2,7 +2,15 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.urls import reverse
-from apps.core.constants import COLOR_CHOICES, FORM_LICENSE_TYPE_CATEGORIES, ITEM_KIND_CHOICES, RESIDENT_STATUS_CHOICES, SHAPE_CHOICES
+from apps.core.constants import (
+    COLOR_CHOICES,
+    FORM_LICENSE_TYPE_CATEGORIES,
+    ITEM_KIND_CHOICES,
+    RESIDENT_STATUS_CHOICES,
+    SHAPE_CHOICES,
+    SHIPPING_PAYER_CHOICES,
+    SHIPPING_SERVICE_CHOICES,
+)
 from apps.core.models import get_default_item_category
 
 
@@ -161,6 +169,27 @@ class Listing(models.Model):
         'self', null=True, blank=True, on_delete=models.SET_NULL,
         related_name='relisted_copies',
         help_text="Original listing if this is a relist"
+    )
+
+    # Shipping config (10.7) — set by the seller, snapshotted onto the order
+    ship_from_address = models.ForeignKey(
+        'accounts.Address', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='listings_shipping_from',
+        help_text='Ship-from address (defaults to your account default address)',
+    )
+    package_weight_oz = models.DecimalField(
+        max_digits=6, decimal_places=1, null=True, blank=True,
+        help_text='Package weight in ounces',
+    )
+    package_length_in = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
+    package_width_in = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
+    package_height_in = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
+    shipping_service = models.CharField(
+        max_length=30, choices=SHIPPING_SERVICE_CHOICES, default='cheapest',
+        help_text='Carrier/service passed through to Shippo when quoting',
+    )
+    shipping_payer = models.CharField(
+        max_length=10, choices=SHIPPING_PAYER_CHOICES, default='buyer',
     )
 
     # Local pickup (4c)

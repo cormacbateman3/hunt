@@ -20,7 +20,7 @@
                 <p style="color: var(--color-muted); margin-bottom: 0.6rem;">@{{ profile_user.username }}</p>
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.7rem;">
                     {% if profile.county %}
-                        <span class="badge badge-active">{{ profile.county }}, PA</span>
+                        <span class="badge badge-active">{{ profile.county }}</span>
                     {% endif %}
                     <span class="badge {% if profile.email_verified %}badge-active{% else %}badge-expired{% endif %}">
                         {% if profile.email_verified %}Email Verified{% else %}Email Unverified{% endif %}

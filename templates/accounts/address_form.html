@@ -52,4 +52,38 @@
         </div>
     </form>
 </section>
+
+{% if google_maps_api_key %}
+<script>
+/* Narrow Google Places loader — this page only, and only when a key exists.
+   Picking a suggestion fills street/city/state/ZIP; typing plain still works. */
+function initKbAddressAutocomplete() {
+    const line1 = document.getElementById('{{ form.line1.id_for_label }}');
+    if (!line1 || !window.google) return;
+    const autocomplete = new google.maps.places.Autocomplete(line1, {
+        types: ['address'],
+        componentRestrictions: { country: 'us' },
+        fields: ['address_components'],
+    });
+    autocomplete.addListener('place_changed', () => {
+        const components = (autocomplete.getPlace() || {}).address_components || [];
+        const get = (type, short) => {
+            const c = components.find(c => c.types.includes(type));
+            return c ? (short ? c.short_name : c.long_name) : '';
+        };
+        const number = get('street_number');
+        const route = get('route');
+        if (route) line1.value = (number ? number + ' ' : '') + route;
+        const city = get('locality') || get('sublocality') || get('postal_town');
+        if (city) document.getElementById('{{ form.city.id_for_label }}').value = city;
+        const state = get('administrative_area_level_1', true);
+        if (state) document.getElementById('{{ form.state.id_for_label }}').value = state;
+        const zip = get('postal_code');
+        if (zip) document.getElementById('{{ form.postal_code.id_for_label }}').value = zip;
+    });
+}
+</script>
+<script async
+        src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places&callback=initKbAddressAutocomplete"></script>
+{% endif %}
 {% endblock %}

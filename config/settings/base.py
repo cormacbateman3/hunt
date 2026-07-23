@@ -43,6 +43,10 @@ INSTALLED_APPS = [
     'apps.prefill',
 ]
 
+# Address autocomplete (10.7): Google Places, loaded only on the address form
+# and only when a key is configured — plain inputs otherwise.
+GOOGLE_MAPS_API_KEY = os.getenv('GOOGLE_MAPS_API_KEY', '')
+
 # Image prefill: 'local' runs the prefill/ package in-process (dev, Anthropic API);
 # 'lambda' invokes AWS Lambda -> Bedrock (wired in 10.19). Same package either way.
 PREFILL_BACKEND = os.getenv('PREFILL_BACKEND', 'local')

@@ -56,6 +56,12 @@ class Order(models.Model):
         choices=[('shipping', 'Shipping'), ('local_pickup', 'Local Pickup')],
         default='shipping',
     )
+    shipping_payer = models.CharField(
+        max_length=10,
+        choices=[('buyer', 'Buyer pays shipping'), ('seller', 'Seller pays (free shipping)')],
+        default='buyer',
+        help_text='Snapshot of the listing shipping-payer choice at purchase',
+    )
     ship_from_snapshot = models.ForeignKey(
         AddressSnapshot, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='orders_ship_from'
