@@ -29,13 +29,16 @@ class CollectionItemForm(forms.ModelForm):
     activity_scope_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter activity scope'}))
     duration = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select duration', widget=forms.Select(attrs={'class': 'form-select'}))
     duration_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter duration'}))
-    addon_type = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select add-on type', widget=forms.Select(attrs={'class': 'form-select'}))
+    addon_type = forms.ModelMultipleChoiceField(
+        queryset=LicenseType.objects.none(), required=False,
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'chip-checkboxes'}),
+    )
     addon_type_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter add-on type'}))
     material = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select material', widget=forms.Select(attrs={'class': 'form-select'}))
     material_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter material'}))
     shape = forms.ChoiceField(choices=[('', 'Select shape')] + SHAPE_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-select'}))
     shape_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter shape'}))
-    colors = forms.MultipleChoiceField(choices=COLOR_CHOICES, required=False, widget=forms.SelectMultiple(attrs={'class': 'form-select', 'size': 6}))
+    colors = forms.MultipleChoiceField(choices=COLOR_CHOICES, required=False, widget=forms.CheckboxSelectMultiple(attrs={'class': 'chip-checkboxes'}))
     colors_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter color'}))
     serial_number = forms.CharField(
         required=False,
@@ -99,9 +102,11 @@ class CollectionItemForm(forms.ModelForm):
         if self.instance and self.instance.pk:
             self.fields['colors'].initial = self.instance.colors
             for category in FORM_LICENSE_TYPE_CATEGORIES:
-                selected = self.instance.license_types.filter(category=category).order_by('name').first()
-                if selected:
-                    self.fields[category].initial = selected
+                selected = self.instance.license_types.filter(category=category).order_by('name')
+                if category == 'addon_type':
+                    self.fields[category].initial = list(selected)
+                elif selected.first():
+                    self.fields[category].initial = selected.first()
 
     def _resolve_state(self):
         state = None
@@ -138,8 +143,10 @@ class CollectionItemForm(forms.ModelForm):
             self.add_error('county', 'Selected geographic unit does not belong to the chosen state.')
         if state and year and state.min_license_year and year < state.min_license_year:
             self.add_error('license_year', f'Earliest known hunting license year for {state.name} is {state.min_license_year}.')
-        if year and year > 2000:
-            self.add_error('license_year', 'License year cannot exceed 2000.')
+        from django.utils import timezone
+        max_year = timezone.now().year - 25
+        if year and year > max_year:
+            self.add_error('license_year', f'Only antique licenses (25+ years old) are collectible here - the latest allowed year is {max_year}.')
 
         # addons_attached only applies to a license with add-ons
         if cleaned_data.get('item_kind') == 'addon':
@@ -155,7 +162,11 @@ class CollectionItemForm(forms.ModelForm):
         for category in FORM_LICENSE_TYPE_CATEGORIES:
             selected = cleaned_data.get(category)
             other_text = (cleaned_data.get(f'{category}_other') or '').strip()
-            if selected and selected.name.lower() == 'other' and not other_text:
+            if category == 'addon_type':
+                has_other = any(item.name.lower() == 'other' for item in (selected or []))
+            else:
+                has_other = bool(selected and selected.name.lower() == 'other')
+            if has_other and not other_text:
                 self.add_error(f'{category}_other', 'Please describe the missing value.')
         if cleaned_data.get('shape') == 'other' and not (cleaned_data.get('shape_other') or '').strip():
             self.add_error('shape_other', 'Please describe the missing shape.')
@@ -172,7 +183,15 @@ class CollectionItemForm(forms.ModelForm):
         item.era_label = self.cleaned_data.get('era_label') or None
         if commit:
             item.save()
-            selected_types = [self.cleaned_data.get(category) for category in FORM_LICENSE_TYPE_CATEGORIES if self.cleaned_data.get(category)]
+            selected_types = []
+            for category in FORM_LICENSE_TYPE_CATEGORIES:
+                value = self.cleaned_data.get(category)
+                if not value:
+                    continue
+                if category == 'addon_type':
+                    selected_types.extend(value)
+                else:
+                    selected_types.append(value)
             item.license_types.set(selected_types)
             self._create_other_suggestions(item)
         return item
@@ -183,12 +202,16 @@ class CollectionItemForm(forms.ModelForm):
         for category in FORM_LICENSE_TYPE_CATEGORIES:
             selected = self.cleaned_data.get(category)
             other_text = (self.cleaned_data.get(f'{category}_other') or '').strip()
-            if selected and selected.name.lower() == 'other' and other_text:
+            if category == 'addon_type':
+                other_row = next((item for item in (selected or []) if item.name.lower() == 'other'), None)
+            else:
+                other_row = selected if (selected and selected.name.lower() == 'other') else None
+            if other_row and other_text:
                 ReferenceDataSuggestion.objects.create(
                     user=self.user,
                     suggestion_type='new_value',
                     target_model='license_type',
-                    target_id=selected.id,
+                    target_id=other_row.id,
                     field_name=category,
                     current_value='Other',
                     proposed_value=other_text,

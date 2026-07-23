@@ -4,7 +4,7 @@ Pennsylvania antique hunting license marketplace built with Django.
 
 ## Current Status (Alpha)
 
-The platform now supports three marketplace paths:
+The platform supports three marketplace paths:
 
 - The Auction House: bid -> win -> pay -> ship -> receive
 - The General Store: buy now -> pay -> ship -> receive

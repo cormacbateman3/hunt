@@ -161,7 +161,6 @@ class BaseListingListView(ListView):
                 | Q(state__name__icontains=search)
                 | Q(county__icontains=search)
                 | Q(county_ref__name__icontains=search)
-                | Q(license_type__icontains=search)
                 | Q(license_types__name__icontains=search)
             )
 

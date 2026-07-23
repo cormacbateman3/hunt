@@ -195,7 +195,6 @@ class Command(BaseCommand):
             county=listing.county,
             county_ref=listing.county_ref,
             is_statewide=listing.is_statewide,
-            license_type=listing.license_type,
             shape=listing.shape,
             colors=listing.colors,
             condition_grade=listing.condition_grade,

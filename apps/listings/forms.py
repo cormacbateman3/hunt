@@ -55,7 +55,10 @@ class ListingForm(forms.ModelForm):
     activity_scope_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter activity scope'}))
     duration = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select duration', widget=forms.Select(attrs={'class': 'form-select'}))
     duration_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter duration'}))
-    addon_type = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select add-on type', widget=forms.Select(attrs={'class': 'form-select'}))
+    addon_type = forms.ModelMultipleChoiceField(
+        queryset=LicenseType.objects.none(), required=False,
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'chip-checkboxes'}),
+    )
     addon_type_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter add-on type'}))
     material = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select material', widget=forms.Select(attrs={'class': 'form-select'}))
     material_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter material'}))
@@ -68,7 +71,7 @@ class ListingForm(forms.ModelForm):
     colors = forms.MultipleChoiceField(
         choices=COLOR_CHOICES,
         required=False,
-        widget=forms.SelectMultiple(attrs={'class': 'form-select', 'size': 6}),
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'chip-checkboxes'}),
     )
     colors_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter color'}))
     source_collection_item = forms.ModelChoiceField(
@@ -143,6 +146,7 @@ class ListingForm(forms.ModelForm):
             'starting_price',
             'reserve_price',
             'buy_now_price',
+            'bid_increment',
             'trade_notes',
             'allow_cash',
             'scheduled_at',
@@ -168,9 +172,10 @@ class ListingForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'class': 'form-input', 'placeholder': 'Describe the license condition, notable features, provenance, and any context collectors should know.', 'rows': 6}),
             'license_year': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '1942 (leave blank if unknown)'}),
             'condition_grade': forms.Select(attrs={'class': 'form-select'}),
-            'starting_price': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '25.00', 'step': '0.01', 'min': '0.01'}),
-            'reserve_price': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': 'Optional reserve', 'step': '0.01', 'min': '0.01'}),
-            'buy_now_price': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '75.00', 'step': '0.01', 'min': '0.01'}),
+            'starting_price': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '$25.00', 'step': '1', 'min': '1'}),
+            'reserve_price': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': 'Optional reserve', 'step': '1', 'min': '1'}),
+            'buy_now_price': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '$75.00', 'step': '1', 'min': '1'}),
+            'bid_increment': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '$1', 'step': '1', 'min': '1'}),
             'trade_notes': forms.Textarea(attrs={'class': 'form-input', 'rows': 4, 'placeholder': 'What are you looking for in return?'}),
             'allow_cash': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
             'package_weight_oz': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '8.0', 'step': '0.5', 'min': '0.5'}),
@@ -189,6 +194,13 @@ class ListingForm(forms.ModelForm):
         self.fields['featured_image'].required = False
         self.fields['license_year'].required = False
 
+        # Trade is not a listing type (10.10: trades start from collections);
+        # legacy trade rows keep the option only while being edited.
+        if not (self.instance.pk and self.instance.listing_type == 'trade'):
+            self.fields['listing_type'].choices = [
+                (value, label) for value, label in Listing.LISTING_TYPE_CHOICES if value != 'trade'
+            ]
+
         selected_state = self._resolve_state()
         if selected_state:
             self.fields['state'].initial = selected_state
@@ -205,9 +217,20 @@ class ListingForm(forms.ModelForm):
         if self.instance and self.instance.pk:
             self.fields['colors'].initial = self.instance.colors
             for category in FORM_LICENSE_TYPE_CATEGORIES:
-                selected = self.instance.license_types.filter(category=category).order_by('name').first()
-                if selected:
-                    self.fields[category].initial = selected
+                selected = self.instance.license_types.filter(category=category).order_by('name')
+                if category == 'addon_type':
+                    self.fields[category].initial = list(selected)
+                elif selected.first():
+                    self.fields[category].initial = selected.first()
+        elif self.user and self.user.is_authenticated and not self.is_bound:
+            # New listing: apply the seller's saved listing defaults (10.8)
+            saved = getattr(getattr(self.user, 'profile', None), 'listing_defaults', None) or {}
+            for field in ('shipping_service', 'shipping_payer', 'package_weight_oz',
+                          'package_length_in', 'package_width_in', 'package_height_in',
+                          'auto_relist', 'bid_increment', 'local_pickup_available',
+                          'local_pickup_location'):
+                if field in saved and not self.initial.get(field):
+                    self.fields[field].initial = saved[field]
 
     def _resolve_state(self):
         state = None
@@ -259,8 +282,9 @@ class ListingForm(forms.ModelForm):
             self.add_error('county_ref', 'Selected geographic unit does not belong to the chosen state.')
         if state and license_year and state.min_license_year and license_year < state.min_license_year:
             self.add_error('license_year', f'Earliest known hunting license year for {state.name} is {state.min_license_year}.')
-        if license_year and license_year > 2000:
-            self.add_error('license_year', 'License year cannot exceed 2000.')
+        max_year = timezone.now().year - 25
+        if license_year and license_year > max_year:
+            self.add_error('license_year', f'Only antique licenses (25+ years old) are tradeable — the latest allowed year is {max_year}.')
 
         # era_label is required when license_year is not provided
         era_label = cleaned_data.get('era_label')
@@ -291,7 +315,11 @@ class ListingForm(forms.ModelForm):
         for category in FORM_LICENSE_TYPE_CATEGORIES:
             selected = cleaned_data.get(category)
             other_text = (cleaned_data.get(f'{category}_other') or '').strip()
-            if selected and selected.name.lower() == 'other' and not other_text:
+            if category == 'addon_type':
+                has_other = any(item.name.lower() == 'other' for item in (selected or []))
+            else:
+                has_other = bool(selected and selected.name.lower() == 'other')
+            if has_other and not other_text:
                 self.add_error(f'{category}_other', 'Please describe the missing value.')
 
         if selected_shape == 'other' and not (cleaned_data.get('shape_other') or '').strip():
@@ -361,11 +389,16 @@ class ListingForm(forms.ModelForm):
 
         if commit:
             listing.save()
-            selected_types = [self.cleaned_data.get(category) for category in FORM_LICENSE_TYPE_CATEGORIES if self.cleaned_data.get(category)]
+            selected_types = []
+            for category in FORM_LICENSE_TYPE_CATEGORIES:
+                value = self.cleaned_data.get(category)
+                if not value:
+                    continue
+                if category == 'addon_type':
+                    selected_types.extend(value)
+                else:
+                    selected_types.append(value)
             listing.license_types.set(selected_types)
-            summary = ', '.join(item.name for item in selected_types[:3])
-            listing.license_type = summary[:50]
-            listing.save(update_fields=['license_type', 'updated_at'])
             self._create_other_suggestions(listing)
         return listing
 
@@ -376,12 +409,16 @@ class ListingForm(forms.ModelForm):
         for category in FORM_LICENSE_TYPE_CATEGORIES:
             selected = self.cleaned_data.get(category)
             other_text = (self.cleaned_data.get(f'{category}_other') or '').strip()
-            if selected and selected.name.lower() == 'other' and other_text:
+            if category == 'addon_type':
+                other_row = next((item for item in (selected or []) if item.name.lower() == 'other'), None)
+            else:
+                other_row = selected if (selected and selected.name.lower() == 'other') else None
+            if other_row and other_text:
                 ReferenceDataSuggestion.objects.create(
                     user=self.user,
                     suggestion_type='new_value',
                     target_model='license_type',
-                    target_id=selected.id,
+                    target_id=other_row.id,
                     field_name=category,
                     current_value='Other',
                     proposed_value=other_text,

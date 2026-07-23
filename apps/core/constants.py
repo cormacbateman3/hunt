@@ -69,14 +69,18 @@ COLOR_CHOICES = [
     ('yellow', 'Yellow'),
     ('red', 'Red'),
     ('crimson_dark_red', 'Crimson/Dark Red'),
+    ('burgundy', 'Burgundy/Maroon'),
     ('forest_green', 'Forest Green'),
+    ('olive', 'Olive/Drab'),
     ('lime_bright_green', 'Lime/Bright Green'),
+    ('teal', 'Teal'),
     ('blue', 'Blue'),
     ('navy', 'Navy'),
     ('white', 'White'),
     ('cream_ivory', 'Cream/Ivory'),
     ('gray', 'Gray'),
     ('silver', 'Silver'),
+    ('copper_bronze', 'Copper/Bronze'),
     ('brown_tan', 'Brown/Tan'),
     ('gold', 'Gold'),
     ('pink', 'Pink'),
@@ -84,6 +88,19 @@ COLOR_CHOICES = [
     ('black', 'Black'),
     ('multi_color', 'Multi-color'),
     ('other', 'Other'),
+]
+
+# Interim improved grades (10.8) ahead of the future grading model.
+# Old keys stay valid — existing rows keep their values.
+CONDITION_CHOICES = [
+    ('damaged', 'Damaged'),
+    ('poor', 'Poor'),
+    ('fair', 'Fair'),
+    ('good', 'Good'),
+    ('very_good', 'Very Good'),
+    ('excellent', 'Excellent'),
+    ('near_mint', 'Near Mint'),
+    ('mint', 'Mint'),
 ]
 
 SUGGESTION_TYPE_CHOICES = [

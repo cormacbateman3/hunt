@@ -1,6 +1,8 @@
 """
 Business logic for bidding system
 """
+from decimal import Decimal
+
 from django.db import transaction
 from django.urls import reverse
 from apps.listings.models import Listing
@@ -39,9 +41,14 @@ def place_bid(listing, bidder, amount):
         if not locked_listing.is_active():
             return False, "This auction has ended"
 
-        minimum_bid = (locked_listing.current_bid or locked_listing.starting_price or 0) + 1
+        # Seller-configured minimum increment (10.8); first bid meets the start price.
+        increment = locked_listing.bid_increment or Decimal('1')
+        if locked_listing.current_bid:
+            minimum_bid = locked_listing.current_bid + increment
+        else:
+            minimum_bid = locked_listing.starting_price or increment
         if amount < minimum_bid:
-            return False, f"Bid must be at least ${minimum_bid:.2f}"
+            return False, f"Bid must be at least ${minimum_bid:.2f} (bid increment: ${increment:.2f})"
 
         previous_winner = (
             Bid.objects.filter(listing=locked_listing, is_winning=True)

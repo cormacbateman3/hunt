@@ -47,6 +47,10 @@ class UserProfile(models.Model):
     email_verification_token = models.UUIDField(default=uuid.uuid4, editable=False)
     phone_verified = models.BooleanField(default=False)
     stripe_customer_id = models.CharField(max_length=100, blank=True)
+    listing_defaults = models.JSONField(
+        default=dict, blank=True,
+        help_text='Saved defaults applied to new listings (shipping config, auto-relist, bid increment, ...)',
+    )
     shipping_address = models.ForeignKey(
         Address,
         on_delete=models.SET_NULL,

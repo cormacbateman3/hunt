@@ -1,6 +1,8 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
+
+from apps.core.constants import SHIPPING_PAYER_CHOICES, SHIPPING_SERVICE_CHOICES
 from .models import UserProfile, Address
 
 
@@ -135,5 +137,49 @@ class AddressForm(forms.ModelForm):
             }),
         }
 
-    def clean_state(self):
-        return self.cleaned_data['state'].upper()
+
+class ListingDefaultsForm(forms.Form):
+    """Saved defaults applied to new listings (10.8) — stored on
+    UserProfile.listing_defaults and read by ListingForm on create."""
+
+    shipping_service = forms.ChoiceField(
+        choices=SHIPPING_SERVICE_CHOICES, required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+    shipping_payer = forms.ChoiceField(
+        choices=SHIPPING_PAYER_CHOICES, required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
+    package_weight_oz = forms.DecimalField(
+        required=False, min_value=0.5, max_digits=6, decimal_places=1,
+        widget=forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '8.0', 'step': '0.5'}),
+    )
+    package_length_in = forms.DecimalField(
+        required=False, min_value=1, max_digits=5, decimal_places=1,
+        widget=forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '10', 'step': '0.5'}),
+    )
+    package_width_in = forms.DecimalField(
+        required=False, min_value=1, max_digits=5, decimal_places=1,
+        widget=forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '7', 'step': '0.5'}),
+    )
+    package_height_in = forms.DecimalField(
+        required=False, min_value=0.5, max_digits=5, decimal_places=1,
+        widget=forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '1', 'step': '0.5'}),
+    )
+    bid_increment = forms.DecimalField(
+        required=False, min_value=1, max_digits=8, decimal_places=2,
+        widget=forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '1', 'step': '1'}),
+    )
+    auto_relist = forms.BooleanField(
+        required=False, widget=forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+    )
+
+    def to_defaults(self):
+        """JSON-safe dict, empties dropped (booleans always kept)."""
+        out = {}
+        for key, value in self.cleaned_data.items():
+            if isinstance(value, bool):
+                out[key] = value
+            elif value not in (None, ''):
+                out[key] = str(value)
+        return out

@@ -94,6 +94,7 @@ def profile_edit(request):
         form = UserProfileForm(instance=profile)
 
     from apps.messaging.models import Block
+    from .forms import ListingDefaultsForm
     addresses = request.user.addresses.all()
     blocked_users = Block.objects.filter(blocker=request.user).select_related('blocked')
     return render(request, 'accounts/profile_edit.html', {
@@ -101,7 +102,25 @@ def profile_edit(request):
         'addresses': addresses,
         'readiness': profile.account_readiness,
         'blocked_users': blocked_users,
+        'listing_defaults_form': ListingDefaultsForm(initial=profile.listing_defaults or {}),
     })
+
+
+@login_required
+def listing_defaults_save(request):
+    """Save the user's default listing settings (applied to new listings)."""
+    from .forms import ListingDefaultsForm
+    if request.method != 'POST':
+        return redirect('accounts:profile_edit')
+    form = ListingDefaultsForm(request.POST)
+    if form.is_valid():
+        profile = request.user.profile
+        profile.listing_defaults = form.to_defaults()
+        profile.save(update_fields=['listing_defaults'])
+        messages.success(request, 'Listing defaults saved — new listings will start with these values.')
+    else:
+        messages.error(request, 'Could not save listing defaults — please check the values.')
+    return redirect('accounts:profile_edit')
 
 
 def profile_view(request, username):

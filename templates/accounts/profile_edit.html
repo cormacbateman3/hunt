@@ -126,6 +126,59 @@
         {% endif %}
     </article>
 
+    {# ── Listing defaults ── #}
+    <article class="card">
+        <h2 style="font-size: 1.1rem; margin-bottom: 0.35rem;">Listing defaults</h2>
+        <p style="color: var(--color-muted); font-size: 0.88rem; margin-bottom: 0.75rem;">
+            New listings start with these values — you can still change them per listing.
+        </p>
+        <form method="post" action="{% url 'accounts:listing_defaults' %}" style="display: grid; gap: 0.85rem;">
+            {% csrf_token %}
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
+                <div>
+                    <label class="form-label" for="{{ listing_defaults_form.shipping_service.id_for_label }}">Carrier / service</label>
+                    {{ listing_defaults_form.shipping_service }}
+                </div>
+                <div>
+                    <label class="form-label" for="{{ listing_defaults_form.shipping_payer.id_for_label }}">Who pays shipping</label>
+                    {{ listing_defaults_form.shipping_payer }}
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.85rem;">
+                <div>
+                    <label class="form-label" for="{{ listing_defaults_form.package_weight_oz.id_for_label }}">Weight (oz)</label>
+                    {{ listing_defaults_form.package_weight_oz }}
+                </div>
+                <div>
+                    <label class="form-label" for="{{ listing_defaults_form.package_length_in.id_for_label }}">Length (in)</label>
+                    {{ listing_defaults_form.package_length_in }}
+                </div>
+                <div>
+                    <label class="form-label" for="{{ listing_defaults_form.package_width_in.id_for_label }}">Width (in)</label>
+                    {{ listing_defaults_form.package_width_in }}
+                </div>
+                <div>
+                    <label class="form-label" for="{{ listing_defaults_form.package_height_in.id_for_label }}">Height (in)</label>
+                    {{ listing_defaults_form.package_height_in }}
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; align-items: end;">
+                <div>
+                    <label class="form-label" for="{{ listing_defaults_form.bid_increment.id_for_label }}">Bid increment ($)</label>
+                    {{ listing_defaults_form.bid_increment }}
+                </div>
+                <div>
+                    <label class="form-label">
+                        {{ listing_defaults_form.auto_relist }} Auto-relist unsold auctions
+                    </label>
+                </div>
+            </div>
+            <div>
+                <button type="submit" class="btn-secondary">Save listing defaults</button>
+            </div>
+        </form>
+    </article>
+
     {# ── Blocked Users ── #}
     <article class="card">
         <h2 style="font-size: 1.1rem; margin-bottom: 0.75rem;">Blocked users</h2>

@@ -40,7 +40,7 @@ class ListingAdmin(admin.ModelAdmin):
             'fields': ('category', 'state', 'county_ref', 'is_statewide', 'license_types', 'shape', 'colors', 'condition_grade', 'listing_completeness_score')
         }),
         ('Legacy Snapshots', {
-            'fields': ('county', 'license_type', 'resident_status'),
+            'fields': ('county', 'resident_status'),
             'classes': ('collapse',),
         }),
         ('Auction Pricing', {

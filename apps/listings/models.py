@@ -4,6 +4,7 @@ from django.utils import timezone
 from django.urls import reverse
 from apps.core.constants import (
     COLOR_CHOICES,
+    CONDITION_CHOICES,
     FORM_LICENSE_TYPE_CATEGORIES,
     ITEM_KIND_CHOICES,
     RESIDENT_STATUS_CHOICES,
@@ -57,14 +58,7 @@ class Listing(models.Model):
         ('cancelled', 'Cancelled'),
     ]
 
-    CONDITION_CHOICES = [
-        ('poor', 'Poor'),
-        ('fair', 'Fair'),
-        ('good', 'Good'),
-        ('very_good', 'Very Good'),
-        ('excellent', 'Excellent'),
-        ('mint', 'Mint'),
-    ]
+    CONDITION_CHOICES = CONDITION_CHOICES
 
     # Relationships
     seller = models.ForeignKey(User, on_delete=models.CASCADE, related_name='listings')
@@ -103,13 +97,15 @@ class Listing(models.Model):
         'core.State', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='listings', help_text='Issuing state for this item'
     )
-    county = models.CharField(max_length=50, help_text="Pennsylvania county")
+    county = models.CharField(
+        max_length=50, blank=True, default='',
+        help_text="Denormalized display snapshot — county_ref/is_statewide are authoritative",
+    )
     county_ref = models.ForeignKey(
         'core.GeographicUnit', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='listings', help_text="Geographic unit reference"
     )
     is_statewide = models.BooleanField(default=False)
-    license_type = models.CharField(max_length=50, help_text="Legacy type snapshot", blank=True)
     license_types = models.ManyToManyField(
         'core.LicenseType', blank=True, related_name='listings',
         help_text="License type(s) for this listing",
@@ -130,6 +126,10 @@ class Listing(models.Model):
     )
 
     # Auction pricing
+    bid_increment = models.DecimalField(
+        max_digits=8, decimal_places=2, default=1,
+        help_text='Minimum amount each new bid must exceed the current bid by',
+    )
     starting_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     current_bid = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     reserve_price = models.DecimalField(
@@ -257,18 +257,28 @@ class Listing(models.Model):
 
     @property
     def listing_completeness_score(self):
+        """Score against the kind-appropriate field set (T9): a standalone
+        add-on is never penalized for base-license dimensions."""
+        has_addons = self.license_types.filter(category='addon_type').exists()
         checks = [
             bool(self.county_ref or self.is_statewide),
-            self.license_types.filter(category='activity_scope').exists(),
             self.license_types.filter(category='material').exists(),
             bool(self.description.strip()),
             bool(self.shape),
             bool(self.colors),
-            self.license_types.filter(category='residency').exists(),
-            self.license_types.filter(category='duration').exists(),
-            self.license_types.filter(category='holder_eligibility').exists(),
-            self.license_types.filter(category='addon_type').exists(),
         ]
+        if self.item_kind == 'addon':
+            checks.append(has_addons)                     # the add-on IS the item
+        else:
+            checks.extend([
+                self.license_types.filter(category='activity_scope').exists(),
+                self.license_types.filter(category='residency').exists(),
+                self.license_types.filter(category='duration').exists(),
+                self.license_types.filter(category='holder_eligibility').exists(),
+                self.license_types.filter(category='addon_type').exists(),
+            ])
+            if has_addons:
+                checks.append(self.addons_attached is not None)
         return int((sum(1 for item in checks if item) / len(checks)) * 100)
 
     def license_types_for_category(self, category):

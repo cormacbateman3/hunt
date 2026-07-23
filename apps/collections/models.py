@@ -1,21 +1,14 @@
 from django.db import models
 from django.contrib.auth.models import User
 from apps.core.models import GeographicUnit, LicenseType, get_default_item_category
-from apps.core.constants import COLOR_CHOICES, FORM_LICENSE_TYPE_CATEGORIES, ITEM_KIND_CHOICES, RESIDENT_STATUS_CHOICES, SHAPE_CHOICES
+from apps.core.constants import COLOR_CHOICES, CONDITION_CHOICES, FORM_LICENSE_TYPE_CATEGORIES, ITEM_KIND_CHOICES, RESIDENT_STATUS_CHOICES, SHAPE_CHOICES
 from apps.listings.models import ERA_LABEL_CHOICES, _year_to_era
 
 
 class CollectionItem(models.Model):
     """An item in a user's personal collection"""
 
-    CONDITION_CHOICES = [
-        ('poor', 'Poor'),
-        ('fair', 'Fair'),
-        ('good', 'Good'),
-        ('very_good', 'Very Good'),
-        ('excellent', 'Excellent'),
-        ('mint', 'Mint'),
-    ]
+    CONDITION_CHOICES = CONDITION_CHOICES
 
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='collection_items')
     category = models.ForeignKey(
