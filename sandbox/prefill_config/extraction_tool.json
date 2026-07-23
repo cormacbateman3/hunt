@@ -1,0 +1,29 @@
+{
+  "name": "extract_license_fields",
+  "description": "Extract structured fields from an antique US hunting or fishing license image.",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "item_kind": {"type": ["string", "null"], "enum": ["license", "addon", "lot", "unknown", null], "description": "license = a base license, with or without attached tags/stamps; addon = a standalone stamp, tag, permit, or privilege paper that is NOT a base license; lot = multiple distinct physical items photographed together; unknown if unclear."},
+      "state_name_or_abbrev": {"type": ["string", "null"], "description": "State exactly as printed, incl. historical forms like \"PENNA.\", \"MICH.\""},
+      "license_year": {"type": ["integer", "null"], "description": "Four-digit year as printed. Only derive a 2-digit year when the century is unambiguous."},
+      "era_guess": {"type": ["string", "null"], "enum": ["Pre-1920", "1920s", "1930s", "1940s", "1950s", "1960s", "1970s", "1980s", "1990s", "2000s", null], "description": "Decade ONLY when no explicit year is visible. Omit entirely when license_year is read."},
+      "geographic_unit_name": {"type": ["string", "null"], "description": "County/unit name OR number exactly as printed, e.g. \"Lancaster\", \"Co. 36\", \"COUNTY NUMBER 36\", \"GMU 12\". Transcribe the number; do not convert it to a name. Null if statewide."},
+      "is_statewide": {"type": "boolean", "description": "True only if the license explicitly covers the whole state with no county/unit restriction."},
+      "residency": {"type": ["string", "null"], "description": "Residency exactly as printed; keep any \"Non-\" prefix, e.g. \"Resident\", \"Non-Resident\"."},
+      "holder_eligibility": {"type": ["string", "null"], "description": "Eligibility class, e.g. \"Adult\", \"Junior\", \"Senior\"."},
+      "activity_scope": {"type": ["string", "null"], "description": "Base activity, e.g. \"Hunter\", \"Hunting\", \"Trapping\", \"Hunting and Fishing\". Do NOT put species tags/stamps here."},
+      "duration": {"type": ["string", "null"], "description": "Validity period if printed, e.g. \"Annual\", \"7-Day\"."},
+      "addon_type": {"type": "array", "items": {"type": "string"}, "maxItems": 4, "description": "Add-on stamps/tags/permits printed on the item — a license can have several, e.g. [\"Turkey Tag\", \"Antlerless Deer\"]. Species tags (deer, turkey, bear, duck) belong here, NOT in activity_scope."},
+      "serial_number": {"type": ["string", "null"], "description": "License/serial number exactly as printed, character-by-character, PRESERVING the printed position of any letter: a letter before the digits stays a prefix (\"F 25009\"), a letter after stays a suffix (\"23560 G\"). Never reorder, never infer missing digits."},
+      "material": {"type": ["string", "null"], "enum": ["Paper/Cardstock", "Metal Button", "Metal Tag", "Celluloid", "Fabric/Canvas", "Plastic", null]},
+      "shape": {"type": ["string", "null"], "enum": ["Rectangle", "Square", "Button/Disc", "Tag (with hole)", "Strip", "Irregular/Custom", null]},
+      "dominant_colors": {"type": "array", "items": {"type": "string"}, "maxItems": 3, "description": "Up to 3 dominant colors, most prominent first. Prefer single basic color words (\"blue\", \"tan\", \"gold\"), not combos like \"yellow/gold\"."},
+      "raw_text_transcription": {"type": "string", "description": "ONLY text physically printed on the item, in reading order. Never add common license phrases from memory. Omit illegible words rather than guess."},
+      "context_text": {"type": ["string", "null"], "description": "Text visible in the photo but NOT printed on the item itself: collector mat/frame annotations, labels, handwriting on backing paper. Never mix this into raw_text_transcription."},
+      "inferred_fields": {"type": "array", "items": {"type": "string"}, "description": "Names of any fields filled by inference from the license type rather than printed text (e.g. \"duration\"). Empty if everything was read from the item."},
+      "per_field_confidence": {"type": "object", "description": "Numeric 0.0-1.0 per populated field. Omit null fields."}
+    },
+    "required": ["raw_text_transcription", "per_field_confidence", "addon_type", "dominant_colors", "inferred_fields", "item_kind"]
+  }
+}

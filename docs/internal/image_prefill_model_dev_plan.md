@@ -1,4 +1,20 @@
 Image Prefill - Dev Plan
+
+> **Status update 2026-07-22:** the model side is done in the sandbox (see
+> `docs/internal/data_model_img_prefill_plan.md` T8 + execution status). What changed vs.
+> this spec: (a) extraction adds `item_kind` (license/addon/lot/unknown) and `context_text`;
+> the resolver gates by kind, matches add-ons species-facet-first with `first_year`/`last_year`
+> era rejection, returns **per-item** add-on tiers, and runs a constrained second-pass
+> re-match on misses; (b) prompts/schema/aliases/knobs live in **`sandbox/prefill_config/`**
+> as editable files — ship that directory inside the `prefill/` package and store
+> `prefill_lib.PROMPT_VERSION` (hash of prompt+schema) in `PrefillJob.prompt_version` (§4's
+> versioning requirement, realized); (c) `max_image_edge` is 1568 (readability over cost);
+> (d) the schema change to Listing/CollectionItem this spec said wouldn't happen did —
+> `item_kind`/`addons_attached`/`category` exist and the forms expose them (T6a).
+> Remaining before this doc's Phase 0 starts: none — lift `sandbox/prefill_lib.py` +
+> `prefill_config/` into the `prefill/` package and build §§2-3 (PrefillJob, async+polling,
+> resolution service) per this spec.
+
 1. Architecture
 Three components, clean seam between them:
 A. prefill/ Python package — pure logic, no Django, no AWS. Takes (image_bytes, controlled_vocab_context) → returns structured extraction JSON. Runs identically in Lambda and in local Django.

@@ -4,7 +4,9 @@ Scope: Adds the missing top levels of the item hierarchy (department → categor
 
 2026-07-10 update: research results folded in (see "Research results" below — two corrections), plus four additions: **T12** department→category top level, **T13** two-page create flow + standardized image slots, **T14** admin general ledger, and the corrected Out-of-State/Co. 68 note.
 
-**Execution status (2026-07-10, branch `feature/alpha-p3-t0-t14`):** T0, T1, T2, T3, T4, T5, T6a, T7, T10, T11 Phase A, and T12 are **shipped and verified on SQLite** (research applied to ref_data, migrations + backfill run, seeders drift-free and idempotent, API year-gating live, forms/admin wired). Remaining: **T8** (prefill schema/resolver — unblocks 10.5) + R6 gold labels; T6b/T9/T13 ride 10.8; T13 lot images ride 10.15; T14 rides 10.18. Postgres sanity check pending a staging DB.
+**Execution status (updated 2026-07-22, branch `feature/alpha-p3-t0-t14`):** T0–T5, T6a, T7, **T8**, T10, T11 Phase A, and T12 are **shipped and verified** (research applied to ref_data, migrations + backfill run, seeders drift-free and idempotent, API year-gating live, forms/admin wired). T8 live 17-image run: every diagnosed failure case fixed (Turkey Tag [high], MD Deer Tag [high], Muzzle Loader matched via alias + second pass, county-number ⇒ PA prior fired, serial suffix preserved, addon kind gating). Follow-ups landed 2026-07-22: PA **Deer Tag** + **Small Game Tag** rows added (run-revealed vocab gap, artifact evidence from the 1979 test item); `MAX_IMAGE_EDGE` 1120 → **1568** (readability over cost, per Cormac); prompts/schema/aliases/knobs **externalized to `sandbox/prefill_config/`** (`system_prompt.md`, `extraction_tool.json`, `second_pass_prompt.md`, `concept_aliases.json`, `config.json`) with a `PROMPT_VERSION` hash — nothing prompt-like is hardcoded in Python anymore, and `PrefillJob.prompt_version` consumes the hash in 10.5.
+
+**Prefill polish deliberately deferred** (model is good-enough; revisit after core workflows): R6 gold labels + per-tier precision scoring (notebook cell is ready), serial agreement-gating, threshold tuning against the gold set, prompt iteration on the remaining single-image misses. Remaining elsewhere: T6b/T9/T13 ride 10.8; T13 lot images ride 10.15; T14 rides 10.18. Postgres sanity check pending a staging DB.
 
 Domain rationale: The marketplace trades physical artifacts, not legal privileges. A base license (PA back tag), a standalone stamp/tag (Federal Duck Stamp, antlerless paper license), and a license with species tags still attached are three different things that currently all flatten into the same dimension set. `item_kind` disambiguates; the existing `addon_type` M2M is reinterpreted by kind (license → "privileges attached/included on this item"; addon → "what this item is").
 
@@ -304,7 +306,7 @@ Pipeline (this is most of the task — the data already exists):
 - `/api/license-types/` addon entries include `target_species`, `hunting_method`, `instrument`, `first_year`, `last_year`, and computed `is_federal` (`state.code=='FD'`).
 - Accept optional `year` param: era-appropriate options ordered first, out-of-range entries flagged (`out_of_range: true`) so the form can soft-warn without a second call.
 
-### T8 — Image-prefill integration (after T0–T5; amends the 10.5 spec)
+### T8 — Image-prefill integration (after T0–T5; amends the 10.5 spec) — ✅ shipped 2026-07-22 (sandbox)
 
 - Extraction schema: add `item_kind` enum `license / addon / lot / unknown` with a short rubric ("standalone stamp/tag/permit vs. base license; multiple distinct items photographed together = lot"). `lot` is extraction-only → UI guidance, no DB write (decision 1).
 - Resolver gates by kind: no activity_scope/duration inference for `addon`; for `addon`, addon_type resolution identifies the item itself.

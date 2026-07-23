@@ -1923,6 +1923,7 @@ ________________________________________
 
 10.5 Image Prefill for Listings & Collections
 Goal: Finish the AI image-prefill feature so uploading a license photo pre-fills the listing/collection form by confidence tier. The detailed spec is docs/internal/image_prefill_model_dev_plan.md — that document is authoritative for this task; the summary here is the integration checklist.
+Status 2026-07-22: the prerequisite data-model work (10.5a, docs/internal/data_model_img_prefill_plan.md T0–T12) and the model itself (T8, sandbox) are DONE — extraction/resolver verified on the 17-image set, prompts externalized to sandbox/prefill_config/. Remaining 10.5 work is the productionization below (prefill/ package, PrefillJob/PrefillCorrection, async+polling API, tier UI, collection form first). Note: "No change to Listing/CollectionItem" below is superseded — item_kind/addons_attached/category shipped in 10.5a.
 Scope
 •	Add the missing dependencies (currently absent from requirements): boto3, django-storages, rapidfuzz, and the Anthropic SDK (for the local backend). Wire PREFILL_BACKEND (local | lambda) so dev runs the prefill/ package in-process and prod calls Lambda → Bedrock with zero code drift.
 •	Build the prefill/ package (pure logic), the Lambda handler, and the Django resolution/service layer (raw extraction → State / GeographicUnit / LicenseType, confidence tiers).

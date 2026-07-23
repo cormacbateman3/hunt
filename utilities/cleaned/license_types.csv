@@ -223,10 +223,12 @@ PA,Archery Stamp,addon_type,pa-addontype-archery-stamp,True,Deer,Archery,stamp,1
 PA,Bear Permit,addon_type,pa-addontype-bear-permit,True,Bear,,permit,1981,
 PA,Big Game Tag,addon_type,pa-addontype-big-game-tag,True,Multiple,,tag,,2011
 PA,DMAP Antlerless Tags,addon_type,pa-addontype-dmap-antlerless-tags,True,Antlerless Deer,,tag,2003,
+PA,Deer Tag,addon_type,pa-addontype-deer-tag,True,Deer,,tag,,2011
 PA,Elk License (Lottery),addon_type,pa-addontype-elk-license-lottery,True,Elk,,license,2001,
 PA,Muzzleloader License,addon_type,pa-addontype-muzzleloader-license,True,Deer,Muzzleloader,license,1974,
 PA,Muzzleloader Stamp,addon_type,pa-addontype-muzzleloader-stamp,True,Deer,Muzzleloader,stamp,1974,
 PA,Pheasant Permit,addon_type,pa-addontype-pheasant-permit,True,Pheasant,,permit,2017,
+PA,Small Game Tag,addon_type,pa-addontype-small-game-tag,True,Small Game,,tag,,2011
 PA,Special Spring Turkey Permit,addon_type,pa-addontype-special-spring-turkey-permit,True,Turkey,,permit,1968,
 PA,Turkey Tag,addon_type,pa-addontype-turkey-tag,True,Turkey,,tag,,2011
 PA,Waterfowl/Migratory Bird Stamp,addon_type,pa-addontype-waterfowl-migratory-bird-stamp,True,Waterfowl,,stamp,1983,

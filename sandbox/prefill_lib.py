@@ -14,6 +14,8 @@ Reference data is read from the live Django ORM (not CSVs). Run the DB seeders f
 from __future__ import annotations
 
 import base64
+import hashlib
+import json
 import os
 import re
 import sys
@@ -54,22 +56,45 @@ from apps.core.constants import COLOR_CHOICES, SHAPE_CHOICES  # noqa: E402
 from apps.core.models import GeographicUnit, LicenseType, State  # noqa: E402
 
 # --------------------------------------------------------------------------- #
-# Config
+# Config — model params, prompts, extraction schema, and aliases live in
+# prefill_config/ as editable files (context management: nothing prompt-like is
+# hardcoded here). PROMPT_VERSION hashes the prompt+schema combination and is
+# what PrefillJob.prompt_version will store in 10.5.
 # --------------------------------------------------------------------------- #
-MODEL_ID = "claude-haiku-4-5-20251001"
-PRICE = {"input": 0.80, "output": 4.00, "cache_write": 1.00, "cache_read": 0.08}  # USD / 1M tokens
+CONFIG_DIR = Path(__file__).resolve().parent / "prefill_config"
 
-# Cost levers: a smaller long edge than the old 1568 (image tokens scale with area),
-# plus trimming the photographed background. Tune MAX_IMAGE_EDGE down and re-measure.
-MAX_IMAGE_EDGE = 1120
-AUTO_CROP = True
 
-ALLOW_INFERENCE = True       # curated, flagged domain inferences, capped at 'medium'
-SECOND_PASS = True           # constrained text-only re-match for unmatched add-ons (fires on misses only)
-FUZZY_FLOOR = 88             # below this we never prefill a value; route to a suggestion
-GEO_NAME_FLOOR = 90
+def reload_config() -> str:
+    """(Re)load params, prompts, schema, and aliases from prefill_config/.
+
+    Call from the notebook after editing those files (autoreload only tracks
+    .py). Returns the new PROMPT_VERSION."""
+    global MODEL_ID, PRICE, MAX_IMAGE_EDGE, AUTO_CROP, ALLOW_INFERENCE, SECOND_PASS
+    global FUZZY_FLOOR, GEO_NAME_FLOOR, SYSTEM_PROMPT, EXTRACTION_TOOL
+    global SECOND_PASS_PROMPT, CONCEPT_ALIASES, PROMPT_VERSION
+    cfg = json.loads((CONFIG_DIR / "config.json").read_text(encoding="utf-8"))
+    MODEL_ID = cfg["model_id"]
+    PRICE = cfg["price_per_mtok"]              # USD / 1M tokens
+    MAX_IMAGE_EDGE = cfg["max_image_edge"]     # 1568 = Claude vision optimum; lower = cheaper
+    AUTO_CROP = cfg["auto_crop"]
+    ALLOW_INFERENCE = cfg["allow_inference"]   # curated, flagged inferences, capped at 'medium'
+    SECOND_PASS = cfg["second_pass"]           # constrained re-match, fires on misses only
+    FUZZY_FLOOR = cfg["fuzzy_floor"]           # below this we never prefill; route to a suggestion
+    GEO_NAME_FLOOR = cfg["geo_name_floor"]
+    SYSTEM_PROMPT = (CONFIG_DIR / "system_prompt.md").read_text(encoding="utf-8")
+    EXTRACTION_TOOL = json.loads((CONFIG_DIR / "extraction_tool.json").read_text(encoding="utf-8"))
+    SECOND_PASS_PROMPT = (CONFIG_DIR / "second_pass_prompt.md").read_text(encoding="utf-8")
+    CONCEPT_ALIASES = {k: tuple(v) for k, v in json.loads(
+        (CONFIG_DIR / "concept_aliases.json").read_text(encoding="utf-8")).items()}
+    PROMPT_VERSION = hashlib.sha1(
+        (SYSTEM_PROMPT + json.dumps(EXTRACTION_TOOL, sort_keys=True) + SECOND_PASS_PROMPT).encode("utf-8")
+    ).hexdigest()[:10]
+    return PROMPT_VERSION
+
+
+reload_config()
+
 CURRENT_YEAR = datetime.now().year
-
 RESAMPLE = Image.Resampling.LANCZOS
 
 # License-type dimensions that resolve to LicenseType rows (vs. plain choice fields).
@@ -156,41 +181,11 @@ class ReferenceData:
 
 
 # --------------------------------------------------------------------------- #
-# 2. Curated vocabulary knowledge (small + stable; later movable to DB/constants)
+# 2. Curated vocabulary knowledge
 # --------------------------------------------------------------------------- #
-# normalized term -> (dimension, canonical). Canonical is matched against the state's
-# candidate names, so add-on keywords (Turkey, Bear...) generalize across states.
-CONCEPT_ALIASES: dict[str, tuple[str, str]] = {
-    # residency
-    "RESIDENT": ("residency", "Resident"),
-    "NONRESIDENT": ("residency", "Nonresident"), "NON RESIDENT": ("residency", "Nonresident"), "NR": ("residency", "Nonresident"),
-    "ALIEN": ("residency", "Alien"), "NONRESIDENT ALIEN": ("residency", "Alien"),
-    # holder eligibility
-    "ADULT": ("holder_eligibility", "General"), "REGULAR": ("holder_eligibility", "General"), "GENERAL": ("holder_eligibility", "General"),
-    "JUNIOR": ("holder_eligibility", "Junior"), "JR": ("holder_eligibility", "Junior"),
-    "YOUTH": ("holder_eligibility", "Youth"), "MINOR": ("holder_eligibility", "Youth"),
-    "SENIOR": ("holder_eligibility", "Senior"), "SR": ("holder_eligibility", "Senior"),
-    "MILITARY": ("holder_eligibility", "Military"), "VETERAN": ("holder_eligibility", "Veteran"), "DISABLED": ("holder_eligibility", "Disabled"),
-    # activity scope
-    "HUNTER": ("activity_scope", "General Hunting"), "HUNTING": ("activity_scope", "General Hunting"),
-    "HUNT": ("activity_scope", "General Hunting"), "RESIDENT HUNTER": ("activity_scope", "General Hunting"),
-    "TRAPPING": ("activity_scope", "Trapping"), "TRAPPER": ("activity_scope", "Trapping"),
-    "FURBEARER": ("activity_scope", "Trapping"), "FUR BEARER": ("activity_scope", "Trapping"),
-    "HUNTING AND FISHING": ("activity_scope", "Combo"), "COMBINATION": ("activity_scope", "Combo"),
-    "COMBO": ("activity_scope", "Combo"), "SPORTSMAN": ("activity_scope", "Sportsman"),
-    # duration
-    "ANNUAL": ("duration", "Annual"), "LIFETIME": ("duration", "Lifetime"),
-    "1 DAY": ("duration", "1-day"), "3 DAY": ("duration", "3-day"), "7 DAY": ("duration", "7-day"),
-    # add-on type (species / tags / stamps) -> distinctive keyword
-    "ANTLERLESS DEER": ("addon_type", "Antlerless Deer"), "ANTLERLESS": ("addon_type", "Antlerless Deer"), "DOE": ("addon_type", "Antlerless Deer"),
-    "DMAP": ("addon_type", "DMAP"),
-    "TURKEY": ("addon_type", "Turkey"), "TURKEY TAG": ("addon_type", "Turkey"), "SPRING TURKEY": ("addon_type", "Turkey"),
-    "BEAR": ("addon_type", "Bear"), "ARCHERY": ("addon_type", "Archery"),
-    "MUZZLELOADER": ("addon_type", "Muzzleloader"), "FLINTLOCK": ("addon_type", "Muzzleloader"),
-    "PHEASANT": ("addon_type", "Pheasant"), "ELK": ("addon_type", "Elk"),
-    "WATERFOWL": ("addon_type", "Waterfowl"), "DUCK": ("addon_type", "Waterfowl"), "MIGRATORY": ("addon_type", "Waterfowl"),
-    "TROUT": ("addon_type", "Trout"),
-}
+# CONCEPT_ALIASES (normalized term -> (dimension, canonical)) is loaded from
+# prefill_config/concept_aliases.json by reload_config(). Canonical is matched
+# against the state's candidate names, so add-on keywords generalize across states.
 
 def _alias(text: Any) -> tuple[str, str] | None:
     """Alias lookup that also tries the space-collapsed key (MUZZLE LOADER -> MUZZLELOADER)."""
@@ -265,73 +260,8 @@ def prep_image(path: str | Path) -> tuple[str, str]:
     return base64.b64encode(buf.getvalue()).decode("utf-8"), "image/jpeg"
 
 
-EXTRACTION_TOOL = {
-    "name": "extract_license_fields",
-    "description": "Extract structured fields from an antique US hunting or fishing license image.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "item_kind": {"type": ["string", "null"], "enum": ["license", "addon", "lot", "unknown", None], "description": "license = a base license, with or without attached tags/stamps; addon = a standalone stamp, tag, permit, or privilege paper that is NOT a base license; lot = multiple distinct physical items photographed together; unknown if unclear."},
-            "state_name_or_abbrev": {"type": ["string", "null"], "description": 'State exactly as printed, incl. historical forms like "PENNA.", "MICH."'},
-            "license_year": {"type": ["integer", "null"], "description": "Four-digit year as printed. Only derive a 2-digit year when the century is unambiguous."},
-            "era_guess": {"type": ["string", "null"], "enum": ["Pre-1920", "1920s", "1930s", "1940s", "1950s", "1960s", "1970s", "1980s", "1990s", "2000s", None], "description": "Decade ONLY when no explicit year is visible. Omit entirely when license_year is read."},
-            "geographic_unit_name": {"type": ["string", "null"], "description": 'County/unit name OR number exactly as printed, e.g. "Lancaster", "Co. 36", "COUNTY NUMBER 36", "GMU 12". Transcribe the number; do not convert it to a name. Null if statewide.'},
-            "is_statewide": {"type": "boolean", "description": "True only if the license explicitly covers the whole state with no county/unit restriction."},
-            "residency": {"type": ["string", "null"], "description": 'Residency exactly as printed; keep any "Non-" prefix, e.g. "Resident", "Non-Resident".'},
-            "holder_eligibility": {"type": ["string", "null"], "description": 'Eligibility class, e.g. "Adult", "Junior", "Senior".'},
-            "activity_scope": {"type": ["string", "null"], "description": 'Base activity, e.g. "Hunter", "Hunting", "Trapping", "Hunting and Fishing". Do NOT put species tags/stamps here.'},
-            "duration": {"type": ["string", "null"], "description": 'Validity period if printed, e.g. "Annual", "7-Day".'},
-            "addon_type": {"type": "array", "items": {"type": "string"}, "maxItems": 4, "description": 'Add-on stamps/tags/permits printed on the item — a license can have several, e.g. ["Turkey Tag", "Antlerless Deer"]. Species tags (deer, turkey, bear, duck) belong here, NOT in activity_scope.'},
-            "serial_number": {"type": ["string", "null"], "description": 'License/serial number exactly as printed, character-by-character, PRESERVING the printed position of any letter: a letter before the digits stays a prefix ("F 25009"), a letter after stays a suffix ("23560 G"). Never reorder, never infer missing digits.'},
-            "material": {"type": ["string", "null"], "enum": ["Paper/Cardstock", "Metal Button", "Metal Tag", "Celluloid", "Fabric/Canvas", "Plastic", None]},
-            "shape": {"type": ["string", "null"], "enum": ["Rectangle", "Square", "Button/Disc", "Tag (with hole)", "Strip", "Irregular/Custom", None]},
-            "dominant_colors": {"type": "array", "items": {"type": "string"}, "maxItems": 3, "description": 'Up to 3 dominant colors, most prominent first. Prefer single basic color words ("blue", "tan", "gold"), not combos like "yellow/gold".'},
-            "raw_text_transcription": {"type": "string", "description": "ONLY text physically printed on the item, in reading order. Never add common license phrases from memory. Omit illegible words rather than guess."},
-            "context_text": {"type": ["string", "null"], "description": "Text visible in the photo but NOT printed on the item itself: collector mat/frame annotations, labels, handwriting on backing paper. Never mix this into raw_text_transcription."},
-            "inferred_fields": {"type": "array", "items": {"type": "string"}, "description": 'Names of any fields filled by inference from the license type rather than printed text (e.g. "duration"). Empty if everything was read from the item.'},
-            "per_field_confidence": {"type": "object", "description": "Numeric 0.0-1.0 per populated field. Omit null fields."},
-        },
-        "required": ["raw_text_transcription", "per_field_confidence", "addon_type", "dominant_colors", "inferred_fields", "item_kind"],
-    },
-}
-
-SYSTEM_PROMPT = """You are an expert cataloger of antique US hunting and fishing licenses.
-
-TRANSCRIPTION (raw_text_transcription) — be strict:
-- Include ONLY words, numbers, and marks physically printed on the item, in reading order.
-- Check ALL orientations: antique tags often print text vertically or along the edges
-  (e.g. a state name running up the left edge). Rotate mentally and read edge text too.
-- Never add phrases you expect to be there. If you cannot read something, leave it out.
-- Never hallucinate or complete serial numbers; transcribe them character-by-character,
-  preserving letter position (prefix "F 25009" vs suffix "23560 G" are different serials).
-- Collector mat/frame annotations, labels, or handwriting on backing paper are NOT item
-  text — put them in context_text, never in raw_text_transcription.
-
-ITEM KIND (item_kind):
-- "license" = a base license, with or without attached tags/stamps.
-- "addon" = a standalone stamp, tag, permit, or privilege paper that is not a base license
-  (e.g. a Federal Duck Stamp alone, a paper antlerless deer license, a detached tag).
-- "lot" = multiple distinct physical items photographed together.
-
-STRUCTURED FIELDS:
-- Fill from the printed text whenever possible.
-- Species tags and stamps (deer, antlerless, turkey, bear, duck/waterfowl, trout) go in addon_type (a list), NOT activity_scope.
-- Every attached or detachable tag portion (anything reading "ATTACH THIS TAG", a numbered
-  species coupon, an integral tag) is an add-on — list them ALL, even faint ones.
-- residency: keep the full "Non-" prefix if present.
-- geographic_unit_name: if a county NUMBER is shown ("Co. 36", "COUNTY NUMBER 36"), transcribe the number; do not convert it to a name.
-- material rubric: "Metal Button" = a round pinback button; stamped flat metal (rectangle,
-  shield, tag with a hole) = "Metal Tag".
-- era_guess: only when no year is readable; omit it when license_year is filled.
-
-INFERENCE — allowed but must be flagged:
-- You MAY infer a field from the license's evident type when it is essentially certain (e.g. a resident hunting tag is Annual; "HUNTER" implies general Hunting).
-- For any inferred field: set its confidence <= 0.7 AND list the field name in inferred_fields.
-- Do NOT infer state, year, county, or serial number — those must come from printed text.
-
-CONFIDENCE (per_field_confidence, 0.0-1.0): 0.90+ certain from image; 0.60-0.89 partial/inferred; below 0.60 return null instead.
-
-If the item is not a hunting/fishing license, transcribe what is legible and leave unsupported fields null."""
+# EXTRACTION_TOOL and SYSTEM_PROMPT are loaded from prefill_config/
+# (extraction_tool.json, system_prompt.md) by reload_config().
 
 
 def get_client():
@@ -372,7 +302,8 @@ def extract(path: str | Path, client=None) -> dict[str, Any]:
                 + usage["cache_read_input_tokens"] * PRICE["cache_read"]) / 1_000_000
         raw = block.input if isinstance(block.input, dict) else dict(block.input)
         return {"raw": raw, "usage": usage, "cost_usd": round(cost, 6),
-                "latency_ms": round((time.perf_counter() - started) * 1000, 1)}
+                "latency_ms": round((time.perf_counter() - started) * 1000, 1),
+                "prompt_version": PROMPT_VERSION}
     except Exception as exc:  # noqa: BLE001
         return {"error": f"{type(exc).__name__}: {exc}"}
 
@@ -636,15 +567,10 @@ def second_pass_addons(client, transcription: str, unmatched: list[str],
         f'{c["id"]}: {c["name"]}' + (f' [{c["species"]}]' if c.get("species") else "")
         for c in candidates
     )
-    year_note = f" The item is from {year}." if year else ""
-    prompt = (
-        "These add-on texts were read from an antique US hunting license but did not "
-        f"match our taxonomy.{year_note}\n\nTexts:\n"
-        + "\n".join(f"- {t}" for t in unmatched)
-        + "\n\nCandidate products (id: name [species]):\n" + listing
-        + "\n\nFor each text pick the candidate that denotes the SAME product "
-        "(spelling/synonym/era variants count), or null if none truly matches. "
-        "Never force a match."
+    prompt = SECOND_PASS_PROMPT.format(
+        year_note=f" The item is from {year}." if year else "",
+        texts="\n".join(f"- {t}" for t in unmatched),
+        candidates=listing,
     )
     try:
         resp = client.messages.create(

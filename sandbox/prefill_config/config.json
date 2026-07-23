@@ -1,0 +1,10 @@
+{
+  "model_id": "claude-haiku-4-5-20251001",
+  "price_per_mtok": {"input": 0.80, "output": 4.00, "cache_write": 1.00, "cache_read": 0.08},
+  "max_image_edge": 1568,
+  "auto_crop": true,
+  "allow_inference": true,
+  "second_pass": true,
+  "fuzzy_floor": 88,
+  "geo_name_floor": 90
+}
