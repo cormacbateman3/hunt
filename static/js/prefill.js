@@ -26,8 +26,13 @@
         addon_type: 'Add-on', shape: 'Shape', colors: 'Colors', serial_number: 'Serial',
     };
 
-    function cookie(name) {
-        const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    function csrfToken() {
+        // CSRF_COOKIE_HTTPONLY hides the csrftoken cookie from JS — read the
+        // form's hidden input instead (the browser still sends the cookie, so
+        // server-side validation works as normal).
+        const input = document.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (input && input.value) return input.value;
+        const m = document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)');
         return m ? decodeURIComponent(m.pop()) : '';
     }
 
@@ -121,6 +126,19 @@
             box.innerHTML = html;
         }
 
+        async fetchJSON(url, opts) {
+            const resp = await fetch(url, opts);
+            let data;
+            try {
+                data = await resp.json();
+            } catch (err) {
+                // An HTML error page (500/403) must surface a readable message.
+                throw new Error('server error (HTTP ' + resp.status + ')');
+            }
+            if (!resp.ok) throw new Error(data.error || 'server error (HTTP ' + resp.status + ')');
+            return data;
+        }
+
         async start(file) {
             this.status('<span class="prefill-shimmer">&#10024; Reading your image&hellip;</span>');
             const body = new FormData();
@@ -128,20 +146,17 @@
             body.append('source_form', this.cfg.source);
             let state;
             try {
-                const resp = await fetch(this.cfg.createUrl, {
+                state = await this.fetchJSON(this.cfg.createUrl, {
                     method: 'POST', body,
-                    headers: { 'X-CSRFToken': cookie('csrftoken') },
+                    headers: { 'X-CSRFToken': csrfToken() },
                 });
-                state = await resp.json();
-                if (!resp.ok) throw new Error(state.error || 'Prefill failed');
+                for (let i = 0; i < 40 && (state.status === 'pending' || state.status === 'resolving'); i++) {
+                    await new Promise(r => setTimeout(r, 750));
+                    state = await this.fetchJSON(this.cfg.createUrl + state.job_id + '/');
+                }
             } catch (err) {
                 this.status('Prefill unavailable: ' + err.message);
                 return;
-            }
-            for (let i = 0; i < 40 && (state.status === 'pending' || state.status === 'resolving'); i++) {
-                await new Promise(r => setTimeout(r, 750));
-                const resp = await fetch(this.cfg.createUrl + state.job_id + '/');
-                state = await resp.json();
             }
             if (state.status !== 'complete') {
                 this.status('Prefill did not finish: ' + (state.error || state.status));
@@ -395,7 +410,7 @@
                     try {
                         await fetch(this.cfg.suggestionUrl, {
                             method: 'POST', body,
-                            headers: { 'X-CSRFToken': cookie('csrftoken') },
+                            headers: { 'X-CSRFToken': csrfToken() },
                         });
                         btn.disabled = true;
                         btn.textContent = 'Suggested ✓';
@@ -435,7 +450,7 @@
             fetch(url, {
                 method: 'POST',
                 keepalive: true,
-                headers: { 'X-CSRFToken': cookie('csrftoken'), 'Content-Type': 'application/json' },
+                headers: { 'X-CSRFToken': csrfToken(), 'Content-Type': 'application/json' },
                 body: JSON.stringify({ corrections }),
             }).catch(() => {});
         }

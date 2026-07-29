@@ -1,4 +1,5 @@
 import json
+import logging
 
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
@@ -8,6 +9,8 @@ from apps.collections.models import CollectionItem
 from apps.listings.models import Listing
 from apps.prefill.models import PrefillCorrection, PrefillJob
 from apps.prefill.services import job_state, process_job, rate_limit_error, validate_image
+
+logger = logging.getLogger(__name__)
 
 
 def _auth_required(request):
@@ -30,7 +33,15 @@ def create_job(request):
         return JsonResponse({'error': error}, status=400)
 
     job = PrefillJob.objects.create(user=request.user, image=image, source_form=source_form)
-    process_job(job)   # local backend completes inline; the client still polls the same contract
+    try:
+        process_job(job)   # local backend completes inline; the client still polls the same contract
+    except Exception:
+        # The polling contract promises JSON — an SDK/resolver crash must not
+        # leak an HTML 500 to the fetch client.
+        logger.exception('Prefill job %s crashed', job.pk)
+        job.status = 'failed'
+        job.error = 'Extraction failed unexpectedly — try again, or fill the form manually.'
+        job.save(update_fields=['status', 'error'])
     return JsonResponse(job_state(job))
 
 

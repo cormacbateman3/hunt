@@ -1,9 +1,10 @@
+import re
 from io import BytesIO
 from unittest import mock
 
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from PIL import Image
 
@@ -128,6 +129,34 @@ class PrefillApiTests(TestCase):
         resp = self._create()
         self.assertEqual(resp.json()['status'], 'failed')
         self.assertIn('10.19', resp.json()['error'])
+
+    def test_pipeline_crash_returns_json_failure_not_html_500(self):
+        def boom(fh, client):
+            raise RuntimeError('SDK exploded')
+        with mock.patch.object(services.core, 'extract', boom), \
+             mock.patch.object(services.core, 'get_client', return_value=object()):
+            resp = self.client.post(reverse('prefill:create_job'),
+                                    {'image': png_upload(), 'source_form': 'collection'})
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data['status'], 'failed')
+        self.assertIn('failed unexpectedly', data['error'])
+
+    def test_dom_csrf_token_passes_with_httponly_cookie(self):
+        """CSRF_COOKIE_HTTPONLY hides the cookie from JS, so prefill.js reads
+        the form's hidden csrfmiddlewaretoken input. Replay that exact flow:
+        token scraped from the page, cookie only riding along in the jar."""
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(self.user)
+        page = client.get(reverse('collections:create'))
+        token = re.search(rb'name="csrfmiddlewaretoken" value="([^"]+)"', page.content).group(1).decode()
+        with mock.patch.object(services.core, 'extract', fake_extract), \
+             mock.patch.object(services.core, 'get_client', return_value=object()):
+            resp = client.post(reverse('prefill:create_job'),
+                               {'image': png_upload(), 'source_form': 'collection'},
+                               HTTP_X_CSRFTOKEN=token)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()['status'], 'complete')
 
 
 class PrefillWiringRenderTests(TestCase):
