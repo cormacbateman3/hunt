@@ -7,7 +7,9 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from PIL import Image
 
+from apps.accounts.models import Address
 from apps.core.models import ItemCategory, LicenseType, State
+from apps.listings.models import Listing
 from apps.prefill import services
 from apps.prefill.models import PrefillCorrection, PrefillJob
 
@@ -126,3 +128,49 @@ class PrefillApiTests(TestCase):
         resp = self._create()
         self.assertEqual(resp.json()['status'], 'failed')
         self.assertIn('10.19', resp.json()['error'])
+
+
+class PrefillWiringRenderTests(TestCase):
+    """KBPrefill's field config is template-generated. Checkbox groups have no
+    id_for_label in Django 5, so wiring one as a sel-based kind renders
+    `sel: '#'` — and that invalid selector aborted init before the upload
+    listener attached (the "prefill never fires" bug). Render each wired page
+    through its real view and pin the config."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.seller = User.objects.create_user('wiring', password='pw')
+        address = Address.objects.create(
+            user=cls.seller, full_name='Wiring Seller', line1='1 Elm St',
+            city='Erie', state='PA', postal_code='16501', is_default=True)
+        profile = cls.seller.profile
+        profile.shipping_address = address
+        profile.save(update_fields=['shipping_address'])
+        State.objects.get_or_create(
+            code='PA', defaults={'name': 'Pennsylvania', 'slug': 'pennsylvania',
+                                 'min_license_year': 1913, 'is_primary_default': True})
+
+    def setUp(self):
+        self.client.force_login(self.seller)
+
+    def assertPrefillWiringValid(self, resp):
+        self.assertEqual(resp.status_code, 200)
+        html = resp.content.decode()
+        self.assertIn('KBPrefill.init', html)
+        self.assertNotIn("sel: '#'", html)
+        self.assertIn("colors: { kind: 'checklist', name: 'colors' }", html)
+
+    def test_listing_create_details_page(self):
+        resp = self.client.get(reverse('listings:create'), {'listing_type': 'buy_now'})
+        self.assertPrefillWiringValid(resp)
+
+    def test_listing_edit_page(self):
+        listing = Listing.objects.create(
+            seller=self.seller, listing_type='buy_now', title='Wiring check',
+            description='x', condition_grade='good', status='active')
+        resp = self.client.get(reverse('listings:edit', args=[listing.pk]))
+        self.assertPrefillWiringValid(resp)
+
+    def test_collection_item_create_page(self):
+        resp = self.client.get(reverse('collections:create'))
+        self.assertPrefillWiringValid(resp)

@@ -31,7 +31,12 @@
         return m ? decodeURIComponent(m.pop()) : '';
     }
 
-    function el(sel) { return sel ? document.querySelector(sel) : null; }
+    function el(sel) {
+        // Checkbox/radio groups have no id_for_label in Django 5, so a template
+        // can emit sel: '#' — an invalid selector must not kill the whole init.
+        if (!sel || sel === '#') return null;
+        try { return document.querySelector(sel); } catch (err) { return null; }
+    }
 
     class Prefill {
         constructor(cfg) {

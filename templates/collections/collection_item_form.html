@@ -227,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
             material: { kind: 'select', sel: '#id_material' },
             addon_type: { kind: 'checklist', name: 'addon_type' },
             shape: { kind: 'select', sel: '#{{ form.shape.id_for_label }}' },
-            colors: { kind: 'multiselect', sel: '#{{ form.colors.id_for_label }}' },
+            colors: { kind: 'checklist', name: 'colors' },
             serial_number: { kind: 'input', sel: '#{{ form.serial_number.id_for_label }}' },
         },
     });
