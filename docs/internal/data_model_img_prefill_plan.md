@@ -455,5 +455,6 @@ Endpoint this gets you to: high-tier prefills you can trust blindly (≥98%), me
 ------
 # other:
 ~~don't love the hardcoding here (min_license_year: 1934 for Federal)... shouldn't this read from the data to find the min.~~
+same with min license year the like 1850 year is hardcoded for the global min
 
 **Resolved 2026-07-31:** Federal's year floor is no longer hardcoded. `_sync_federal_floor()` in `seed_license_types.py` and the `0008_federal_min_license_year` data migration both derive it from `Min('first_year')` across the FD-state LicenseType rows (the 1934 duck stamp today). Verified: reset FD min → null, re-seed → derived 1934 from data. Note the concept distinction preserved — real states' `min_license_year` still comes from research/states.csv (first year the state issued *any* license, e.g. PA 1913), which is NOT the same as the earliest addon row; only the Federal pseudo-state (no base license) derives its floor from its item rows.
