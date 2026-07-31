@@ -116,6 +116,16 @@
     color: #8f2c19;
 }
 
+/* Django field errors ({{ field.errors }}) — reset the UA list and flag in the
+   field-journal error tone so a rejected field reads as an error. */
+.errorlist {
+    color: var(--color-error);
+    list-style: none;
+    padding: 0;
+    margin: 0.2rem 0 0;
+    font-size: 0.85rem;
+}
+
 .alert-warning {
     background: #fff4e1;
     border-color: #f1d69e;

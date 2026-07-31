@@ -1,3 +1,7 @@
+# Floor for license years when a state has no researched min_license_year
+# (matches the prefill resolver's fallback).
+ABSOLUTE_MIN_LICENSE_YEAR = 1850
+
 RESIDENT_STATUS_CHOICES = [
     ('resident', 'Resident'),
     ('non_resident', 'Non-Resident'),

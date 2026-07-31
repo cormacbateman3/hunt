@@ -1,7 +1,13 @@
 from django import forms
 from django.db.models import Q
+from django.utils import timezone
 
-from apps.core.constants import COLOR_CHOICES, FORM_LICENSE_TYPE_CATEGORIES, SHAPE_CHOICES
+from apps.core.constants import (
+    ABSOLUTE_MIN_LICENSE_YEAR,
+    COLOR_CHOICES,
+    FORM_LICENSE_TYPE_CATEGORIES,
+    SHAPE_CHOICES,
+)
 from apps.core.models import GeographicUnit, LicenseType, ReferenceDataSuggestion, State
 from apps.collections.models import CollectionItem, CollectionItemImage, WantedItem
 from apps.listings.models import ERA_LABEL_CHOICES
@@ -80,9 +86,9 @@ class CollectionItemForm(forms.ModelForm):
         widgets = {
             'item_kind': forms.RadioSelect(),
             'addons_attached': forms.NullBooleanSelect(attrs={'class': 'form-select'}),
-            'title': forms.TextInput(attrs={'class': 'form-input'}),
-            'description': forms.Textarea(attrs={'class': 'form-input', 'rows': 4}),
-            'license_year': forms.NumberInput(attrs={'class': 'form-input'}),
+            'title': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g., 1942 Adams County Resident Hunting License'}),
+            'description': forms.Textarea(attrs={'class': 'form-input', 'rows': 4, 'placeholder': 'Condition, notable features, provenance, and any context worth keeping.'}),
+            'license_year': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '1942 (leave blank if unknown)'}),
             'resident_status': forms.Select(attrs={'class': 'form-select'}),
             'condition_grade': forms.Select(attrs={'class': 'form-select'}),
             'is_public': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
@@ -98,6 +104,7 @@ class CollectionItemForm(forms.ModelForm):
         if state:
             self.fields['state'].initial = state
         self._set_reference_querysets(state)
+        self._apply_year_bounds(state)
 
         if self.instance and self.instance.pk:
             self.fields['colors'].initial = self.instance.colors
@@ -133,28 +140,45 @@ class CollectionItemForm(forms.ModelForm):
         for category in FORM_LICENSE_TYPE_CATEGORIES:
             self.fields[category].queryset = _state_license_type_queryset(state, category)
 
+    def _apply_year_bounds(self, state):
+        """Mirror the server-side year rules onto the rendered input so the
+        browser flags violations before a submit round-trip."""
+        max_year = timezone.now().year - 25
+        min_year = (state.min_license_year or ABSOLUTE_MIN_LICENSE_YEAR) if state else ABSOLUTE_MIN_LICENSE_YEAR
+        self.fields['license_year'].widget.attrs.update({'min': min_year, 'max': max_year})
+        state_label = state.name if state else 'This state'
+        self.fields['license_year'].help_text = (
+            f'{state_label}: {min_year}–{max_year}. Only expired, antique items (25+ years old) '
+            'belong here — leave blank if the year is unknown.'
+        )
+
     def clean(self):
         cleaned_data = super().clean()
         state = cleaned_data.get('state')
         county = cleaned_data.get('county')
         year = cleaned_data.get('license_year')
+        # A standalone add-on has no base-license dimensions; drop anything
+        # picked while those fields were hidden.
+        if cleaned_data.get('item_kind') == 'addon':
+            cleaned_data['addons_attached'] = None
+            for category in ('residency', 'holder_eligibility', 'activity_scope', 'duration'):
+                cleaned_data[category] = None
+                cleaned_data[f'{category}_other'] = ''
         selected_dimensions = [cleaned_data.get(category) for category in FORM_LICENSE_TYPE_CATEGORIES]
         if county and state and county.state_id != state.id:
             self.add_error('county', 'Selected geographic unit does not belong to the chosen state.')
-        if state and year and state.min_license_year and year < state.min_license_year:
-            self.add_error('license_year', f'Earliest known hunting license year for {state.name} is {state.min_license_year}.')
-        from django.utils import timezone
         max_year = timezone.now().year - 25
-        if year and year > max_year:
-            self.add_error('license_year', f'Only antique licenses (25+ years old) are collectible here - the latest allowed year is {max_year}.')
-
-        # addons_attached only applies to a license with add-ons
-        if cleaned_data.get('item_kind') == 'addon':
-            cleaned_data['addons_attached'] = None
+        if year is not None:
+            if state and state.min_license_year and year < state.min_license_year:
+                self.add_error('license_year', f'Earliest known hunting license year for {state.name} is {state.min_license_year}.')
+            elif year < ABSOLUTE_MIN_LICENSE_YEAR:
+                self.add_error('license_year', "That's earlier than any known hunting license — check the year.")
+            if year > max_year:
+                self.add_error('license_year', f'Only antique licenses (25+ years old) are collectible here - the latest allowed year is {max_year}.')
 
         # era_label is required when license_year is not provided
         era_label = cleaned_data.get('era_label')
-        if not year and not era_label:
+        if year is None and not era_label:
             self.add_error('era_label', 'Era is required when license year is unknown.')
 
         if not any(selected_dimensions) and not cleaned_data.get('shape') and not (cleaned_data.get('colors') or []):

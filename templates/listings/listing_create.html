@@ -147,7 +147,7 @@
 
             <!-- 1b. Item kind -->
             <div>
-                <label class="form-label">What is this item?</label>
+                <label class="form-label">License or add-on?</label>
                 <div style="display: flex; gap: 1.25rem; flex-wrap: wrap;">
                     {% for radio in form.item_kind %}
                         <label style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 400; margin: 0; cursor: pointer;">
@@ -229,6 +229,7 @@
                 <div>
                     <label class="form-label" for="{{ form.license_year.id_for_label }}">License year</label>
                     {{ form.license_year }}
+                    <small class="form-help" id="{{ form.license_year.id_for_label }}_helptext" style="color: var(--color-muted);">{{ form.license_year.help_text }}</small>
                     {{ form.license_year.errors }}
                 </div>
                 <div id="era-label-field">
@@ -256,7 +257,7 @@
             </div>
 
             <!-- 8. Item taxonomy — collapsible (10.8); opens itself when it holds errors -->
-            <details id="taxonomy-details" {% if form.errors %}open{% endif %} style="border: 1px solid var(--color-border); border-radius: 8px; padding: 0.75rem;">
+            <details id="taxonomy-details" {% if taxonomy_has_errors %}open{% endif %} style="border: 1px solid var(--color-border); border-radius: 8px; padding: 0.75rem;">
                 <summary style="cursor: pointer; font-size: 1.05rem; font-weight: 600;">
                     Item taxonomy <span style="font-weight: 400; color: var(--color-muted); font-size: 0.85rem;">— identify what the item is (optional but boosts completeness)</span>
                 </summary>
@@ -404,7 +405,7 @@
             </details>
         </div>
 
-        <details style="margin-top: 1rem;" {% if form.ship_from_address.errors or form.package_weight_oz.errors or form.shipping_service.errors %}open{% endif %}>
+        <details style="margin-top: 1rem;" {% if form.ship_from_address.errors or form.package_weight_oz.errors or form.package_length_in.errors or form.package_width_in.errors or form.package_height_in.errors or form.shipping_service.errors or form.shipping_payer.errors %}open{% endif %}>
             <summary style="cursor: pointer; font-size: 1.05rem; font-weight: 600;">Shipping</summary>
             <div style="display: grid; gap: 0.85rem; margin-top: 0.75rem;">
                 {% include 'listings/_shipping_section.html' %}
@@ -582,6 +583,12 @@ document.addEventListener('DOMContentLoaded', () => {
             geoSelect.appendChild(option);
         });
         geoLabel.textContent = geoData.issuance_unit_label || 'Geographic Unit';
+
+        // Sync the year floor to the newly chosen state (max stays server-set).
+        if (licenseYearInput) {
+            licenseYearInput.min = geoData.min_license_year || 1850;
+            if (licenseYearInput.value.trim() !== '') licenseYearInput.reportValidity();
+        }
 
         const licenseTypeResponse = await fetch(`/api/license-types/?state=${encodeURIComponent(stateId)}`);
         const licenseTypeData = await licenseTypeResponse.json();

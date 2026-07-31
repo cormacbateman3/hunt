@@ -11,7 +11,7 @@ from django.utils import timezone
 from .models import ERA_LABEL_CHOICES, Listing, ListingQuestion
 from .forms import ListingForm, ListingImageFormSet
 from apps.bids.forms import BidForm
-from apps.bids.services import get_user_bid_on_listing, get_winning_bid
+from apps.bids.services import get_user_bid_on_listing, get_winning_bid, minimum_bid_for
 from apps.collections.models import CollectionItem
 from apps.core.models import GeographicUnit, LicenseType, State
 from apps.core.constants import FORM_LICENSE_TYPE_CATEGORIES, LICENSE_TYPE_CATEGORY_CHOICES
@@ -36,11 +36,26 @@ TAXONOMY_FIELDS = [
 ]
 
 
+def _taxonomy_has_errors(form):
+    """True when a validation error lands on a field inside the collapsible
+    Item Taxonomy group — so the template opens that group, not on any error."""
+    if not getattr(form, 'errors', None):
+        return False
+    names = set()
+    for field_name, other_name, _ in TAXONOMY_FIELDS:
+        names.add(field_name)
+        names.add(other_name)
+    names.update({'addons_attached', 'shape', 'shape_other', 'colors', 'colors_other'})
+    return any(name in form.errors for name in names)
+
+
 def _prefill_from_collection_item(collection_item):
     initial = {
         'source_collection_item': collection_item.pk,
         'title': collection_item.title,
         'description': collection_item.description,
+        'item_kind': collection_item.item_kind,
+        'addons_attached': collection_item.addons_attached,
         'license_year': collection_item.license_year,
         'state': collection_item.state_id or getattr(collection_item.county, 'state_id', None),
         'county_ref': collection_item.county_id,
@@ -51,10 +66,14 @@ def _prefill_from_collection_item(collection_item):
         'serial_number': collection_item.serial_number or '',
         'era_label': collection_item.era_label or '',
     }
-    for category in ('residency', 'holder_eligibility', 'activity_scope', 'duration', 'addon_type', 'material'):
+    for category in ('residency', 'holder_eligibility', 'activity_scope', 'duration', 'material'):
         selected = collection_item.license_types.filter(category=category).order_by('name').first()
         if selected:
             initial[category] = selected.id
+    # addon_type is multi-valued — .first() would silently drop the rest
+    initial['addon_type'] = list(
+        collection_item.license_types.filter(category='addon_type').values_list('id', flat=True)
+    )
     return initial
 
 
@@ -331,7 +350,7 @@ def listing_detail(request, pk):
         winning_bid = get_winning_bid(listing)
         bid_count = listing.bids.count()
         recent_bids = listing.bids.select_related('bidder').order_by('-placed_at')[:10]
-        minimum_bid = (listing.current_bid or listing.starting_price or 0) + 1
+        minimum_bid = minimum_bid_for(listing)
 
     if is_auction and request.user.is_authenticated:
         user_bid = get_user_bid_on_listing(request.user, listing)
@@ -491,6 +510,7 @@ def listing_create(request):
                         'listings/listing_create.html',
                         {'form': form, 'image_formset': image_formset,
                          'taxonomy_fields': TAXONOMY_FIELDS,
+                         'taxonomy_has_errors': _taxonomy_has_errors(form),
                          'taxonomy_field_names_json': json.dumps([item[0] for item in TAXONOMY_FIELDS]),
                          'suggestion_form': ReferenceDataSuggestionForm(
                              initial={'target_model': 'other', 'suggestion_type': 'new_value'}
@@ -505,6 +525,9 @@ def listing_create(request):
                     owner=request.user,
                     title=listing.title,
                     description=listing.description,
+                    category=listing.category,
+                    item_kind=listing.item_kind,
+                    addons_attached=listing.addons_attached,
                     license_year=listing.license_year,
                     state=listing.state,
                     county=listing.county_ref,
@@ -543,6 +566,7 @@ def listing_create(request):
                     'form': form,
                     'image_formset': image_formset,
                     'taxonomy_fields': TAXONOMY_FIELDS,
+                    'taxonomy_has_errors': _taxonomy_has_errors(form),
                     'taxonomy_field_names_json': json.dumps([item[0] for item in TAXONOMY_FIELDS]),
                     'suggestion_form': ReferenceDataSuggestionForm(
                         initial={'target_model': 'other', 'suggestion_type': 'new_value'}
@@ -585,6 +609,7 @@ def listing_create(request):
         'config_listing_type': config_listing_type,
         'config_listing_type_label': dict(Listing.LISTING_TYPE_CHOICES).get(config_listing_type, ''),
         'taxonomy_fields': TAXONOMY_FIELDS,
+        'taxonomy_has_errors': _taxonomy_has_errors(form),
         'taxonomy_field_names_json': json.dumps([item[0] for item in TAXONOMY_FIELDS]),
         'suggestion_form': ReferenceDataSuggestionForm(
             initial={'target_model': 'other', 'suggestion_type': 'new_value'}
@@ -619,6 +644,7 @@ def listing_edit(request, pk):
         'image_formset': image_formset,
         'listing': listing,
         'taxonomy_fields': TAXONOMY_FIELDS,
+        'taxonomy_has_errors': _taxonomy_has_errors(form),
         'taxonomy_field_names_json': json.dumps([item[0] for item in TAXONOMY_FIELDS]),
         'suggestion_form': ReferenceDataSuggestionForm(
             initial={'target_model': 'listing', 'target_id': listing.id, 'suggestion_type': 'new_value'}

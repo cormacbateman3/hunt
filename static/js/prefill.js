@@ -346,6 +346,10 @@
                     const initial = this.initial[field] || '';
                     if (spec.kind === 'radio') {
                         this.radios(field).forEach(r => { r.checked = r.value === initial; });
+                        // Re-run any listener bound to this radio group (e.g. item_kind
+                        // section toggling) so cleared suggestions restore the layout.
+                        const restored = this.radios(field).find(r => r.checked) || this.radios(field)[0];
+                        if (restored) restored.dispatchEvent(new Event('change', { bubbles: true }));
                     } else {
                         const node = el(spec.sel);
                         if (node) { node.value = initial; node.dispatchEvent(new Event('change', { bubbles: true })); }

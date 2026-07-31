@@ -24,14 +24,14 @@ class BidForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
     def clean_amount(self):
+        from .services import minimum_bid_for
+
         amount = self.cleaned_data['amount']
 
         if not self.listing:
             raise forms.ValidationError("Listing is required")
 
-        # Get minimum bid (current bid + 1, or starting price)
-        minimum_bid = (self.listing.current_bid or self.listing.starting_price or 0) + 1
-
+        minimum_bid = minimum_bid_for(self.listing)
         if amount < minimum_bid:
             raise forms.ValidationError(
                 f"Bid must be at least ${minimum_bid:.2f}"

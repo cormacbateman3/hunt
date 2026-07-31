@@ -27,6 +27,7 @@ def geo_units_api(request):
             'state': state.code if state else '',
             'state_name': state.name if state else '',
             'issuance_unit_label': state.issuance_unit_label if state else 'Geographic Unit',
+            'min_license_year': state.min_license_year if state else None,
             'results': [
                 {
                     'id': unit.id,

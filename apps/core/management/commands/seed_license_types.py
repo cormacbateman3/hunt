@@ -148,6 +148,11 @@ class Command(BaseCommand):
         deleted = self._apply_deletions(states, federal_state)
         swept = self._sweep_retired_categories()
 
+        # Federal is a pseudo-state with no base license, so its year floor is
+        # simply the earliest federal item on record — derive it from the seeded
+        # rows rather than hardcoding (real states' floors come from states.csv).
+        self._sync_federal_floor(federal_state)
+
         if drift:
             self.stdout.write(self.style.WARNING(
                 f'Drift (DB differs from CSV on {len(drift)} row(s); re-run with --overwrite to apply):'
@@ -162,6 +167,22 @@ class Command(BaseCommand):
                 f'drift={len(drift)} total={LicenseType.objects.count()}'
             )
         )
+
+    def _sync_federal_floor(self, federal_state):
+        """Set Federal's min_license_year to the earliest first_year across its
+        seeded license types (the 1934 duck stamp today), data-driven."""
+        from django.db.models import Min
+
+        earliest = (
+            LicenseType.objects.filter(state=federal_state, first_year__isnull=False)
+            .aggregate(m=Min('first_year'))['m']
+        )
+        if earliest and federal_state.min_license_year != earliest:
+            federal_state.min_license_year = earliest
+            federal_state.save(update_fields=['min_license_year'])
+            self.stdout.write(self.style.SUCCESS(
+                f'Federal year floor set from data: {earliest}'
+            ))
 
     def _state_for(self, code, states, federal_state):
         return federal_state if code == 'FD' else states.get(code)

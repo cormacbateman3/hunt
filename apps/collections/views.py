@@ -483,6 +483,8 @@ def add_from_order(request, order_id):
         initial = {
             'title': listing.title,
             'description': listing.description,
+            'item_kind': listing.item_kind,
+            'addons_attached': listing.addons_attached,
             'license_year': listing.license_year,
             'state': listing.state_id,
             'county': listing.county_ref_id,
@@ -494,10 +496,14 @@ def add_from_order(request, order_id):
             'is_public': True,
             'trade_eligible': False,  # just purchased, not trading yet
         }
-        for category in ('residency', 'holder_eligibility', 'activity_scope', 'duration', 'addon_type', 'material'):
+        for category in ('residency', 'holder_eligibility', 'activity_scope', 'duration', 'material'):
             sel = listing.license_types.filter(category=category).order_by('name').first()
             if sel:
                 initial[category] = sel.id
+        # addon_type is multi-valued — .first() would silently drop the rest
+        initial['addon_type'] = list(
+            listing.license_types.filter(category='addon_type').values_list('id', flat=True)
+        )
         form = CollectionItemForm(initial=initial, user=request.user)
         image_formset = CollectionItemImageFormSet()
 

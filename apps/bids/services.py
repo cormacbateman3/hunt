@@ -11,6 +11,18 @@ from apps.enforcement.services import enforce_capability
 from apps.notifications.services import create_notification
 
 
+def minimum_bid_for(listing):
+    """Lowest acceptable next bid: the starting price for the first bid,
+    current bid + seller-set increment after. Single source of truth for the
+    detail page, the bid form, and place_bid."""
+    increment = listing.bid_increment or Decimal('1')
+    if increment <= 0:
+        increment = Decimal('1')
+    if listing.current_bid:
+        return listing.current_bid + increment
+    return listing.starting_price or increment
+
+
 def place_bid(listing, bidder, amount):
     """
     Place a bid on a listing with validation and notifications.
@@ -42,13 +54,15 @@ def place_bid(listing, bidder, amount):
             return False, "This auction has ended"
 
         # Seller-configured minimum increment (10.8); first bid meets the start price.
-        increment = locked_listing.bid_increment or Decimal('1')
-        if locked_listing.current_bid:
-            minimum_bid = locked_listing.current_bid + increment
-        else:
-            minimum_bid = locked_listing.starting_price or increment
+        minimum_bid = minimum_bid_for(locked_listing)
         if amount < minimum_bid:
-            return False, f"Bid must be at least ${minimum_bid:.2f} (bid increment: ${increment:.2f})"
+            if locked_listing.current_bid:
+                increment = locked_listing.bid_increment or Decimal('1')
+                return False, (
+                    f"Bid must be at least ${minimum_bid:.2f} "
+                    f"(current bid ${locked_listing.current_bid:.2f} + ${increment:.2f} increment)"
+                )
+            return False, f"Bid must be at least ${minimum_bid:.2f} — the starting price for this auction"
 
         previous_winner = (
             Bid.objects.filter(listing=locked_listing, is_winning=True)

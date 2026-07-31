@@ -450,3 +450,10 @@ Ranked by expected impact against the errors actually observed:
 **7. Formalize these 17 into a gold set and grow it to ~75–100.** A `gold.json` of correct field values per image plus a scoring cell in the notebook that reports per-field precision *per tier*. Then the tier definitions stop being vibes: "high" means ≥98% measured precision or the threshold moves until it does. Every change above becomes a before/after number instead of eyeballing 17 HTML tables.
 
 Endpoint this gets you to: high-tier prefills you can trust blindly (≥98%), medium as "probably right, please glance," and the genuinely unreadable stuff routed to suggestions instead of wrong guesses — which is the right product behavior for a listing form anyway. If you want, next pass I can write the second-pass resolver function + the gold-set scoring cell so they drop straight into the sandbox notebook.
+
+
+------
+# other:
+~~don't love the hardcoding here (min_license_year: 1934 for Federal)... shouldn't this read from the data to find the min.~~
+
+**Resolved 2026-07-31:** Federal's year floor is no longer hardcoded. `_sync_federal_floor()` in `seed_license_types.py` and the `0008_federal_min_license_year` data migration both derive it from `Min('first_year')` across the FD-state LicenseType rows (the 1934 duck stamp today). Verified: reset FD min → null, re-seed → derived 1934 from data. Note the concept distinction preserved — real states' `min_license_year` still comes from research/states.csv (first year the state issued *any* license, e.g. PA 1913), which is NOT the same as the earliest addon row; only the Federal pseudo-state (no base license) derives its floor from its item rows.

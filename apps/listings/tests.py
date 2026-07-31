@@ -16,9 +16,11 @@ def png_upload(name='listing.png'):
     return SimpleUploadedFile(name, buf.getvalue(), content_type='image/png')
 
 from apps.bids.services import place_bid
+from apps.collections.models import CollectionItem
 from apps.core.models import LicenseType, State
 from apps.listings.forms import ListingForm
 from apps.listings.models import Listing
+from apps.listings.views import _prefill_from_collection_item
 
 
 class ListingFormOverhaulTests(TestCase):
@@ -89,6 +91,71 @@ class ListingFormOverhaulTests(TestCase):
         self.assertIn('25.00', msg)
         ok, msg = place_bid(listing, bidder, Decimal('25'))
         self.assertTrue(ok, msg)
+
+    def test_year_below_state_minimum_rejected(self):
+        form = ListingForm(data=self._data(license_year='1899'),
+                           files={'featured_image': png_upload()}, user=self.seller)
+        self.assertFalse(form.is_valid())
+        self.assertIn('license_year', form.errors)
+        self.assertIn('1913', ' '.join(form.errors['license_year']))
+
+    def test_year_widget_carries_state_bounds(self):
+        form = ListingForm(user=self.seller, initial={'state': self.pa.pk})
+        attrs = form.fields['license_year'].widget.attrs
+        self.assertEqual(attrs['min'], 1913)
+        self.assertEqual(attrs['max'], timezone.now().year - 25)
+
+    def test_addon_kind_clears_hidden_base_dimensions(self):
+        residency = LicenseType.objects.create(
+            state=self.pa, name='Resident', category='residency', slug='r-pa-resident')
+        form = ListingForm(
+            data=self._data(item_kind='addon', residency=str(residency.pk),
+                            addon_type=[str(self.turkey.pk)]),
+            files={'featured_image': png_upload()}, user=self.seller)
+        self.assertTrue(form.is_valid(), form.errors)
+        form.instance.seller = self.seller
+        listing = form.save()
+        # The invisible 'Resident' pick must not survive onto an add-on item.
+        self.assertFalse(listing.license_types.filter(category='residency').exists())
+        self.assertEqual(
+            set(listing.license_types.filter(category='addon_type').values_list('name', flat=True)),
+            {'Turkey Tag'})
+
+    def test_negative_price_rejected_by_model_validator(self):
+        listing = Listing(
+            seller=self.seller, listing_type='buy_now', title='Bad', description='x',
+            condition_grade='good', buy_now_price=Decimal('-5'))
+        with self.assertRaises(Exception):
+            listing.full_clean()
+
+    def test_first_bid_message_names_starting_price_not_increment(self):
+        bidder = User.objects.create_user('firstbidder', password='pw')
+        p = bidder.profile
+        p.email_verified = True
+        p.save(update_fields=['email_verified'])
+        listing = Listing.objects.create(
+            seller=self.seller, listing_type='auction', title='A', description='x',
+            condition_grade='good', status='active', starting_price=Decimal('20'),
+            bid_increment=Decimal('5'), auction_end=timezone.now() + timedelta(days=3))
+        ok, msg = place_bid(listing, bidder, Decimal('10'))
+        self.assertFalse(ok)
+        self.assertIn('starting price', msg)
+        self.assertNotIn('increment', msg)
+        # First valid bid, then the next-bid message names the increment arithmetic.
+        place_bid(listing, bidder, Decimal('20'))
+        ok, msg = place_bid(listing, bidder, Decimal('22'))
+        self.assertFalse(ok)
+        self.assertIn('increment', msg)
+
+    def test_prefill_from_collection_preserves_kind_and_all_addons(self):
+        item = CollectionItem.objects.create(
+            owner=self.seller, title='Two-stamp addon', item_kind='addon',
+            addons_attached=None, state=self.pa)
+        item.license_types.add(self.turkey, self.big_game)
+        initial = _prefill_from_collection_item(item)
+        self.assertEqual(initial['item_kind'], 'addon')
+        self.assertIn('addons_attached', initial)
+        self.assertEqual(set(initial['addon_type']), {self.turkey.pk, self.big_game.pk})
 
     def test_completeness_is_kind_aware(self):
         addon_item = Listing.objects.create(

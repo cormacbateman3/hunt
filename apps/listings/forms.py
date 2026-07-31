@@ -7,7 +7,12 @@ from django.utils import timezone
 
 from apps.accounts.models import Address
 from apps.collections.models import CollectionItem
-from apps.core.constants import COLOR_CHOICES, FORM_LICENSE_TYPE_CATEGORIES, SHAPE_CHOICES
+from apps.core.constants import (
+    ABSOLUTE_MIN_LICENSE_YEAR,
+    COLOR_CHOICES,
+    FORM_LICENSE_TYPE_CATEGORIES,
+    SHAPE_CHOICES,
+)
 from apps.core.models import GeographicUnit, LicenseType, ReferenceDataSuggestion, State
 from apps.listings.models import ERA_LABEL_CHOICES, Listing, ListingImage
 
@@ -174,7 +179,7 @@ class ListingForm(forms.ModelForm):
             'license_year': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '1942 (leave blank if unknown)'}),
             'condition_grade': forms.Select(attrs={'class': 'form-select'}),
             'starting_price': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '$25.00', 'step': '1', 'min': '1'}),
-            'reserve_price': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': 'Optional reserve', 'step': '1', 'min': '1'}),
+            'reserve_price': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '$50.00 (optional)', 'step': '1', 'min': '1'}),
             'buy_now_price': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '$75.00', 'step': '1', 'min': '1'}),
             'bid_increment': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '$1', 'step': '1', 'min': '1'}),
             'trade_notes': forms.Textarea(attrs={'class': 'form-input', 'rows': 4, 'placeholder': 'What are you looking for in return?'}),
@@ -209,6 +214,7 @@ class ListingForm(forms.ModelForm):
         if selected_state:
             self.fields['state'].initial = selected_state
         self._set_reference_querysets(selected_state)
+        self._apply_year_bounds(selected_state)
 
         if self.user and self.user.is_authenticated:
             self.fields['source_collection_item'].queryset = CollectionItem.objects.filter(owner=self.user).order_by('-created_at')
@@ -262,11 +268,28 @@ class ListingForm(forms.ModelForm):
         for category in FORM_LICENSE_TYPE_CATEGORIES:
             self.fields[category].queryset = _state_license_type_queryset(state, category)
 
+    def _apply_year_bounds(self, state):
+        """Mirror the server-side year rules onto the rendered input so the
+        browser flags violations before a submit round-trip."""
+        max_year = timezone.now().year - 25
+        min_year = (state.min_license_year or ABSOLUTE_MIN_LICENSE_YEAR) if state else ABSOLUTE_MIN_LICENSE_YEAR
+        self.fields['license_year'].widget.attrs.update({'min': min_year, 'max': max_year})
+        state_label = state.name if state else 'This state'
+        self.fields['license_year'].help_text = (
+            f'{state_label}: {min_year}–{max_year}. Only expired, antique items (25+ years old) '
+            'can be listed — leave blank if the year is unknown.'
+        )
+
     def clean(self):
         cleaned_data = super().clean()
-        # addons_attached only applies to a license with add-ons
+        # A standalone add-on has no base-license dimensions; drop anything the
+        # seller picked while those fields were hidden, so it can't save or
+        # invisibly satisfy the at-least-one-attribute rule below.
         if cleaned_data.get('item_kind') == 'addon':
             cleaned_data['addons_attached'] = None
+            for category in ('residency', 'holder_eligibility', 'activity_scope', 'duration'):
+                cleaned_data[category] = None
+                cleaned_data[f'{category}_other'] = ''
         # Optional-with-model-default fields: blank means "use the default"
         if not cleaned_data.get('shipping_service'):
             cleaned_data['shipping_service'] = 'cheapest'
@@ -291,15 +314,18 @@ class ListingForm(forms.ModelForm):
 
         if county_ref and state and county_ref.state_id != state.id:
             self.add_error('county_ref', 'Selected geographic unit does not belong to the chosen state.')
-        if state and license_year and state.min_license_year and license_year < state.min_license_year:
-            self.add_error('license_year', f'Earliest known hunting license year for {state.name} is {state.min_license_year}.')
         max_year = timezone.now().year - 25
-        if license_year and license_year > max_year:
-            self.add_error('license_year', f'Only antique licenses (25+ years old) are tradeable — the latest allowed year is {max_year}.')
+        if license_year is not None:
+            if state and state.min_license_year and license_year < state.min_license_year:
+                self.add_error('license_year', f'Earliest known hunting license year for {state.name} is {state.min_license_year}.')
+            elif license_year < ABSOLUTE_MIN_LICENSE_YEAR:
+                self.add_error('license_year', "That's earlier than any known hunting license — check the year.")
+            if license_year > max_year:
+                self.add_error('license_year', f'Only antique licenses (25+ years old) are tradeable — the latest allowed year is {max_year}.')
 
         # era_label is required when license_year is not provided
         era_label = cleaned_data.get('era_label')
-        if not license_year and not era_label:
+        if license_year is None and not era_label:
             self.add_error('era_label', 'Era is required when license year is unknown.')
 
         if listing_type == 'auction':

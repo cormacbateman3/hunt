@@ -1,3 +1,6 @@
+from decimal import Decimal
+
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -128,18 +131,24 @@ class Listing(models.Model):
     # Auction pricing
     bid_increment = models.DecimalField(
         max_digits=8, decimal_places=2, default=1,
+        validators=[MinValueValidator(Decimal('1'))],
         help_text='Minimum amount each new bid must exceed the current bid by',
     )
-    starting_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    starting_price = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(Decimal('1'))],
+    )
     current_bid = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     reserve_price = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(Decimal('1'))],
         help_text="Minimum price to sell (auction only)"
     )
 
     # Buy-now pricing
     buy_now_price = models.DecimalField(
         max_digits=10, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(Decimal('1'))],
         help_text="Fixed price for buy-now listings"
     )
 

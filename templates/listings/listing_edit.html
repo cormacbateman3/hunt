@@ -27,7 +27,7 @@
                 {{ form.source_collection_item.errors }}
             </div>
             <div>
-                <label class="form-label">What is this item?</label>
+                <label class="form-label">License or add-on?</label>
                 <div style="display: flex; gap: 1.25rem; flex-wrap: wrap;">
                     {% for radio in form.item_kind %}
                         <label style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 400; margin: 0; cursor: pointer;">
@@ -63,6 +63,7 @@
                 <div>
                     <label class="form-label" for="{{ form.license_year.id_for_label }}">License year</label>
                     {{ form.license_year }}
+                    <small class="form-help" id="{{ form.license_year.id_for_label }}_helptext" style="color: var(--color-muted);">{{ form.license_year.help_text }}</small>
                     {{ form.license_year.errors }}
                 </div>
                 <div id="era-label-field">
@@ -385,6 +386,10 @@ document.addEventListener('DOMContentLoaded', () => {
             geoSelect.appendChild(option);
         });
         geoLabel.textContent = geoData.issuance_unit_label || 'Geographic Unit';
+        if (licenseYearInput) {
+            licenseYearInput.min = geoData.min_license_year || 1850;
+            if (licenseYearInput.value.trim() !== '') licenseYearInput.reportValidity();
+        }
 
         const licenseTypeResponse = await fetch(`/api/license-types/?state=${encodeURIComponent(stateId)}`);
         const licenseTypeData = await licenseTypeResponse.json();

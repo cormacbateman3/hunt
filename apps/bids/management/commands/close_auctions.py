@@ -184,34 +184,18 @@ class Command(BaseCommand):
 
         original = listing.original_listing or listing
 
-        new_listing = Listing(
-            seller=listing.seller,
-            source_collection_item=listing.source_collection_item,
-            listing_type=listing.listing_type,
-            title=listing.title,
-            description=listing.description,
-            license_year=listing.license_year,
-            state=listing.state,
-            county=listing.county,
-            county_ref=listing.county_ref,
-            is_statewide=listing.is_statewide,
-            shape=listing.shape,
-            colors=listing.colors,
-            condition_grade=listing.condition_grade,
-            resident_status=listing.resident_status,
-            starting_price=listing.starting_price,
-            reserve_price=listing.reserve_price,
-            trade_notes=listing.trade_notes,
-            allow_cash=listing.allow_cash,
-            featured_image=listing.featured_image,
-            local_pickup_available=listing.local_pickup_available,
-            local_pickup_location=listing.local_pickup_location,
-            auto_relist=listing.auto_relist,
-            relist_count=listing.relist_count + 1,
-            original_listing=original,
-            auction_end=now + timedelta(days=duration_days),
-            status='active',
-        )
+        # Clone the row instead of enumerating fields — an enumeration silently
+        # drops every column added later (the old list lost item_kind, era,
+        # serial, bid_increment, and the whole shipping config).
+        new_listing = Listing.objects.get(pk=listing.pk)
+        new_listing.pk = None
+        new_listing._state.adding = True
+        new_listing.current_bid = None
+        new_listing.scheduled_at = None
+        new_listing.relist_count = listing.relist_count + 1
+        new_listing.original_listing = original
+        new_listing.auction_end = now + timedelta(days=duration_days)
+        new_listing.status = 'active'
         new_listing.save()
         new_listing.license_types.set(listing.license_types.all())
 
