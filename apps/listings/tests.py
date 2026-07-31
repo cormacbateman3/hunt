@@ -15,12 +15,17 @@ def png_upload(name='listing.png'):
     Image.new('RGB', (300, 300), 'white').save(buf, 'PNG')
     return SimpleUploadedFile(name, buf.getvalue(), content_type='image/png')
 
+from django.test import Client
+from django.urls import reverse
+
 from apps.bids.services import place_bid
 from apps.collections.models import CollectionItem
 from apps.core.models import LicenseType, State
 from apps.listings.forms import ListingForm
 from apps.listings.models import Listing
 from apps.listings.views import _prefill_from_collection_item
+from apps.orders.models import Order
+from apps.shipping.services import estimate_listing_shipping
 
 
 class ListingFormOverhaulTests(TestCase):
@@ -173,3 +178,73 @@ class ListingFormOverhaulTests(TestCase):
         # Same data — the addon scores higher because base dimensions don't apply to it
         self.assertGreater(addon_item.listing_completeness_score,
                            license_item.listing_completeness_score)
+
+
+class BuyNowReviewFlowTests(TestCase):
+    """10.9: the review page is a no-commitment preview; the listing must only
+    lock (status -> pending, Order created) when the buyer proceeds to payment."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.seller = User.objects.create_user('bnseller', password='pw')
+        cls.buyer = User.objects.create_user('bnbuyer', password='pw')
+        State.objects.get_or_create(
+            code='PA', defaults={'name': 'Pennsylvania', 'slug': 'pennsylvania',
+                                 'min_license_year': 1913, 'is_primary_default': True})
+
+    def _listing(self, **overrides):
+        data = dict(
+            seller=self.seller, listing_type='buy_now', title='1955 License',
+            description='x', condition_grade='good', status='active',
+            buy_now_price=Decimal('80'), shipping_payer='seller')
+        data.update(overrides)
+        return Listing.objects.create(**data)
+
+    def setUp(self):
+        self.client = Client()
+        self.client.force_login(self.buyer)
+
+    def test_review_page_creates_no_order_and_does_not_lock(self):
+        listing = self._listing()
+        resp = self.client.get(reverse('listings:buy_now_review', args=[listing.pk]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Review your purchase')
+        listing.refresh_from_db()
+        self.assertEqual(listing.status, 'active')          # still not locked
+        self.assertEqual(Order.objects.filter(listing=listing).count(), 0)
+
+    def test_review_shows_platform_fee_and_total(self):
+        listing = self._listing()
+        resp = self.client.get(reverse('listings:buy_now_review', args=[listing.pk]))
+        # Seller pays shipping, so total = item + platform fee (no shipping added).
+        self.assertContains(resp, 'seller pays')
+        self.assertContains(resp, 'Proceed to secure payment')
+
+    def test_seller_cannot_review_own_listing(self):
+        listing = self._listing()
+        self.client.force_login(self.seller)
+        resp = self.client.get(reverse('listings:buy_now_review', args=[listing.pk]))
+        self.assertEqual(resp.status_code, 302)
+
+    def test_proceeding_locks_listing_and_creates_order(self):
+        listing = self._listing()
+        resp = self.client.post(reverse('listings:buy_now_checkout_start', args=[listing.pk]))
+        self.assertEqual(resp.status_code, 302)
+        listing.refresh_from_db()
+        self.assertEqual(listing.status, 'pending')         # now locked
+        order = Order.objects.get(listing=listing)
+        self.assertEqual(order.status, 'pending_payment')
+        self.assertEqual(order.buyer_id, self.buyer.id)
+
+    def test_estimate_shipping_zero_when_seller_pays(self):
+        listing = self._listing(shipping_payer='seller')
+        amount, note = estimate_listing_shipping(listing, self.buyer)
+        self.assertEqual(amount, Decimal('0.00'))
+        self.assertEqual(note, 'Seller pays shipping')
+
+    def test_estimate_shipping_deferred_without_addresses(self):
+        # buyer has no default address and payer is buyer -> no Shippo call
+        listing = self._listing(shipping_payer='buyer')
+        amount, note = estimate_listing_shipping(listing, self.buyer)
+        self.assertIsNone(amount)
+        self.assertEqual(note, 'Calculated at payment')

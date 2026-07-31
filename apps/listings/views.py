@@ -1,4 +1,5 @@
 import json
+from decimal import Decimal
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -18,6 +19,7 @@ from apps.core.constants import FORM_LICENSE_TYPE_CATEGORIES, LICENSE_TYPE_CATEG
 from apps.core.forms import ReferenceDataSuggestionForm
 from apps.orders.models import Order
 from apps.orders.services import calculate_platform_fee
+from apps.shipping.services import estimate_listing_shipping
 from apps.payments.models import PaymentTransaction
 from apps.trades.models import TradeOffer
 from apps.enforcement.services import enforce_capability
@@ -664,6 +666,54 @@ def my_listings(request):
     }
 
     return render(request, 'listings/my_listings.html', context)
+
+
+@login_required
+def buy_now_review(request, pk):
+    """Pre-payment review page (10.9): show the item, a shipping estimate, and
+    the total so the buyer confirms before anything locks. No Order is created
+    here — the listing only locks when they proceed to payment (the old flow
+    jumped straight from one click to Stripe, which is what we're fixing)."""
+    listing = get_object_or_404(Listing, pk=pk, listing_type='buy_now')
+
+    if request.user.id == listing.seller_id:
+        messages.error(request, 'You cannot buy your own listing.')
+        return redirect('listings:detail', pk=listing.pk)
+    allowed, reason = enforce_capability(request.user, 'buy_now')
+    if not allowed:
+        messages.error(request, reason)
+        return redirect('listings:detail', pk=listing.pk)
+
+    existing_order = Order.objects.filter(listing=listing).first()
+    mine = bool(existing_order and existing_order.buyer_id == request.user.id)
+    if existing_order and existing_order.status in {'paid', 'label_created', 'in_transit', 'delivered', 'completed'}:
+        messages.error(request, 'This listing has already been purchased.')
+        return redirect('listings:detail', pk=listing.pk)
+    if listing.status == 'pending' and not mine:
+        messages.error(request, "This listing is currently locked by another buyer's checkout session.")
+        return redirect('listings:detail', pk=listing.pk)
+    if listing.status not in {'active', 'pending'}:
+        messages.error(request, 'This listing is no longer available for buy now.')
+        return redirect('listings:detail', pk=listing.pk)
+
+    item_amount = listing.buy_now_price or Decimal('0')
+    platform_fee = calculate_platform_fee(item_amount)
+    shipping_amount, shipping_note = estimate_listing_shipping(listing, request.user)
+    estimated_total = item_amount + platform_fee + (shipping_amount or Decimal('0'))
+    buyer_address = getattr(getattr(request.user, 'profile', None), 'shipping_address', None)
+
+    return render(request, 'listings/buy_now_review.html', {
+        'listing': listing,
+        'item_amount': item_amount,
+        'platform_fee': platform_fee,
+        'shipping_amount': shipping_amount,
+        'shipping_note': shipping_note,
+        'shipping_is_estimate': shipping_amount is not None and shipping_note == 'Estimated',
+        'shipping_seller_pays': shipping_note == 'Seller pays shipping',
+        'estimated_total': estimated_total,
+        'buyer_address': buyer_address,
+        'resume': mine and existing_order.status == 'pending_payment',
+    })
 
 
 @login_required

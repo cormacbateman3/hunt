@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Review your purchase | KeystoneBid{% endblock %}
+
+{% block content %}
+<section class="card" style="max-width: 640px; margin: 0 auto;">
+    <a href="{% url 'listings:detail' listing.pk %}" style="color: var(--color-aged-amber); font-size: 0.9rem;">&larr; Back to listing</a>
+    <h1 style="margin: 0.5rem 0 0.25rem;">Review your purchase</h1>
+    <p style="margin: 0 0 1.25rem; color: var(--color-muted);">
+        Nothing is charged and the listing isn't held yet — look everything over, then continue to secure payment.
+    </p>
+
+    <div style="display: flex; gap: 1rem; align-items: flex-start; padding-bottom: 1rem; border-bottom: 1px solid var(--color-border);">
+        {% if listing.featured_image %}
+            <img src="{{ listing.featured_image.url }}" alt="{{ listing.title }}"
+                 style="width: 96px; height: 96px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--color-border);">
+        {% endif %}
+        <div>
+            <strong style="font-size: 1.05rem;">{{ listing.title }}</strong>
+            <p style="margin: 0.2rem 0 0; color: var(--color-muted); font-size: 0.9rem;">
+                {% if listing.license_year %}{{ listing.license_year }} &middot; {% endif %}Sold by {{ listing.seller.username }}
+            </p>
+        </div>
+    </div>
+
+    <dl style="display: grid; grid-template-columns: 1fr auto; gap: 0.5rem 1rem; margin: 1.25rem 0;">
+        <dt>Item price</dt>
+        <dd style="margin: 0; text-align: right;">${{ item_amount|floatformat:2 }}</dd>
+
+        <dt>Platform fee</dt>
+        <dd style="margin: 0; text-align: right;">${{ platform_fee|floatformat:2 }}</dd>
+
+        <dt>Shipping{% if shipping_is_estimate %} <span style="color: var(--color-muted); font-weight: 400;">(estimate)</span>{% endif %}</dt>
+        <dd style="margin: 0; text-align: right;">
+            {% if shipping_seller_pays %}<span style="color: var(--color-forest-green);">Free — seller pays</span>
+            {% elif shipping_amount is not None %}${{ shipping_amount|floatformat:2 }}
+            {% else %}<span style="color: var(--color-muted);">{{ shipping_note }}</span>{% endif %}
+        </dd>
+
+        <dt style="border-top: 1px solid var(--color-border); padding-top: 0.5rem; font-weight: 700;">
+            {% if shipping_amount is None or shipping_is_estimate %}Estimated total{% else %}Total{% endif %}
+        </dt>
+        <dd style="margin: 0; text-align: right; border-top: 1px solid var(--color-border); padding-top: 0.5rem; font-weight: 700; font-size: 1.1rem;">
+            ${{ estimated_total|floatformat:2 }}
+        </dd>
+    </dl>
+
+    {% if shipping_is_estimate %}
+        <p style="color: var(--color-muted); font-size: 0.85rem; margin: 0 0 1rem;">
+            Shipping is estimated from the seller's package details; the exact rate is confirmed on the payment step.
+        </p>
+    {% endif %}
+
+    {% if not buyer_address %}
+        <div class="alert alert-warning" style="margin-bottom: 1rem;">
+            You'll need a default shipping address before payment.
+            <a href="{% url 'accounts:address_add' %}">Add one now &rarr;</a>
+        </div>
+    {% endif %}
+
+    <form method="post" action="{% url 'listings:buy_now_checkout_start' listing.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn-primary" style="width: 100%;">
+            {% if resume %}Resume secure payment{% else %}Proceed to secure payment{% endif %}
+        </button>
+    </form>
+    <p style="text-align: center; margin: 0.75rem 0 0;">
+        <a href="{% url 'listings:detail' listing.pk %}" style="color: var(--color-aged-amber);">Cancel</a>
+    </p>
+</section>
+{% endblock %}

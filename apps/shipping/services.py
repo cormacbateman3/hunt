@@ -179,6 +179,38 @@ def quote_order_shipping(order, parcel_data=None):
     return shipment
 
 
+def estimate_listing_shipping(listing, buyer):
+    """Best-effort buyer shipping estimate for the pre-payment review page.
+
+    Deliberately creates NO Order or Shipment — viewing a total must never lock
+    the listing. Returns (amount, note): amount is a Decimal, or None when we
+    can't estimate yet (then note explains why, e.g. 'Calculated at payment').
+    """
+    if getattr(listing, 'shipping_payer', 'buyer') == 'seller':
+        return Decimal('0.00'), 'Seller pays shipping'
+    seller_address = (
+        getattr(listing, 'ship_from_address', None)
+        or getattr(getattr(listing.seller, 'profile', None), 'shipping_address', None)
+    )
+    buyer_address = getattr(getattr(buyer, 'profile', None), 'shipping_address', None)
+    if not seller_address or not buyer_address:
+        return None, 'Calculated at payment'
+    try:
+        client = ShippoClient()
+        payload = client.create_shipment(
+            address_from=_address_to_shippo_payload(seller_address),
+            address_to=_address_to_shippo_payload(buyer_address),
+            parcel=_parcel_to_shippo(listing_parcel(listing)),
+        )
+        rates = payload.get('rates') or []
+        if not rates:
+            return None, 'Calculated at payment'
+        selected = select_rate(rates, getattr(listing, 'shipping_service', 'cheapest'))
+        return _to_decimal(selected['amount']), 'Estimated'
+    except ShippoError:
+        return None, 'Calculated at payment'
+
+
 def ensure_checkout_shipping_ready(order):
     shipment = Shipment.objects.filter(order=order).first()
     if shipment and shipment.rate_id and shipment.rate_amount is not None:

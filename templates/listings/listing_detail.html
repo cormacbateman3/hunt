@@ -197,10 +197,7 @@
             </form>
         {% elif user.is_authenticated and is_buy_now %}
             {% if can_buy_now %}
-                <form method="post" action="{% url 'listings:buy_now_checkout_start' listing.pk %}" style="margin-top: 1rem;">
-                    {% csrf_token %}
-                    <button type="submit" class="btn-primary">Buy now</button>
-                </form>
+                <a class="btn-primary" href="{% url 'listings:buy_now_review' listing.pk %}" style="margin-top: 1rem; display: inline-block;">Buy now</a>
                 <form method="post" action="{% url 'favorites:toggle_listing' listing.pk %}" style="margin-top: 0.6rem;">
                     {% csrf_token %}
                     <input type="hidden" name="next" value="{{ request.path }}">
