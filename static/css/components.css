@@ -39,6 +39,47 @@
     background: #d2d8cc;
 }
 
+.btn-lg {
+    padding: 0.8rem 2rem;
+    font-size: 1rem;
+}
+
+.btn-sm {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.85rem;
+}
+
+.btn-ghost {
+    display: inline-block;
+    border: 2px solid var(--color-forest-green);
+    border-radius: var(--radius-sm);
+    padding: 0.58rem 1.15rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--color-forest-green);
+    background: transparent;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    line-height: 1.25;
+    text-decoration: none;
+}
+
+.btn-ghost:hover {
+    background: var(--color-forest-green);
+    color: #fff;
+}
+
+.btn-ghost.btn-lg {
+    padding: 0.78rem 2rem;
+    font-size: 1rem;
+}
+
+.btn-ghost.btn-sm {
+    padding: 0.33rem 0.75rem;
+    font-size: 0.85rem;
+    border-width: 1.5px;
+}
+
 /* ── Forms ── */
 .form-label {
     display: block;
@@ -116,8 +157,6 @@
     color: #8f2c19;
 }
 
-/* Django field errors ({{ field.errors }}) — reset the UA list and flag in the
-   field-journal error tone so a rejected field reads as an error. */
 .errorlist {
     color: var(--color-error);
     list-style: none;
@@ -151,13 +190,13 @@
 }
 
 .listing-card:hover {
-    box-shadow: 0 8px 24px rgba(44, 74, 30, 0.2);
-    transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(44, 74, 30, 0.22);
+    transform: translateY(-3px);
 }
 
 .listing-card-img {
     width: 100%;
-    height: 220px;
+    aspect-ratio: 4 / 3;
     object-fit: cover;
     display: block;
     background: #e8e0d0;
@@ -165,7 +204,7 @@
 
 .listing-card-img-placeholder {
     width: 100%;
-    height: 220px;
+    aspect-ratio: 4 / 3;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -202,6 +241,9 @@
     gap: 0.35rem;
     flex-wrap: wrap;
     align-items: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .listing-card-price {
@@ -476,3 +518,163 @@
     margin-top: 0.9rem;
 }
 .img-back-badge { background: var(--color-aged-amber, #a9852f); }
+
+/* ── Hero ── */
+.hero {
+    background-color: var(--color-parchment);
+    background-image: url("data:image/svg+xml,%3Csvg width='24' height='24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 24L24 0M-6 6L6-6M18 30L30 18' stroke='%23c4b49a' stroke-width='0.6' opacity='0.45'/%3E%3C/svg%3E");
+    border-bottom: 1px solid var(--color-border);
+    padding: var(--space-5) 0 var(--space-4);
+    margin-bottom: var(--space-4);
+}
+
+.hero-inner {
+    border-left: 4px solid var(--color-forest-green);
+    padding-left: var(--space-3);
+    max-width: 660px;
+}
+
+.hero-eyebrow {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-aged-amber);
+    margin-bottom: var(--space-1);
+}
+
+.hero h1 {
+    font-size: clamp(1.75rem, 4vw, 2.6rem);
+    line-height: 1.18;
+    color: var(--color-forest-green);
+    margin-bottom: var(--space-2);
+}
+
+.hero-subtitle {
+    font-size: 1.05rem;
+    line-height: 1.65;
+    color: var(--color-muted);
+    margin-bottom: var(--space-3);
+    max-width: 520px;
+}
+
+.hero-actions {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* ── Feature grid ── */
+.feature-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+}
+
+@media (max-width: 960px) {
+    .feature-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 520px) {
+    .feature-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.feature-card {
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-3);
+    gap: 0;
+}
+
+.feature-card .card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: var(--space-2);
+}
+
+.feature-card h3 {
+    font-size: 1.08rem;
+    color: var(--color-forest-green);
+    margin: 0;
+}
+
+.feature-card p {
+    font-size: 0.92rem;
+    color: var(--color-muted);
+    line-height: 1.55;
+    margin: 0;
+}
+
+.card-footer {
+    margin-top: auto;
+    padding-top: var(--space-2);
+}
+
+.card-icon {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--space-2);
+    flex-shrink: 0;
+}
+
+.card-icon svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    stroke: #fff;
+}
+
+.card-icon--auction  { background: var(--color-forest-green); }
+.card-icon--store    { background: var(--color-aged-amber); }
+.card-icon--trading  { background: var(--color-hunting-rust); }
+.card-icon--collections { background: var(--color-muted); }
+
+/* ── Recent section ── */
+.recent-section {
+    margin-bottom: var(--space-5);
+}
+
+.recent-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-3);
+}
+
+.recent-section-header h2 {
+    font-size: 1.35rem;
+}
+
+/* ── Empty state ── */
+.empty-state {
+    background: var(--color-parchment);
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-5) var(--space-4);
+    text-align: center;
+    color: var(--color-muted);
+    font-size: 0.95rem;
+}
+
+.empty-state p {
+    margin-bottom: var(--space-2);
+}
+
+.empty-state-actions {
+    display: flex;
+    gap: var(--space-2);
+    justify-content: center;
+    flex-wrap: wrap;
+}

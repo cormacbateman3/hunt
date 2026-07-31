@@ -1,64 +1,156 @@
 {% extends 'base.html' %}
 
-{% block title %}KeystoneBid - Pennsylvania Antique Hunting License Marketplace{% endblock %}
+{% block title %}KeystoneBid &mdash; Pennsylvania Antique Hunting License Marketplace{% endblock %}
 
 {% block content %}
 <section class="hero">
-    <h1>Pennsylvania&rsquo;s Hunting Heritage Marketplace</h1>
-    <p class="hero-subtitle">
-        Buy, sell, and trade antique Pennsylvania hunting licenses with fellow collectors.
-    </p>
+    <div class="hero-inner">
+        <span class="hero-eyebrow">Pennsylvania &middot; Est. 1895</span>
+        <h1>Pennsylvania&rsquo;s Hunting Heritage,<br>Traded with Care</h1>
+        <p class="hero-subtitle">
+            Auction, buy, sell, and trade antique hunting licenses with fellow collectors
+            who know what they mean.
+        </p>
+        <div class="hero-actions">
+            <a href="{% url 'listings:auction_house' %}" class="btn-primary btn-lg">Browse Auctions</a>
+            <a href="{% url 'listings:general_store' %}" class="btn-ghost">Shop Fixed Price</a>
+        </div>
+    </div>
 </section>
 
 <section class="feature-grid">
+
     <article class="card feature-card">
-        <h3>The Auction House</h3>
-        <p>
-            Bid on rare licenses in timed auctions. Find pieces from every county, every era.
-        </p>
-        <a href="{% url 'listings:auction_house' %}" class="btn-primary">Browse Auctions</a>
+        <div class="card-icon card-icon--auction">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14 2L20 8"/>
+                <path d="M15 3L21 9"/>
+                <path d="M3 21L12 12"/>
+                <path d="M11 13L13 11"/>
+                <line x1="3" y1="21" x2="8" y2="16"/>
+                <path d="M2 22h4"/>
+            </svg>
+        </div>
+        <div class="card-body">
+            <h3>The Auction House</h3>
+            <p>Bid on rare licenses in timed auctions. Find pieces from every county, every era.</p>
+        </div>
+        <div class="card-footer">
+            <a href="{% url 'listings:auction_house' %}" class="btn-primary">Browse Auctions</a>
+        </div>
     </article>
 
     <article class="card feature-card">
-        <h3>The General Store</h3>
-        <p>
-            Browse fixed-price listings. Buy instantly — no waiting for an auction to close.
-        </p>
-        <a href="{% url 'listings:general_store' %}" class="btn-primary">Shop Now</a>
+        <div class="card-icon card-icon--store">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <path d="M16 10a4 4 0 0 1-8 0"/>
+            </svg>
+        </div>
+        <div class="card-body">
+            <h3>The General Store</h3>
+            <p>Browse fixed-price listings. Buy instantly &mdash; no waiting for an auction to close.</p>
+        </div>
+        <div class="card-footer">
+            <a href="{% url 'listings:general_store' %}" class="btn-primary">Shop Now</a>
+        </div>
     </article>
 
     <article class="card feature-card">
-        <h3>The Trading Block</h3>
-        <p>
-            Trade licenses directly with other collectors. Negotiate, counter, and deal.
-        </p>
-        <a href="{% url 'listings:trading_block' %}" class="btn-primary">Browse Trades</a>
+        <div class="card-icon card-icon--trading">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="17 1 21 5 17 9"/>
+                <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                <polyline points="7 23 3 19 7 15"/>
+                <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+            </svg>
+        </div>
+        <div class="card-body">
+            <h3>The Trading Block</h3>
+            <p>Trade licenses directly with other collectors. Propose, counter, and deal.</p>
+        </div>
+        <div class="card-footer">
+            <a href="{% url 'listings:trading_block' %}" class="btn-primary">Browse Trades</a>
+        </div>
     </article>
 
     <article class="card feature-card">
-        <h3>Collections</h3>
-        <p>
-            Browse collector profiles and curated collections from across Pennsylvania.
-        </p>
-        {% if user.is_authenticated %}
-            <a href="{% url 'accounts:profile' user.username %}" class="btn-primary">My Collection</a>
-        {% else %}
-            <a href="{% url 'accounts:register' %}" class="btn-primary">Join &amp; Collect</a>
-        {% endif %}
+        <div class="card-icon card-icon--collections">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3" width="7" height="7"/>
+                <rect x="14" y="3" width="7" height="7"/>
+                <rect x="3" y="14" width="7" height="7"/>
+                <rect x="14" y="14" width="7" height="7"/>
+            </svg>
+        </div>
+        <div class="card-body">
+            <h3>Collections</h3>
+            <p>Browse collector profiles and curated collections from across Pennsylvania.</p>
+        </div>
+        <div class="card-footer">
+            {% if user.is_authenticated %}
+                <a href="{% url 'accounts:profile' user.username %}" class="btn-primary">My Collection</a>
+            {% else %}
+                <a href="{% url 'accounts:register' %}" class="btn-primary">Join &amp; Collect</a>
+            {% endif %}
+        </div>
     </article>
+
 </section>
 
-<section class="recent-listings">
-    <h2>Recently Listed</h2>
-    <p>New licenses added to the marketplace every day.</p>
-    {% if user.is_authenticated %}
-        <div style="margin-top: var(--space-2);">
-            <a href="{% url 'listings:auction_house' %}" class="btn-primary">Browse all listings</a>
+<section class="recent-section">
+    <div class="recent-section-header">
+        <h2>Recently Listed</h2>
+        <a href="{% url 'listings:auction_house' %}" class="btn-ghost btn-sm">View all &rarr;</a>
+    </div>
+
+    {% if recent_listings %}
+        <div class="listing-grid">
+            {% for listing in recent_listings %}
+                <article class="listing-card">
+                    {% if listing.primary_image %}
+                        <img class="listing-card-img" src="{{ listing.primary_image.url }}"
+                             alt="{{ listing.title }}" loading="lazy">
+                    {% else %}
+                        <div class="listing-card-img-placeholder">No image</div>
+                    {% endif %}
+                    <div class="listing-card-body">
+                        <p class="listing-card-title">{{ listing.title }}</p>
+                        <p class="listing-card-meta">
+                            {% if listing.license_year %}{{ listing.license_year }}{% endif %}
+                            {% if listing.state %} &middot; {{ listing.state.code }}{% endif %}
+                        </p>
+                        <p class="listing-card-price">
+                            {% if listing.listing_type == 'auction' %}
+                                Current bid: ${{ listing.current_bid|default:listing.starting_price }}
+                            {% else %}
+                                ${{ listing.price }}
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="listing-card-footer">
+                        <span>{{ listing.get_listing_type_display }}</span>
+                        <a href="{{ listing.get_absolute_url }}" class="btn-primary">View</a>
+                    </div>
+                </article>
+            {% endfor %}
         </div>
     {% else %}
-        <div style="margin-top: var(--space-2);">
-            <a href="{% url 'accounts:register' %}" class="btn-primary" style="margin-right: 0.75rem;">Get started</a>
-            <a href="{% url 'listings:auction_house' %}" class="btn-secondary">Browse as guest</a>
+        <div class="empty-state">
+            <p>New licenses arrive daily &mdash; check back soon.</p>
+            <div class="empty-state-actions">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'listings:auction_house' %}" class="btn-secondary">Browse all listings</a>
+                {% else %}
+                    <a href="{% url 'accounts:register' %}" class="btn-primary">Get started</a>
+                    <a href="{% url 'listings:auction_house' %}" class="btn-secondary">Browse as guest</a>
+                {% endif %}
+            </div>
         </div>
     {% endif %}
 </section>
