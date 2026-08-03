@@ -199,9 +199,12 @@
         </div>
     </form>
 
-    {# Must stay OUTSIDE the form above: this partial is itself a <form>, and a
-       nested form start tag is dropped by the parser while its </form> closes
-       the OUTER form -- which orphaned the submit button and everything after it. #}
+    {% comment %}
+    Must stay OUTSIDE the form above. This partial renders its own form
+    element, and the HTML parser drops a nested opening tag while still
+    honouring the closing one -- which closed the host form early and
+    orphaned the submit button and every field after this point.
+    {% endcomment %}
     <details style="margin-top: 1rem;">
         <summary style="cursor: pointer; color: var(--color-aged-amber);">Is a value missing?</summary>
         <div style="margin-top: 0.75rem;">

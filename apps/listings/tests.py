@@ -299,3 +299,130 @@ class FormSubmitOwnershipTests(TestCase):
                     f'{name} nests the suggestion form inside another form — this '
                     f'orphans the submit button and every field after the include',
                 )
+
+
+class UploadRetentionTests(TestCase):
+    """A validation error must not throw away the user's uploaded images.
+
+    A browser cannot repopulate <input type="file">, so without a server-side
+    stash the featured image vanished on every failed submit and had to be
+    picked again.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        from apps.accounts.models import Address
+
+        cls.user = User.objects.create_user('uprt', password='pw', email='u@e.com')
+        address = Address.objects.create(
+            user=cls.user, full_name='U', line1='1 Rd', city='H',
+            state='PA', postal_code='17101', is_default=True,
+        )
+        cls.user.profile.email_verified = True
+        cls.user.profile.shipping_address = address
+        cls.user.profile.save(update_fields=['email_verified', 'shipping_address'])
+        State.objects.get_or_create(
+            code='PA',
+            defaults={
+                'name': 'Pennsylvania', 'slug': 'pennsylvania',
+                'min_license_year': 1913, 'is_primary_default': True,
+            },
+        )
+
+    def _payload(self, **overrides):
+        data = {
+            'listing_type': 'buy_now', 'item_kind': 'license',
+            'title': 'Retained Upload', 'description': 'd',
+            'condition_grade': 'good', 'license_year': '1955',
+            'buy_now_price': '75', 'shipping_payer': 'buyer',
+            'weight_oz': '5', 'length_in': '6', 'width_in': '4', 'height_in': '4',
+            'additional_images-TOTAL_FORMS': '0', 'additional_images-INITIAL_FORMS': '0',
+            'additional_images-MIN_NUM_FORMS': '0', 'additional_images-MAX_NUM_FORMS': '10',
+        }
+        data.update(overrides)
+        return data
+
+    def setUp(self):
+        self.client = Client()
+        self.client.force_login(self.user)
+
+    def test_failed_submit_keeps_the_image_and_a_retry_without_it_succeeds(self):
+        state = State.objects.get(code='PA')
+        residency = LicenseType.objects.filter(category='residency').first() or (
+            LicenseType.objects.create(name='Resident', category='residency', slug='res-x')
+        )
+
+        # First attempt: image supplied, but 'state' omitted -> invalid.
+        first = self.client.post(
+            reverse('listings:create'),
+            self._payload(featured_image=png_upload('kept.png')),
+        )
+        self.assertEqual(first.status_code, 200)
+        self.assertFalse(Listing.objects.filter(title='Retained Upload').exists())
+        # The user is told the upload survived.
+        self.assertContains(first, 'kept')
+
+        # Retry fixing only the error, WITHOUT re-picking the file.
+        second = self.client.post(
+            reverse('listings:create'),
+            self._payload(state=str(state.id), residency=str(residency.id)),
+        )
+        self.assertEqual(second.status_code, 302)
+        listing = Listing.objects.get(title='Retained Upload')
+        self.assertTrue(listing.featured_image)
+
+    def test_a_new_upload_replaces_the_retained_one(self):
+        self.client.post(
+            reverse('listings:create'),
+            self._payload(featured_image=png_upload('first.png')),
+        )
+        resp = self.client.post(
+            reverse('listings:create'),
+            self._payload(featured_image=png_upload('second.png')),
+        )
+        self.assertContains(resp, 'second.png')
+        self.assertNotContains(resp, 'first.png')
+
+    def test_stash_is_cleared_once_the_listing_saves(self):
+        from apps.core.upload_stash import SESSION_KEY
+
+        state = State.objects.get(code='PA')
+        residency = LicenseType.objects.filter(category='residency').first() or (
+            LicenseType.objects.create(name='Resident', category='residency', slug='res-y')
+        )
+        self.client.post(
+            reverse('listings:create'),
+            self._payload(featured_image=png_upload('once.png')),
+        )
+        self.assertIn(SESSION_KEY, self.client.session)
+
+        self.client.post(
+            reverse('listings:create'),
+            self._payload(state=str(state.id), residency=str(residency.id)),
+        )
+        self.assertNotIn(SESSION_KEY, self.client.session)
+
+
+class TemplateCommentSyntaxTests(TestCase):
+    """`{# #}` cannot span lines — Django renders a multi-line one as raw text.
+
+    That is how an explanatory comment ended up printed on the live create
+    form, with the `<form>` tags inside it parsed as real HTML.
+    """
+
+    def test_no_multiline_hash_comments_in_templates(self):
+        import glob
+        import io
+        import re
+
+        offenders = []
+        for path in glob.glob('templates/**/*.html', recursive=True):
+            source = io.open(path, encoding='utf-8').read()
+            for line_no, line in enumerate(source.splitlines(), 1):
+                if '{#' in line and '#}' not in line.split('{#', 1)[1]:
+                    offenders.append(f'{path}:{line_no}')
+        self.assertEqual(
+            offenders, [],
+            'Multi-line {# #} comments render as visible page text; '
+            'use {% comment %}...{% endcomment %}. Offenders: ' + ', '.join(offenders),
+        )

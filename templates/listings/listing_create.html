@@ -174,6 +174,19 @@
                 <label class="form-label" style="margin-bottom: 0.35rem; display: block;">
                     Images <span style="font-weight: 400; color: var(--color-muted);">(up to 5 — first is the Featured/front photo, second the back)</span>
                 </label>
+                {% if retained_uploads %}
+                    {# A file input cannot be repopulated after a failed POST; the server holds the upload and shows it here. #}
+                    <div class="alert alert-info" style="margin-bottom: 0.6rem;">
+                        <strong>Your {{ retained_uploads|length }} uploaded image{{ retained_uploads|pluralize }} {{ retained_uploads|pluralize:"was,were" }} kept</strong>
+                        &mdash; you don't need to choose {{ retained_uploads|pluralize:"it,them" }} again. Pick new files only if you want to replace {{ retained_uploads|pluralize:"it,them" }}.
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
+                            {% for field, name, url in retained_uploads %}
+                                <img src="{{ url }}" alt="{{ name }}" title="{{ name }}"
+                                     style="width: 64px; height: 64px; object-fit: cover; border-radius: 6px; border: 1px solid var(--color-border);">
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
                 <div class="img-zone" id="img-zone">
                     <div class="img-drop-area" id="img-drop">
                         <div class="img-empty-state" id="img-empty">
@@ -431,9 +444,12 @@
         </div>
     </form>
 
-    {# Must stay OUTSIDE the form above: this partial is itself a <form>, and a
-       nested form start tag is dropped by the parser while its </form> closes
-       the OUTER form -- which orphaned the submit button and everything after it. #}
+    {% comment %}
+    Must stay OUTSIDE the form above. This partial renders its own form
+    element, and the HTML parser drops a nested opening tag while still
+    honouring the closing one -- which closed the host form early and
+    orphaned the submit button and every field after this point.
+    {% endcomment %}
     <details style="margin-top: 1rem;">
         <summary style="cursor: pointer; color: var(--color-aged-amber);">Is a value missing?</summary>
         <div style="margin-top: 0.75rem;">

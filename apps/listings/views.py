@@ -17,6 +17,7 @@ from apps.collections.models import CollectionItem
 from apps.core.models import GeographicUnit, LicenseType, State
 from apps.core.constants import FORM_LICENSE_TYPE_CATEGORIES, LICENSE_TYPE_CATEGORY_CHOICES
 from apps.core.forms import ReferenceDataSuggestionForm
+from apps.core.upload_stash import clear_stash, restore_missing, stash_uploads, stashed_files
 from apps.offers.services import active_offers, can_offer_on, reserving_offer
 from apps.orders.models import Order
 from apps.orders.services import calculate_platform_fee
@@ -523,10 +524,15 @@ def listing_create(request):
         )
         return redirect('accounts:dashboard')
 
-    image_formset = ListingImageFormSet(request.POST or None, request.FILES or None)
+    # Re-attach anything the user uploaded on a previous, failed attempt: a
+    # browser cannot refill a file input, so without this a validation error
+    # silently drops the images and makes them pick every file again.
+    post_files = restore_missing(request, request.FILES) if request.method == 'POST' else None
+
+    image_formset = ListingImageFormSet(request.POST or None, post_files or None)
 
     if request.method == 'POST':
-        form = ListingForm(request.POST, request.FILES, user=request.user)
+        form = ListingForm(request.POST, post_files, user=request.user)
 
         if form.is_valid() and image_formset.is_valid():
             form.instance.seller = request.user
@@ -595,22 +601,25 @@ def listing_create(request):
             # Re-bind as inline formset to save FK automatically.
             image_formset = ListingImageFormSet(
                 request.POST,
-                request.FILES,
+                post_files,
                 instance=listing,
             )
             if image_formset.is_valid():
                 image_formset.save()
-                _copy_collection_images_to_listing(listing, uploaded_any=bool(request.FILES))
+                _copy_collection_images_to_listing(listing, uploaded_any=bool(post_files))
                 _normalize_listing_image_sort_order(listing)
                 _link_prefill_job(request, listing)
+                clear_stash(request)
             else:
                 listing.delete()
+                stash_uploads(request, request.FILES)
                 return render(request, 'listings/listing_create.html', {
                     'form': form,
                     'image_formset': image_formset,
                     'taxonomy_fields': TAXONOMY_FIELDS,
                     'taxonomy_has_errors': _taxonomy_has_errors(form),
                     'taxonomy_field_names_json': json.dumps([item[0] for item in TAXONOMY_FIELDS]),
+                    'retained_uploads': stashed_files(request),
                     'suggestion_form': ReferenceDataSuggestionForm(
                         initial={'target_model': 'other', 'suggestion_type': 'new_value'}
                     ),
@@ -643,6 +652,10 @@ def listing_create(request):
         else:
             form = ListingForm(initial={'listing_type': config_type}, user=request.user)
 
+    if request.method == 'POST':
+        # Reached only when the form failed — hold the upload for the retry.
+        stash_uploads(request, request.FILES)
+
     config_listing_type = (
         form.data.get('listing_type') if form.is_bound else form.initial.get('listing_type')
     ) or ''
@@ -654,6 +667,7 @@ def listing_create(request):
         'taxonomy_fields': TAXONOMY_FIELDS,
         'taxonomy_has_errors': _taxonomy_has_errors(form),
         'taxonomy_field_names_json': json.dumps([item[0] for item in TAXONOMY_FIELDS]),
+        'retained_uploads': stashed_files(request) if request.method == 'POST' else [],
         'suggestion_form': ReferenceDataSuggestionForm(
             initial={'target_model': 'other', 'suggestion_type': 'new_value'}
         ),
