@@ -11,6 +11,17 @@
         Nothing is charged and the listing isn't held yet — look everything over, then continue to secure payment.
     </p>
 
+    {% if accepted_offer %}
+        <div class="alert alert-success" style="margin-bottom: 1.25rem;">
+            You're paying your accepted offer price of
+            <strong>${{ accepted_offer.amount|floatformat:2 }}</strong>, not the
+            ${{ list_price|floatformat:2 }} list price.
+            {% if accepted_offer.payment_deadline %}
+                This listing is held for you until {{ accepted_offer.payment_deadline }}.
+            {% endif %}
+        </div>
+    {% endif %}
+
     <div style="display: flex; gap: 1rem; align-items: flex-start; padding-bottom: 1rem; border-bottom: 1px solid var(--color-border);">
         {% if listing.featured_image %}
             <img src="{{ listing.featured_image.url }}" alt="{{ listing.title }}"
@@ -25,7 +36,7 @@
     </div>
 
     <dl style="display: grid; grid-template-columns: 1fr auto; gap: 0.5rem 1rem; margin: 1.25rem 0;">
-        <dt>Item price</dt>
+        <dt>{% if accepted_offer %}Agreed offer price{% else %}Item price{% endif %}</dt>
         <dd style="margin: 0; text-align: right;">${{ item_amount|floatformat:2 }}</dd>
 
         <dt>Platform fee</dt>

@@ -158,6 +158,28 @@
             <div style="margin-top: 1rem;">
                 <a class="btn-secondary" href="{% url 'listings:edit' listing.pk %}">Edit listing</a>
             </div>
+
+            {% if held_offer %}
+                <div class="alert alert-success" style="margin-top: 1rem;">
+                    You accepted <strong>{{ held_offer.buyer.username }}</strong>&rsquo;s offer of
+                    ${{ held_offer.amount|floatformat:2 }}. Awaiting their payment.
+                    <a href="{% url 'offers:detail' held_offer.pk %}">View offer</a>
+                </div>
+            {% elif seller_pending_offers %}
+                <div style="margin-top: 1rem;">
+                    <h3 style="font-size: 1.05rem; margin-bottom: 0.5rem;">Offers awaiting your response</h3>
+                    <div style="display: grid; gap: 0.45rem;">
+                        {% for offer in seller_pending_offers %}
+                            <p style="margin: 0;">
+                                <a href="{% url 'offers:detail' offer.pk %}">
+                                    <strong>${{ offer.amount|floatformat:2 }}</strong>
+                                </a>
+                                <span style="color: var(--color-muted);">from {{ offer.from_user.username }}</span>
+                            </p>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
         {% elif user.is_authenticated and is_auction %}
             <hr style="margin: 1rem 0; border: 0; border-top: 1px solid var(--color-border);">
             <h3 style="font-size: 1.05rem; margin-bottom: 0.75rem;">Place bid</h3>
@@ -196,8 +218,35 @@
                 <button type="submit" class="btn-secondary">Message seller</button>
             </form>
         {% elif user.is_authenticated and is_buy_now %}
-            {% if can_buy_now %}
+            {% if viewer_holds_offer %}
+                <div class="alert alert-success" style="margin-top: 1rem;">
+                    Your offer of <strong>${{ held_offer.amount|floatformat:2 }}</strong> was accepted.
+                    Complete payment to secure this item.
+                </div>
+                <a class="btn-primary" href="{% url 'listings:buy_now_review' listing.pk %}">
+                    Review &amp; pay ${{ held_offer.amount|floatformat:2 }}
+                </a>
+            {% elif offer_reserved_by_other %}
+                <p style="margin-top: 1rem; color: var(--color-hunting-rust);">
+                    This listing is reserved for a buyer whose offer was accepted.
+                </p>
+            {% elif can_buy_now %}
                 <a class="btn-primary" href="{% url 'listings:buy_now_review' listing.pk %}" style="margin-top: 1rem; display: inline-block;">Buy now</a>
+
+                {% if my_pending_offer %}
+                    <p style="margin-top: 0.8rem; color: var(--color-muted);">
+                        You have a pending offer of
+                        <strong>${{ my_pending_offer.amount|floatformat:2 }}</strong>.
+                        <a href="{% url 'offers:detail' my_pending_offer.pk %}">View it</a>
+                    </p>
+                {% elif can_make_offer %}
+                    <a class="btn-ghost" href="{% url 'offers:make' listing.pk %}"
+                       style="margin-top: 0.6rem; display: inline-block;">Make an offer</a>
+                    <p style="margin-top: 0.4rem; color: var(--color-muted); font-size: 0.9rem;">
+                        Offers are binding &mdash; if the seller accepts, you buy at that price.
+                    </p>
+                {% endif %}
+
                 <form method="post" action="{% url 'favorites:toggle_listing' listing.pk %}" style="margin-top: 0.6rem;">
                     {% csrf_token %}
                     <input type="hidden" name="next" value="{{ request.path }}">

@@ -151,6 +151,10 @@ class Listing(models.Model):
         validators=[MinValueValidator(Decimal('1'))],
         help_text="Fixed price for buy-now listings"
     )
+    allow_offers = models.BooleanField(
+        default=False,
+        help_text="Let buyers negotiate with a binding offer below your asking price",
+    )
 
     # Trade fields
     trade_notes = models.TextField(blank=True, help_text="What the seller is looking for in trade")

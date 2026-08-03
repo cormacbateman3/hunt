@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}Offer on {{ listing.title }} | KeystoneBid{% endblock %}
+
+{% block content %}
+<section style="display: grid; gap: 1rem; max-width: 720px; margin: 0 auto;">
+
+    <article class="card">
+        <a href="{% url 'listings:detail' listing.pk %}" style="color: var(--color-aged-amber); font-size: 0.9rem;">&larr; Back to listing</a>
+        <h1 style="margin: 0.5rem 0 0.45rem;">Offer on {{ listing.title }}</h1>
+        <p style="color: var(--color-muted);">
+            {{ offer.from_user.username }}{% if offer.is_from_seller %} (seller){% endif %}
+            &rarr; {{ offer.to_user.username }} &middot; {{ offer.get_status_display }}
+        </p>
+
+        <dl style="display: grid; grid-template-columns: 1fr auto; gap: 0.5rem 1rem; margin: 1.25rem 0 0;">
+            <dt>Offer</dt>
+            <dd style="margin: 0; text-align: right;"><strong>${{ offer.amount|floatformat:2 }}</strong></dd>
+
+            <dt>List price</dt>
+            <dd style="margin: 0; text-align: right;">${{ listing.buy_now_price|floatformat:2 }}</dd>
+
+            {% if offer.status == 'pending' and offer.expires_at %}
+                <dt>Expires</dt>
+                <dd style="margin: 0; text-align: right;">{{ offer.expires_at|date:"M j, Y g:i a" }}</dd>
+            {% endif %}
+
+            {% if offer.status == 'accepted' and offer.payment_deadline %}
+                <dt>Pay by</dt>
+                <dd style="margin: 0; text-align: right;">{{ offer.payment_deadline|date:"M j, Y g:i a" }}</dd>
+            {% endif %}
+        </dl>
+
+        {% if offer.message %}
+            <p style="margin-top: 0.9rem;">&ldquo;{{ offer.message }}&rdquo;</p>
+        {% endif %}
+    </article>
+
+    {% if offer.status == 'accepted' %}
+        <article class="card">
+            <div class="alert alert-success" style="margin: 0;">
+                {% if is_buyer %}
+                    Your offer was accepted. Complete payment to secure this item &mdash;
+                    the listing is held for you until the deadline above.
+                {% else %}
+                    You accepted this offer. {{ offer.buyer.username }} has been asked to
+                    complete payment; the item is held for them until the deadline above.
+                {% endif %}
+            </div>
+            {% if is_buyer %}
+                <div style="margin-top: 0.9rem;">
+                    <a href="{% url 'listings:buy_now_review' listing.pk %}" class="btn-primary">
+                        Review &amp; pay ${{ offer.amount|floatformat:2 }}
+                    </a>
+                </div>
+            {% endif %}
+        </article>
+    {% endif %}
+
+    {% if can_respond or can_withdraw %}
+        <article class="card">
+            <h2 style="font-size: 1.2rem; margin-bottom: 0.55rem;">Actions</h2>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                {% if can_respond %}
+                    <form method="post" action="{% url 'offers:action' offer.pk 'accept' %}">
+                        {% csrf_token %}
+                        <button class="btn-primary" type="submit">Accept ${{ offer.amount|floatformat:2 }}</button>
+                    </form>
+                    <a class="btn-ghost" href="{% url 'offers:counter' offer.pk %}">Counter</a>
+                    <form method="post" action="{% url 'offers:action' offer.pk 'decline' %}">
+                        {% csrf_token %}
+                        <button class="btn-secondary" type="submit">Decline</button>
+                    </form>
+                {% endif %}
+                {% if can_withdraw %}
+                    <form method="post" action="{% url 'offers:action' offer.pk 'withdraw' %}">
+                        {% csrf_token %}
+                        <button class="btn-secondary" type="submit">Withdraw offer</button>
+                    </form>
+                {% endif %}
+            </div>
+        </article>
+    {% endif %}
+
+    {% if history|length > 1 %}
+        <article class="card">
+            <h2 style="font-size: 1.2rem; margin-bottom: 0.55rem;">Offer history</h2>
+            <div style="display: grid; gap: 0.45rem;">
+                {% for past in history %}
+                    <p style="margin: 0;">
+                        <strong>${{ past.amount|floatformat:2 }}</strong>
+                        from {{ past.from_user.username }}
+                        &middot; {{ past.get_status_display }}
+                        &middot; {{ past.created_at|date:"M j, Y g:i a" }}
+                        {% if past.pk != offer.pk %}
+                            &middot; <a href="{% url 'offers:detail' past.pk %}">view</a>
+                        {% endif %}
+                    </p>
+                {% endfor %}
+            </div>
+        </article>
+    {% endif %}
+
+</section>
+{% endblock %}

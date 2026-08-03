@@ -152,6 +152,7 @@ class ListingForm(forms.ModelForm):
             'starting_price',
             'reserve_price',
             'buy_now_price',
+            'allow_offers',
             'bid_increment',
             'trade_notes',
             'allow_cash',
@@ -184,6 +185,7 @@ class ListingForm(forms.ModelForm):
             'bid_increment': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '$1', 'step': '1', 'min': '1'}),
             'trade_notes': forms.Textarea(attrs={'class': 'form-input', 'rows': 4, 'placeholder': 'What are you looking for in return?'}),
             'allow_cash': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+            'allow_offers': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
             'package_weight_oz': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '8.0', 'step': '0.5', 'min': '0.5'}),
             'package_length_in': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '10', 'step': '0.5', 'min': '1'}),
             'package_width_in': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '7', 'step': '0.5', 'min': '1'}),
@@ -403,6 +405,7 @@ class ListingForm(forms.ModelForm):
             listing.buy_now_price = None
             listing.trade_notes = ''
             listing.allow_cash = False
+            listing.allow_offers = False
         elif listing_type == 'buy_now':
             listing.starting_price = None
             listing.current_bid = None
@@ -416,6 +419,8 @@ class ListingForm(forms.ModelForm):
             listing.reserve_price = None
             listing.buy_now_price = None
             listing.auction_end = None
+            # Offers negotiate a buy-now price; trades have their own offer flow.
+            listing.allow_offers = False
 
         # Scheduled go-live: only apply on new listings (no pk yet)
         if not listing.pk and scheduled_at:

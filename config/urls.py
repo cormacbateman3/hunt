@@ -22,6 +22,7 @@ urlpatterns = [
     path('notifications/', include('apps.notifications.urls')),
     path('shipping/', include('apps.shipping.urls')),
     path('trades/', include('apps.trades.urls')),
+    path('offers/', include('apps.offers.urls')),
     path('favorites/', include('apps.favorites.urls')),
     path('messages/', include(('apps.messaging.urls', 'messaging'), namespace='messaging')),
     path('reviews/', include(('apps.reviews.urls', 'reviews'), namespace='reviews')),

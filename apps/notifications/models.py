@@ -24,6 +24,12 @@ class Notification(models.Model):
         ('trade_offer_declined', 'Trade Offer Declined'),
         ('trade_offer_countered', 'Trade Offer Countered'),
         ('trade_offer_expired', 'Trade Offer Expired'),
+        # Buy-now price offers (10.9)
+        ('offer_received', 'Offer Received'),
+        ('offer_accepted', 'Offer Accepted'),
+        ('offer_declined', 'Offer Declined'),
+        ('offer_countered', 'Offer Countered'),
+        ('offer_expired', 'Offer Expired'),
         ('listing_question_received', 'Listing Question Received'),
         ('listing_question_answered', 'Listing Question Answered'),
         ('order_ship_reminder', 'Order Ship Reminder'),

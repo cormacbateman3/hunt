@@ -17,6 +17,7 @@ from apps.collections.models import CollectionItem
 from apps.core.models import GeographicUnit, LicenseType, State
 from apps.core.constants import FORM_LICENSE_TYPE_CATEGORIES, LICENSE_TYPE_CATEGORY_CHOICES
 from apps.core.forms import ReferenceDataSuggestionForm
+from apps.offers.services import active_offers, can_offer_on, reserving_offer
 from apps.orders.models import Order
 from apps.orders.services import calculate_platform_fee
 from apps.shipping.services import estimate_listing_shipping
@@ -436,6 +437,13 @@ def listing_detail(request, pk):
             and buy_now_order.status == 'pending_payment'
             and buy_now_order.buyer_id == request.user.id
         )
+        offers_open, _offers_reason = can_offer_on(listing)
+        held_offer = reserving_offer(listing)
+        viewer_holds_offer = bool(
+            held_offer
+            and request.user.is_authenticated
+            and held_offer.buyer.id == request.user.id
+        )
         context.update({
             'buy_now_order': buy_now_order,
             'can_buy_now': can_buy_now,
@@ -448,6 +456,26 @@ def listing_detail(request, pk):
                     not request.user.is_authenticated
                     or buy_now_order.buyer_id != request.user.id
                 )
+            ),
+            # Offers (10.9): sellers never originate, so the button is buyer-only.
+            'can_make_offer': bool(
+                offers_open
+                and request.user.is_authenticated
+                and request.user.id != listing.seller_id
+                and not held_offer
+            ),
+            'held_offer': held_offer,
+            'viewer_holds_offer': viewer_holds_offer,
+            'offer_reserved_by_other': bool(held_offer and not viewer_holds_offer),
+            'my_pending_offer': (
+                listing.offers.filter(from_user=request.user, status='pending').first()
+                if request.user.is_authenticated
+                else None
+            ),
+            'seller_pending_offers': (
+                active_offers(listing)
+                if request.user.is_authenticated and request.user.id == listing.seller_id
+                else None
             ),
         })
     if listing.listing_type == 'trade':
@@ -696,7 +724,13 @@ def buy_now_review(request, pk):
         messages.error(request, 'This listing is no longer available for buy now.')
         return redirect('listings:detail', pk=listing.pk)
 
-    item_amount = listing.buy_now_price or Decimal('0')
+    # An accepted offer reserves the listing for its buyer and sets the price.
+    held = reserving_offer(listing)
+    if held and held.buyer.id != request.user.id:
+        messages.error(request, 'This listing is reserved for a buyer whose offer was accepted.')
+        return redirect('listings:detail', pk=listing.pk)
+
+    item_amount = (held.amount if held else listing.buy_now_price) or Decimal('0')
     platform_fee = calculate_platform_fee(item_amount)
     shipping_amount, shipping_note = estimate_listing_shipping(listing, request.user)
     estimated_total = item_amount + platform_fee + (shipping_amount or Decimal('0'))
@@ -704,6 +738,8 @@ def buy_now_review(request, pk):
 
     return render(request, 'listings/buy_now_review.html', {
         'listing': listing,
+        'accepted_offer': held,
+        'list_price': listing.buy_now_price,
         'item_amount': item_amount,
         'platform_fee': platform_fee,
         'shipping_amount': shipping_amount,
@@ -738,6 +774,12 @@ def buy_now_checkout_start(request, pk):
             messages.error(request, 'This listing is not available for buy now.')
             return redirect('listings:detail', pk=listing.pk)
 
+        # An accepted offer reserves the listing for its buyer at the agreed price.
+        held = reserving_offer(listing)
+        if held and held.buyer.id != request.user.id:
+            messages.error(request, 'This listing is reserved for a buyer whose offer was accepted.')
+            return redirect('listings:detail', pk=listing.pk)
+
         existing_order = Order.objects.select_for_update().filter(listing=listing).first()
 
         if existing_order and existing_order.status == 'pending_payment':
@@ -752,7 +794,10 @@ def buy_now_checkout_start(request, pk):
             if listing.status == 'pending':
                 messages.error(request, 'This listing is currently locked for checkout by another buyer.')
                 return redirect('listings:detail', pk=listing.pk)
-            item_amount = listing.buy_now_price
+            # Everything downstream (shipping recalc, Stripe unit_amount) is
+            # derived from Order.item_amount, so pricing the order from the
+            # accepted offer here is the whole of the offer->payment wiring.
+            item_amount = held.amount if held else listing.buy_now_price
             platform_fee = calculate_platform_fee(item_amount)
             total_amount = item_amount + platform_fee
 

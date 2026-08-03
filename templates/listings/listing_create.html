@@ -359,6 +359,16 @@
                     {{ form.buy_now_price }}
                     {{ form.buy_now_price.errors }}
                 </div>
+                <div data-listing-panel="buy_now">
+                    <label class="form-label" for="{{ form.allow_offers.id_for_label }}">
+                        {{ form.allow_offers }} Allow offers
+                    </label>
+                    <small style="color: var(--color-muted);">
+                        Buyers can propose a lower price. Offers are binding &mdash; accepting one
+                        sells the item at that price.
+                    </small>
+                    {{ form.allow_offers.errors }}
+                </div>
             </div>
             <div data-listing-panel="trade">
                 <label class="form-label" for="{{ form.trade_notes.id_for_label }}">Trade preferences</label>

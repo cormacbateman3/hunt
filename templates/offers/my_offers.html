@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}My offers | KeystoneBid{% endblock %}
+
+{% block content %}
+<section style="display: grid; gap: 1rem;">
+
+    <h1>My offers</h1>
+
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.55rem;">Received</h2>
+        {% if received %}
+            <div style="display: grid; gap: 0.45rem;">
+                {% for offer in received %}
+                    <p style="margin: 0;">
+                        <a href="{% url 'offers:detail' offer.pk %}">
+                            <strong>${{ offer.amount|floatformat:2 }}</strong> on {{ offer.listing.title }}
+                        </a>
+                        <span style="color: var(--color-muted);">
+                            &middot; from {{ offer.from_user.username }}
+                            &middot; {{ offer.get_status_display }}
+                        </span>
+                    </p>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p style="color: var(--color-muted);">No offers received yet.</p>
+        {% endif %}
+    </article>
+
+    <article class="card">
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.55rem;">Sent</h2>
+        {% if sent %}
+            <div style="display: grid; gap: 0.45rem;">
+                {% for offer in sent %}
+                    <p style="margin: 0;">
+                        <a href="{% url 'offers:detail' offer.pk %}">
+                            <strong>${{ offer.amount|floatformat:2 }}</strong> on {{ offer.listing.title }}
+                        </a>
+                        <span style="color: var(--color-muted);">
+                            &middot; to {{ offer.to_user.username }}
+                            &middot; {{ offer.get_status_display }}
+                        </span>
+                    </p>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p style="color: var(--color-muted);">You have not made any offers yet.</p>
+        {% endif %}
+    </article>
+
+</section>
+{% endblock %}
