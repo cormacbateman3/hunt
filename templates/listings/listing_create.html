@@ -422,13 +422,6 @@
             </div>
         </details>
 
-        <details style="margin-top: 1rem;">
-            <summary style="cursor: pointer; color: var(--color-aged-amber);">Is a value missing?</summary>
-            <div style="margin-top: 0.75rem;">
-                {% include 'core/_reference_data_suggestion_form.html' %}
-            </div>
-        </details>
-
         <hr style="margin: 1.2rem 0; border: 0; border-top: 1px solid var(--color-border);">
         <div style="margin-top: 1.25rem;">
             <button type="submit" class="btn-primary">Create listing</button>
@@ -437,6 +430,16 @@
             </a>
         </div>
     </form>
+
+    {# Must stay OUTSIDE the form above: this partial is itself a <form>, and a
+       nested form start tag is dropped by the parser while its </form> closes
+       the OUTER form -- which orphaned the submit button and everything after it. #}
+    <details style="margin-top: 1rem;">
+        <summary style="cursor: pointer; color: var(--color-aged-amber);">Is a value missing?</summary>
+        <div style="margin-top: 0.75rem;">
+            {% include 'core/_reference_data_suggestion_form.html' %}
+        </div>
+    </details>
 </section>
 {% endblock %}
 

@@ -248,3 +248,54 @@ class BuyNowReviewFlowTests(TestCase):
         amount, note = estimate_listing_shipping(listing, self.buyer)
         self.assertIsNone(amount)
         self.assertEqual(note, 'Calculated at payment')
+
+
+class FormSubmitOwnershipTests(TestCase):
+    """Guards the nested-<form> regression.
+
+    `core/_reference_data_suggestion_form.html` is itself a <form>. Included
+    inside another form, the parser drops its start tag but honours its
+    </form>, which closed the host form early and orphaned everything after
+    the include -- the submit button (so clicking "Create listing" did
+    nothing at all) and, on the edit page, the whole image formset.
+    """
+
+    SUGGESTION_PARTIAL = "{% include 'core/_reference_data_suggestion_form.html' %}"
+
+    TEMPLATES = [
+        'listings/listing_create.html',
+        'listings/listing_edit.html',
+        'collections/collection_item_form.html',
+        'collections/add_from_order.html',
+        'collections/wanted_item_form.html',
+    ]
+
+    def test_suggestion_partial_is_never_nested_inside_another_form(self):
+        import re
+
+        from django.template.loader import get_template
+
+        for name in self.TEMPLATES:
+            with self.subTest(template=name):
+                source = get_template(name).template.source
+                depth = 0
+                include_depth = None
+                for match in re.finditer(
+                    r'<form\b|</form>|_reference_data_suggestion_form', source
+                ):
+                    token = match.group(0)
+                    if token == '<form':
+                        depth += 1
+                    elif token == '</form>':
+                        depth -= 1
+                    else:
+                        include_depth = depth
+                self.assertIsNotNone(
+                    include_depth, f'{name} no longer includes the suggestion partial'
+                )
+                self.assertEqual(
+                    include_depth,
+                    0,
+                    f'{name} nests the suggestion form inside another form — this '
+                    f'orphans the submit button and every field after the include',
+                )

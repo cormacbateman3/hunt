@@ -59,11 +59,32 @@
 }
 
 /* Column layout with an auto-margin footer so every card's button sits on the
-   same baseline regardless of description length. */
+   same baseline regardless of description length.
+
+   Differentiation is a top accent rule + a letterspaced label, not an icon.
+   Icon-in-a-coloured-circle is the generic SaaS-landing idiom the brand brief
+   rules out ("avoid anything that feels generic, Silicon Valley"); a ruled
+   catalogue card reads like the 1942 license book the brief asks for. */
 .feature-card {
     display: flex;
     flex-direction: column;
     text-align: left;
+    border-top: 3px solid var(--color-muted);
+}
+
+.feature-card--auction     { border-top-color: var(--color-forest-green); }
+.feature-card--store       { border-top-color: var(--color-aged-amber); }
+.feature-card--trading     { border-top-color: var(--color-hunting-rust); }
+.feature-card--collections { border-top-color: var(--color-muted); }
+
+.card-eyebrow {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    margin-bottom: 0.4rem;
 }
 
 .feature-card .card-body {
@@ -91,28 +112,6 @@
     margin-top: auto;
     padding-top: var(--space-2);
 }
-
-.card-icon {
-    width: 2.75rem;
-    height: 2.75rem;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: var(--space-2);
-    flex-shrink: 0;
-}
-
-.card-icon svg {
-    width: 1.25rem;
-    height: 1.25rem;
-    stroke: #fff;
-}
-
-.card-icon--auction     { background: var(--color-forest-green); }
-.card-icon--store       { background: var(--color-aged-amber); }
-.card-icon--trading     { background: var(--color-hunting-rust); }
-.card-icon--collections { background: var(--color-muted); }
 
 /* ── Recently listed ── */
 .recent-listings {

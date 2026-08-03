@@ -6,7 +6,7 @@ from django.views.decorators.http import require_POST
 from apps.listings.models import Listing
 from .models import Bid
 from .forms import BidForm
-from .services import place_bid
+from .services import minimum_bid_for, place_bid
 
 
 @login_required
@@ -59,7 +59,12 @@ def bid_status(request, listing_id):
         return JsonResponse({'error': 'Bid status is only available for auctions.'}, status=400)
 
     latest_bid = listing.bids.filter(is_winning=True).first()
-    minimum_bid = (listing.current_bid or listing.starting_price or 0) + 1
+    # Must come from minimum_bid_for(): this endpoint's result is polled into the
+    # page and re-read by the submit validator, so any private formula here
+    # silently overrides the displayed minimum. The old "+ 1" both hardcoded the
+    # increment and charged one even for the first bid, so a listing starting at
+    # $18 rejected an $18 bid asking for $19.
+    minimum_bid = minimum_bid_for(listing)
 
     return JsonResponse({
         'listing_id': listing.id,
