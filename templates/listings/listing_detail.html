@@ -182,6 +182,24 @@
             {% endif %}
         {% elif user.is_authenticated and is_auction %}
             <hr style="margin: 1rem 0; border: 0; border-top: 1px solid var(--color-border);">
+            {% if viewer_won_auction %}
+                {# Winner CTA mirrors the buy-now review flow (10.9). #}
+                <div class="alert alert-success">
+                    You won this auction at <strong>${{ auction_order.item_amount|floatformat:2 }}</strong>.
+                </div>
+                {% if auction_order.status == 'pending_payment' %}
+                    <a class="btn-primary" href="{% url 'listings:auction_win_review' listing.pk %}">
+                        Review &amp; pay
+                    </a>
+                {% else %}
+                    <a class="btn-secondary" href="{% url 'orders:detail' auction_order.pk %}">View your order</a>
+                {% endif %}
+            {% elif not auction_open %}
+                <p style="color: var(--color-muted);">
+                    This auction has ended.
+                    {% if auction_order %}The item is awaiting payment from the winning bidder.{% endif %}
+                </p>
+            {% else %}
             <h3 style="font-size: 1.05rem; margin-bottom: 0.75rem;">Place bid</h3>
             {% if user.profile.email_verified %}
                 <form method="post" action="{% url 'bids:create' listing.id %}" data-bid-form>
@@ -197,6 +215,7 @@
                 <p style="color: var(--color-hunting-rust);">
                     Verify your email before placing bids.
                 </p>
+            {% endif %}
             {% endif %}
             <form method="post" action="{% url 'favorites:toggle_listing' listing.pk %}" style="margin-top: 0.8rem;">
                 {% csrf_token %}

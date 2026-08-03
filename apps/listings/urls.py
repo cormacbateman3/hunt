@@ -16,6 +16,7 @@ urlpatterns = [
     path('<int:pk>/questions/<int:question_id>/flag/', views.flag_question, name='flag_question'),
     path('<int:pk>/buy-now/review/', views.buy_now_review, name='buy_now_review'),
     path('<int:pk>/buy-now/', views.buy_now_checkout_start, name='buy_now_checkout_start'),
+    path('<int:pk>/won/review/', views.auction_win_review, name='auction_win_review'),
     path('<int:pk>/', views.listing_detail, name='detail'),
     path('<int:pk>/edit/', views.listing_edit, name='edit'),
     path('my-listings/', views.my_listings, name='my_listings'),

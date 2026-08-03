@@ -67,6 +67,21 @@ def calculate_platform_fee(item_amount):
     return fee
 
 
+def build_order_amounts(item_amount):
+    """(item, platform_fee, total) for a purchase at `item_amount`.
+
+    Single source of truth for order pricing. Both purchase paths must use it:
+    close_auctions previously hardcoded platform_fee_amount=0 and
+    total=item, so the platform fee was silently lost on every auction sale
+    (shipping is added later by apply_shipping_to_order, which rebuilds the
+    total from item + platform_fee, so a zero fee stayed zero all the way to
+    the Stripe charge).
+    """
+    item_amount = Decimal(item_amount)
+    platform_fee = calculate_platform_fee(item_amount)
+    return item_amount, platform_fee, item_amount + platform_fee
+
+
 def release_stale_pending_buy_now_orders(timeout_minutes=30, limit=200):
     from .models import Order
     threshold = timezone.now() - timedelta(minutes=timeout_minutes)
@@ -93,3 +108,59 @@ def release_stale_pending_buy_now_orders(timeout_minutes=30, limit=200):
             locked_order.save(update_fields=['status', 'updated_at'])
             released_count += 1
     return released_count, threshold
+
+
+def release_unpaid_auction_wins(grace_hours=24, limit=200):
+    """Release auctions whose winner never paid.
+
+    Needed because 10.9 stopped close_auctions from delisting at close: the
+    listing now sits at 'pending' until the paid webhook, so without a release
+    an unpaid win would hold the listing in 'pending' forever (the buy-now
+    sweeper is scoped to order_type='buy_now' and cannot help).
+
+    The listing goes to 'expired', not 'active' — the auction genuinely ended,
+    so relisting is the seller's decision. Second-chance offers to the
+    next-highest bidder are deliberately out of scope; that is a product policy
+    call, not part of 10.9.
+    """
+    from apps.notifications.services import create_notification
+
+    from .models import Order
+
+    threshold = timezone.now() - timedelta(hours=grace_hours)
+    queryset = (
+        Order.objects.select_related('listing')
+        .filter(order_type='auction', status='pending_payment', created_at__lte=threshold)
+        .order_by('created_at')[:limit]
+    )
+    released = []
+    for order in queryset:
+        with transaction.atomic():
+            locked_order = Order.objects.select_for_update().select_related('listing').get(pk=order.pk)
+            listing = locked_order.listing
+            if locked_order.status != 'pending_payment' or listing.listing_type != 'auction':
+                continue
+            if listing.status == 'pending':
+                listing.status = 'expired'
+                listing.save(update_fields=['status', 'updated_at'])
+            payment = getattr(locked_order, 'payment', None)
+            if payment and payment.status in {'pending', 'processing'}:
+                payment.status = 'failed'
+                payment.save(update_fields=['status', 'updated_at'])
+            locked_order.status = 'cancelled'
+            locked_order.save(update_fields=['status', 'updated_at'])
+            released.append(locked_order)
+
+    for released_order in released:
+        create_notification(
+            user=released_order.seller,
+            notification_type='auction_expired',
+            message=(
+                f'The winning bidder on "{released_order.listing.title}" did not pay '
+                f'within {grace_hours} hours. The sale was cancelled and the listing '
+                'is no longer marked sold — you can relist it.'
+            ),
+            link_url=f'/listings/{released_order.listing_id}/',
+            dedupe_window_hours=24,
+        )
+    return len(released), threshold

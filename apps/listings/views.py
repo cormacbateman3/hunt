@@ -420,6 +420,19 @@ def listing_detail(request, pk):
         'related_listings': related_listings,
         'more_from_seller': more_from_seller,
     }
+    if listing.listing_type == 'auction':
+        # Winner CTA + "auction ended" state (10.9). Without this the bid form
+        # rendered on closed auctions and the winner had no route to payment.
+        auction_order = Order.objects.filter(listing=listing).first()
+        context.update({
+            'auction_order': auction_order,
+            'auction_open': listing.status == 'active' and listing.is_active(),
+            'viewer_won_auction': bool(
+                auction_order
+                and request.user.is_authenticated
+                and auction_order.buyer_id == request.user.id
+            ),
+        })
     if listing.listing_type == 'buy_now':
         buy_now_order = Order.objects.filter(listing=listing).first()
         can_buy_now = False
@@ -749,6 +762,48 @@ def buy_now_review(request, pk):
         'estimated_total': estimated_total,
         'buyer_address': buyer_address,
         'resume': mine and existing_order.status == 'pending_payment',
+    })
+
+
+@login_required
+def auction_win_review(request, pk):
+    """Pre-payment review for an auction winner (10.9).
+
+    The auction counterpart of buy_now_review, so both marketplaces show the
+    fee, shipping estimate and total before anyone reaches Stripe. The Order
+    already exists here — winning the auction is the commitment, unlike a
+    buy-now click — so this page reviews it rather than creating it.
+    """
+    listing = get_object_or_404(Listing, pk=pk, listing_type='auction')
+    order = Order.objects.filter(listing=listing).select_related('listing').first()
+
+    if not order:
+        messages.error(request, 'This auction has no completed sale to pay for.')
+        return redirect('listings:detail', pk=listing.pk)
+    if order.buyer_id != request.user.id:
+        messages.error(request, 'Only the winning bidder can complete this purchase.')
+        return redirect('listings:detail', pk=listing.pk)
+    if order.status != 'pending_payment':
+        messages.info(request, 'This order is no longer awaiting payment.')
+        return redirect('orders:detail', pk=order.pk)
+
+    shipping_amount, shipping_note = estimate_listing_shipping(listing, request.user)
+    estimated_total = (
+        order.item_amount + order.platform_fee_amount + (shipping_amount or Decimal('0'))
+    )
+    buyer_address = getattr(getattr(request.user, 'profile', None), 'shipping_address', None)
+
+    return render(request, 'listings/auction_win_review.html', {
+        'listing': listing,
+        'order': order,
+        'item_amount': order.item_amount,
+        'platform_fee': order.platform_fee_amount,
+        'shipping_amount': shipping_amount,
+        'shipping_note': shipping_note,
+        'shipping_is_estimate': shipping_amount is not None and shipping_note == 'Estimated',
+        'shipping_seller_pays': shipping_note == 'Seller pays shipping',
+        'estimated_total': estimated_total,
+        'buyer_address': buyer_address,
     })
 
 

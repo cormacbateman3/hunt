@@ -8,6 +8,7 @@ from django.urls import reverse
 from apps.listings.models import Listing
 from apps.bids.models import Bid
 from apps.orders.models import Order
+from apps.orders.services import build_order_amounts
 from apps.payments.models import PaymentTransaction
 from apps.notifications.services import create_notification
 
@@ -79,20 +80,27 @@ class Command(BaseCommand):
                         closed_count += 1
                         continue
 
-                    locked_listing.status = 'sold'
+                    # 10.9 consistency: a listing is delisted to 'sold' only by the
+                    # paid webhook, never at close. 'pending' means "won, awaiting
+                    # payment"; release_unpaid_auction_wins reclaims it if the
+                    # winner never pays.
+                    locked_listing.status = 'pending'
                     locked_listing.current_bid = winning_bid.amount
                     locked_listing.save(update_fields=['status', 'current_bid', 'updated_at'])
 
+                    item_amount, platform_fee, total_amount = build_order_amounts(
+                        winning_bid.amount
+                    )
                     order, _ = Order.objects.get_or_create(
                         listing=locked_listing,
                         defaults={
                             'buyer': winning_bid.bidder,
                             'seller': locked_listing.seller,
                             'order_type': 'auction',
-                            'item_amount': winning_bid.amount,
+                            'item_amount': item_amount,
                             'shipping_amount': 0,
-                            'platform_fee_amount': 0,
-                            'total_amount': winning_bid.amount,
+                            'platform_fee_amount': platform_fee,
+                            'total_amount': total_amount,
                             'status': 'pending_payment',
                             'shipping_payer': locked_listing.shipping_payer,
                         },
@@ -101,17 +109,22 @@ class Command(BaseCommand):
                         order=order,
                         defaults={'status': 'pending'},
                     )
-                    checkout_path = reverse('payments:checkout', kwargs={'order_id': order.pk})
-                    checkout_url = f"{settings.SITE_URL.rstrip('/')}{checkout_path}"
+                    # Link to the review page, not straight to Stripe — same rule
+                    # as buy-now: the buyer sees fee, shipping and total first.
+                    review_path = reverse(
+                        'listings:auction_win_review', kwargs={'pk': locked_listing.pk}
+                    )
+                    review_url = f"{settings.SITE_URL.rstrip('/')}{review_path}"
 
                     create_notification(
                         user=winning_bid.bidder,
-                        notification_type='order_created',
+                        notification_type='auction_won',
                         message=(
                             f'You won "{locked_listing.title}" for ${winning_bid.amount:.2f}. '
-                            f'Complete payment for order #{order.pk}: {checkout_url}'
+                            f'Review and complete payment: {review_url}'
                         ),
-                        link_url=f'/orders/{order.pk}/',
+                        link_url=review_path,
+                        dedupe_window_hours=1,
                     )
                     create_notification(
                         user=locked_listing.seller,

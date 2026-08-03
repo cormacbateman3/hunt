@@ -16,6 +16,14 @@
                 <a href="{% url 'orders:detail' order.pk %}">{{ order.listing.title }}</a> -
                 ${{ order.total_amount }} -
                 {{ order.get_status_display }}
+                {% if order.status == 'pending_payment' %}
+                    &middot;
+                    {% if order.order_type == 'auction' %}
+                        <a href="{% url 'listings:auction_win_review' order.listing_id %}">Review &amp; pay &rarr;</a>
+                    {% else %}
+                        <a href="{% url 'listings:buy_now_review' order.listing_id %}">Review &amp; pay &rarr;</a>
+                    {% endif %}
+                {% endif %}
             </p>
         {% empty %}
             <p>No purchases yet.</p>

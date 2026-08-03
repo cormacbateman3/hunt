@@ -10,6 +10,7 @@ from django.views.decorators.http import require_POST
 import stripe
 from apps.notifications.services import create_notification
 from apps.orders.models import Order
+from apps.orders.services import build_order_amounts
 from apps.shipping.services import ShippoError, ensure_checkout_shipping_ready
 from .models import PaymentTransaction, Transaction
 
@@ -17,16 +18,17 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
 def _get_or_create_order_from_transaction(transaction):
+    item_amount, platform_fee, total_amount = build_order_amounts(transaction.sale_amount)
     order, _ = Order.objects.get_or_create(
         listing=transaction.listing,
         defaults={
             'buyer': transaction.buyer,
             'seller': transaction.seller,
             'order_type': 'auction',
-            'item_amount': transaction.sale_amount,
+            'item_amount': item_amount,
             'shipping_amount': 0,
-            'platform_fee_amount': 0,
-            'total_amount': transaction.sale_amount,
+            'platform_fee_amount': platform_fee,
+            'total_amount': total_amount,
             'status': 'paid' if transaction.status == 'paid' else 'pending_payment',
         },
     )
@@ -202,7 +204,10 @@ def handle_payment_intent_succeeded(payment_intent):
         if order.status == 'pending_payment':
             order.status = 'paid'
             order.save(update_fields=['status', 'updated_at'])
-        if order.order_type == 'buy_now' and order.listing.status != 'sold':
+        # Both purchase types delist here and only here (10.9). Auctions used to
+        # be marked sold at close, before any payment; now close_auctions leaves
+        # them 'pending' and this is what completes the sale.
+        if order.order_type in {'buy_now', 'auction'} and order.listing.status != 'sold':
             order.listing.status = 'sold'
             order.listing.save(update_fields=['status', 'updated_at'])
 
