@@ -1,6 +1,9 @@
 :root {
     --color-forest-green: #2c4a1e;
     --color-aged-amber: #8b5e0a;
+    /* Lifted amber for accents sitting on the forest-green nav — the base
+       amber only reaches ~1.8:1 there, below the 3:1 non-text minimum. */
+    --color-aged-amber-on-dark: #d9a441;
     --color-hunting-rust: #a0391a;
     --color-parchment: #f5ecd7;
     --color-cream-white: #fafaf5;
