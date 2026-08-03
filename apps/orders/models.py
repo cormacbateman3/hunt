@@ -82,6 +82,16 @@ class Order(models.Model):
             models.Index(fields=['seller', '-created_at']),
             models.Index(fields=['status']),
         ]
+        constraints = [
+            # No self-dealing, enforced at the database. The view and service
+            # layers already refuse it, but three separate code paths create
+            # Orders and only one of them used to check — a backstop here means
+            # no future path can mint a self-purchase, whatever it forgets.
+            models.CheckConstraint(
+                check=~models.Q(buyer=models.F('seller')),
+                name='order_buyer_is_not_seller',
+            ),
+        ]
 
     def __str__(self):
         return f"Order #{self.pk} - {self.listing.title} (${self.total_amount})"

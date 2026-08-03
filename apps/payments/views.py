@@ -18,6 +18,14 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
 def _get_or_create_order_from_transaction(transaction):
+    # Legacy Transaction rows are not covered by the checkout guards, and the
+    # Order table forbids buyer == seller at the database level, so refuse
+    # here with a clear error rather than surfacing an IntegrityError.
+    if transaction.buyer_id == transaction.seller_id:
+        raise ValueError(
+            f'Transaction {transaction.pk} has the same buyer and seller; '
+            'refusing to create a self-purchase order.'
+        )
     item_amount, platform_fee, total_amount = build_order_amounts(transaction.sale_amount)
     order, _ = Order.objects.get_or_create(
         listing=transaction.listing,

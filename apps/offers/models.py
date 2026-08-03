@@ -76,6 +76,14 @@ class Offer(models.Model):
             models.Index(fields=['to_user', '-created_at']),
             models.Index(fields=['status']),
         ]
+        constraints = [
+            # An offer always has two distinct parties. Backstop for the
+            # service-layer rule that a seller cannot negotiate with themselves.
+            models.CheckConstraint(
+                check=~models.Q(from_user=models.F('to_user')),
+                name='offer_parties_are_distinct',
+            ),
+        ]
 
     def __str__(self):
         return f'Offer #{self.pk} — ${self.amount} on {self.listing_id} ({self.status})'

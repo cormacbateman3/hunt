@@ -29,15 +29,20 @@ class Command(BaseCommand):
         for listing in expired_listings:
             with transaction.atomic():
                 locked_listing = Listing.objects.select_for_update().get(pk=listing.pk)
+                # A seller's own bid can never win. Bid.save() and place_bid
+                # both refuse self-bids, so this only fires on rows predating
+                # those guards or created outside them — but letting one win
+                # would create an Order where buyer == seller.
+                eligible_bids = Bid.objects.filter(listing=locked_listing).exclude(
+                    bidder_id=locked_listing.seller_id
+                )
                 winning_bid = (
-                    Bid.objects.filter(listing=locked_listing, is_winning=True)
-                    .select_related('bidder')
-                    .first()
+                    eligible_bids.filter(is_winning=True).select_related('bidder').first()
                 )
 
                 if not winning_bid:
                     winning_bid = (
-                        Bid.objects.filter(listing=locked_listing)
+                        eligible_bids
                         .select_related('bidder')
                         .order_by('-amount', 'placed_at')
                         .first()

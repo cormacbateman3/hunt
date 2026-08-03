@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.contrib.auth.models import User
@@ -27,3 +28,18 @@ class Bid(models.Model):
 
     def __str__(self):
         return f"${self.amount} bid on {self.listing.title} by {self.bidder.username}"
+
+    def clean(self):
+        super().clean()
+        if self.bidder_id and self.listing_id and self.bidder_id == self.listing.seller_id:
+            raise ValidationError('You cannot bid on your own listing.')
+
+    def save(self, *args, **kwargs):
+        # A seller must never end up holding a bid on their own auction: such a
+        # bid can win at close and mint a self-purchase Order. The form and
+        # place_bid both refuse it; this closes the shell/admin/import paths
+        # too. Cannot be a DB CheckConstraint — the seller lives on Listing,
+        # and a check constraint cannot reach across a foreign key.
+        if self.bidder_id and self.listing_id and self.bidder_id == self.listing.seller_id:
+            raise ValidationError('You cannot bid on your own listing.')
+        return super().save(*args, **kwargs)
