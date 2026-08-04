@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Bench &middot; KeystoneBid{% endblock %}
+
+{% block context_band %}{% include 'components/_bench_tabs.html' %}{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/bench.css' %}">{% endblock %}
+
+{% block content %}
+<div class="bench-layout">
+
+    <div class="bench-main">
+        <header>
+            <h1 class="kb-page-title bench-greeting">{{ greeting }}, {{ user.profile.get_display_name|default:user.username }}</h1>
+            <p class="kb-page-lede">
+                {% if needs_you_count %}
+                    {{ needs_you_count }} thing{{ needs_you_count|pluralize }} need{{ needs_you_count|pluralize:'s,' }} you. Nothing else is on a clock.
+                {% else %}
+                    Nothing is on a clock. Everything you owe and everything owed to you is settled.
+                {% endif %}
+            </p>
+        </header>
+
+        {# ── The deadlines the platform already tracks ───────────────── #}
+        {% if needs_you %}
+            <div class="kb-rows">
+                {% for row in needs_you %}
+                    <div class="kb-row kb-row--{{ row.urgency }}">
+                        {% if row.thumb %}
+                            <img class="kb-row-thumb" src="{{ row.thumb }}" alt="" loading="lazy">
+                        {% else %}
+                            <div class="kb-row-thumb" aria-hidden="true"></div>
+                        {% endif %}
+                        <div class="kb-row-body">
+                            <span class="kb-eyebrow {% if row.urgency == 'now' %}kb-eyebrow--rust{% elif row.urgency == 'soon' %}kb-eyebrow--brass{% endif %}">{{ row.label }}</span>
+                            <span class="kb-row-title">{{ row.title }}</span>
+                            <span class="kb-row-sub">{{ row.sub }}</span>
+                        </div>
+                        <a href="{{ row.url }}"
+                           class="kb-btn {% if row.urgency == 'now' %}kb-btn--primary{% else %}kb-btn--secondary{% endif %}">{{ row.action }}</a>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="kb-empty">
+                <h2>Nothing needs you</h2>
+                <p>No payment due, nothing waiting to be posted, no offer sitting unanswered. When something lands on a clock it appears here first.</p>
+                <div class="kb-empty-actions">
+                    <a href="{% url 'hunt' %}" class="kb-btn kb-btn--primary">Go hunting</a>
+                    <a href="{% url 'listings:create' %}" class="kb-btn kb-btn--secondary">Sell an item</a>
+                </div>
+            </div>
+        {% endif %}
+
+        {# ── Closing tonight where you already collect ───────────────── #}
+        {% if closing_soon %}
+            <section class="bench-section">
+                <div class="kb-between">
+                    <h2 class="kb-h2">Closing soon{% if progress %} in {{ progress.unit_label|lower }} you collect{% endif %}</h2>
+                    <a href="{% url 'hunt' %}?tab=ending" class="kb-btn kb-btn--text">See all &rarr;</a>
+                </div>
+                <div class="kb-grid bench-closing">
+                    {% for listing in closing_soon %}
+                        {% include 'listings/_card.html' %}
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+    </div>
+
+    {# ── Side rail ───────────────────────────────────────────────────── #}
+    <aside class="bench-rail">
+        {% if progress %}
+            <section class="kb-panel">
+                <span class="kb-eyebrow">Collection progress</span>
+                <div class="bench-meter">
+                    <div class="kb-between">
+                        <span class="bench-meter-label">{{ progress.unit_label }}</span>
+                        <span class="kb-price bench-meter-value">{{ progress.unit_held }} / {{ progress.unit_total }}</span>
+                    </div>
+                    <div class="kb-meter"><span style="width: {{ progress.unit_pct }}%"></span></div>
+                </div>
+                {% if progress.year_total %}
+                    <div class="bench-meter">
+                        <div class="kb-between">
+                            <span class="bench-meter-label">{{ progress.year_label }}</span>
+                            <span class="kb-price bench-meter-value">{{ progress.year_held }} / {{ progress.year_total }}</span>
+                        </div>
+                        <div class="kb-meter kb-meter--brass"><span style="width: {{ progress.year_pct }}%"></span></div>
+                    </div>
+                {% endif %}
+                {% if progress.gaps %}
+                    <div class="kb-panel-divide bench-gaps">
+                        <span class="kb-muted bench-gaps-title">Closest gaps</span>
+                        <div class="kb-inline">
+                            {% for gap in progress.gaps %}
+                                <span class="kb-chip kb-chip--quiet kb-chip--sm">{{ gap }}</span>
+                            {% endfor %}
+                        </div>
+                        <a href="{% url 'hunt' %}?state_id={{ progress.state.id }}" class="kb-btn kb-btn--text">Hunt my gaps &rarr;</a>
+                    </div>
+                {% endif %}
+            </section>
+        {% endif %}
+
+        <section class="kb-panel kb-panel--parchment">
+            <span class="kb-eyebrow">
+                Wanted list{% if wanted_matches %} &mdash; {{ wanted_matches|length }} match{{ wanted_matches|length|pluralize:'es' }}{% endif %}
+            </span>
+            {% if wanted_matches %}
+                <div class="bench-wants">
+                    {% for listing in wanted_matches %}
+                        <a href="{{ listing.get_absolute_url }}" class="bench-want">
+                            {% if listing.featured_image %}
+                                <img src="{{ listing.featured_image.url }}" alt="" loading="lazy">
+                            {% else %}
+                                <span class="bench-want-thumb" aria-hidden="true"></span>
+                            {% endif %}
+                            <span class="kb-stack">
+                                <span class="bench-want-title">{{ listing.title|truncatechars:34 }}</span>
+                                <span class="kb-card-sub">
+                                    {% if listing.listing_type == 'trade' %}Open to trade
+                                    {% elif listing.listing_type == 'buy_now' %}Buy now &middot; ${{ listing.current_price|floatformat:2 }}
+                                    {% else %}Bid &middot; ${{ listing.current_price|floatformat:2 }}{% endif %}
+                                </span>
+                            </span>
+                        </a>
+                    {% endfor %}
+                </div>
+                <a href="{% url 'hunt' %}?tab=wants" class="kb-btn kb-btn--text">All matches &rarr;</a>
+            {% else %}
+                <p class="bench-empty-copy">A want is a standing search. Name a place, a range of years or a type, and anything listed against it turns up here.</p>
+                <a href="{% url 'collections:wanted_create' %}" class="kb-btn kb-btn--text">Add a want &rarr;</a>
+            {% endif %}
+        </section>
+
+        <section class="kb-panel">
+            <span class="kb-eyebrow">Account</span>
+            <ul class="bench-readiness">
+                {% for item in readiness %}
+                    <li>
+                        <span class="bench-check {% if item.complete %}is-done{% endif %}" aria-hidden="true">
+                            {% if item.complete %}&#10003;{% else %}&#9675;{% endif %}
+                        </span>
+                        <span>{{ item.label }}</span>
+                        {% if not item.complete and item.fix_url %}
+                            <a href="{{ item.fix_url }}" class="kb-btn kb-btn--text bench-fix">{{ item.fix_label }} &rarr;</a>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+            <p class="bench-note">Phone verification unlocks trading.</p>
+        </section>
+    </aside>
+</div>
+{% endblock %}

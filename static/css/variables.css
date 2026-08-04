@@ -1,27 +1,128 @@
+/* ==========================================================================
+   KeystoneBid design tokens
+   Source of truth: docs/internal/design/ui-ux-redesign-model — turn 1b,
+   "The shell and the design language every page inherits".
+
+   The old palette used parchment as the default card background, which is
+   what made every page read as one flat beige mass. The rule now: white
+   surfaces on a warm page; parchment is reserved for grouping and quiet
+   zones. Green is darker so white text on it is comfortable; amber warms
+   into brass and carries accents and one primary action per view.
+   ========================================================================== */
+
 :root {
-    --color-forest-green: #2c4a1e;
-    --color-aged-amber: #8b5e0a;
-    /* Lifted amber for accents sitting on the forest-green nav — the base
-       amber only reaches ~1.8:1 there, below the 3:1 non-text minimum. */
+    /* --- Core palette ---------------------------------------------------- */
+    --kb-forest: #26331f;          /* Deep Forest — nav, primary action, ink accents */
+    --kb-brass: #a07a26;           /* Brass — accents, links, the one gold action */
+    --kb-rust: #9c3d1e;            /* Rust — urgency, trade format, alerts, counts */
+    --kb-live: #2f6b34;            /* Live Green — live/positive states */
+
+    /* --- Surfaces -------------------------------------------------------- */
+    --kb-surface: #ffffff;         /* cards, panels, the working surface */
+    --kb-page: #faf8f3;            /* the warm page behind everything */
+    --kb-parchment: #f2eee4;       /* grouping + quiet zones only, never default */
+    --kb-parchment-soft: #f7f4ec;  /* panel headers */
+    --kb-chip: #f7f2e6;            /* chip / pill background */
+    --kb-field: #fdfcf8;           /* form field background on parchment */
+    --kb-cream: #f4f1e8;           /* text + marks on forest */
+
+    /* --- Rules & borders ------------------------------------------------- */
+    --kb-rule: #e3ddce;            /* card + section borders */
+    --kb-rule-strong: #cfc7b4;     /* inputs, secondary buttons */
+    --kb-rule-soft: #efeade;       /* dividers inside a panel */
+    --kb-rule-panel: #ddd7c8;      /* outer panel border on parchment */
+
+    /* --- Text ------------------------------------------------------------ */
+    --kb-ink: #1c1f18;             /* body text */
+    --kb-ink-2: #4d5245;           /* secondary text */
+    --kb-ink-3: #6b6f60;           /* muted text, inactive tabs */
+    --kb-ink-4: #8c8f80;           /* faint text, hints, counts */
+
+    /* --- Tonal states ---------------------------------------------------- */
+    --kb-live-bg: #eef3ea;
+    --kb-live-border: #cfdcc9;
+    --kb-alert-bg: #fdf1e7;
+    --kb-alert-border: #f0d4bf;
+    --kb-note-bg: #fdf6e3;
+
+    /* Placeholder hatch used wherever a license scan has not loaded. */
+    --kb-hatch: repeating-linear-gradient(45deg, #ece7db 0 7px, #e3ddce 7px 14px);
+
+    /* --- Type ------------------------------------------------------------ */
+    /* Petrona carries the field-journal warmth for titles and prices;
+       Public Sans carries all the working text, because its figures stay
+       legible at 12-14px where Georgia's muddy. */
+    --kb-font-display: Petrona, Georgia, "Times New Roman", serif;
+    --kb-font-body: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --kb-font-mono: ui-monospace, Menlo, Consolas, monospace;
+
+    --kb-text-page-title: 600 34px/1.15 var(--kb-font-display);
+    --kb-text-section: 600 19px/1.25 var(--kb-font-display);
+    --kb-text-body: 400 14px/1.65 var(--kb-font-body);
+
+    /* Uppercase label: Public Sans 700 / 0.09em */
+    --kb-label-size: 11px;
+    --kb-label-tracking: 0.09em;
+
+    /* --- Shell ----------------------------------------------------------- */
+    --kb-topbar-h: 62px;
+    --kb-band-h: 48px;
+    --kb-crumb-h: 44px;
+    --kb-page-max: 1240px;
+    --kb-gutter: 24px;
+
+    /* --- Spacing (8px scale) --------------------------------------------- */
+    --kb-1: 4px;
+    --kb-2: 8px;
+    --kb-3: 12px;
+    --kb-4: 16px;
+    --kb-5: 20px;
+    --kb-6: 24px;
+    --kb-7: 32px;
+    --kb-8: 40px;
+
+    /* --- Radii ----------------------------------------------------------- */
+    --kb-r-chip: 4px;
+    --kb-r-sm: 5px;
+    --kb-r-md: 7px;              /* buttons, inputs */
+    --kb-r-lg: 10px;             /* cards */
+    --kb-r-xl: 11px;             /* panels */
+    --kb-r-pill: 999px;
+
+    /* --- Elevation ------------------------------------------------------- */
+    --kb-shadow-panel: 0 14px 34px rgba(30, 38, 24, 0.10);
+
+    /* ---------------------------------------------------------------------
+       Legacy aliases.
+       The pre-revamp token names are still referenced across layout.css,
+       components.css and the page stylesheets. They are re-pointed at the
+       new palette so untouched pages move with the redesign instead of
+       drifting away from it. Remove an alias once its last consumer is
+       restyled; do not add new uses.
+       --------------------------------------------------------------------- */
+    --color-forest-green: var(--kb-forest);
+    --color-aged-amber: var(--kb-brass);
     --color-aged-amber-on-dark: #d9a441;
-    --color-hunting-rust: #a0391a;
-    --color-parchment: #f5ecd7;
-    --color-cream-white: #fafaf5;
-    --color-ink: #1d2617;
-    --color-border: #d6ccb5;
-    --color-muted: #5e664f;
-    --color-error: #a0391a;
-    --color-shadow: rgba(44, 74, 30, 0.12);
+    --color-hunting-rust: var(--kb-rust);
+    --color-parchment: var(--kb-parchment);
+    --color-cream-white: var(--kb-page);
+    --color-ink: var(--kb-ink);
+    --color-border: var(--kb-rule);
+    --color-muted: var(--kb-ink-3);
+    --color-error: var(--kb-rust);
+    --color-shadow: rgba(30, 38, 24, 0.10);
+    --color-surface: var(--kb-surface);
+    --color-text: var(--kb-ink);
 
-    --font-heading: Georgia, "Times New Roman", serif;
-    --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-heading: var(--kb-font-display);
+    --font-body: var(--kb-font-body);
 
-    --space-1: 0.5rem;
-    --space-2: 1rem;
-    --space-3: 1.5rem;
-    --space-4: 2rem;
-    --space-5: 3rem;
+    --space-1: var(--kb-2);
+    --space-2: var(--kb-4);
+    --space-3: var(--kb-6);
+    --space-4: var(--kb-7);
+    --space-5: var(--kb-8);
 
-    --radius-sm: 0.4rem;
-    --radius-md: 0.75rem;
+    --radius-sm: var(--kb-r-md);
+    --radius-md: var(--kb-r-xl);
 }

@@ -151,7 +151,9 @@ class BaseListingListView(ListView):
         county_id = self.request.GET.get('county_id')
         year_min = self.request.GET.get('year_min')
         year_max = self.request.GET.get('year_max')
-        search = self.request.GET.get('search')
+        # `q` is the global search in the topbar; `search` is the in-page
+        # filter field. Either can drive the same query.
+        search = self.request.GET.get('search') or self.request.GET.get('q')
 
         if state_id and state_id.isdigit():
             queryset = queryset.filter(state_id=state_id)
@@ -332,6 +334,286 @@ class TradingBlockListView(BaseListingListView):
     listing_type = 'trade'
     section_title = 'The Trading Block'
     section_description = 'Trade listings with structured negotiation.'
+
+
+def pillar_redirect(listing_type):
+    """Send an old pillar URL to Hunt with that format pre-applied.
+
+    The three browse pages were one filter bar copy-pasted across an
+    identical card grid; the only real difference was the price line on the
+    card. Anyone holding a bookmark or an inbound link lands on the same
+    result set, now inside the one catalog.
+    """
+    def _view(request):
+        params = request.GET.copy()
+        params.setlist('format', [listing_type])
+        return redirect(f"{reverse('hunt')}?{params.urlencode()}", permanent=True)
+    return _view
+
+
+# ── Hunt ────────────────────────────────────────────────────────────────
+# One catalog replacing four identical browse pages. How you'd get an item
+# is a filter, not a destination: trade availability is a property of an
+# item, not a different kind of item.
+
+HUNT_FORMATS = [
+    ('auction', 'Bid'),
+    ('buy_now', 'Buy now'),
+    ('trade', 'Open to trade'),
+]
+
+HUNT_SORTS = {
+    'ending': ('Ending soonest', ['auction_end', '-created_at']),
+    'new': ('Newly listed', ['-created_at']),
+    'price_asc': ('Price, lowest first', ['starting_price']),
+    'price_desc': ('Price, highest first', ['-starting_price']),
+}
+
+# The named sub-tabs above the rail. Each is a saved position in the same
+# catalog rather than a separate page.
+HUNT_TABS = [
+    ('all', 'All items'),
+    ('ending', 'Ending soon'),
+    ('wants', 'Matches my wants'),
+    ('new', 'Newly listed'),
+]
+
+
+class HuntView(BaseListingListView):
+    """The unified catalog. Everything for sale or trade, in one grid."""
+
+    template_name = 'listings/hunt.html'
+    section_title = 'Hunt'
+    show_map_toggle = True
+
+    def _selected_formats(self):
+        valid = {key for key, _ in HUNT_FORMATS}
+        return [f for f in self.request.GET.getlist('format') if f in valid]
+
+    def _apply_hunt_filters(self, queryset, include_format=True):
+        if include_format:
+            formats = self._selected_formats()
+            if formats:
+                queryset = queryset.filter(listing_type__in=formats)
+        if self.request.GET.get('pickup'):
+            queryset = queryset.filter(local_pickup_available=True)
+        return queryset
+
+    def get_queryset(self):
+        # The base class already handles state, unit, year, era, type and
+        # condition; Hunt adds format, pickup, the sub-tab and sorting.
+        queryset = self._apply_hunt_filters(super().get_queryset())
+
+        tab = self.request.GET.get('tab', 'all')
+        now = timezone.now()
+        if tab == 'ending':
+            queryset = queryset.filter(
+                listing_type='auction', auction_end__gt=now
+            ).order_by('auction_end')
+        elif tab == 'new':
+            queryset = queryset.order_by('-created_at')
+        elif tab == 'wants' and self.request.user.is_authenticated:
+            queryset = self._match_wanted(queryset)
+
+        sort = self.request.GET.get('sort')
+        if sort in HUNT_SORTS:
+            queryset = queryset.order_by(*HUNT_SORTS[sort][1])
+        elif tab == 'all':
+            queryset = queryset.order_by('-created_at')
+
+        return queryset
+
+    def _match_wanted(self, queryset):
+        """Narrow to listings that satisfy at least one of the viewer's wants."""
+        from apps.collections.models import WantedItem
+
+        wants = WantedItem.objects.filter(user=self.request.user)
+        if not wants.exists():
+            return queryset.none()
+
+        match = Q(pk__in=[])
+        for want in wants.select_related('state', 'county', 'license_type'):
+            clause = Q()
+            if want.state_id:
+                clause &= Q(state_id=want.state_id)
+            if want.county_id:
+                clause &= Q(county_ref_id=want.county_id)
+            if want.year_min:
+                clause &= Q(license_year__gte=want.year_min)
+            if want.year_max:
+                clause &= Q(license_year__lte=want.year_max)
+            if want.license_type_id:
+                clause &= Q(license_types__id=want.license_type_id)
+            if clause:
+                match |= clause
+
+        return queryset.filter(match).distinct()
+
+    def _facet_counts(self):
+        """Counts per format, measured with every *other* filter applied.
+
+        A collector can then see that only 57 items offer local pickup
+        before spending a click on it.
+        """
+        base = self._apply_hunt_filters(
+            super().get_queryset(), include_format=False
+        )
+        by_type = dict(
+            base.values('listing_type')
+            .annotate(n=Count('id', distinct=True))
+            .values_list('listing_type', 'n')
+        )
+        selected = self._selected_formats()
+        return [
+            {
+                'key': key,
+                'label': label,
+                'count': by_type.get(key, 0),
+                'checked': key in selected,
+            }
+            for key, label in HUNT_FORMATS
+        ]
+
+    def _pickup_count(self):
+        return (
+            self._apply_hunt_filters(super().get_queryset(), include_format=True)
+            .filter(local_pickup_available=True)
+            .distinct()
+            .count()
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        request = self.request
+
+        context['listing_condition_choices'] = Listing.CONDITION_CHOICES
+        context['hunt_formats'] = self._facet_counts()
+        context['pickup_count'] = self._pickup_count()
+        context['pickup_on'] = bool(request.GET.get('pickup'))
+        context['hunt_tabs'] = [
+            {'key': key, 'label': label,
+             'active': request.GET.get('tab', 'all') == key}
+            for key, label in HUNT_TABS
+        ]
+        context['current_tab'] = request.GET.get('tab', 'all')
+
+        sort = request.GET.get('sort')
+        context['hunt_sorts'] = [
+            {'key': key, 'label': label, 'active': sort == key}
+            for key, (label, _) in HUNT_SORTS.items()
+        ]
+        context['current_sort_label'] = (
+            HUNT_SORTS[sort][0] if sort in HUNT_SORTS else 'Newest first'
+        )
+
+        # Headline counts for the result summary line.
+        qs = self.get_queryset()
+        context['result_total'] = context['paginator'].count if context.get('paginator') else qs.count()
+        context['result_bidding'] = qs.filter(listing_type='auction').count()
+        context['result_trade'] = qs.filter(listing_type='trade').count()
+
+        context['applied_filters'] = self._applied_filters(context)
+        context['hunt_title'] = self._hunt_title(context)
+
+        # Query string minus the sub-tab, so tab links preserve filters.
+        tab_params = request.GET.copy()
+        tab_params.pop('tab', None)
+        tab_params.pop('page', None)
+        context['hunt_query'] = tab_params.urlencode()
+
+        return context
+
+    def _query_without(self, **drop):
+        """A querystring with specific filter values removed, for chip ×."""
+        params = self.request.GET.copy()
+        params.pop('page', None)
+        for key, value in drop.items():
+            if value is None:
+                params.pop(key, None)
+            else:
+                remaining = [v for v in params.getlist(key) if v != value]
+                params.setlist(key, remaining)
+                if not remaining:
+                    params.pop(key, None)
+        encoded = params.urlencode()
+        return f'?{encoded}' if encoded else '?'
+
+    def _applied_filters(self, context):
+        """The chip row under the heading — every active filter, removable."""
+        chips = []
+        labels = dict(HUNT_FORMATS)
+        for fmt in self._selected_formats():
+            chips.append({'label': labels[fmt], 'url': self._query_without(format=fmt)})
+
+        selected_state = context.get('selected_state')
+        if self.request.GET.get('state_id') and selected_state:
+            chips.append({'label': selected_state.name,
+                          'url': self._query_without(state_id=None)})
+
+        unit_id = self.request.GET.get('county_id')
+        if unit_id and unit_id.isdigit():
+            unit = GeographicUnit.objects.filter(pk=unit_id).first()
+            if unit:
+                chips.append({'label': unit.name,
+                              'url': self._query_without(county_id=None)})
+
+        year_min = self.request.GET.get('year_min')
+        year_max = self.request.GET.get('year_max')
+        if year_min or year_max:
+            chips.append({
+                'label': f"{year_min or '…'}–{year_max or '…'}",
+                'url': self._query_without(year_min=None, year_max=None),
+            })
+
+        for era in self.request.GET.getlist('era'):
+            chips.append({'label': era, 'url': self._query_without(era=era)})
+
+        conditions = self.request.GET.getlist('condition')
+        if conditions:
+            grades = dict(Listing.CONDITION_CHOICES)
+            chips.append({
+                'label': ', '.join(grades.get(c, c) for c in conditions),
+                'url': self._query_without(condition=None),
+            })
+
+        for group in context.get('license_type_groups', []):
+            for type_id in group['selected_ids']:
+                match = next((t for t in group['types'] if str(t.id) == type_id), None)
+                if match:
+                    chips.append({
+                        'label': match.name,
+                        'url': self._query_without(**{group['filter_key']: type_id}),
+                    })
+
+        if self.request.GET.get('pickup'):
+            chips.append({'label': 'Local pickup',
+                          'url': self._query_without(pickup=None)})
+
+        return chips
+
+    def _hunt_title(self, context):
+        """Name the result set after what was actually asked for."""
+        unit_id = self.request.GET.get('county_id')
+        unit = GeographicUnit.objects.filter(pk=unit_id).first() if unit_id and unit_id.isdigit() else None
+        year_min = self.request.GET.get('year_min')
+        year_max = self.request.GET.get('year_max')
+
+        if unit:
+            head = unit.display_name if hasattr(unit, 'display_name') else unit.name
+        elif context.get('selected_state') and self.request.GET.get('state_id'):
+            head = context['selected_state'].name
+        elif self.request.GET.get('q') or self.request.GET.get('search'):
+            head = self.request.GET.get('q') or self.request.GET.get('search')
+        else:
+            head = 'Everything for sale or trade'
+
+        if year_min and year_max:
+            return f'{head}, {year_min}–{year_max}'
+        if year_min:
+            return f'{head}, {year_min} onwards'
+        if year_max:
+            return f'{head}, up to {year_max}'
+        return head
 
 
 def listing_detail(request, pk):

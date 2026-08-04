@@ -1,0 +1,16 @@
+{% comment %}
+Band 2 for Hunt — named positions in the one catalog.
+
+Each tab is a saved position in the same result set, not a separate index.
+Filters carry across, which is why every link re-emits the current query.
+{% endcomment %}
+<nav class="kb-context" aria-label="Hunt views">
+    <div class="kb-band-inner">
+        {% for tab in hunt_tabs %}
+            <a href="?{% if hunt_query %}{{ hunt_query }}&amp;{% endif %}tab={{ tab.key }}"
+               class="kb-tab" {% if tab.active %}aria-current="page"{% endif %}>{{ tab.label }}</a>
+        {% endfor %}
+        <div class="kb-context-spacer"></div>
+        <span class="kb-context-note">{{ result_total }} item{{ result_total|pluralize }}</span>
+    </div>
+</nav>

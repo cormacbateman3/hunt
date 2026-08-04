@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ hunt_title }} &middot; Hunt &middot; KeystoneBid{% endblock %}
+
+{% block context_band %}{% include 'components/_hunt_tabs.html' %}{% endblock %}
+
+{% block main_class %}kb-hunt{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/hunt.css' %}">{% endblock %}
+
+{% block content %}
+<form method="get" id="hunt-filters">
+    {% comment %}
+    Carry the sub-tab and the global search term through every filter submit,
+    so refining never silently drops you back to All items.
+    {% endcomment %}
+    {% if current_tab and current_tab != 'all' %}<input type="hidden" name="tab" value="{{ current_tab }}">{% endif %}
+    {% if request.GET.q %}<input type="hidden" name="q" value="{{ request.GET.q }}">{% endif %}
+
+    <div class="hunt-layout">
+
+        {% comment %}
+        Refine rail. Nine dropdowns became a persistent rail with result
+        counts, so a collector can see that only N items offer local pickup
+        before spending a click on it.
+        {% endcomment %}
+        <aside class="hunt-rail" aria-label="Refine results">
+            <div class="kb-between">
+                <span class="kb-eyebrow">Refine</span>
+                <a href="{% url 'hunt' %}" class="hunt-clear">Clear all</a>
+            </div>
+
+            <section class="hunt-facet">
+                <h2 class="hunt-facet-title">How you&rsquo;d get it</h2>
+                {% for fmt in hunt_formats %}
+                    <label class="kb-check">
+                        <span class="kb-check-label">
+                            <input type="checkbox" name="format" value="{{ fmt.key }}"
+                                   {% if fmt.checked %}checked{% endif %}>
+                            {{ fmt.label }}
+                        </span>
+                        <span class="kb-check-count">{{ fmt.count }}</span>
+                    </label>
+                {% endfor %}
+                <label class="kb-check">
+                    <span class="kb-check-label">
+                        <input type="checkbox" name="pickup" value="1" {% if pickup_on %}checked{% endif %}>
+                        Local pickup offered
+                    </span>
+                    <span class="kb-check-count">{{ pickup_count }}</span>
+                </label>
+            </section>
+
+            <section class="hunt-facet">
+                <h2 class="hunt-facet-title">Where it was issued</h2>
+                <select name="state_id" class="kb-select" onchange="this.form.submit()">
+                    {% for state in states %}
+                        <option value="{{ state.id }}" {% if selected_state.id == state.id %}selected{% endif %}>{{ state.name }}</option>
+                    {% endfor %}
+                </select>
+                {% if counties %}
+                    <select name="county_id" class="kb-select" onchange="this.form.submit()">
+                        <option value="">
+                            {% if selected_state %}Search {{ counties|length }} {{ selected_state.issuance_unit_label|lower }}s&hellip;{% else %}All units&hellip;{% endif %}
+                        </option>
+                        {% for unit in counties %}
+                            <option value="{{ unit.id }}" {% if filters.county_id == unit.id|stringformat:'s' %}selected{% endif %}>{{ unit.name }}</option>
+                        {% endfor %}
+                    </select>
+                {% endif %}
+            </section>
+
+            <section class="hunt-facet">
+                <h2 class="hunt-facet-title">Year</h2>
+                <div class="hunt-range">
+                    <input type="number" name="year_min" class="kb-input" placeholder="From"
+                           value="{{ filters.year_min }}" inputmode="numeric">
+                    <span class="kb-faint">to</span>
+                    <input type="number" name="year_max" class="kb-input" placeholder="To"
+                           value="{{ filters.year_max }}" inputmode="numeric">
+                </div>
+                <div class="kb-inline">
+                    {% for era_value, era_label in era_choices %}
+                        <label class="kb-chip kb-chip--sm {% if era_value in filters.era_list %}is-on{% endif %}">
+                            <input type="checkbox" name="era" value="{{ era_value }}" class="kb-sr"
+                                   {% if era_value in filters.era_list %}checked{% endif %}>
+                            {{ era_label }}
+                        </label>
+                    {% endfor %}
+                </div>
+            </section>
+
+            {% for group in license_type_groups %}
+                <section class="hunt-facet">
+                    <h2 class="hunt-facet-title">{{ group.label }}</h2>
+                    {% for type in group.types|slice:':6' %}
+                        <label class="kb-check">
+                            <span class="kb-check-label">
+                                <input type="checkbox" name="{{ group.filter_key }}" value="{{ type.id }}"
+                                       {% if type.id|stringformat:'s' in group.selected_ids %}checked{% endif %}>
+                                {{ type.name }}
+                            </span>
+                        </label>
+                    {% endfor %}
+                    {% if group.types|length > 6 %}
+                        <details class="hunt-more">
+                            <summary>{{ group.types|length|add:'-6' }} more</summary>
+                            {% for type in group.types|slice:'6:' %}
+                                <label class="kb-check">
+                                    <span class="kb-check-label">
+                                        <input type="checkbox" name="{{ group.filter_key }}" value="{{ type.id }}"
+                                               {% if type.id|stringformat:'s' in group.selected_ids %}checked{% endif %}>
+                                        {{ type.name }}
+                                    </span>
+                                </label>
+                            {% endfor %}
+                        </details>
+                    {% endif %}
+                </section>
+            {% endfor %}
+
+            <section class="hunt-facet">
+                <h2 class="hunt-facet-title">Condition</h2>
+                <div class="kb-inline">
+                    {% for value, label in listing_condition_choices %}
+                        <label class="kb-chip kb-chip--sm {% if value in filters.condition_list %}is-on{% endif %}">
+                            <input type="checkbox" name="condition" value="{{ value }}" class="kb-sr"
+                                   {% if value in filters.condition_list %}checked{% endif %}>
+                            {{ label }}
+                        </label>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <button type="submit" class="kb-btn kb-btn--primary kb-btn--block">Apply</button>
+        </aside>
+
+        {# ── Results ────────────────────────────────────────────────── #}
+        <div class="hunt-results">
+            <header class="hunt-head">
+                <div>
+                    <h1 class="kb-page-title hunt-title">{{ hunt_title }}</h1>
+                    <p class="kb-page-lede">
+                        {{ result_total }} item{{ result_total|pluralize }}
+                        {% if result_bidding %} &middot; {{ result_bidding }} taking bids{% endif %}
+                        {% if result_trade %} &middot; {{ result_trade }} open to trade{% endif %}
+                    </p>
+                </div>
+                <div class="kb-inline">
+                    <select name="sort" class="kb-select hunt-sort" onchange="this.form.submit()">
+                        {% for sort in hunt_sorts %}
+                            <option value="{{ sort.key }}" {% if sort.active %}selected{% endif %}>{{ sort.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </header>
+
+            {% if applied_filters %}
+                <div class="hunt-chips">
+                    <span class="kb-faint">Filters</span>
+                    {% for chip in applied_filters %}
+                        <a href="{{ chip.url }}" class="kb-chip is-on">{{ chip.label }} <span class="kb-chip-x" aria-hidden="true">&times;</span><span class="kb-sr">Remove filter</span></a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% if listings %}
+                <div class="kb-grid">
+                    {% for listing in listings %}
+                        {% include 'listings/_card.html' %}
+                    {% endfor %}
+                </div>
+
+                {% if is_paginated %}
+                    <nav class="hunt-pages" aria-label="Pagination">
+                        {% if page_obj.has_previous %}
+                            <a class="kb-btn kb-btn--secondary" href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>
+                        {% endif %}
+                        <span class="kb-faint">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                        {% if page_obj.has_next %}
+                            <a class="kb-btn kb-btn--secondary" href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next</a>
+                        {% endif %}
+                    </nav>
+                {% endif %}
+
+            {% elif current_tab == 'wants' %}
+                <div class="kb-empty">
+                    <h2>Nothing matches your wanted list yet</h2>
+                    <p>A want is a standing search: name a {{ selected_state.issuance_unit_label|lower|default:'county' }}, a range of years or a type, and anything listed against it turns up here and in your Bench.</p>
+                    <div class="kb-empty-actions">
+                        <a href="{% url 'collections:wanted_create' %}" class="kb-btn kb-btn--primary">Add a want</a>
+                        <a href="?tab=all" class="kb-btn kb-btn--secondary">Browse everything</a>
+                    </div>
+                </div>
+            {% else %}
+                <div class="kb-empty">
+                    <h2>Nothing here yet</h2>
+                    <p>No item matches all of those filters at once. Widening the year range or clearing a type usually finds the nearest thing.</p>
+                    <div class="kb-empty-actions">
+                        <a href="{% url 'hunt' %}" class="kb-btn kb-btn--primary">Clear all filters</a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Checkbox chips submit the rail so a filter never needs two clicks.
+    document.querySelectorAll('#hunt-filters input[type="checkbox"]').forEach((box) => {
+        box.addEventListener('change', () => box.form.submit());
+    });
+</script>
+{% endblock %}

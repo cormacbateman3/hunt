@@ -5,12 +5,15 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from django.core.cache import cache
 from django.core.mail import send_mail
+from django.db.models import Count, Max, Q
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
+from .bench import needs_you
 from .forms import UserRegistrationForm, UserProfileForm, AddressForm
 from .models import UserProfile, Address
+from apps.core.models import GeographicUnit, State
 from apps.listings.models import Listing
 from apps.bids.models import Bid
 from apps.orders.models import Order
@@ -243,6 +246,141 @@ def dashboard(request):
         'readiness': request.user.profile.account_readiness,
     }
     return render(request, 'accounts/dashboard.html', context)
+
+
+@login_required
+def bench(request):
+    """My Bench → Needs you — the page a returning collector lands on.
+
+    Three things need you, or none do. Everything that used to hide in the
+    username dropdown is a visible tab beside it.
+    """
+    user = request.user
+    rows = needs_you(user)
+
+    hour = timezone.localtime().hour
+    if hour < 12:
+        greeting = 'Morning'
+    elif hour < 17:
+        greeting = 'Afternoon'
+    else:
+        greeting = 'Evening'
+
+    context = {
+        'greeting': greeting,
+        'needs_you': rows,
+        'needs_you_count': len(rows),
+        'readiness': user.profile.account_readiness,
+        'closing_soon': _closing_in_my_units(user),
+        'wanted_matches': _wanted_matches(user),
+        'progress': _collection_progress(user),
+    }
+    return render(request, 'accounts/bench.html', context)
+
+
+def _primary_state(user):
+    """The state this collector actually collects, not the one they live in."""
+    top = (
+        CollectionItem.objects.filter(owner=user, state__isnull=False)
+        .values('state')
+        .annotate(n=Count('id'))
+        .order_by('-n')
+        .first()
+    )
+    if top:
+        return State.objects.filter(pk=top['state']).first()
+    profile_state = getattr(user.profile, 'state', None)
+    return profile_state or State.objects.filter(is_primary_default=True).first()
+
+
+def _collection_progress(user):
+    """Ground covered, in the state's own vocabulary.
+
+    Pennsylvania issues by county; other states issue by GMU, WMD or hunt
+    area. Reading ``issuance_unit_label`` keeps "county" out of the
+    interface everywhere it would be wrong.
+    """
+    state = _primary_state(user)
+    if not state:
+        return None
+
+    items = CollectionItem.objects.filter(owner=user, state=state)
+
+    unit_total = GeographicUnit.objects.filter(state=state, is_statewide=False).count()
+    unit_held = items.filter(county__isnull=False).values('county').distinct().count()
+
+    first_year = state.licensing_start_year or state.min_license_year
+    years = items.filter(license_year__isnull=False)
+    year_held = years.values('license_year').distinct().count()
+    last_year = years.aggregate(Max('license_year'))['license_year__max']
+    year_total = (last_year - first_year + 1) if (first_year and last_year and last_year >= first_year) else 0
+
+    held_ids = set(items.filter(county__isnull=False).values_list('county_id', flat=True))
+    gaps = list(
+        GeographicUnit.objects.filter(state=state, is_statewide=False)
+        .exclude(id__in=held_ids)
+        .order_by('sort_order', 'name')
+        .values_list('name', flat=True)[:5]
+    )
+
+    return {
+        'state': state,
+        'unit_label': f'{state.issuance_unit_label}s',
+        'unit_held': unit_held,
+        'unit_total': unit_total,
+        'unit_pct': round(unit_held / unit_total * 100) if unit_total else 0,
+        'year_label': f'Years {first_year}–{last_year}' if first_year and last_year else 'Years',
+        'year_held': year_held,
+        'year_total': year_total,
+        'year_pct': round(year_held / year_total * 100) if year_total else 0,
+        'gaps': gaps,
+    }
+
+
+def _closing_in_my_units(user, limit=3):
+    """Auctions closing soonest in the units this collector already holds."""
+    held = set(
+        CollectionItem.objects.filter(owner=user, county__isnull=False)
+        .values_list('county_id', flat=True)
+    )
+    qs = Listing.objects.filter(
+        status='active', listing_type='auction', auction_end__gt=timezone.now()
+    ).exclude(seller=user).select_related('county_ref', 'state')
+    if held:
+        qs = qs.filter(county_ref_id__in=held)
+    return list(qs.order_by('auction_end')[:limit])
+
+
+def _wanted_matches(user, limit=2):
+    """Live listings that satisfy one of this collector's wants."""
+    wants = WantedItem.objects.filter(user=user).select_related('state', 'county')
+    if not wants.exists():
+        return []
+
+    match = Q(pk__in=[])
+    for want in wants:
+        clause = Q()
+        if want.state_id:
+            clause &= Q(state_id=want.state_id)
+        if want.county_id:
+            clause &= Q(county_ref_id=want.county_id)
+        if want.year_min:
+            clause &= Q(license_year__gte=want.year_min)
+        if want.year_max:
+            clause &= Q(license_year__lte=want.year_max)
+        if want.license_type_id:
+            clause &= Q(license_types__id=want.license_type_id)
+        if clause:
+            match |= clause
+
+    return list(
+        Listing.objects.filter(status='active')
+        .filter(match)
+        .exclude(seller=user)
+        .select_related('county_ref')
+        .distinct()
+        .order_by('-created_at')[:limit]
+    )
 
 
 def verify_email(request, token):

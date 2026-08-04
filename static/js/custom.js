@@ -129,32 +129,38 @@ async function pollJson(endpoint, callback, intervalMs = 10000) {
 }
 
 function initNav() {
-    // Hamburger toggle
-    const hamburger = document.getElementById('hamburger-btn');
-    const nav = document.querySelector('.site-nav');
-    if (hamburger && nav) {
-        hamburger.addEventListener('click', () => {
-            const open = nav.classList.toggle('nav-open');
-            hamburger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    // Mobile toggle for the three destinations
+    const toggle = document.getElementById('kb-nav-toggle');
+    const topbar = document.getElementById('kb-topbar');
+    if (toggle && topbar) {
+        toggle.addEventListener('click', () => {
+            const open = topbar.classList.toggle('is-open');
+            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
         });
     }
 
-    // User menu dropdown
-    const userMenuBtns = document.querySelectorAll('.user-menu-btn');
-    userMenuBtns.forEach((btn) => {
-        const menu = btn.closest('.user-menu');
-        if (!menu) return;
-        btn.addEventListener('click', (e) => {
+    // Account menu — profile, settings, sign out and nothing else
+    const account = document.getElementById('kb-account');
+    const accountBtn = account ? account.querySelector('.kb-avatar') : null;
+    if (account && accountBtn) {
+        accountBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            const open = menu.classList.toggle('is-open');
-            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            const open = account.classList.toggle('is-open');
+            accountBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
         });
-    });
-    // Close dropdowns on outside click
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && account.classList.contains('is-open')) {
+                account.classList.remove('is-open');
+                accountBtn.setAttribute('aria-expanded', 'false');
+                accountBtn.focus();
+            }
+        });
+    }
+
     document.addEventListener('click', () => {
-        document.querySelectorAll('.user-menu.is-open').forEach((m) => {
+        document.querySelectorAll('.kb-account.is-open').forEach((m) => {
             m.classList.remove('is-open');
-            const btn = m.querySelector('.user-menu-btn');
+            const btn = m.querySelector('.kb-avatar');
             if (btn) btn.setAttribute('aria-expanded', 'false');
         });
     });

@@ -1,3 +1,4 @@
+from datetime import timedelta
 from decimal import Decimal
 
 from django.core.validators import MinValueValidator
@@ -259,6 +260,15 @@ class Listing(models.Model):
         if self.listing_type == 'auction' and self.is_active():
             return self.auction_end - timezone.now()
         return None
+
+    def ends_soon(self, within_hours=4):
+        """True when the countdown should read as urgent rather than neutral.
+
+        Urgency without anxiety: the badge only turns rust once a bid
+        decision genuinely can't wait, so a two-day timer doesn't shout.
+        """
+        remaining = self.time_remaining()
+        return remaining is not None and remaining <= timedelta(hours=within_hours)
 
     def current_price(self):
         """Get current price (highest bid or starting price)"""

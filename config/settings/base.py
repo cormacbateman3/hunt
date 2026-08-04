@@ -79,6 +79,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.media',
+                'apps.core.context_processors.shell',
                 'apps.notifications.context_processors.notifications_nav',
                 'apps.messaging.context_processors.messaging_nav',
             ],

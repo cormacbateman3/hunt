@@ -1,0 +1,62 @@
+{% comment %}
+The listing card.
+
+One grid holds auctions, buy-now and trades, so every card states its format
+in the top-left corner. On a trade card, what the owner wants sits where a
+price would — that is the information a trader is actually scanning for.
+{% endcomment %}
+<a href="{{ listing.get_absolute_url }}" class="kb-card">
+    <div class="kb-card-media">
+        {% if listing.listing_type == 'auction' %}
+            <span class="kb-badge kb-badge--auction">Auction</span>
+        {% elif listing.listing_type == 'buy_now' %}
+            <span class="kb-badge kb-badge--buynow">Buy now</span>
+        {% else %}
+            <span class="kb-badge kb-badge--trade">Trade</span>
+        {% endif %}
+
+        {% if listing.featured_image %}
+            <img src="{{ listing.featured_image.url }}" alt="{{ listing.title }}" loading="lazy">
+        {% else %}
+            <span class="kb-card-placeholder">no scan yet</span>
+        {% endif %}
+    </div>
+
+    <div class="kb-card-body">
+        <h3 class="kb-card-title">{{ listing.title }}</h3>
+        <span class="kb-card-meta">
+            {% if listing.county_ref %}{{ listing.county_ref.name }} &middot; {% endif %}
+            {% if listing.license_year %}{{ listing.license_year }}{% else %}{{ listing.effective_era }}{% endif %}
+            {% if listing.resident_status != 'unknown' %} &middot; {{ listing.get_resident_status_display }}{% endif %}
+        </span>
+        <span class="kb-card-meta">{{ listing.get_condition_grade_display }}</span>
+
+        <div class="kb-card-foot">
+            <div class="kb-stack">
+                {% if listing.listing_type == 'trade' %}
+                    <span class="kb-card-wants">
+                        {% if listing.trade_notes %}Wants: {{ listing.trade_notes|truncatechars:38 }}
+                        {% else %}Open to offers{% endif %}
+                    </span>
+                    <span class="kb-card-sub">{% if listing.allow_cash %}Cash boot OK{% else %}No cash{% endif %}</span>
+                {% else %}
+                    <span class="kb-price kb-card-price">${{ listing.current_price|floatformat:2 }}</span>
+                    <span class="kb-card-sub">
+                        {% if listing.listing_type == 'auction' %}
+                            {{ listing.bids.count }} bid{{ listing.bids.count|pluralize }}
+                        {% elif listing.local_pickup_available and listing.local_pickup_location %}
+                            Local pickup &middot; {{ listing.local_pickup_location }}
+                        {% endif %}
+                    </span>
+                {% endif %}
+            </div>
+
+            {% if listing.listing_type == 'auction' and listing.auction_end %}
+                <span class="kb-badge {% if listing.ends_soon %}kb-badge--urgent{% else %}kb-badge--neutral{% endif %}"
+                      data-auction-end="{{ listing.auction_end|date:'c' }}">
+                    {{ listing.auction_end|timeuntil }}
+                </span>
+            {% endif %}
+        </div>
+    </div>
+</a>

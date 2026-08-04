@@ -1,0 +1,34 @@
+{% comment %}
+Band 2 for My Bench — the workspace tabs.
+
+These are the old username dropdown, promoted. The dropdown was the reason
+nothing felt connected: it hid state behind a click. Tabs are always visible,
+and the one that can be waiting on you carries its count.
+{% endcomment %}
+{% with view=request.resolver_match.view_name %}
+<nav class="kb-context" aria-label="My Bench">
+    <div class="kb-band-inner">
+        <a href="{% url 'bench' %}" class="kb-tab"
+           {% if view == 'bench' %}aria-current="page"{% endif %}>
+            Needs you
+            {% if bench_needs_count %}<span class="kb-tab-count">{{ bench_needs_count }}</span>{% endif %}
+        </a>
+        <a href="{% url 'bids:my_bids' %}" class="kb-tab"
+           {% if view == 'bids:my_bids' or view == 'offers:mine' %}aria-current="page"{% endif %}>Bids &amp; offers</a>
+        <a href="{% url 'orders:my_orders' %}" class="kb-tab"
+           {% if view == 'orders:my_orders' or view == 'orders:detail' %}aria-current="page"{% endif %}>Orders</a>
+        <a href="{% url 'listings:my_listings' %}" class="kb-tab"
+           {% if view == 'listings:my_listings' %}aria-current="page"{% endif %}>My listings</a>
+        <a href="{% url 'collections:my_collection' %}" class="kb-tab"
+           {% if view == 'collections:my_collection' %}aria-current="page"{% endif %}>My collection</a>
+        <a href="{% url 'collections:my_collection' %}#wanted" class="kb-tab">Wanted list</a>
+        <a href="{% url 'favorites:list' %}" class="kb-tab"
+           {% if view == 'favorites:list' %}aria-current="page"{% endif %}>Saved</a>
+        <a href="{% url 'messaging:inbox' %}" class="kb-tab"
+           {% if view == 'messaging:inbox' %}aria-current="page"{% endif %}>
+            Messages
+            {% if nav_unread_message_count %}<span class="kb-tab-count">{{ nav_unread_message_count }}</span>{% endif %}
+        </a>
+    </div>
+</nav>
+{% endwith %}
