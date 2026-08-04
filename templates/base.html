@@ -26,7 +26,8 @@
 </head>
 <body>
 
-{# ── Band 1 — topbar ─────────────────────────────────────────────────── #}
+{% block masthead %}
+{# ── Band 1 — topbar. Home overrides this with the full 158px masthead. ── #}
 <header class="kb-topbar" id="kb-topbar">
     <div class="kb-band-inner">
         <a href="{% url 'home' %}" class="kb-brand">
@@ -111,6 +112,7 @@
         </div>
     </div>
 </header>
+{% endblock %}
 
 {# ── Band 2 — contextual: sub-tabs in Hunt, workspace tabs in My Bench ── #}
 {% block context_band %}{% endblock %}

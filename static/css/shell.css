@@ -606,3 +606,212 @@ body {
         padding-right: var(--kb-4);
     }
 }
+
+/* ==========================================================================
+   The full masthead — home only, 158px
+   Spec: design turn 2a. Three bands: 32px strapline, 82px nameplate, 42px
+   nav rule. A broadsheet nameplate, not an app bar.
+   ========================================================================== */
+
+.kb-masthead {
+    background: var(--kb-forest);
+    color: var(--kb-cream);
+}
+
+.kb-masthead-inner {
+    max-width: var(--kb-page-max);
+    margin: 0 auto;
+    padding: 0 var(--kb-gutter);
+    height: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.kb-spacer { flex: 1; }
+
+/* ── Band 1 — the strapline ──────────────────────────────────────────── */
+.kb-masthead-strap {
+    height: 32px;
+    border-bottom: 1px solid rgba(160, 122, 38, 0.30);
+}
+
+.kb-strap-line {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.17em;
+    text-transform: uppercase;
+    color: rgba(244, 241, 232, 0.55);
+}
+
+.kb-strap-date,
+.kb-strap-link {
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    color: rgba(244, 241, 232, 0.55);
+    text-decoration: none;
+    font-variant-numeric: tabular-nums;
+}
+
+.kb-strap-link:hover { color: var(--kb-cream); }
+
+.kb-strap-rule {
+    width: 1px;
+    height: 11px;
+    background: rgba(244, 241, 232, 0.25);
+    margin: 0 12px;
+}
+
+/* ── Band 2 — the nameplate ──────────────────────────────────────────── */
+.kb-masthead-plate {
+    height: 82px;
+}
+
+.kb-masthead-plate .kb-masthead-inner { gap: 22px; }
+
+.kb-nameplate {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    flex-shrink: 0;
+    text-decoration: none;
+}
+
+.kb-nameplate img {
+    width: 32px;
+    height: 32px;
+    display: block;
+    flex-shrink: 0;
+}
+
+.kb-nameplate-word {
+    font-family: var(--kb-font-display);
+    font-size: 33px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1;
+    color: var(--kb-cream);
+}
+
+.kb-nameplate-est {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(160, 122, 38, 0.95);
+    margin-top: 4px;
+}
+
+.kb-search--plate {
+    flex: 0 0 420px;
+    max-width: 420px;
+    margin-left: 0;
+    height: 38px;
+}
+
+.kb-search--plate input { font-size: 12.5px; }
+
+.kb-plate-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-shrink: 0;
+}
+
+.kb-plate-alert {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    text-decoration: none;
+    color: rgba(244, 241, 232, 0.8);
+}
+
+.kb-plate-alert:hover { color: var(--kb-cream); }
+
+.kb-plate-alert svg { width: 15px; height: 15px; }
+
+.kb-plate-alert span:not([class]) {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+}
+
+.kb-plate-rule {
+    width: 1px;
+    height: 24px;
+    background: rgba(244, 241, 232, 0.18);
+}
+
+.kb-plate-user {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    text-decoration: none;
+    color: rgba(244, 241, 232, 0.8);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.kb-plate-user:hover { color: var(--kb-cream); }
+
+.kb-plate-user .kb-avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 12px;
+    cursor: default;
+}
+
+/* ── Band 3 — the zones ──────────────────────────────────────────────── */
+.kb-masthead-nav {
+    height: 42px;
+    border-top: 1px solid rgba(244, 241, 232, 0.13);
+    background: var(--kb-forest-deep);
+}
+
+.kb-masthead-nav .kb-masthead-inner { align-items: stretch; }
+
+.kb-masthead-nav .kb-dest {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    box-shadow: none;
+}
+
+.kb-masthead-nav .kb-dest:first-of-type { padding-left: 0; }
+
+.kb-masthead-nav .kb-dest[aria-current="page"] {
+    box-shadow: inset 0 -2px 0 var(--kb-brass);
+}
+
+.kb-masthead-stats {
+    display: flex;
+    align-items: center;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: rgba(244, 241, 232, 0.5);
+    font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 900px) {
+    .kb-search--plate,
+    .kb-masthead-stats,
+    .kb-plate-user span:not([class]) { display: none; }
+
+    .kb-masthead-plate { height: 68px; }
+    .kb-nameplate-word { font-size: 26px; }
+    .kb-plate-right { gap: 12px; }
+
+    .kb-masthead-nav .kb-masthead-inner {
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+    .kb-masthead-nav .kb-masthead-inner::-webkit-scrollbar { display: none; }
+}
+
+@media (max-width: 560px) {
+    .kb-strap-line { display: none; }
+    .kb-masthead-inner { padding: 0 var(--kb-4); }
+    .kb-plate-alert span:not([class]) { display: none; }
+}

@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}KeystoneBid &middot; Antique Hunting Licenses, Bought, Sold and Traded{% endblock %}
+
+{% block masthead %}{% include 'components/_masthead.html' %}{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/home.css' %}">{% endblock %}
+
+{% block content %}
+
+{% comment %}
+Home, not signed in — turn 2c. A different page, not the same page with the
+greeting removed. A stranger needs telling what this is; a member needs
+telling what changed.
+{% endcomment %}
+
+<section class="hm-hero">
+    <div class="hm-hero-copy">
+        <span class="kb-eyebrow kb-eyebrow--brass">Est. 2026 &middot; Pennsylvania</span>
+        <h1 class="hm-hero-title">A licence is a cheap thing to own, and the only one your grandfather carried.</h1>
+        <p class="hm-hero-lede">
+            Antique and vintage hunting licences, bought, sold and traded by the people
+            who collect them. Sellers set their own terms &mdash; we are never the
+            auctioneer. Only expired licences change hands here.
+        </p>
+        <div class="kb-inline hm-hero-actions">
+            <a href="{% url 'accounts:register' %}" class="kb-btn kb-btn--gold kb-btn--lg">Join the community</a>
+            <a href="{% url 'hunt' %}" class="kb-btn kb-btn--secondary kb-btn--lg">Look around first</a>
+        </div>
+        <p class="hm-hero-fine">Free to join, to browse and to trade. Sellers pay a commission when something sells.</p>
+    </div>
+
+    <div class="hm-hero-stats">
+        <div class="hm-stat">
+            <span class="hm-stat-figure">{{ stat_listings }}</span>
+            <span class="hm-stat-label">licence{{ stat_listings|pluralize }} listed</span>
+        </div>
+        <div class="hm-stat">
+            <span class="hm-stat-figure">{{ stat_units }}</span>
+            <span class="hm-stat-label">count{{ stat_units|pluralize:"y,ies" }} represented</span>
+        </div>
+        <div class="hm-stat">
+            <span class="hm-stat-figure">{{ stat_collectors }}</span>
+            <span class="hm-stat-label">collector{{ stat_collectors|pluralize }}</span>
+        </div>
+    </div>
+</section>
+
+<div class="hm-markets">
+    {% for m in marketplaces %}
+        <a href="{{ m.url }}" class="hm-market">
+            <span class="hm-market-name">{{ m.name }}</span>
+            <span class="hm-market-count">{{ m.count }} {{ m.noun }}</span>
+        </a>
+    {% endfor %}
+</div>
+
+{% if closing_tonight %}
+    <section class="hm-band">
+        <div class="hm-rule">
+            <h2 class="hm-rule-title">Closing soon</h2>
+            <span class="hm-rule-line" aria-hidden="true"></span>
+            <a href="{% url 'hunt' %}?tab=ending" class="hm-rule-link">All {{ closing_count }} &rarr;</a>
+        </div>
+        <div class="kb-grid">
+            {% for listing in closing_tonight %}{% include 'listings/_card.html' %}{% endfor %}
+        </div>
+    </section>
+{% endif %}
+
+{% if fresh %}
+    <section class="hm-band">
+        <div class="hm-rule">
+            <h2 class="hm-rule-title">Fresh on the shelves</h2>
+            <span class="hm-rule-line" aria-hidden="true"></span>
+            <a href="{% url 'hunt' %}?tab=new" class="hm-rule-link">Newly listed &rarr;</a>
+        </div>
+        <div class="hm-fresh">
+            {% for listing in fresh %}
+                <a href="{{ listing.get_absolute_url }}" class="kb-card">
+                    <div class="kb-card-media">
+                        <span class="hm-new-dot" title="Just listed"></span>
+                        {% if listing.featured_image %}
+                            <img src="{{ listing.featured_image.url }}" alt="{{ listing.title }}" loading="lazy">
+                        {% endif %}
+                    </div>
+                    <div class="kb-card-body">
+                        <span class="kb-eyebrow kb-eyebrow--card kb-eyebrow--brass">{% if listing.listing_type == 'auction' %}Auction{% elif listing.listing_type == 'buy_now' %}Store{% else %}Trade{% endif %}</span>
+                        <h3 class="kb-card-title hm-fresh-title">{{ listing.title|truncatechars:32 }}</h3>
+                        {% if listing.listing_type == 'trade' %}
+                            <span class="kb-card-sub hm-fresh-foot">{{ listing.trade_notes|truncatechars:22|default:"Open to offers" }}</span>
+                        {% else %}
+                            <span class="kb-price hm-fresh-foot">${{ listing.current_price|floatformat:2 }}</span>
+                        {% endif %}
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    </section>
+{% endif %}
+
+<section class="hm-band">
+    <div class="hm-rule">
+        <h2 class="hm-rule-title">How it works</h2>
+        <span class="hm-rule-line" aria-hidden="true"></span>
+    </div>
+    <div class="hm-how">
+        <div class="hm-how-step">
+            <span class="hm-how-number">1</span>
+            <div class="kb-stack">
+                <span class="hm-how-title">Photograph what you own</span>
+                <p class="hm-how-copy">The year, the county and the type are read off the picture. From one item we can tell you what it&rsquo;s worth and which counties you&rsquo;d need for a full run.</p>
+            </div>
+        </div>
+        <div class="hm-how-step">
+            <span class="hm-how-number">2</span>
+            <div class="kb-stack">
+                <span class="hm-how-title">Keep it, sell it, or open it to trade</span>
+                <p class="hm-how-copy">Everything starts on your own shelf. Selling is something you do with an item afterwards, and you can change your mind whenever.</p>
+            </div>
+        </div>
+        <div class="hm-how-step">
+            <span class="hm-how-number">3</span>
+            <div class="kb-stack">
+                <span class="hm-how-title">Tell us what you&rsquo;re after</span>
+                <p class="hm-how-copy">A want is a standing search. You get a letter the day one is listed, and collectors who own one can offer you a trade without you asking.</p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -115,32 +115,34 @@ screens 1–3, turn 20a (readiness sheet).
 
 ---
 
-## Pass 2 — Home, the masthead, the Day Book ⬜ NEXT
+## Pass 2 — Home, the masthead, the Day Book ✅ DONE
 
-**Design refs** — turn 2a (masthead), 2b (home signed in), 2c (home signed out),
-2e. Dev plan **10.17**.
+*2026-08-04 · 159 tests green (13 added)*
 
-- **Full masthead, 158px, home only** — 32px strapline band (*"Antique hunting
-  licenses of the Commonwealth & beyond"* + date + sign out), 82px nameplate
-  (32px mark, Petrona 33px, `EST. 2026 · PENNSYLVANIA` in brass small caps, 420px
-  search well), 42px nav sub-band on `--kb-forest-deep` with the four zones and a
-  live stat line. Compresses to the existing 56px bar everywhere else.
-- **Home signed in** — bands, each answering a question a collector actually has:
-  what needs me · what closes tonight · **the Day Book** · what am I missing ·
-  what turned up · the map.
-- **The Day Book** — the activity ledger, written with the hour in the margin like
-  a shop's day book, not a social feed. Needs **no new models**: `Notification`,
-  `Bid`, `Listing.created_at` and `Shipment` events already carry every line.
-- **Home signed out** — a genuinely different page, not the same page with the
-  greeting removed. Hero at `--kb-text-hero` (44px), live stats, one route in.
-- Small map component at the foot (full version in Pass 9).
+**Design refs** — turn 2a (masthead), 2b (home signed in), 2c (home signed out).
+Dev plan **10.17**.
 
-Files: `templates/home.html`, `templates/base.html` (masthead block), `apps/core/`
-or a home view (currently a bare `TemplateView`), `static/css/pages/home.css`.
+**What actually shipped**
+
+| Area | Detail |
+|---|---|
+| Masthead | `templates/components/_masthead.html` — the full 158px broadsheet: 32px strapline (*"Antique hunting licenses of the Commonwealth & beyond"* + date + sign out), 82px nameplate (32px mark, Petrona 33px, `EST. 2026 · PENNSYLVANIA`, 420px recessed search), 42px nav rule on `--kb-forest-deep` with the four zones and a live stat line. `base.html` gained a `{% block masthead %}` so **home overrides, every other page keeps the 56px bar**. |
+| Home view | `apps/core/views.py:home` replaces the bare `TemplateView`. Two templates, chosen by auth — a stranger needs telling what this is, a member needs telling what changed. |
+| The Day Book | `apps/core/daybook.py` — the ledger, hour in the mono margin. Draws on `Notification`, `Listing.created_at`, `Bid` and `ShipmentEvent`; **no new models**. Your own lines carry an emphasis and a tone (rust = on a clock, forest = yours, plain = news); parcels only surface to the two people they belong to. |
+| Signed in | Greeting ruled off in 2px forest · the three marketplace names back **on the goods** · Closing soon (one 1.6fr hero card + three followers) · Day Book · Fresh on the shelves with the just-listed green dot · rail: collection progress, wanted matches, Almanac. |
+| Signed out | Genuinely different page: 44px hero, forest stat block, marketplace strip, closing soon, fresh, and a three-step *How it works*. No greeting, no bench. |
+
+**Deviations**
+- The two map bands (Your counties choropleth, Hunt by ground) are **omitted, not
+  faked** — they are Pass 9. The collection-progress panel carries the meter and
+  the gap chips in the meantime.
+- **Three questions** panel omitted — no model (Pass 15).
+- The Almanac rail panel links to the placeholder rather than featuring a real
+  entry (Pass 14).
 
 ---
 
-## Pass 3 — Collections zone ⬜
+## Pass 3 — Collections zone ⬜ NEXT
 
 **Design refs** — turn 13a (browse collectors), 13b (everything owned), 3b
 (collector profile), 10a (my collection), 10b (matrix + wanted list).

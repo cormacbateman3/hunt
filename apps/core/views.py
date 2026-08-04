@@ -1,12 +1,17 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.db.models import Q
+from django.urls import reverse
+from django.utils import timezone
 
 from apps.core.constants import FORM_LICENSE_TYPE_CATEGORIES
+from apps.core.daybook import day_book
 from apps.core.forms import ReferenceDataSuggestionForm
 from apps.core.models import GeographicUnit, LicenseType, State
+from apps.listings.models import Listing
 
 
 def _selected_state_from_code(state_code):
@@ -172,3 +177,84 @@ def almanac(request):
     """
     states = State.objects.filter(is_primary_default=True).first()
     return render(request, 'core/almanac.html', {'default_state': states})
+
+
+def home(request):
+    """The home page.
+
+    Turn 2b (signed in) and 2c (signed out). These are deliberately two
+    different pages, not the same page with the greeting removed: a stranger
+    needs to be told what this is, a member needs to be told what changed.
+
+    Every band answers a question a collector actually has when they open the
+    site — what needs me, what closes tonight, what happened while I was out,
+    what am I missing, what turned up. The old page answered none of them.
+    """
+    now = timezone.now()
+    live = Listing.objects.filter(status='active')
+
+    # The three names come out of the navigation and go back on the goods.
+    tonight = now.replace(hour=23, minute=59, second=59)
+    marketplaces = [
+        {
+            'name': 'The Auction House',
+            'url': f"{reverse('hunt')}?format=auction",
+            'count': live.filter(listing_type='auction').count(),
+            'noun': 'taking bids',
+            'detail': live.filter(
+                listing_type='auction', auction_end__gt=now, auction_end__lte=tonight
+            ).count(),
+            'detail_noun': 'close tonight',
+        },
+        {
+            'name': 'The General Store',
+            'url': f"{reverse('hunt')}?format=buy_now",
+            'count': live.filter(listing_type='buy_now').count(),
+            'noun': 'priced to sell',
+            'detail': live.filter(listing_type='buy_now', allow_offers=True).count(),
+            'detail_noun': 'taking offers',
+        },
+        {
+            'name': 'The Trading Block',
+            'url': f"{reverse('hunt')}?format=trade",
+            'count': live.filter(listing_type='trade').count(),
+            'noun': 'open to trade',
+        },
+    ]
+
+    running = live.filter(listing_type='auction', auction_end__gt=now)
+    closing = list(
+        running.select_related('county_ref', 'state', 'seller')
+        .order_by('auction_end')[:4]
+    )
+    fresh = list(
+        live.select_related('county_ref', 'state')
+        .order_by('-created_at')[:5]
+    )
+
+    context = {
+        'marketplaces': marketplaces,
+        'closing_tonight': closing,
+        'closing_count': running.count(),
+        'fresh': fresh,
+        'day_book': day_book(request.user),
+        'stat_listings': live.count(),
+        'stat_units': live.filter(county_ref__isnull=False)
+                          .values('county_ref').distinct().count(),
+        'stat_collectors': User.objects.filter(is_active=True).count(),
+    }
+
+    if not request.user.is_authenticated:
+        return render(request, 'home_signed_out.html', context)
+
+    from apps.accounts.bench import needs_you_count
+    from apps.accounts.views import _collection_progress, _wanted_matches
+
+    hour = timezone.localtime().hour
+    context.update({
+        'greeting': 'Morning' if hour < 12 else 'Afternoon' if hour < 17 else 'Evening',
+        'needs_count': needs_you_count(request.user),
+        'progress': _collection_progress(request.user),
+        'wanted_matches': _wanted_matches(request.user, limit=2),
+    })
+    return render(request, 'home.html', context)
