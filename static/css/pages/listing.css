@@ -1,11 +1,450 @@
-.listing-detail {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: var(--space-3);
+/* ==========================================================================
+   Listing detail
+   Spec: design turn 1c, screen 3.
+
+   The old page was a `2fr 1fr` grid with three children, so the bid box —
+   the only reason the page exists — wrapped into the wide left column below
+   the image while the seller card took the top right. Here the decision
+   panel is one sticky column that cannot be pushed under the fold.
+   ========================================================================== */
+
+.lst-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--kb-5);
+    margin-bottom: var(--kb-5);
 }
 
-@media (max-width: 900px) {
-    .listing-detail {
+.lst-flags {
+    gap: 7px;
+}
+
+.lst-listed {
+    font-size: 12px;
+}
+
+.lst-title {
+    font-family: var(--kb-font-display);
+    font-size: 32px;
+    font-weight: 600;
+    line-height: 1.15;
+    color: var(--kb-forest);
+    margin: 6px 0 0;
+    text-wrap: balance;
+}
+
+.lst-subtitle {
+    font-size: 13.5px;
+    color: var(--kb-ink-3);
+    margin-top: 4px;
+}
+
+.lst-head-actions {
+    flex-shrink: 0;
+}
+
+.lst-grid {
+    display: grid;
+    grid-template-columns: 1fr 372px;
+    gap: 28px;
+    align-items: start;
+}
+
+.lst-main {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    min-width: 0;
+}
+
+/* ── Gallery ─────────────────────────────────────────────────────────── */
+.lst-gallery {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.lst-stage {
+    aspect-ratio: 16 / 10;
+    border-radius: var(--kb-r-lg);
+    border: 1px solid var(--kb-rule);
+    background: var(--kb-hatch);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.lst-stage img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: var(--kb-surface);
+}
+
+.lst-thumbs {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+}
+
+.lst-thumb {
+    aspect-ratio: 1;
+    border-radius: 6px;
+    border: 1px solid var(--kb-rule);
+    background: var(--kb-hatch);
+    padding: 0;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.lst-thumb.is-on {
+    border: 2px solid var(--kb-forest);
+}
+
+.lst-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.lst-thumb--zoom {
+    border-style: dashed;
+    border-color: var(--kb-rule-strong);
+    background: none;
+    font: 400 11px/1 var(--kb-font-body);
+    color: var(--kb-ink-4);
+}
+
+/* ── Tabs ────────────────────────────────────────────────────────────── */
+.lst-panel {
+    padding-top: var(--kb-5);
+}
+
+.lst-specs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 26px;
+}
+
+.lst-spec-group {
+    gap: 10px;
+}
+
+.lst-complete {
+    color: var(--kb-live);
+    font-weight: 600;
+}
+
+.lst-description {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--kb-ink);
+    max-width: 68ch;
+}
+
+.lst-note {
+    font-size: 12.5px;
+    line-height: 1.55;
+    margin: 0;
+}
+
+/* ── Q&A ─────────────────────────────────────────────────────────────── */
+.lst-ask {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: var(--kb-4);
+}
+
+.lst-qa {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.lst-q {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    padding: 13px 15px;
+    background: var(--kb-surface);
+}
+
+.lst-q.is-flagged {
+    border-color: var(--kb-alert-border);
+    background: var(--kb-alert-bg);
+}
+
+.lst-q-text {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.6;
+}
+
+.lst-q-date {
+    font-size: 11.5px;
+}
+
+.lst-flag {
+    font-size: 11.5px;
+    color: var(--kb-ink-4);
+    padding: 0;
+}
+
+.lst-flagged-note {
+    margin: 6px 0 0;
+    font-size: 12.5px;
+    color: var(--kb-rust);
+}
+
+.lst-answer {
+    margin: 8px 0 0;
+    font-size: 13.5px;
+    line-height: 1.6;
+    border-top: 1px solid var(--kb-rule-soft);
+    padding-top: 8px;
+}
+
+/* ── Bid history ─────────────────────────────────────────────────────── */
+.lst-bids {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+}
+
+.lst-bids th {
+    text-align: left;
+    font: 700 var(--kb-label-size)/1.2 var(--kb-font-body);
+    letter-spacing: var(--kb-label-tracking);
+    text-transform: uppercase;
+    color: var(--kb-ink-3);
+    padding: 0 0 8px;
+    border-bottom: 1px solid var(--kb-rule);
+}
+
+.lst-bids td {
+    padding: 9px 0;
+    border-bottom: 1px solid var(--kb-rule-soft);
+}
+
+.lst-bid-amount {
+    font-family: var(--kb-font-display);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.lst-bids tr.is-winning .lst-bid-amount {
+    color: var(--kb-live);
+}
+
+.lst-shipping {
+    grid-template-columns: 140px 1fr;
+}
+
+/* ── Decision rail ───────────────────────────────────────────────────── */
+.lst-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    position: sticky;
+    top: calc(var(--kb-topbar-h) + 12px);
+}
+
+.lst-decide {
+    display: flex;
+    flex-direction: column;
+    gap: var(--kb-4);
+}
+
+.lst-price-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--kb-3);
+}
+
+.lst-big {
+    font-size: 34px;
+    line-height: 1.05;
+}
+
+.lst-price-sub {
+    font-size: 12.5px;
+}
+
+.lst-clock {
+    align-items: flex-end;
+    text-align: right;
+}
+
+.lst-countdown {
+    font-size: 24px;
+    line-height: 1.15;
+    color: var(--kb-rust);
+}
+
+.lst-bid-form {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.lst-bid-label {
+    margin: 0;
+    letter-spacing: 0.08em;
+}
+
+.lst-bid-row {
+    display: flex;
+    gap: 8px;
+}
+
+/* The bid field is rendered by the Django form, so it is reached by
+   position rather than by a class this template controls. */
+.lst-bid-row input {
+    flex: 1;
+    min-width: 0;
+    background: var(--kb-surface);
+    border: 1px solid var(--kb-rule-strong);
+    border-radius: var(--kb-r-md);
+    padding: 10px 12px;
+    font: 400 15px/1.2 var(--kb-font-body);
+    font-variant-numeric: tabular-nums;
+    color: var(--kb-ink);
+}
+
+.lst-bid-row input:focus {
+    outline: 2px solid var(--kb-forest);
+    outline-offset: -1px;
+}
+
+.lst-quick {
+    gap: 6px;
+}
+
+.lst-quick .kb-chip {
+    cursor: pointer;
+    font-variant-numeric: tabular-nums;
+}
+
+.lst-actions,
+.lst-offers,
+.lst-won {
+    gap: 9px;
+}
+
+.lst-won-line,
+.lst-blocked {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.lst-blocked {
+    color: var(--kb-rust);
+}
+
+.lst-offer-row {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    font-size: 13.5px;
+    text-decoration: none;
+    color: var(--kb-ink);
+    padding: 7px 0;
+    border-bottom: 1px solid var(--kb-rule-soft);
+}
+
+.lst-trade-head {
+    gap: 5px;
+}
+
+.lst-trade-wants {
+    margin: 0;
+    font-family: var(--kb-font-display);
+    font-size: 17px;
+    line-height: 1.4;
+    color: var(--kb-forest);
+}
+
+.lst-ship-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12.5px;
+    color: var(--kb-ink-2);
+}
+
+.lst-ship-lines .kb-between {
+    gap: var(--kb-2);
+}
+
+/* ── Seller + gap panels ─────────────────────────────────────────────── */
+.lst-seller,
+.lst-gap {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 18px;
+}
+
+.lst-seller-stats {
+    gap: 5px;
+}
+
+.lst-positive {
+    background: var(--kb-live-bg);
+    border-color: var(--kb-live-border);
+    color: var(--kb-live);
+    font-weight: 600;
+}
+
+.lst-gap-line {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--kb-ink);
+}
+
+/* ── Discovery rows ──────────────────────────────────────────────────── */
+.lst-more {
+    margin-top: var(--kb-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--kb-3);
+}
+
+@media (max-width: 1000px) {
+    .lst-grid {
         grid-template-columns: 1fr;
+    }
+
+    /* Stacked, the panel must lead — it is the decision. */
+    .lst-rail {
+        position: static;
+        order: -1;
+    }
+}
+
+@media (max-width: 720px) {
+    .lst-head {
+        flex-direction: column;
+        gap: var(--kb-3);
+    }
+
+    .lst-title {
+        font-size: 25px;
+    }
+
+    .lst-specs {
+        grid-template-columns: 1fr;
+        gap: var(--kb-5);
+    }
+
+    .lst-thumbs {
+        grid-template-columns: repeat(4, 1fr);
     }
 }

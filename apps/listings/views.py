@@ -1,5 +1,5 @@
 import json
-from decimal import Decimal
+from decimal import Decimal, ROUND_CEILING
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -616,6 +616,52 @@ class HuntView(BaseListingListView):
         return head
 
 
+def _quick_bids(minimum_bid):
+    """Three rounded jumps above the minimum, for one-tap bidding.
+
+    A collector deciding in the last two minutes should not have to type.
+    """
+    if not minimum_bid:
+        return []
+    base = Decimal(minimum_bid)
+    steps = []
+    for multiplier in (Decimal('1.05'), Decimal('1.25'), Decimal('1.6')):
+        raised = base * multiplier
+        # Round up to a figure someone would actually say out loud.
+        unit = Decimal('5') if raised < 200 else Decimal('25')
+        rounded = (raised / unit).to_integral_value(rounding=ROUND_CEILING) * unit
+        if rounded > base and rounded not in steps:
+            steps.append(rounded)
+    return [base] + steps
+
+
+def _viewer_gap(user, listing):
+    """Whether this listing would close a hole in the viewer's own runs.
+
+    The most useful thing the page can tell a collector is not what the item
+    is, but whether they already have it.
+    """
+    if not user.is_authenticated or listing.seller_id == user.id:
+        return None
+    if not (listing.county_ref_id and listing.license_year):
+        return None
+
+    owned = CollectionItem.objects.filter(owner=user)
+    exact = owned.filter(
+        county=listing.county_ref_id, license_year=listing.license_year
+    ).exists()
+    if exact:
+        return {'have': True, 'unit': listing.county_ref.name, 'year': listing.license_year}
+
+    return {
+        'have': False,
+        'unit': listing.county_ref.name,
+        'year': listing.license_year,
+        'new_unit': not owned.filter(county=listing.county_ref_id).exists(),
+        'new_year': not owned.filter(license_year=listing.license_year).exists(),
+    }
+
+
 def listing_detail(request, pk):
     """View a single listing with full details"""
     listing = get_object_or_404(
@@ -702,6 +748,8 @@ def listing_detail(request, pk):
         'listing_favorite_count': listing_favorite_count,
         'related_listings': related_listings,
         'more_from_seller': more_from_seller,
+        'viewer_gap': _viewer_gap(request.user, listing),
+        'quick_bids': _quick_bids(minimum_bid) if is_auction else [],
     }
     if listing.listing_type == 'auction':
         # Winner CTA + "auction ended" state (10.9). Without this the bid form

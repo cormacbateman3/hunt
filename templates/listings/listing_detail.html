@@ -1,447 +1,546 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ listing.title }} | KeystoneBid{% endblock %}
+{% block title %}{{ listing.title }} &middot; KeystoneBid{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/pages/listing.css' %}">
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/listing.css' %}">{% endblock %}
+
+{% block context_band %}
+<nav class="kb-crumbs" aria-label="Breadcrumb">
+    <div class="kb-band-inner">
+        <a href="{% url 'hunt' %}">Hunt</a>
+        {% if listing.state %}
+            <span class="kb-crumb-sep" aria-hidden="true">/</span>
+            <a href="{% url 'hunt' %}?state_id={{ listing.state.id }}">{{ listing.state.name }}</a>
+        {% endif %}
+        {% if listing.county_ref %}
+            <span class="kb-crumb-sep" aria-hidden="true">/</span>
+            <a href="{% url 'hunt' %}?state_id={{ listing.state.id }}&amp;county_id={{ listing.county_ref.id }}">{{ listing.county_ref.name }}</a>
+        {% endif %}
+        <span class="kb-crumb-sep" aria-hidden="true">/</span>
+        <span class="kb-crumb-current">{{ listing.title|truncatechars:44 }}</span>
+    </div>
+</nav>
 {% endblock %}
 
 {% block content %}
-<article class="listing-detail">
-    <section class="card">
-        <h1 style="margin-bottom: 0.75rem;">{{ listing.title }}</h1>
 
-        {% if listing.featured_image %}
-            <img
-                id="gallery-main"
-                data-gallery-main
-                src="{{ listing.featured_image.url }}"
-                alt="{{ listing.title }}"
-                style="border-radius: 8px; margin-bottom: 0.6rem; width: 100%; max-height: 460px; object-fit: contain; background: #f0eadb;"
-            >
+{% comment %}
+Header. Format and state read first, then the title, then the object line.
+{% endcomment %}
+<header class="lst-head">
+    <div class="kb-stack">
+        <div class="kb-inline lst-flags">
+            {% if is_auction %}<span class="kb-badge kb-badge--auction">Auction</span>
+            {% elif is_buy_now %}<span class="kb-badge kb-badge--buynow">Buy now</span>
+            {% else %}<span class="kb-badge kb-badge--trade">Trade</span>{% endif %}
+
+            {% if listing.status == 'active' %}
+                {% if is_auction and not auction_open %}
+                    <span class="kb-badge kb-badge--neutral">Ended</span>
+                {% else %}
+                    <span class="kb-badge kb-badge--live">Live</span>
+                {% endif %}
+            {% else %}
+                <span class="kb-badge kb-badge--neutral">{{ listing.get_status_display }}</span>
+            {% endif %}
+
+            <span class="kb-faint lst-listed">
+                Listed {{ listing.created_at|date:"M j" }}
+                {% if listing_favorite_count %} &middot; {{ listing_favorite_count }} watching{% endif %}
+            </span>
+        </div>
+
+        <h1 class="lst-title">{{ listing.title }}</h1>
+
+        <span class="lst-subtitle">
+            {% if listing.display_license_type_summary %}{{ listing.display_license_type_summary }}{% endif %}
+            {% if listing.serial_number %} &middot; Serial {{ listing.serial_number }}{% endif %}
+        </span>
+    </div>
+
+    <div class="kb-inline lst-head-actions">
+        {% if user.is_authenticated and listing.seller_id != user.id %}
+            <form method="post" action="{% url 'favorites:toggle_listing' listing.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button type="submit" class="kb-btn kb-btn--secondary">
+                    {% if is_favorited_listing %}Watching{% else %}Watch{% endif %}
+                </button>
+            </form>
+        {% elif user.is_authenticated and listing.seller_id == user.id %}
+            <a href="{% url 'listings:edit' listing.pk %}" class="kb-btn kb-btn--secondary">Edit listing</a>
         {% endif %}
+    </div>
+</header>
 
-        {% if listing.additional_images.all %}
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 1rem;">
+<div class="lst-grid">
+
+    {# ── Left: gallery, then the tabs ─────────────────────────────── #}
+    <div class="lst-main">
+        <section class="lst-gallery" aria-label="Photographs">
+            <div class="lst-stage">
                 {% if listing.featured_image %}
-                    <button type="button" class="btn-secondary" style="padding: 0;" data-gallery-thumb data-full-src="{{ listing.featured_image.url }}">
-                        <img src="{{ listing.featured_image.url }}" alt="Featured image thumbnail" style="width: 100%; border-radius: 6px;">
+                    <img id="gallery-main" data-gallery-main src="{{ listing.featured_image.url }}" alt="{{ listing.title }}">
+                {% else %}
+                    <span class="kb-card-placeholder">no scan yet</span>
+                {% endif %}
+            </div>
+
+            {% if listing.additional_images.all %}
+                <div class="lst-thumbs">
+                    {% if listing.featured_image %}
+                        <button type="button" class="lst-thumb is-on" data-gallery-thumb data-full-src="{{ listing.featured_image.url }}">
+                            <img src="{{ listing.featured_image.url }}" alt="View main photograph">
+                        </button>
+                    {% endif %}
+                    {% for image in listing.additional_images.all %}
+                        <button type="button" class="lst-thumb" data-gallery-thumb data-full-src="{{ image.image.url }}">
+                            <img src="{{ image.image.url }}" alt="View photograph {{ forloop.counter }}">
+                        </button>
+                    {% endfor %}
+                    <button type="button" class="lst-thumb lst-thumb--zoom" data-gallery-zoom>Zoom</button>
+                </div>
+            {% endif %}
+        </section>
+
+        {% comment %}
+        Eighteen "label: value" paragraphs become two labelled tables, and
+        the long-form content moves into tabs so the page has a bottom.
+        {% endcomment %}
+        <section class="lst-tabs" data-tabs>
+            <div class="kb-subtabs" role="tablist">
+                <button class="kb-subtab" role="tab" aria-selected="true" data-tab-target="tab-details">Details</button>
+                <button class="kb-subtab" role="tab" aria-selected="false" data-tab-target="tab-description">Description</button>
+                {% if is_auction or is_buy_now %}
+                    <button class="kb-subtab" role="tab" aria-selected="false" data-tab-target="tab-qa">
+                        Q&amp;A <span class="kb-subtab-count">{{ questions|length }}</span>
                     </button>
                 {% endif %}
-                {% for image in listing.additional_images.all %}
-                    <button type="button" class="btn-secondary" style="padding: 0;" data-gallery-thumb data-full-src="{{ image.image.url }}">
-                        <img src="{{ image.image.url }}" alt="Additional image {{ forloop.counter }}" style="width: 100%; border-radius: 6px;">
+                {% if is_auction %}
+                    <button class="kb-subtab" role="tab" aria-selected="false" data-tab-target="tab-bids">
+                        Bid history <span class="kb-subtab-count">{{ bid_count }}</span>
                     </button>
-                {% endfor %}
+                {% endif %}
+                <button class="kb-subtab" role="tab" aria-selected="false" data-tab-target="tab-shipping">Shipping</button>
             </div>
-        {% endif %}
 
-        <p style="margin-bottom: 1rem;">{{ listing.description }}</p>
+            <div class="lst-panel" id="tab-details" role="tabpanel">
+                <div class="lst-specs">
+                    <div class="kb-stack lst-spec-group">
+                        <span class="kb-eyebrow kb-eyebrow--brass">The licence</span>
+                        <dl class="kb-spec">
+                            <dt>Year</dt><dd>{{ listing.license_year|default:"Unknown" }}</dd>
+                            {% if listing.effective_era %}<dt>Era</dt><dd>{{ listing.effective_era }}</dd>{% endif %}
+                            {% if listing.state %}
+                                <dt>{{ listing.state.issuance_unit_label|default:"Unit" }}</dt>
+                                <dd>
+                                    {% if listing.county_ref %}
+                                        <a href="{% url 'core:geographic_unit_detail' listing.county_ref.pk %}">{{ listing.county_ref.name }}</a>,
+                                    {% elif listing.is_statewide %}Statewide, {% endif %}
+                                    <a href="{% url 'core:state_detail' listing.state.slug %}">{{ listing.state.name }}</a>
+                                </dd>
+                            {% endif %}
+                            <dt>Residency</dt><dd>{{ listing.get_resident_status_display }}</dd>
+                            {% if listing.display_license_type_summary %}
+                                <dt>Scope</dt><dd>{{ listing.display_license_type_summary }}</dd>
+                            {% endif %}
+                            {% if listing.serial_number %}
+                                <dt>Serial</dt><dd>{{ listing.serial_number }}</dd>
+                            {% endif %}
+                        </dl>
+                    </div>
 
-        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            <button type="button" class="btn-secondary" data-gallery-prev>Previous image</button>
-            <button type="button" class="btn-secondary" data-gallery-next>Next image</button>
-            <button type="button" class="btn-secondary" data-gallery-zoom>Zoom</button>
-        </div>
-    </section>
-
-    <!-- Seller card -->
-    <aside class="card" style="padding: 1rem;">
-        <h2 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.6rem; color: var(--color-muted); text-transform: uppercase; letter-spacing: 0.04em;">Seller</h2>
-        <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem;">
-            {% if listing.seller.profile.avatar %}
-                <img src="{{ listing.seller.profile.avatar.url }}" alt="{{ listing.seller.profile.get_display_name }}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
-            {% else %}
-                <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--color-parchment); display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--color-aged-amber);">
-                    {{ listing.seller.profile.get_display_name|first|upper }}
+                    <div class="kb-stack lst-spec-group">
+                        <span class="kb-eyebrow kb-eyebrow--brass">The object</span>
+                        <dl class="kb-spec">
+                            <dt>Form</dt><dd>{{ listing.get_item_kind_display }}</dd>
+                            {% if listing.shape %}<dt>Shape</dt><dd>{{ listing.get_shape_display_label }}</dd>{% endif %}
+                            {% if listing.colors %}<dt>Colours</dt><dd>{{ listing.display_colors }}</dd>{% endif %}
+                            <dt>Condition</dt><dd>{{ listing.get_condition_grade_display }}</dd>
+                            {% if listing.addons_attached is not None %}
+                                <dt>Add-ons</dt>
+                                <dd>{% if listing.addons_attached %}Still attached{% else %}Detached{% endif %}</dd>
+                            {% endif %}
+                            <dt>Listing detail</dt>
+                            <dd class="lst-complete">{{ listing.listing_completeness_score }}% complete</dd>
+                        </dl>
+                    </div>
                 </div>
-            {% endif %}
-            <div>
-                <a href="{% url 'accounts:profile' listing.seller.username %}" style="font-weight: 600; font-size: 1rem;">
-                    {{ listing.seller.profile.get_display_name }}
-                </a>
-                <p style="color: var(--color-muted); font-size: 0.85rem; margin: 0;">@{{ listing.seller.username }}</p>
-            </div>
-        </div>
-        {% if listing.seller.profile.county %}
-            <p style="font-size: 0.88rem; color: var(--color-muted); margin-bottom: 0.45rem;">{{ listing.seller.profile.county }}</p>
-        {% endif %}
-        {% if seller_review_summary.total > 0 %}
-            <p style="font-size: 0.9rem; margin-bottom: 0.3rem;">
-                <strong>{{ seller_review_summary.positive_pct }}% positive</strong>
-                <span style="color: var(--color-muted);">({{ seller_review_summary.total }} review{{ seller_review_summary.total|pluralize }})</span>
-            </p>
-        {% else %}
-            <p style="font-size: 0.88rem; color: var(--color-muted); margin-bottom: 0.3rem;">No reviews yet</p>
-        {% endif %}
-        {% if seller_completed_sales > 0 %}
-            <p style="font-size: 0.88rem; color: var(--color-muted);">{{ seller_completed_sales }} completed sale{{ seller_completed_sales|pluralize }}</p>
-        {% endif %}
-        <a href="{% url 'accounts:profile' listing.seller.username %}" class="btn-secondary" style="margin-top: 0.65rem; display: inline-block; font-size: 0.85rem;">View profile</a>
-    </aside>
-
-    <aside
-        class="card"
-        {% if is_auction %}
-        data-poll-url="{% url 'listings:bid_status' listing.id %}"
-        data-bid-target="#current-bid-value"
-        data-bid-count-target="#bid-count-value"
-        data-min-bid-target="#min-bid-value"
-        data-auction-end-target="#countdown-value"
-        {% endif %}
-    >
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.75rem;">{{ listing.get_listing_type_display }} details</h2>
-        {% if is_auction %}
-        <p><strong>Current price:</strong> $<span id="current-bid-value">{{ listing.current_price }}</span></p>
-        <p><strong>Minimum next bid:</strong> $<span id="min-bid-value">{{ minimum_bid }}</span></p>
-        <p><strong>Total bids:</strong> <span id="bid-count-value">{{ bid_count }}</span></p>
-        <p>
-            <strong>Time remaining:</strong>
-            <span id="countdown-value" data-auction-end="{{ listing.auction_end|date:'c' }}">
-                --
-            </span>
-        </p>
-        {% elif is_buy_now %}
-        <p><strong>Price:</strong> {% if listing.buy_now_price %}${{ listing.buy_now_price }}{% else %}-{% endif %}</p>
-        {% else %}
-        <p><strong>Trade preferences:</strong></p>
-        <p>{{ listing.trade_notes|default:"No specific preferences listed." }}</p>
-        <p><strong>Cash add-on:</strong> {% if listing.allow_cash %}Allowed{% else %}Not allowed{% endif %}</p>
-        {% endif %}
-        <p><strong>State:</strong> {% if listing.state %}<a href="{% url 'core:state_detail' listing.state.slug %}">{{ listing.state.name }}</a>{% else %}Unknown{% endif %}</p>
-        <p><strong>{{ listing.state.issuance_unit_label|default:'Geographic Unit' }}:</strong> {% if listing.county_ref %}<a href="{% url 'core:geographic_unit_detail' listing.county_ref.pk %}">{{ listing.county_ref.name }}</a>{% else %}Unknown{% endif %}</p>
-        <p><strong>Year:</strong>
-            {% if listing.license_year %}{{ listing.license_year }}{% else %}Unknown{% endif %}
-        </p>
-        {% if listing.effective_era %}
-        <p><strong>Era:</strong> {{ listing.effective_era }}</p>
-        {% endif %}
-        {% if listing.serial_number %}
-        <p><strong>Serial / stub #:</strong> {{ listing.serial_number }}</p>
-        {% endif %}
-        {% if listing.display_license_type_summary %}
-        <p><strong>Taxonomy:</strong> {{ listing.display_license_type_summary }}</p>
-        {% endif %}
-        {% if listing.shape %}
-        <p><strong>Shape:</strong> {{ listing.get_shape_display_label }}</p>
-        {% endif %}
-        {% if listing.colors %}
-        <p><strong>Colors:</strong> {{ listing.display_colors }}</p>
-        {% endif %}
-        <p><strong>Resident status:</strong> {{ listing.get_resident_status_display }}</p>
-        <p><strong>Condition:</strong> {{ listing.get_condition_grade_display }}</p>
-        <p><strong>Completeness:</strong> {{ listing.listing_completeness_score }}%</p>
-        {% if listing_favorite_count %}
-        <p><strong>Favorites:</strong> {{ listing_favorite_count }}</p>
-        {% endif %}
-        <p><strong>Status:</strong> {{ listing.get_status_display }}
-            {% if listing.status == 'scheduled' %}
-                &mdash; goes live {{ listing.scheduled_at|date:"M j, Y g:i A" }}
-            {% endif %}
-        </p>
-        {% if is_auction %}
-        <p><strong>Auction ends:</strong> {{ listing.auction_end|date:"M j, Y, g:i a" }}</p>
-        {% if listing.relist_count > 0 %}
-        <p><strong>Relist:</strong> {{ listing.relist_count }}/3
-            {% if listing.original_listing %}
-                (<a href="{% url 'listings:detail' listing.original_listing.pk %}">original listing</a>)
-            {% endif %}
-        </p>
-        {% endif %}
-        {% endif %}
-        {% if listing.local_pickup_available %}
-        <p><strong>Local pickup:</strong> Available &mdash; {{ listing.local_pickup_location }}</p>
-        {% endif %}
-
-        {% if user.is_authenticated and listing.seller_id == user.id %}
-            <div style="margin-top: 1rem;">
-                <a class="btn-secondary" href="{% url 'listings:edit' listing.pk %}">Edit listing</a>
             </div>
 
-            {% if held_offer %}
-                <div class="alert alert-success" style="margin-top: 1rem;">
-                    You accepted <strong>{{ held_offer.buyer.username }}</strong>&rsquo;s offer of
-                    ${{ held_offer.amount|floatformat:2 }}. Awaiting their payment.
-                    <a href="{% url 'offers:detail' held_offer.pk %}">View offer</a>
-                </div>
-            {% elif seller_pending_offers %}
-                <div style="margin-top: 1rem;">
-                    <h3 style="font-size: 1.05rem; margin-bottom: 0.5rem;">Offers awaiting your response</h3>
-                    <div style="display: grid; gap: 0.45rem;">
-                        {% for offer in seller_pending_offers %}
-                            <p style="margin: 0;">
-                                <a href="{% url 'offers:detail' offer.pk %}">
-                                    <strong>${{ offer.amount|floatformat:2 }}</strong>
-                                </a>
-                                <span style="color: var(--color-muted);">from {{ offer.from_user.username }}</span>
-                            </p>
+            <div class="lst-panel" id="tab-description" role="tabpanel" hidden>
+                <p class="lst-description">{{ listing.description|linebreaksbr }}</p>
+                {% if is_trade %}
+                    <div class="kb-panel-divide">
+                        <span class="kb-eyebrow kb-eyebrow--brass">What the seller wants</span>
+                        <p class="lst-description">{{ listing.trade_notes|default:"No specific preferences listed." }}</p>
+                        <p class="kb-muted lst-note">
+                            Cash on top of a swap is
+                            {% if listing.allow_cash %}welcome{% else %}not accepted{% endif %}.
+                        </p>
+                    </div>
+                {% endif %}
+            </div>
+
+            {% if is_auction or is_buy_now %}
+                <div class="lst-panel" id="tab-qa" role="tabpanel" hidden>
+                    {% if user.is_authenticated and user.id != listing.seller_id %}
+                        <form method="post" action="{% url 'listings:ask_question' listing.pk %}" class="lst-ask">
+                            {% csrf_token %}
+                            <label class="kb-label" for="ask-question">Ask the seller</label>
+                            <textarea class="kb-textarea" id="ask-question" name="question" rows="3"
+                                      placeholder="Anything the photographs don&rsquo;t answer" required></textarea>
+                            <button type="submit" class="kb-btn kb-btn--secondary">Ask question</button>
+                        </form>
+                    {% elif not user.is_authenticated %}
+                        <p class="kb-muted lst-note">
+                            <a href="{% url 'accounts:login' %}?next={{ request.path }}">Sign in</a> to ask a question.
+                        </p>
+                    {% endif %}
+
+                    <div class="lst-qa">
+                        {% for q in questions %}
+                            <article class="lst-q {% if q.moderation_state == 'flagged' %}is-flagged{% endif %}">
+                                <div class="kb-between">
+                                    <p class="lst-q-text"><strong>{{ q.asker.username }}</strong> asked: {{ q.question }}</p>
+                                    {% if user.is_authenticated and q.moderation_state == 'ok' and user.id != listing.seller_id %}
+                                        <form method="post" action="{% url 'listings:flag_question' listing.pk q.pk %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="kb-btn kb-btn--text lst-flag" title="Flag as inappropriate">Flag</button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                                <span class="kb-faint lst-q-date">{{ q.created_at|date:"M j, Y g:i a" }}</span>
+                                {% if q.moderation_state == 'flagged' %}
+                                    <p class="lst-flagged-note">This has been flagged and is under review.</p>
+                                {% endif %}
+                                {% if q.seller_answer %}
+                                    <p class="lst-answer"><strong>Seller:</strong> {{ q.seller_answer }}</p>
+                                {% elif user.is_authenticated and user.id == listing.seller_id %}
+                                    <form method="post" action="{% url 'listings:answer_question' listing.pk q.pk %}" class="lst-ask">
+                                        {% csrf_token %}
+                                        <textarea class="kb-textarea" name="seller_answer" rows="2" placeholder="Post an answer" required></textarea>
+                                        <button type="submit" class="kb-btn kb-btn--secondary">Post answer</button>
+                                    </form>
+                                {% else %}
+                                    <p class="kb-muted lst-note">Awaiting seller response.</p>
+                                {% endif %}
+                            </article>
+                        {% empty %}
+                            <p class="kb-muted lst-note">No questions yet. Anything asked here is answered in public, for the next buyer as much as this one.</p>
                         {% endfor %}
                     </div>
                 </div>
             {% endif %}
-        {% elif user.is_authenticated and is_auction %}
-            <hr style="margin: 1rem 0; border: 0; border-top: 1px solid var(--color-border);">
-            {% if viewer_won_auction %}
-                {# Winner CTA mirrors the buy-now review flow (10.9). #}
-                <div class="alert alert-success">
-                    You won this auction at <strong>${{ auction_order.item_amount|floatformat:2 }}</strong>.
-                </div>
-                {% if auction_order.status == 'pending_payment' %}
-                    <a class="btn-primary" href="{% url 'listings:auction_win_review' listing.pk %}">
-                        Review &amp; pay
-                    </a>
-                {% else %}
-                    <a class="btn-secondary" href="{% url 'orders:detail' auction_order.pk %}">View your order</a>
-                {% endif %}
-            {% elif not auction_open %}
-                <p style="color: var(--color-muted);">
-                    This auction has ended.
-                    {% if auction_order %}The item is awaiting payment from the winning bidder.{% endif %}
-                </p>
-            {% else %}
-            <h3 style="font-size: 1.05rem; margin-bottom: 0.75rem;">Place bid</h3>
-            {% if user.profile.email_verified %}
-                <form method="post" action="{% url 'bids:create' listing.id %}" data-bid-form>
-                    {% csrf_token %}
-                    <label class="form-label" for="{{ bid_form.amount.id_for_label }}">Bid amount ($)</label>
-                    {{ bid_form.amount }}
-                    <small style="color: var(--color-muted);">Minimum: $<span id="min-bid-helper">{{ minimum_bid }}</span></small>
-                    <div style="margin-top: 0.75rem;">
-                        <button type="submit" class="btn-primary">Submit bid</button>
-                    </div>
-                </form>
-            {% else %}
-                <p style="color: var(--color-hunting-rust);">
-                    Verify your email before placing bids.
-                </p>
-            {% endif %}
-            {% endif %}
-            <form method="post" action="{% url 'favorites:toggle_listing' listing.pk %}" style="margin-top: 0.8rem;">
-                {% csrf_token %}
-                <input type="hidden" name="next" value="{{ request.path }}">
-                <button type="submit" class="btn-secondary">
-                    {% if is_favorited_listing %}Unfavorite{% else %}Favorite{% endif %}
-                </button>
-            </form>
-            {% if user_bid %}
-                <p style="margin-top: 0.8rem; color: var(--color-muted);">
-                    Your highest bid: ${{ user_bid.amount }}
-                </p>
-            {% endif %}
-            <form method="post" action="{% url 'messaging:start' %}" style="margin-top: 0.8rem;">
-                {% csrf_token %}
-                <input type="hidden" name="recipient_id" value="{{ listing.seller_id }}">
-                <input type="hidden" name="listing_id" value="{{ listing.pk }}">
-                <input type="hidden" name="conversation_type" value="auction">
-                <button type="submit" class="btn-secondary">Message seller</button>
-            </form>
-        {% elif user.is_authenticated and is_buy_now %}
-            {% if viewer_holds_offer %}
-                <div class="alert alert-success" style="margin-top: 1rem;">
-                    Your offer of <strong>${{ held_offer.amount|floatformat:2 }}</strong> was accepted.
-                    Complete payment to secure this item.
-                </div>
-                <a class="btn-primary" href="{% url 'listings:buy_now_review' listing.pk %}">
-                    Review &amp; pay ${{ held_offer.amount|floatformat:2 }}
-                </a>
-            {% elif offer_reserved_by_other %}
-                <p style="margin-top: 1rem; color: var(--color-hunting-rust);">
-                    This listing is reserved for a buyer whose offer was accepted.
-                </p>
-            {% elif can_buy_now %}
-                <a class="btn-primary" href="{% url 'listings:buy_now_review' listing.pk %}" style="margin-top: 1rem; display: inline-block;">Buy now</a>
 
-                {% if my_pending_offer %}
-                    <p style="margin-top: 0.8rem; color: var(--color-muted);">
-                        You have a pending offer of
-                        <strong>${{ my_pending_offer.amount|floatformat:2 }}</strong>.
-                        <a href="{% url 'offers:detail' my_pending_offer.pk %}">View it</a>
-                    </p>
-                {% elif can_make_offer %}
-                    <a class="btn-ghost" href="{% url 'offers:make' listing.pk %}"
-                       style="margin-top: 0.6rem; display: inline-block;">Make an offer</a>
-                    <p style="margin-top: 0.4rem; color: var(--color-muted); font-size: 0.9rem;">
-                        Offers are binding &mdash; if the seller accepts, you buy at that price.
-                    </p>
-                {% endif %}
-
-                <form method="post" action="{% url 'favorites:toggle_listing' listing.pk %}" style="margin-top: 0.6rem;">
-                    {% csrf_token %}
-                    <input type="hidden" name="next" value="{{ request.path }}">
-                    <button type="submit" class="btn-secondary">
-                        {% if is_favorited_listing %}Unfavorite{% else %}Favorite{% endif %}
-                    </button>
-                </form>
-            {% elif can_resume_buy_now %}
-                <p style="margin-top: 1rem; color: var(--color-muted);">You already started checkout for this listing.</p>
-                <a class="btn-primary" href="{% url 'payments:checkout' buy_now_order.pk %}">Resume checkout</a>
-            {% elif buy_now_locked %}
-                <p style="margin-top: 1rem; color: var(--color-hunting-rust);">
-                    This listing is currently locked by another buyer's checkout session.
-                </p>
-            {% elif buy_now_restriction_reason %}
-                <p style="margin-top: 1rem; color: var(--color-hunting-rust);">
-                    {{ buy_now_restriction_reason }}
-                </p>
-            {% else %}
-                <p style="margin-top: 1rem; color: var(--color-muted);">
-                    This listing is no longer available for buy now.
-                </p>
-            {% endif %}
-            <form method="post" action="{% url 'messaging:start' %}" style="margin-top: 0.8rem;">
-                {% csrf_token %}
-                <input type="hidden" name="recipient_id" value="{{ listing.seller_id }}">
-                <input type="hidden" name="listing_id" value="{{ listing.pk }}">
-                <input type="hidden" name="conversation_type" value="buy_now">
-                <button type="submit" class="btn-secondary">Message seller</button>
-            </form>
-        {% elif user.is_authenticated and is_trade %}
-            {% if listing.seller_id == user.id %}
-                <p style="margin-top: 1rem; color: var(--color-muted);">
-                    Offers received: {{ trade_offer_count }}
-                </p>
-                {% if latest_trade_offer %}
-                    <a class="btn-secondary" href="{% url 'trades:offer_detail' offer_id=latest_trade_offer.id %}">
-                        View latest offer
-                    </a>
-                {% else %}
-                    <p style="color: var(--color-muted);">No offers yet.</p>
-                {% endif %}
-            {% else %}
-                {% if can_propose_trade %}
-                    <a class="btn-primary" href="{% url 'trades:propose' listing_id=listing.id %}" style="margin-top: 1rem; display:inline-block;">
-                        Propose trade
-                    </a>
-                    <form method="post" action="{% url 'favorites:toggle_listing' listing.pk %}" style="margin-top: 0.6rem;">
-                        {% csrf_token %}
-                        <input type="hidden" name="next" value="{{ request.path }}">
-                        <button type="submit" class="btn-secondary">
-                            {% if is_favorited_listing %}Unfavorite{% else %}Favorite{% endif %}
-                        </button>
-                    </form>
-                    <form method="post" action="{% url 'messaging:start' %}" style="margin-top: 0.6rem;">
-                        {% csrf_token %}
-                        <input type="hidden" name="recipient_id" value="{{ listing.seller_id }}">
-                        <input type="hidden" name="listing_id" value="{{ listing.pk }}">
-                        <input type="hidden" name="conversation_type" value="trade">
-                        <button type="submit" class="btn-secondary">Message seller</button>
-                    </form>
-                {% elif trade_restriction_reason %}
-                    <p style="margin-top: 1rem; color: var(--color-hunting-rust);">
-                        {{ trade_restriction_reason }}
-                    </p>
-                {% endif %}
-            {% endif %}
-        {% elif is_auction %}
-            <p style="margin-top: 1rem;">
-                <a class="btn-primary" href="{% url 'accounts:login' %}?next={{ request.path }}">Login to bid</a>
-            </p>
-        {% elif is_buy_now %}
-            <p style="margin-top: 1rem;">
-                <a class="btn-primary" href="{% url 'accounts:login' %}?next={{ request.path }}">Login for buy now</a>
-            </p>
-        {% else %}
-            <p style="margin-top: 1rem;">
-                <a class="btn-primary" href="{% url 'accounts:login' %}?next={{ request.path }}">Login to propose trade</a>
-            </p>
-        {% endif %}
-    </aside>
-</article>
-
-{% if is_auction or is_buy_now %}
-<section class="card" style="margin-top: 1rem;">
-    <h2 style="font-size: 1.2rem; margin-bottom: 0.75rem;">Q&A</h2>
-    {% if user.is_authenticated and user.id != listing.seller_id %}
-        <form method="post" action="{% url 'listings:ask_question' listing.pk %}" style="display: grid; gap: 0.45rem; margin-bottom: 0.8rem;">
-            {% csrf_token %}
-            <textarea class="form-input" name="question" rows="3" placeholder="Ask the seller a question..." required></textarea>
-            <div><button type="submit" class="btn-secondary">Ask question</button></div>
-        </form>
-    {% elif not user.is_authenticated %}
-        <p style="color: var(--color-muted); margin-bottom: 0.8rem;">
-            <a href="{% url 'accounts:login' %}?next={{ request.path }}">Log in</a> to ask a question.
-        </p>
-    {% endif %}
-    <div style="display: grid; gap: 0.65rem;">
-        {% for q in questions %}
-            <article style="padding: 0.65rem; border: 1px solid {% if q.moderation_state == 'flagged' %}var(--color-hunting-rust){% else %}var(--color-border){% endif %}; border-radius: 8px;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
-                    <p style="margin: 0;"><strong>{{ q.asker.username }} asked:</strong> {{ q.question }}</p>
-                    {% if user.is_authenticated and q.moderation_state == 'ok' and user.id != listing.seller_id %}
-                        <form method="post" action="{% url 'listings:flag_question' listing.pk q.pk %}" style="flex-shrink: 0;">
-                            {% csrf_token %}
-                            <button type="submit" class="btn-secondary"
-                                    style="font-size: 0.75rem; padding: 0.15rem 0.4rem; color: var(--color-muted);"
-                                    title="Flag as inappropriate">Flag</button>
-                        </form>
+            {% if is_auction %}
+                <div class="lst-panel" id="tab-bids" role="tabpanel" hidden>
+                    {% if recent_bids %}
+                        <table class="lst-bids">
+                            <thead><tr><th>Amount</th><th>Bidder</th><th>Placed</th></tr></thead>
+                            <tbody>
+                                {% for bid in recent_bids %}
+                                    <tr {% if bid.is_winning %}class="is-winning"{% endif %}>
+                                        <td class="lst-bid-amount">${{ bid.amount|floatformat:2 }}</td>
+                                        <td>{{ bid.bidder.username }}{% if bid.is_winning %} <span class="kb-badge kb-badge--live">Winning</span>{% endif %}</td>
+                                        <td class="kb-faint">{{ bid.placed_at|date:"M j, g:i a" }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p class="kb-muted lst-note">No bids yet. The first one sets the floor.</p>
                     {% endif %}
                 </div>
-                <p style="color: var(--color-muted); font-size: 0.85rem; margin-top: 0.2rem;">{{ q.created_at|date:"M j, Y g:i a" }}</p>
-                {% if q.moderation_state == 'flagged' %}
-                    <p style="margin-top: 0.35rem; color: var(--color-hunting-rust); font-size: 0.85rem;">
-                        This has been flagged and is under review.
+            {% endif %}
+
+            <div class="lst-panel" id="tab-shipping" role="tabpanel" hidden>
+                <dl class="kb-spec lst-shipping">
+                    <dt>Ships from</dt>
+                    <dd>{% if listing.ship_from_address %}{{ listing.ship_from_address.city }}, {{ listing.ship_from_address.state }}{% else %}Not stated{% endif %}</dd>
+                    <dt>Who pays</dt>
+                    <dd>{% if listing.shipping_payer == 'seller' %}Seller &mdash; free shipping{% else %}Buyer{% endif %}</dd>
+                    <dt>Local pickup</dt>
+                    <dd>
+                        {% if listing.local_pickup_available %}
+                            {{ listing.local_pickup_location|default:"Offered, by arrangement" }}
+                        {% else %}Not offered{% endif %}
+                    </dd>
+                </dl>
+            </div>
+        </section>
+    </div>
+
+    {# ── Right: the one decision panel ────────────────────────────── #}
+    <aside class="lst-rail">
+        <div class="kb-panel lst-decide"
+             {% if is_auction %}
+             data-poll-url="{% url 'listings:bid_status' listing.id %}"
+             data-bid-target="#current-bid-value"
+             data-bid-count-target="#bid-count-value"
+             data-min-bid-target="#min-bid-value"
+             data-auction-end-target="#countdown-value"
+             {% endif %}>
+
+            {% if is_auction %}
+                <div class="lst-price-row">
+                    <div class="kb-stack">
+                        <span class="kb-eyebrow">Current bid</span>
+                        <span class="kb-price lst-big">$<span id="current-bid-value">{{ listing.current_price|floatformat:2 }}</span></span>
+                        <span class="kb-faint lst-price-sub">
+                            <span id="bid-count-value">{{ bid_count }}</span> bid{{ bid_count|pluralize }}
+                            {% if listing.reserve_price %}
+                                &middot; {% if listing.current_bid and listing.current_bid >= listing.reserve_price %}reserve met{% else %}reserve not met{% endif %}
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% if auction_open %}
+                        <div class="kb-stack lst-clock">
+                            <span class="kb-eyebrow kb-eyebrow--rust">Ends in</span>
+                            <span class="kb-price lst-countdown" id="countdown-value"
+                                  data-auction-end="{{ listing.auction_end|date:'c' }}">&mdash;</span>
+                            <span class="kb-faint lst-price-sub">{{ listing.auction_end|date:"D M j, g:i a" }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+
+                {% if user.is_authenticated and listing.seller_id == user.id %}
+                    <p class="kb-muted lst-note kb-panel-divide">This is your listing. You cannot bid on it.</p>
+                {% elif user.is_authenticated %}
+                    {% if viewer_won_auction %}
+                        <div class="kb-panel-divide kb-stack lst-won">
+                            <p class="lst-won-line">You won this auction at <strong>${{ auction_order.item_amount|floatformat:2 }}</strong>.</p>
+                            {% if auction_order.status == 'pending_payment' %}
+                                <a class="kb-btn kb-btn--primary kb-btn--lg kb-btn--block" href="{% url 'listings:auction_win_review' listing.pk %}">Review &amp; pay</a>
+                            {% else %}
+                                <a class="kb-btn kb-btn--secondary kb-btn--block" href="{% url 'orders:detail' auction_order.pk %}">View your order</a>
+                            {% endif %}
+                        </div>
+                    {% elif not auction_open %}
+                        <p class="kb-muted lst-note kb-panel-divide">
+                            This auction has ended.{% if auction_order %} The item is awaiting payment from the winning bidder.{% endif %}
+                        </p>
+                    {% elif not user.profile.email_verified %}
+                        <p class="lst-blocked kb-panel-divide">Verify your email before placing bids.</p>
+                    {% else %}
+                        <form method="post" action="{% url 'bids:create' listing.id %}" data-bid-form class="kb-panel-divide lst-bid-form">
+                            {% csrf_token %}
+                            <div class="kb-between">
+                                <span class="kb-label lst-bid-label">Your bid</span>
+                                <span class="kb-faint">Minimum $<span id="min-bid-value">{{ minimum_bid }}</span></span>
+                            </div>
+                            <div class="lst-bid-row">
+                                {{ bid_form.amount }}
+                                <button type="submit" class="kb-btn kb-btn--primary kb-btn--lg">Place bid</button>
+                            </div>
+                            {% if quick_bids %}
+                                <div class="kb-inline lst-quick">
+                                    {% for amount in quick_bids %}
+                                        <button type="button" class="kb-chip kb-chip--quiet" data-quick-bid="{{ amount|floatformat:2 }}">${{ amount|floatformat:0 }}</button>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <span class="kb-hint" id="min-bid-helper-wrap">Bids are binding. The seller sets the terms &mdash; KeystoneBid is never the auctioneer.</span>
+                        </form>
+                        {% if user_bid %}
+                            <p class="kb-muted lst-note">Your highest bid so far: <strong>${{ user_bid.amount }}</strong></p>
+                        {% endif %}
+                    {% endif %}
+                {% else %}
+                    <div class="kb-panel-divide">
+                        <a class="kb-btn kb-btn--primary kb-btn--lg kb-btn--block" href="{% url 'accounts:login' %}?next={{ request.path }}">Sign in to bid</a>
+                    </div>
+                {% endif %}
+
+            {% elif is_buy_now %}
+                <div class="lst-price-row">
+                    <div class="kb-stack">
+                        <span class="kb-eyebrow">Price</span>
+                        <span class="kb-price lst-big">{% if listing.buy_now_price %}${{ listing.buy_now_price|floatformat:2 }}{% else %}&mdash;{% endif %}</span>
+                        {% if listing.allow_offers %}<span class="kb-faint lst-price-sub">Offers considered</span>{% endif %}
+                    </div>
+                </div>
+
+                {% if user.is_authenticated and listing.seller_id == user.id %}
+                    {% if held_offer %}
+                        <div class="kb-panel-divide lst-won">
+                            <p class="lst-won-line">You accepted <strong>{{ held_offer.from_user.username }}</strong>&rsquo;s offer of ${{ held_offer.amount|floatformat:2 }}. Awaiting their payment.</p>
+                            <a class="kb-btn kb-btn--secondary kb-btn--block" href="{% url 'offers:detail' held_offer.pk %}">View offer</a>
+                        </div>
+                    {% elif seller_pending_offers %}
+                        <div class="kb-panel-divide kb-stack lst-offers">
+                            <span class="kb-label">Offers awaiting your response</span>
+                            {% for offer in seller_pending_offers %}
+                                <a href="{% url 'offers:detail' offer.pk %}" class="lst-offer-row">
+                                    <strong>${{ offer.amount|floatformat:2 }}</strong>
+                                    <span class="kb-muted">from {{ offer.from_user.username }}</span>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="kb-muted lst-note kb-panel-divide">This is your listing. No offers yet.</p>
+                    {% endif %}
+                {% elif user.is_authenticated %}
+                    <div class="kb-panel-divide kb-stack lst-actions">
+                        {% if viewer_holds_offer %}
+                            <p class="lst-won-line">Your offer of <strong>${{ held_offer.amount|floatformat:2 }}</strong> was accepted. Complete payment to secure this item.</p>
+                            <a class="kb-btn kb-btn--primary kb-btn--lg kb-btn--block" href="{% url 'listings:buy_now_review' listing.pk %}">Review &amp; pay ${{ held_offer.amount|floatformat:2 }}</a>
+                        {% elif offer_reserved_by_other %}
+                            <p class="lst-blocked">This listing is reserved for a buyer whose offer was accepted.</p>
+                        {% elif can_buy_now %}
+                            <a class="kb-btn kb-btn--primary kb-btn--lg kb-btn--block" href="{% url 'listings:buy_now_review' listing.pk %}">Buy now</a>
+                            {% if my_pending_offer %}
+                                <p class="kb-muted lst-note">
+                                    You have a pending offer of <strong>${{ my_pending_offer.amount|floatformat:2 }}</strong>.
+                                    <a href="{% url 'offers:detail' my_pending_offer.pk %}">View it</a>
+                                </p>
+                            {% elif can_make_offer %}
+                                <a class="kb-btn kb-btn--secondary kb-btn--block" href="{% url 'offers:make' listing.pk %}">Make an offer</a>
+                                <span class="kb-hint">Offers are binding &mdash; if the seller accepts, you buy at that price.</span>
+                            {% endif %}
+                        {% elif can_resume_buy_now %}
+                            <p class="kb-muted lst-note">You already started checkout for this listing.</p>
+                            <a class="kb-btn kb-btn--primary kb-btn--block" href="{% url 'payments:checkout' buy_now_order.pk %}">Resume checkout</a>
+                        {% elif buy_now_locked %}
+                            <p class="lst-blocked">This listing is currently locked by another buyer&rsquo;s checkout session.</p>
+                        {% elif buy_now_restriction_reason %}
+                            <p class="lst-blocked">{{ buy_now_restriction_reason }}</p>
+                        {% else %}
+                            <p class="kb-muted lst-note">This listing is no longer available for buy now.</p>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="kb-panel-divide">
+                        <a class="kb-btn kb-btn--primary kb-btn--lg kb-btn--block" href="{% url 'accounts:login' %}?next={{ request.path }}">Sign in to buy</a>
+                    </div>
+                {% endif %}
+
+            {% else %}
+                <div class="kb-stack lst-trade-head">
+                    <span class="kb-eyebrow">Open to trade</span>
+                    <p class="lst-trade-wants">{{ listing.trade_notes|default:"No specific preferences listed." }}</p>
+                    <span class="kb-faint lst-price-sub">
+                        {% if listing.allow_cash %}Cash on top of a swap is welcome{% else %}Straight swap only, no cash{% endif %}
+                    </span>
+                </div>
+
+                {% if user.is_authenticated and listing.seller_id == user.id %}
+                    <div class="kb-panel-divide kb-stack lst-actions">
+                        <p class="kb-muted lst-note">Offers received: <strong>{{ trade_offer_count }}</strong></p>
+                        {% if latest_trade_offer %}
+                            <a class="kb-btn kb-btn--secondary kb-btn--block" href="{% url 'trades:offer_detail' offer_id=latest_trade_offer.id %}">View latest offer</a>
+                        {% endif %}
+                    </div>
+                {% elif user.is_authenticated %}
+                    <div class="kb-panel-divide kb-stack lst-actions">
+                        {% if can_propose_trade %}
+                            <a class="kb-btn kb-btn--primary kb-btn--lg kb-btn--block" href="{% url 'trades:propose' listing_id=listing.id %}">Propose a trade</a>
+                            <span class="kb-hint">You pick from your own collection on the next screen. Nothing is committed until both sides agree.</span>
+                        {% elif trade_restriction_reason %}
+                            <p class="lst-blocked">{{ trade_restriction_reason }}</p>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="kb-panel-divide">
+                        <a class="kb-btn kb-btn--primary kb-btn--lg kb-btn--block" href="{% url 'accounts:login' %}?next={{ request.path }}">Sign in to propose a trade</a>
+                    </div>
+                {% endif %}
+            {% endif %}
+
+            {% if not is_trade %}
+                <div class="kb-panel-divide lst-ship-lines">
+                    <div class="kb-between"><span class="kb-faint">Shipping</span>
+                        <span>{% if listing.shipping_payer == 'seller' %}Free &mdash; seller pays{% else %}Buyer pays{% endif %}</span></div>
+                    {% if listing.local_pickup_available %}
+                        <div class="kb-between"><span class="kb-faint">Local pickup</span>
+                            <span>{{ listing.local_pickup_location|default:"By arrangement" }}</span></div>
+                    {% endif %}
+                    <div class="kb-between"><span class="kb-faint">Condition</span>
+                        <span>{{ listing.get_condition_grade_display }}</span></div>
+                </div>
+            {% endif %}
+        </div>
+
+        {# Seller — parchment, because it groups rather than decides. #}
+        <div class="kb-panel kb-panel--parchment lst-seller">
+            <div class="kb-person">
+                <span class="kb-person-avatar">
+                    {% if listing.seller.profile.avatar %}
+                        <img src="{{ listing.seller.profile.avatar.url }}" alt="">
+                    {% else %}{{ listing.seller.profile.get_display_name|slice:':2'|upper }}{% endif %}
+                </span>
+                <span class="kb-stack">
+                    <a href="{% url 'accounts:profile' listing.seller.username %}" class="kb-person-name">{{ listing.seller.profile.get_display_name }}</a>
+                    <span class="kb-person-sub">
+                        {% if listing.seller.profile.county %}Collecting from {{ listing.seller.profile.county }}{% else %}@{{ listing.seller.username }}{% endif %}
+                    </span>
+                </span>
+            </div>
+
+            <div class="kb-inline lst-seller-stats">
+                {% if seller_review_summary.total > 0 %}
+                    <span class="kb-chip kb-chip--quiet kb-chip--sm lst-positive">{{ seller_review_summary.positive_pct }}% positive &middot; {{ seller_review_summary.total }}</span>
+                {% else %}
+                    <span class="kb-chip kb-chip--quiet kb-chip--sm">No reviews yet</span>
+                {% endif %}
+                {% if seller_completed_sales %}
+                    <span class="kb-chip kb-chip--quiet kb-chip--sm">{{ seller_completed_sales }} sale{{ seller_completed_sales|pluralize }}</span>
+                {% endif %}
+            </div>
+
+            {% if user.is_authenticated and listing.seller_id != user.id %}
+                <form method="post" action="{% url 'messaging:start' %}" class="kb-inline lst-seller-actions">
+                    {% csrf_token %}
+                    <input type="hidden" name="recipient_id" value="{{ listing.seller_id }}">
+                    <input type="hidden" name="listing_id" value="{{ listing.pk }}">
+                    <input type="hidden" name="conversation_type" value="{{ listing.listing_type }}">
+                    <button type="submit" class="kb-btn kb-btn--secondary kb-btn--sm">Ask a question</button>
+                </form>
+            {% endif %}
+        </div>
+
+        {% comment %}
+        The most useful thing this page can tell a collector is not what the
+        item is, but whether they already have it.
+        {% endcomment %}
+        {% if viewer_gap %}
+            <div class="kb-panel lst-gap">
+                <span class="kb-eyebrow">Your collection</span>
+                {% if viewer_gap.have %}
+                    <p class="lst-gap-line">You already own a {{ viewer_gap.year }} {{ viewer_gap.unit }}.</p>
+                {% else %}
+                    <p class="lst-gap-line">
+                        You don&rsquo;t have a {{ viewer_gap.year }} {{ viewer_gap.unit }}. This would close a gap in
+                        {% if viewer_gap.new_unit and viewer_gap.new_year %}both your unit and year runs.
+                        {% elif viewer_gap.new_unit %}your {{ viewer_gap.unit }} run.
+                        {% elif viewer_gap.new_year %}your {{ viewer_gap.year }} year.
+                        {% else %}your collection.{% endif %}
                     </p>
                 {% endif %}
-                {% if q.seller_answer %}
-                    <p style="margin-top: 0.45rem;"><strong>Seller:</strong> {{ q.seller_answer }}</p>
-                {% elif user.is_authenticated and user.id == listing.seller_id %}
-                    <form method="post" action="{% url 'listings:answer_question' listing.pk q.pk %}" style="display: grid; gap: 0.45rem; margin-top: 0.55rem;">
-                        {% csrf_token %}
-                        <textarea class="form-input" name="seller_answer" rows="2" placeholder="Post an answer..." required></textarea>
-                        <div><button type="submit" class="btn-secondary">Post answer</button></div>
-                    </form>
-                {% else %}
-                    <p style="margin-top: 0.45rem; color: var(--color-muted);">Awaiting seller response.</p>
-                {% endif %}
-            </article>
-        {% empty %}
-            <p>No questions yet.</p>
-        {% endfor %}
-    </div>
-</section>
-{% endif %}
-
-{% if is_auction %}
-<section class="card" style="margin-top: 1rem;">
-    <h2 style="font-size: 1.2rem; margin-bottom: 0.75rem;">Recent bids</h2>
-    {% if recent_bids %}
-        <div style="display: grid; gap: 0.45rem;">
-            {% for bid in recent_bids %}
-                <p>
-                    ${{ bid.amount }} by {{ bid.bidder.username }} on {{ bid.placed_at|date:"M j, Y g:i a" }}
-                    {% if bid.is_winning %}<strong>(winning)</strong>{% endif %}
-                </p>
-            {% endfor %}
-        </div>
-    {% else %}
-        <p>No bids yet.</p>
-    {% endif %}
-</section>
-{% endif %}
+            </div>
+        {% endif %}
+    </aside>
+</div>
 
 {% if related_listings %}
-<section class="card" style="margin-top: 1rem;">
-    <h2 style="font-size: 1.2rem; margin-bottom: 0.75rem;">Related Listings</h2>
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem;">
-        {% for listing in related_listings %}
-            {% include 'listings/_listing_card.html' %}
-        {% endfor %}
-    </div>
-</section>
+    <section class="lst-more">
+        <h2 class="kb-h2">Similar items</h2>
+        <div class="kb-grid">
+            {% for listing in related_listings %}{% include 'listings/_card.html' %}{% endfor %}
+        </div>
+    </section>
 {% endif %}
 
 {% if more_from_seller %}
-<section class="card" style="margin-top: 1rem;">
-    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.75rem;">
-        <h2 style="font-size: 1.2rem; margin: 0;">More from {{ listing.seller.profile.get_display_name|default:listing.seller.username }}</h2>
-        <a href="{% url 'accounts:profile' listing.seller.username %}?tab=listings" style="font-size: 0.85rem; color: var(--color-muted);">See all &rarr;</a>
-    </div>
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem;">
-        {% for listing in more_from_seller %}
-            {% include 'listings/_listing_card.html' %}
-        {% endfor %}
-    </div>
-</section>
+    <section class="lst-more">
+        <div class="kb-between">
+            <h2 class="kb-h2">More from {{ listing.seller.profile.get_display_name|default:listing.seller.username }}</h2>
+            <a href="{% url 'accounts:profile' listing.seller.username %}?tab=listings" class="kb-btn kb-btn--text">See all &rarr;</a>
+        </div>
+        <div class="kb-grid">
+            {% for listing in more_from_seller %}{% include 'listings/_card.html' %}{% endfor %}
+        </div>
+    </section>
 {% endif %}
 {% endblock %}

@@ -71,6 +71,54 @@ function initBidFormValidation() {
     });
 }
 
+// Q&A, bid history and shipping live in tabs so the listing page has a
+// bottom. Progressive enhancement: with no JS every panel is simply visible.
+function initTabs() {
+    document.querySelectorAll('[data-tabs]').forEach((group) => {
+        const tabs = Array.from(group.querySelectorAll('[data-tab-target]'));
+        if (tabs.length === 0) return;
+
+        const panels = tabs
+            .map((tab) => document.getElementById(tab.dataset.tabTarget))
+            .filter(Boolean);
+
+        const show = (index) => {
+            tabs.forEach((tab, i) => tab.setAttribute('aria-selected', i === index ? 'true' : 'false'));
+            panels.forEach((panel, i) => { panel.hidden = i !== index; });
+        };
+
+        tabs.forEach((tab, index) => {
+            tab.addEventListener('click', () => show(index));
+            tab.addEventListener('keydown', (e) => {
+                if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+                e.preventDefault();
+                const next = (index + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+                tabs[next].focus();
+                show(next);
+            });
+        });
+
+        show(0);
+    });
+}
+
+// One-tap bidding. A collector deciding in the last two minutes should not
+// have to type a figure.
+function initQuickBids() {
+    const buttons = document.querySelectorAll('[data-quick-bid]');
+    if (buttons.length === 0) return;
+
+    buttons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const form = button.closest('form');
+            const input = form ? form.querySelector('input[name="amount"]') : null;
+            if (!input) return;
+            input.value = button.dataset.quickBid;
+            input.focus();
+        });
+    });
+}
+
 function initGallery() {
     const mainImage = document.querySelector('[data-gallery-main]');
     const thumbs = Array.from(document.querySelectorAll('[data-gallery-thumb]'));
@@ -86,6 +134,7 @@ function initGallery() {
     const setImage = (index) => {
         currentIndex = (index + sources.length) % sources.length;
         mainImage.src = sources[currentIndex];
+        thumbs.forEach((thumb, i) => thumb.classList.toggle('is-on', i === currentIndex));
     };
 
     thumbs.forEach((thumb, index) => {
@@ -197,6 +246,8 @@ document.addEventListener('DOMContentLoaded', () => {
     fadeOutMessages();
     initNav();
     initDashTabs();
+    initTabs();
+    initQuickBids();
     document.querySelectorAll('[data-auction-end]').forEach(startCountdown);
     initBidFormValidation();
     initGallery();
