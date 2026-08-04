@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block title %}The Almanac &middot; KeystoneBid{% endblock %}
+
+{% block content %}
+<div class="alm-intro">
+    <span class="kb-eyebrow kb-eyebrow--brass">The Almanac</span>
+    <h1 class="kb-page-title">What collectors know about this material, written down and signed.</h1>
+    <p class="kb-page-lede">
+        An entry is a piece about one county, one era, one licence type or one particular
+        licence &mdash; what was issued, how to tell an original from a reproduction, and
+        what a run of them is actually worth knowing. It publishes under the writer&rsquo;s
+        name with their holding beside it, because that is a reader&rsquo;s only way to weigh
+        what they say. Corrections go to the author first.
+    </p>
+</div>
+
+<div class="kb-panel alm-soon">
+    <span class="kb-eyebrow">Not built yet</span>
+    <p class="alm-soon-copy">
+        The Almanac needs a model that does not exist &mdash; an entry, an author, a subject
+        and a corrections queue. It sits third in the build order, after price history and
+        collection sets, because both of those are load-bearing for screens across the rest
+        of the site and this one is not.
+    </p>
+    <p class="alm-soon-copy">
+        It is in the navigation because the shape of the site is settled and a zone that
+        quietly appears later is harder to plan around than one that says what it will be.
+    </p>
+</div>
+
+<section class="alm-meanwhile">
+    <h2 class="kb-h2">In the meantime</h2>
+    <p class="kb-page-lede">
+        Two things already carry some of this. Reference pages hold what is known about a
+        state and its issuing units, and every listing carries its seller&rsquo;s own
+        description of the object.
+    </p>
+    <div class="kb-empty-actions alm-actions">
+        {% if default_state %}
+            <a href="{% url 'core:state_detail' default_state.slug %}" class="kb-btn kb-btn--primary">
+                {{ default_state.name }} reference
+            </a>
+        {% endif %}
+        <a href="{% url 'hunt' %}" class="kb-btn kb-btn--secondary">Go hunting</a>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .alm-intro { max-width: 810px; display: flex; flex-direction: column; gap: 10px; }
+    .alm-soon { margin: var(--kb-7) 0; max-width: 810px; display: flex; flex-direction: column; gap: 10px; border-left: 3px solid var(--kb-brass); }
+    .alm-soon-copy { margin: 0; font: var(--kb-text-body-sm); color: var(--kb-ink-2); }
+    .alm-meanwhile { display: flex; flex-direction: column; gap: 10px; max-width: 810px; }
+    .alm-actions { justify-content: flex-start; margin-top: var(--kb-2); }
+</style>
+{% endblock %}

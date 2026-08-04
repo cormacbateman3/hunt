@@ -155,3 +155,20 @@ def create_reference_data_suggestion(request):
     else:
         messages.error(request, 'Please correct the suggestion form and try again.')
     return redirect(next_url)
+
+
+def almanac(request):
+    """The Almanac — a nav-level destination with no model behind it yet.
+
+    Turn 12 designs an index of member-written entries about a county, an
+    era or a single licence, with a corrections queue and a moderator step.
+    Turn 20 puts the model third in its own build order, after price history
+    and CollectionSet.
+
+    Shipping the nav slot without the app is deliberate: the four-zone
+    masthead is the settled design, and a zone that quietly disappears is
+    worse than one that says plainly what it will be. This page states that
+    and points at the two things that already exist.
+    """
+    states = State.objects.filter(is_primary_default=True).first()
+    return render(request, 'core/almanac.html', {'default_state': states})

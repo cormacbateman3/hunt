@@ -1,15 +1,15 @@
 /* ==========================================================================
-   The shell — three fixed bands, inherited by every page.
-   Spec: design turn 1b, "The shell and the design language every page
-   inherits", and the four screens it carries in 1c.
+   The shell
+   Spec: design turn 2a, "every other page — compressed to 56px, with the
+   trail on the left", as carried by every turn from 2 to 21.
 
-   Band 1  topbar   62px, forest, brand + global search + three destinations
-   Band 2  context  48px, white, sub-tabs in Hunt / workspace tabs in My Bench
-   Band 3  page     the content well, max 1240px on a warm page
+   Band 1  masthead     56px, forest — mark, four zones, search, actions
+   Band 2  contextual   44px tabs, or a 40px breadcrumb trail
+   Band 3  page         the content well on a warm page
+
+   Hairlines, not shadows. Paper doesn't float.
    ========================================================================== */
 
-/* Every band is full-bleed; the content inside it rides the page width so
-   the nav lines up with the grid below it. */
 .kb-band-inner {
     max-width: var(--kb-page-max);
     margin: 0 auto;
@@ -19,7 +19,7 @@
     align-items: center;
 }
 
-/* ── Band 1 — topbar ─────────────────────────────────────────────────── */
+/* ── Band 1 — masthead ───────────────────────────────────────────────── */
 .kb-topbar {
     background: var(--kb-forest);
     color: var(--kb-cream);
@@ -34,85 +34,57 @@
 }
 
 .kb-brand {
-    font-family: var(--kb-font-display);
-    font-size: 23px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    color: var(--kb-cream);
-    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
     flex-shrink: 0;
+    text-decoration: none;
+}
+
+.kb-brand img {
+    width: 25px;
+    height: 25px;
+    display: block;
+    flex-shrink: 0;
+}
+
+.kb-brand span {
+    font-family: var(--kb-font-display);
+    font-size: 21px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    color: var(--kb-cream);
     line-height: 1;
 }
 
-.kb-brand:hover {
+.kb-brand:hover span {
     color: var(--kb-cream);
-    opacity: 0.88;
+    opacity: 0.9;
 }
 
-/* Global search. There is no global search today — only a per-page filter
-   bar — so this is the new primary way in. */
-.kb-search {
-    flex: 1;
-    max-width: 480px;
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    background: rgba(255, 255, 255, 0.09);
-    border: 1px solid rgba(255, 255, 255, 0.20);
-    border-radius: var(--kb-r-lg);
-    padding: 0 13px;
-    height: 36px;
-    transition: background-color 0.15s, border-color 0.15s;
-}
-
-.kb-search:focus-within {
-    background: rgba(255, 255, 255, 0.14);
-    border-color: rgba(255, 255, 255, 0.32);
-}
-
-.kb-search svg {
-    width: 15px;
-    height: 15px;
-    flex-shrink: 0;
-    stroke: rgba(244, 241, 232, 0.65);
-}
-
-.kb-search input {
-    flex: 1;
-    min-width: 0;
-    background: none;
-    border: 0;
-    padding: 0;
-    color: var(--kb-cream);
-    font: 400 13px/1 var(--kb-font-body);
-}
-
-.kb-search input::placeholder {
-    color: rgba(244, 241, 232, 0.6);
-}
-
-.kb-search input:focus {
-    outline: none;
-}
-
-.kb-topbar-spacer {
-    flex: 1;
-}
-
-.kb-topbar-right {
-    display: flex;
-    align-items: center;
-    gap: 14px;
+.kb-topbar-divider {
+    width: 1px;
+    height: 22px;
+    background: rgba(244, 241, 232, 0.18);
     flex-shrink: 0;
 }
 
-/* The three destinations. */
+/* The four zones, hard left beside the mark — reading order, not a
+   centred banner. */
+.kb-topbar-nav {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+}
+
 .kb-dest {
-    font-size: 13.5px;
-    font-weight: 500;
-    color: rgba(244, 241, 232, 0.72);
+    font-size: var(--kb-nav-size);
+    font-weight: 700;
+    letter-spacing: var(--kb-nav-tracking);
+    text-transform: uppercase;
+    color: rgba(244, 241, 232, 0.62);
     text-decoration: none;
-    padding-bottom: 3px;
+    padding-bottom: 4px;
     white-space: nowrap;
     transition: color 0.15s;
 }
@@ -122,73 +94,125 @@
 }
 
 .kb-dest[aria-current="page"] {
-    font-weight: 600;
     color: var(--kb-cream);
     box-shadow: inset 0 -2px 0 var(--kb-brass);
 }
 
-.kb-topbar-divider {
-    width: 1px;
-    height: 22px;
-    background: rgba(255, 255, 255, 0.18);
+/* A zone with nothing behind it yet still has to look like a place. */
+.kb-dest--soon {
+    color: rgba(244, 241, 232, 0.38);
+}
+
+/* Search sits right of the zones, recessed into the masthead. */
+.kb-search {
+    flex: 1;
+    max-width: 300px;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    background: var(--kb-forest-ink);
+    border: 1px solid #3b4a33;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+    border-radius: var(--kb-r-chip);
+    padding: 0 12px;
+    height: 32px;
+}
+
+.kb-search:focus-within {
+    border-color: var(--kb-brass);
+}
+
+.kb-search svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    stroke: rgba(244, 241, 232, 0.5);
+}
+
+.kb-search input {
+    flex: 1;
+    min-width: 0;
+    background: none;
+    border: 0;
+    padding: 0;
+    color: var(--kb-cream);
+    font: 400 12px/1 var(--kb-font-body);
+}
+
+.kb-search input::placeholder {
+    color: rgba(244, 241, 232, 0.5);
+}
+
+.kb-search input:focus {
+    outline: none;
+}
+
+.kb-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
     flex-shrink: 0;
 }
 
-/* The one gold action. Brass is reserved for accents and a single primary
-   action per view — this is it in the shell. */
+/* Icon + count. Brass for messages, rust for notifications — the colour
+   says which kind of waiting it is. */
+.kb-alert {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+    color: rgba(244, 241, 232, 0.8);
+}
+
+.kb-alert:hover {
+    color: var(--kb-cream);
+}
+
+.kb-alert svg {
+    width: 14px;
+    height: 14px;
+}
+
+.kb-alert-count {
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 15px;
+    height: 15px;
+    line-height: 15px;
+    text-align: center;
+    border-radius: var(--kb-r-chip);
+    padding: 0 3px;
+}
+
+.kb-alert-count--brass { background: var(--kb-brass); }
+.kb-alert-count--rust  { background: var(--kb-rust); }
+
+/* The one gold action. */
 .kb-sell {
     background: var(--kb-brass);
-    color: #fff;
-    font-size: 13px;
-    font-weight: 600;
-    padding: 8px 15px;
-    border-radius: var(--kb-r-md);
+    border: 1px solid var(--kb-brass);
+    color: var(--kb-forest-ink);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    padding: 8px 14px;
+    border-radius: var(--kb-r-chip);
     text-decoration: none;
     white-space: nowrap;
     transition: background-color 0.15s;
 }
 
 .kb-sell:hover {
-    background: #8c6a1f;
-    color: #fff;
+    background: var(--kb-brass-bright);
+    border-color: var(--kb-brass-bright);
+    color: var(--kb-forest-ink);
 }
 
-.kb-bell {
-    position: relative;
-    display: flex;
-    align-items: center;
-    color: rgba(244, 241, 232, 0.85);
-    text-decoration: none;
-}
-
-.kb-bell:hover {
-    color: var(--kb-cream);
-}
-
-.kb-bell svg {
-    width: 18px;
-    height: 18px;
-}
-
-.kb-bell-badge {
-    position: absolute;
-    top: -5px;
-    right: -6px;
-    background: var(--kb-rust);
-    color: #fff;
-    font-size: 9.5px;
-    font-weight: 700;
-    min-width: 15px;
-    height: 15px;
-    line-height: 15px;
-    text-align: center;
-    border-radius: var(--kb-r-pill);
-    padding: 0 3px;
-    pointer-events: none;
-}
-
-/* The username dropdown is gone. The avatar carries only account, settings,
-   sign out — everything else was hiding state and is now a My Bench tab. */
+/* The username dropdown is gone — it hid state. The avatar carries only
+   profile, settings, sign out. */
 .kb-account {
     position: relative;
     flex-shrink: 0;
@@ -197,10 +221,10 @@
 .kb-avatar {
     width: 28px;
     height: 28px;
-    border-radius: var(--kb-r-pill);
+    border-radius: var(--kb-r-chip);
     background: var(--kb-parchment);
     color: var(--kb-forest);
-    font: 700 12.5px/1 var(--kb-font-body);
+    font: 700 11.5px/1 var(--kb-font-body);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -223,12 +247,12 @@
     top: calc(100% + 10px);
     min-width: 190px;
     background: var(--kb-surface);
-    border: 1px solid var(--kb-rule);
+    border: 1px solid var(--kb-rule-panel);
     border-radius: var(--kb-r-lg);
     box-shadow: var(--kb-shadow-panel);
     list-style: none;
     margin: 0;
-    padding: 6px 0;
+    padding: 5px 0;
     z-index: 200;
 }
 
@@ -238,8 +262,8 @@
 
 .kb-account-menu a {
     display: block;
-    padding: 9px 16px;
-    font-size: 13px;
+    padding: 8px 16px;
+    font: var(--kb-text-body-sm);
     color: var(--kb-ink);
     text-decoration: none;
 }
@@ -252,13 +276,15 @@
 .kb-account-menu hr {
     border: 0;
     border-top: 1px solid var(--kb-rule);
-    margin: 6px 0;
+    margin: 5px 0;
 }
 
 .kb-auth-link {
-    font-size: 13.5px;
-    font-weight: 500;
-    color: rgba(244, 241, 232, 0.72);
+    font-size: var(--kb-nav-size);
+    font-weight: 700;
+    letter-spacing: var(--kb-nav-tracking);
+    text-transform: uppercase;
+    color: rgba(244, 241, 232, 0.62);
     text-decoration: none;
 }
 
@@ -266,26 +292,26 @@
     color: var(--kb-cream);
 }
 
-/* ── Band 2 — contextual ─────────────────────────────────────────────── */
+/* ── Band 2a — workspace / catalog tabs ──────────────────────────────── */
 .kb-context {
-    background: var(--kb-surface);
-    border-bottom: 1px solid var(--kb-rule);
+    background: var(--kb-parchment-soft);
+    border-bottom: 1px solid var(--kb-rule-panel);
     height: var(--kb-band-h);
 }
 
 .kb-context .kb-band-inner {
-    gap: 2px;
+    gap: 24px;
+    align-items: stretch;
 }
 
 .kb-tab {
-    font-size: 13.5px;
+    font: var(--kb-text-body-sm);
     color: var(--kb-ink-3);
     text-decoration: none;
-    height: var(--kb-band-h);
     display: flex;
     align-items: center;
     gap: 7px;
-    padding: 0 12px;
+    border-bottom: 2px solid transparent;
     white-space: nowrap;
 }
 
@@ -296,20 +322,20 @@
 .kb-tab[aria-current="page"] {
     font-weight: 600;
     color: var(--kb-forest);
-    box-shadow: inset 0 -2px 0 var(--kb-forest);
+    border-bottom-color: var(--kb-forest);
 }
 
 /* A count on a tab is always something waiting on you, so it is rust. */
 .kb-tab-count {
     background: var(--kb-rust);
     color: #fff;
-    font-size: 10.5px;
+    font-size: 10px;
     font-weight: 700;
-    min-width: 17px;
-    height: 17px;
-    line-height: 17px;
+    min-width: 16px;
+    height: 16px;
+    line-height: 16px;
     text-align: center;
-    border-radius: var(--kb-r-pill);
+    border-radius: var(--kb-r-chip);
     padding: 0 4px;
 }
 
@@ -318,12 +344,12 @@
 }
 
 .kb-context-note {
-    font-size: 12.5px;
-    color: var(--kb-ink-3);
+    align-self: center;
+    font: var(--kb-text-meta);
+    color: var(--kb-ink-4);
 }
 
-/* Breadcrumb variant — used on listing detail, where the band carries the
-   path plus result-position paging instead of tabs. */
+/* ── Band 2b — the trail ─────────────────────────────────────────────── */
 .kb-crumbs {
     background: var(--kb-surface);
     border-bottom: 1px solid var(--kb-rule);
@@ -331,27 +357,42 @@
 }
 
 .kb-crumbs .kb-band-inner {
-    gap: 8px;
+    gap: 9px;
 }
 
-.kb-crumbs a,
-.kb-crumbs span {
-    font-size: 12.5px;
-    color: var(--kb-ink-3);
+/* Every crumb is a live filter you can step back to, so they read as
+   links rather than as grey furniture. */
+.kb-crumbs a {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--kb-brass);
     text-decoration: none;
 }
 
 .kb-crumbs a:hover {
-    color: var(--kb-brass);
+    color: var(--kb-brass-deep);
 }
 
 .kb-crumb-sep {
+    font-size: 11px;
     color: var(--kb-rule-strong);
 }
 
 .kb-crumb-current {
-    color: var(--kb-ink);
+    font-size: 12px;
     font-weight: 600;
+    color: var(--kb-ink);
+}
+
+.kb-crumb-back {
+    margin-left: auto;
+    font: var(--kb-text-fine);
+    color: var(--kb-ink-4);
+    text-decoration: none;
+}
+
+.kb-crumb-back:hover {
+    color: var(--kb-brass);
 }
 
 /* ── Band 3 — the page ───────────────────────────────────────────────── */
@@ -367,23 +408,19 @@ body {
     padding: 26px var(--kb-gutter) 48px;
 }
 
-/* Full-bleed variant for Hunt, where the filter rail runs to the left edge
-   of the content well and needs its own border. */
-.kb-page--flush {
-    padding: 0 var(--kb-gutter);
-}
-
 .kb-page-title {
-    font: var(--kb-text-page-title);
-    letter-spacing: -0.015em;
+    font: var(--kb-text-h1);
     color: var(--kb-forest);
     margin: 0;
+    text-wrap: balance;
 }
 
 .kb-page-lede {
     margin: 3px 0 0;
-    font-size: 13.5px;
+    font: var(--kb-text-body-sm);
     color: var(--kb-ink-3);
+    max-width: 810px;
+    text-wrap: pretty;
 }
 
 /* ── Messages ────────────────────────────────────────────────────────── */
@@ -423,8 +460,8 @@ body {
 
 .kb-footer-tag {
     margin: 0;
-    font-size: 13px;
-    max-width: 30ch;
+    font: var(--kb-text-meta);
+    max-width: 34ch;
     line-height: 1.6;
 }
 
@@ -435,15 +472,16 @@ body {
 }
 
 .kb-footer-col h2 {
-    font: 700 var(--kb-label-size)/1 var(--kb-font-body);
-    letter-spacing: var(--kb-label-tracking);
+    font-size: var(--kb-eyebrow-size);
+    font-weight: 700;
+    letter-spacing: var(--kb-eyebrow-tracking);
     text-transform: uppercase;
-    color: var(--kb-brass);
+    color: var(--kb-brass-bright);
     margin: 0 0 3px;
 }
 
 .kb-footer-col a {
-    font-size: 13px;
+    font: var(--kb-text-meta);
     color: rgba(244, 241, 232, 0.72);
     text-decoration: none;
 }
@@ -460,7 +498,7 @@ body {
     max-width: var(--kb-page-max);
     margin: 0 auto;
     padding: var(--kb-4) var(--kb-gutter);
-    font-size: 12px;
+    font: var(--kb-text-fine);
     color: rgba(244, 241, 232, 0.5);
 }
 
@@ -498,88 +536,67 @@ body {
     transform: translateY(-6.5px) rotate(-45deg);
 }
 
-@media (max-width: 1040px) {
-    .kb-search {
-        max-width: 260px;
-    }
-
-    .kb-topbar .kb-band-inner {
-        gap: var(--kb-3);
-    }
+@media (max-width: 1120px) {
+    .kb-search { max-width: 200px; }
+    .kb-topbar .kb-band-inner { gap: var(--kb-3); }
+    .kb-topbar-right { gap: 12px; }
 }
 
-@media (max-width: 860px) {
-    .kb-nav-toggle {
-        display: flex;
-    }
+@media (max-width: 940px) {
+    .kb-nav-toggle { display: flex; }
+    .kb-topbar { position: relative; }
+    .kb-search { display: none; }
 
-    .kb-topbar {
-        position: relative;
-    }
-
-    .kb-topbar-spacer,
-    .kb-search {
-        display: none;
-    }
-
-    /* The destinations stack below the bar rather than compete for width
-       with the bell and the sell action, which stay reachable. */
+    /* The zones stack below the bar rather than compete for width with the
+       bell and the gold action, which stay reachable. */
     .kb-topbar-nav {
         display: none;
         position: absolute;
         top: var(--kb-topbar-h);
         left: 0;
         right: 0;
-        background: var(--kb-forest);
+        background: var(--kb-forest-deep);
         border-top: 1px solid rgba(255, 255, 255, 0.12);
         padding: var(--kb-2) var(--kb-gutter) var(--kb-4);
         flex-direction: column;
         align-items: stretch;
         gap: 0;
-        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
         z-index: 150;
     }
 
-    .kb-topbar.is-open .kb-topbar-nav {
-        display: flex;
-    }
+    .kb-topbar.is-open .kb-topbar-nav { display: flex; }
 
     .kb-topbar-nav .kb-dest {
-        padding: 11px 0;
-        font-size: 15px;
+        padding: 12px 0;
+        font-size: 12.5px;
         box-shadow: none;
     }
 
     .kb-topbar-nav .kb-dest[aria-current="page"] {
-        color: var(--kb-brass);
-        box-shadow: none;
+        color: var(--kb-brass-bright);
     }
 
-    .kb-topbar-nav .kb-topbar-divider,
-    .kb-topbar-nav .kb-sell {
-        display: none;
-    }
+    .kb-topbar-divider { display: none; }
+    .kb-topbar .kb-band-inner > .kb-topbar-right { margin-left: auto; }
 
-    /* The context band scrolls sideways rather than wrapping to two rows,
-       which would shift the page content down on every tabbed screen. */
-    .kb-context .kb-band-inner {
+    /* The bands scroll sideways rather than wrapping to two rows, which
+       would shift the page content down on every tabbed screen. */
+    .kb-context .kb-band-inner,
+    .kb-crumbs .kb-band-inner {
         overflow-x: auto;
         scrollbar-width: none;
     }
 
-    .kb-context .kb-band-inner::-webkit-scrollbar {
+    .kb-context .kb-band-inner::-webkit-scrollbar,
+    .kb-crumbs .kb-band-inner::-webkit-scrollbar {
         display: none;
     }
 }
 
 @media (max-width: 560px) {
-    .kb-page {
-        padding: var(--kb-5) var(--kb-4) var(--kb-7);
-    }
-
-    .kb-page-title {
-        font-size: 26px;
-    }
+    .kb-sell { display: none; }
+    .kb-page { padding: var(--kb-5) var(--kb-4) var(--kb-7); }
+    .kb-page-title { font-size: 24px; }
 
     .kb-band-inner,
     .kb-messages,

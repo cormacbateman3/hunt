@@ -9,18 +9,20 @@ from django.views.generic import TemplateView
 
 from apps.accounts import views as account_views
 from apps.collections import views as collection_views
+from apps.core import views as core_views
 from apps.listings import views as listing_views
 
 urlpatterns = [
     # Admin
     path('admin/', admin.site.urls),
 
-    # The three zones. Each has a job: Hunt is one catalog, My Bench is
-    # your workspace, Collectors is people and their public collections.
-    # They are top-level because they are the whole navigation.
+    # The four zones. Each has a job: Hunt is one catalog, Collections is
+    # people and what they own, My Bench is your workspace, The Almanac is
+    # what the community knows. Top-level, because they are the navigation.
     path('hunt/', listing_views.HuntView.as_view(), name='hunt'),
+    path('collections/', collection_views.browse_collections, name='collectors'),
     path('bench/', account_views.bench, name='bench'),
-    path('collectors/', collection_views.browse_collections, name='collectors'),
+    path('almanac/', core_views.almanac, name='almanac'),
 
     # App URLs
     path('accounts/', include('apps.accounts.urls')),

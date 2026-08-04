@@ -1,20 +1,23 @@
-"""Shell context — which of the three zones the current page belongs to.
+"""Shell context — which zone the current page belongs to.
 
-The redesign replaces four top-level pillars with three zones that each have
-a job: Hunt (one catalog), My Bench (your workspace) and Collectors (people
-and their public collections). Rather than have every template declare its
-own zone and drift out of sync, the zone is derived once from the resolved
-view name.
+The redesign replaces four top-level pillars with four zones that each have
+a job: Hunt (one catalog), Collections (people and what they own), My Bench
+(your workspace) and The Almanac (what the community knows). Rather than
+have every template declare its own zone and drift out of sync, the zone is
+derived once from the resolved view name.
 """
 
-# Views that belong to a zone regardless of their app namespace. The three
-# zone roots are top-level URLs, so they carry no namespace at all.
+# Views that belong to a zone regardless of their app namespace. The zone
+# roots are top-level URLs, so they carry no namespace at all.
 _ZONE_BY_VIEW = {
     'hunt': 'hunt',
     'bench': 'bench',
-    'collectors': 'collectors',
-    'collections:browse': 'collectors',
-    'accounts:profile': 'collectors',
+    'collectors': 'collections',
+    'almanac': 'almanac',
+    # Looking at someone's collection is discovery, so it lives in
+    # Collections; managing your own is work, so it lives in My Bench.
+    'collections:browse': 'collections',
+    'accounts:profile': 'collections',
     'collections:my_collection': 'bench',
 }
 

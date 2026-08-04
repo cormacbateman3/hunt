@@ -1,77 +1,127 @@
 /* ==========================================================================
    KeystoneBid design tokens
-   Source of truth: docs/internal/design/ui-ux-redesign-model — turn 1b,
-   "The shell and the design language every page inherits".
 
-   The old palette used parchment as the default card background, which is
-   what made every page read as one flat beige mass. The rule now: white
-   surfaces on a warm page; parchment is reserved for grouping and quiet
-   zones. Green is darker so white text on it is comfortable; amber warms
-   into brass and carries accents and one primary action per view.
+   Source of truth: docs/internal/design/ui-ux-redesign-model.
+
+   The document is ordered newest-first. Turn 1 proposed the design language;
+   turn 2a then revised the shell ("every other page — compressed to 56px")
+   and turns 2 through 21 all use that revision. Where the two disagree, the
+   later turns win — they are the settled answer and the ~90 screens drawn
+   against them.
+
+   The largest single difference is radius. Turn 1 was soft (7/10/11px);
+   every turn after it is square (3px used 844 times, 4px 359, 2px 212).
+   Turn 2 states the rule outright: "square 3px corners… hairline rules
+   instead of shadows". Paper doesn't float.
    ========================================================================== */
 
 :root {
-    /* --- Core palette ---------------------------------------------------- */
-    --kb-forest: #26331f;          /* Deep Forest — nav, primary action, ink accents */
-    --kb-brass: #a07a26;           /* Brass — accents, links, the one gold action */
-    --kb-rust: #9c3d1e;            /* Rust — urgency, trade format, alerts, counts */
-    --kb-live: #2f6b34;            /* Live Green — live/positive states */
+    /* --- Ink ------------------------------------------------------------ */
+    --kb-ink: #1c1f18;             /* body copy, row titles, input values */
+    --kb-ink-2: #4d5245;           /* secondary prose, table cells */
+    --kb-ink-3: #6b6f60;           /* field labels, meta, inactive tabs */
+    --kb-ink-4: #8c8f80;           /* helper text, footnotes, counts */
+    --kb-ink-5: #a09a88;           /* faintest: timestamps, order numbers */
+    --kb-placeholder: #8b8f7f;     /* input placeholders, select carets */
 
-    /* --- Surfaces -------------------------------------------------------- */
-    --kb-surface: #ffffff;         /* cards, panels, the working surface */
+    /* --- Brand ---------------------------------------------------------- */
+    --kb-forest: #26331f;          /* masthead, primary action, headings */
+    --kb-forest-deep: #1f2b19;     /* nav sub-band on the full masthead */
+    --kb-forest-ink: #1b2416;      /* text on brass; the search well */
+    --kb-brass: #a07a26;           /* eyebrows, links, one gold action */
+    --kb-brass-deep: #7d5d17;      /* link hover, raised edge under gold */
+    --kb-brass-bright: #d9b45e;    /* gold on a dark ground */
+    --kb-rust: #9c3d1e;            /* urgency, destructive, outbid */
+    --kb-rust-2: #8c6a5a;          /* muted rust prose inside peach panels */
+    --kb-live: #2f6b34;            /* positive and complete states */
+    --kb-sage: #6d7a5f;            /* held but below grade; parish accent */
+    --kb-tan: #8c7a4e;             /* "was here early" badge category */
+
+    /* --- Surfaces ------------------------------------------------------- */
+    --kb-surface: #ffffff;
     --kb-page: #faf8f3;            /* the warm page behind everything */
-    --kb-parchment: #f2eee4;       /* grouping + quiet zones only, never default */
-    --kb-parchment-soft: #f7f4ec;  /* panel headers */
-    --kb-chip: #f7f2e6;            /* chip / pill background */
-    --kb-field: #fdfcf8;           /* form field background on parchment */
-    --kb-cream: #f4f1e8;           /* text + marks on forest */
+    --kb-parchment: #f2eee4;       /* grouping and quiet zones ONLY */
+    --kb-parchment-soft: #f7f4ec;  /* card header strips, tab bands */
+    --kb-chip: #f7f2e6;            /* gap tags, quick-bid chips */
+    --kb-field: #fdfcf8;           /* form-field fill */
+    --kb-cream: #f4f1e8;           /* text and marks on forest */
+    --kb-tint-attention: #fdfaf2;  /* row tint: something waiting on you */
+    --kb-tint-positive: #fbfcfa;   /* row tint: winning */
+    --kb-fill-placeholder: #e8e4da;
+    --kb-border-placeholder: #d6cfbd;
 
-    /* --- Rules & borders ------------------------------------------------- */
-    --kb-rule: #e3ddce;            /* card + section borders */
-    --kb-rule-strong: #cfc7b4;     /* inputs, secondary buttons */
-    --kb-rule-soft: #efeade;       /* dividers inside a panel */
-    --kb-rule-panel: #ddd7c8;      /* outer panel border on parchment */
+    /* --- Rules ---------------------------------------------------------- */
+    /* The design carries two near-identical generations of these (1-2%
+       apart). Collapsed to four steps; the later variants #f0ece1, #c9c2ae
+       and #ddd7c8 map onto rule-soft, rule-strong and rule-panel. */
+    --kb-rule-panel: #ddd7c8;      /* outer frame, page-level card border */
+    --kb-rule: #e3ddce;            /* card + table borders, dividers */
+    --kb-rule-soft: #efeade;       /* row dividers inside a card */
+    --kb-rule-strong: #cfc7b4;     /* inputs, secondary buttons, dropzones */
 
-    /* --- Text ------------------------------------------------------------ */
-    --kb-ink: #1c1f18;             /* body text */
-    --kb-ink-2: #4d5245;           /* secondary text */
-    --kb-ink-3: #6b6f60;           /* muted text, inactive tabs */
-    --kb-ink-4: #8c8f80;           /* faint text, hints, counts */
-
-    /* --- Tonal states ---------------------------------------------------- */
+    /* --- Tonal states --------------------------------------------------- */
     --kb-live-bg: #eef3ea;
     --kb-live-border: #cfdcc9;
+    --kb-tile-live: #f6faf4;
     --kb-alert-bg: #fdf1e7;
     --kb-alert-border: #f0d4bf;
+    --kb-alert-chip-bg: #fbf0eb;
+    --kb-alert-chip-border: #e0c3b6;
     --kb-note-bg: #fdf6e3;
+    --kb-note-border: #f0e4c4;
+    --kb-note-ink: #5c5540;
 
-    /* Placeholder hatch used wherever a license scan has not loaded. */
+    /* --- Placeholder hatches -------------------------------------------- */
     --kb-hatch: repeating-linear-gradient(45deg, #ece7db 0 7px, #e3ddce 7px 14px);
+    --kb-hatch-dark: repeating-linear-gradient(45deg, #e6e0d2 0 7px, #dbd4c2 7px 14px);
 
-    /* --- Type ------------------------------------------------------------ */
-    /* Petrona carries the field-journal warmth for titles and prices;
-       Public Sans carries all the working text, because its figures stay
-       legible at 12-14px where Georgia's muddy. */
+    /* --- Type ----------------------------------------------------------- */
+    /* Petrona carries titles and prices at 600 only; Public Sans carries all
+       working text, because its figures stay legible at 12-14px where
+       Georgia's muddy. */
     --kb-font-display: Petrona, Georgia, "Times New Roman", serif;
     --kb-font-body: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     --kb-font-mono: ui-monospace, Menlo, Consolas, monospace;
 
+    --kb-text-hero: 600 44px/1.08 var(--kb-font-display);
     --kb-text-page-title: 600 34px/1.15 var(--kb-font-display);
+    --kb-text-h1-lg: 600 32px/1.15 var(--kb-font-display);
+    --kb-text-h1: 600 28px/1.1 var(--kb-font-display);
+    --kb-text-h2: 600 21px/1.2 var(--kb-font-display);
     --kb-text-section: 600 19px/1.25 var(--kb-font-display);
-    --kb-text-body: 400 14px/1.65 var(--kb-font-body);
+    --kb-text-card-title: 600 15px/1.28 var(--kb-font-display);
 
-    /* Uppercase label: Public Sans 700 / 0.09em */
+    /* 14px is right for page prose. Every card, table row and panel in the
+       later turns is 13-13.5px — do not stretch 14px over card UI. */
+    --kb-text-body: 400 14px/1.65 var(--kb-font-body);
+    --kb-text-body-sm: 400 13.5px/1.6 var(--kb-font-body);
+    --kb-text-meta: 400 12.5px/1.5 var(--kb-font-body);
+    --kb-text-fine: 400 11.5px/1.5 var(--kb-font-body);
+
+    /* Three distinct uppercase labels, all 700. One pair cannot express the
+       10px card eyebrow and the 10.5px field label the design uses. */
+    --kb-eyebrow-size: 10px;
+    --kb-eyebrow-tracking: 0.14em;
+    --kb-fieldlabel-size: 10.5px;
+    --kb-fieldlabel-tracking: 0.12em;
     --kb-label-size: 11px;
     --kb-label-tracking: 0.09em;
+    --kb-nav-size: 11.5px;
+    --kb-nav-tracking: 0.15em;
+    --kb-badge-size: 10px;
+    --kb-badge-tracking: 0.09em;
 
-    /* --- Shell ----------------------------------------------------------- */
-    --kb-topbar-h: 62px;
-    --kb-band-h: 48px;
-    --kb-crumb-h: 44px;
-    --kb-page-max: 1240px;
-    --kb-gutter: 24px;
+    /* --- Shell ---------------------------------------------------------- */
+    --kb-topbar-h: 56px;
+    --kb-band-h: 44px;
+    --kb-crumb-h: 40px;
+    --kb-page-max: 1280px;
+    --kb-gutter: 28px;             /* leaves a 1224px content well */
 
-    /* --- Spacing (8px scale) --------------------------------------------- */
+    /* --- Spacing -------------------------------------------------------- */
+    /* Page-level rhythm only. Component internals keep their literal px:
+       rounding every `11px 18px` header to `12px 16px` would visibly change
+       every card in the design. */
     --kb-1: 4px;
     --kb-2: 8px;
     --kb-3: 12px;
@@ -81,28 +131,36 @@
     --kb-7: 32px;
     --kb-8: 40px;
 
-    /* --- Radii ----------------------------------------------------------- */
-    --kb-r-chip: 4px;
-    --kb-r-sm: 5px;
-    --kb-r-md: 7px;              /* buttons, inputs */
-    --kb-r-lg: 10px;             /* cards */
-    --kb-r-xl: 11px;             /* panels */
-    --kb-r-pill: 999px;
+    --kb-card-head-pad: 11px 18px;
+    --kb-card-body-pad: 16px 18px;
+    --kb-row-pad: 12px 18px;
 
-    /* --- Elevation ------------------------------------------------------- */
+    /* --- Radii ---------------------------------------------------------- */
+    --kb-r-micro: 2px;             /* checkboxes, micro thumbs, swatches */
+    --kb-r-chip: 3px;
+    --kb-r-sm: 3px;
+    --kb-r-md: 3px;                /* buttons, inputs */
+    --kb-r-lg: 4px;                /* cards */
+    --kb-r-xl: 4px;                /* panels */
+    --kb-r-pill: 999px;            /* toggles, rail dots, progress bars */
+
+    /* --- Elevation ------------------------------------------------------ */
+    /* Modals and overlays only. Cards use a hairline: paper doesn't float. */
     --kb-shadow-panel: 0 14px 34px rgba(30, 38, 24, 0.10);
 
     /* ---------------------------------------------------------------------
        Legacy aliases.
-       The pre-revamp token names are still referenced across layout.css,
-       components.css and the page stylesheets. They are re-pointed at the
-       new palette so untouched pages move with the redesign instead of
-       drifting away from it. Remove an alias once its last consumer is
+       Pre-revamp token names are still referenced across layout.css,
+       components.css and the page stylesheets. Re-pointing them at the new
+       palette moves untouched pages with the redesign instead of letting
+       them drift — and because --radius-sm and --radius-md alias the radii
+       above, squaring those five values squares the corners on every
+       un-migrated page for free. Remove an alias once its last consumer is
        restyled; do not add new uses.
        --------------------------------------------------------------------- */
     --color-forest-green: var(--kb-forest);
     --color-aged-amber: var(--kb-brass);
-    --color-aged-amber-on-dark: #d9a441;
+    --color-aged-amber-on-dark: var(--kb-brass-bright);
     --color-hunting-rust: var(--kb-rust);
     --color-parchment: var(--kb-parchment);
     --color-cream-white: var(--kb-page);
@@ -124,5 +182,5 @@
     --space-5: var(--kb-8);
 
     --radius-sm: var(--kb-r-md);
-    --radius-md: var(--kb-r-xl);
+    --radius-md: var(--kb-r-lg);
 }
