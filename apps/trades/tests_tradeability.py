@@ -11,6 +11,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.accounts.models import Address
 from apps.collections.models import CollectionItem
 from apps.collections.tradeability import (
     is_open_to_trade,
@@ -34,6 +35,16 @@ class TradeabilityBase(TestCase):
             defaults={'name': 'Pennsylvania', 'slug': 'pennsylvania',
                       'is_primary_default': True},
         )
+        # Trading is gated on a verified email; these tests are about what
+        # happens after that gate, not the gate itself.
+        for member in (cls.owner, cls.suitor, cls.rival):
+            address = Address.objects.create(
+                user=member, full_name=member.username, line1='1 Main St',
+                city='Williamsport', state='PA', postal_code='17701')
+            member.profile.email_verified = True
+            member.profile.shipping_address = address
+            member.profile.save(
+                update_fields=['email_verified', 'shipping_address'])
 
     def _item(self, owner=None, **kwargs):
         defaults = {
@@ -176,3 +187,65 @@ class OfferPrivacyTests(TradeabilityBase):
         self.client.force_login(User.objects.create_user('td_nosy'))
         resp = self.client.get(reverse('trades:offer_detail', args=[offer.pk]))
         self.assertEqual(resp.status_code, 403)
+
+
+class CompletedTradeTests(TradeabilityBase):
+    """A completed trade used to leave both pieces advertised.
+
+    Ownership does not transfer, so the licence stayed in the old owner's
+    collection marked tradeable. A second collector could propose for
+    something that left months ago; the owner accepts, cannot ship, and takes
+    a non-shipment strike for a piece that was never theirs to give.
+    """
+
+    def _completed_trade(self):
+        from apps.trades.models import Trade, TradeOffer, TradeOfferItem
+        from apps.trades.services import _close_traded_pieces
+
+        listing = Listing.objects.create(
+            seller=self.owner, title='Up for trade', description='d',
+            state=self.pa, condition_grade='good', status='sold',
+            listing_type='trade')
+        mine = self._item(owner=self.owner, title='Mine')
+        theirs = self._item(owner=self.suitor, title='Theirs')
+
+        offer = TradeOffer.objects.create(
+            trade_listing=listing, from_user=self.suitor, to_user=self.owner,
+            status='accepted')
+        TradeOfferItem.objects.create(
+            offer=offer, collection_item=theirs, direction='offered')
+        TradeOfferItem.objects.create(
+            offer=offer, collection_item=mine, direction='requested')
+
+        trade = Trade.objects.create(
+            listing=listing, initiator=self.suitor, counterparty=self.owner,
+            status='delivered_both')
+        return trade, mine, theirs, _close_traded_pieces
+
+    def test_completion_stops_advertising_both_pieces(self):
+        trade, mine, theirs, close = self._completed_trade()
+        self.assertTrue(is_open_to_trade(mine))
+        self.assertTrue(is_open_to_trade(theirs))
+
+        close(trade)
+        mine.refresh_from_db()
+        theirs.refresh_from_db()
+        self.assertFalse(is_open_to_trade(mine))
+        self.assertFalse(is_open_to_trade(theirs))
+
+    def test_a_piece_that_has_gone_cannot_be_offered_again(self):
+        """The strike this prevents is the whole point."""
+        from apps.trades.services import create_trade_offer
+
+        trade, mine, theirs, close = self._completed_trade()
+        close(trade)
+        mine.refresh_from_db()
+
+        second = Listing.objects.create(
+            seller=self.rival, title='Another', description='d', state=self.pa,
+            condition_grade='good', status='active', listing_type='trade')
+        offer, error = create_trade_offer(
+            listing=second, from_user=self.owner, to_user=self.rival,
+            offered_items=[mine])
+        self.assertIsNone(offer)
+        self.assertIn('cannot be traded', error)

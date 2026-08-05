@@ -110,6 +110,37 @@ def _copy_collection_images_to_listing(listing, uploaded_any=False):
         )
 
 
+def _copy_listing_images_to_collection_item(listing, item):
+    """Give the auto-created collection item the photographs it was made from.
+
+    Listing something creates the collection item behind it, and until now
+    that item was created with no images at all — so a seller who
+    photographed a licence found a blank tile in their own collection and on
+    their public profile, while the same photographs sat on the lot.
+
+    Roles carry across so the front stays the front.
+    """
+    from apps.collections.models import CollectionItemImage
+
+    if item.images.exists():
+        return
+
+    if listing.featured_image:
+        CollectionItemImage.objects.create(
+            collection_item=item, image=listing.featured_image.name,
+            image_role='front', sort_order=0)
+
+    for extra in listing.additional_images.order_by('sort_order', 'uploaded_at'):
+        # One front and one back per item is a database constraint; anything
+        # that would collide becomes a detail rather than failing the save.
+        role = extra.image_role
+        if role in ('front', 'back') and item.images.filter(image_role=role).exists():
+            role = 'detail'
+        CollectionItemImage.objects.create(
+            collection_item=item, image=extra.image.name,
+            image_role=role, sort_order=extra.sort_order + 1)
+
+
 def _normalize_listing_image_sort_order(listing):
     for idx, image in enumerate(listing.additional_images.order_by('sort_order', 'uploaded_at'), start=0):
         if image.sort_order != idx:
@@ -951,6 +982,7 @@ def listing_create(request):
                     trade_eligible=True,
                 )
                 collection_item.license_types.set(listing.license_types.all())
+                _copy_listing_images_to_collection_item(listing, collection_item)
                 listing.source_collection_item = collection_item
                 listing.save(update_fields=['source_collection_item', 'updated_at'])
 

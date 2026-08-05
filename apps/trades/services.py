@@ -125,6 +125,42 @@ def _notify_trade_state_change(trade, old_status, new_status):
         )
 
 
+def _close_traded_pieces(trade):
+    """Stop advertising licences that have physically changed hands.
+
+    Ownership does not transfer. Nothing anywhere moves a CollectionItem
+    between owners, and doing that properly belongs with the collection work
+    — but leaving both sides' pieces marked tradeable is worse than the gap
+    itself. A second collector proposes for a licence that left months ago,
+    the owner accepts, cannot ship it because it is in somebody else's
+    drawer, and takes a non-shipment strike for something that was never
+    theirs to give.
+
+    So the pieces stop being offerable at the moment they are delivered. They
+    still sit in the wrong collection until ownership transfer exists, which
+    is visible and wrong but harmless; advertising them is neither.
+    """
+    from apps.collections.models import CollectionItem
+
+    accepted = (
+        TradeOffer.objects
+        .filter(trade_listing=trade.listing, status='accepted')
+        .prefetch_related('items')
+        .first()
+    )
+    if not accepted:
+        return
+
+    # Both directions: each side's piece has left its owner.
+    item_ids = [
+        item.collection_item_id for item in accepted.items.all()
+        if item.collection_item_id
+    ]
+    if item_ids:
+        CollectionItem.objects.filter(pk__in=item_ids).update(
+            trade_eligible=False)
+
+
 def sync_trade_status(trade, *, notify=True):
     shipments = list(trade.shipments.all())
     if len(shipments) < 2:
@@ -135,6 +171,8 @@ def sync_trade_status(trade, *, notify=True):
     if next_status != previous:
         trade.status = next_status
         trade.save(update_fields=['status', 'updated_at'])
+        if next_status == 'completed':
+            _close_traded_pieces(trade)
         if notify:
             _notify_trade_state_change(trade, previous, next_status)
     return trade.status
