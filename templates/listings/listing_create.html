@@ -163,7 +163,7 @@
                 <span class="form-label" style="display: block;">Selling in</span>
                 <p style="margin: 0;">
                     <strong>{{ config_listing_type_label|default:'The General Store' }}</strong>
-                    <a href="{% url 'listings:create' %}" style="margin-left: 0.6rem; font-size: 0.85rem; color: var(--color-aged-amber);">change</a>
+                    <a href="{% url 'listings:sell_start' %}" style="margin-left: 0.6rem; font-size: 0.85rem; color: var(--color-aged-amber);">change</a>
                 </p>
                 <div style="display: none;">{{ form.listing_type }}</div>
                 {{ form.listing_type.errors }}

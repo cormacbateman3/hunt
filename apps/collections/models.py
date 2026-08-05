@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from apps.core.models import GeographicUnit, LicenseType, get_default_item_category
 from apps.core.constants import COLOR_CHOICES, CONDITION_CHOICES, FORM_LICENSE_TYPE_CATEGORIES, ITEM_KIND_CHOICES, RESIDENT_STATUS_CHOICES, SHAPE_CHOICES
-from apps.listings.models import ERA_LABEL_CHOICES, _year_to_era
+from apps.listings.models import ERA_LABEL_CHOICES, IMAGE_ROLE_CHOICES, _year_to_era
 
 
 class CollectionItem(models.Model):
@@ -59,6 +59,27 @@ class CollectionItem(models.Model):
     # Register: docs/internal/plan_design.md
     trade_eligible = models.BooleanField(default=True, help_text="Available for trade offers")
     featured = models.BooleanField(default=False, help_text="Pin to the top of your public profile (max 6)")
+
+    # ── Only the owner ever sees these ───────────────────────────────────
+    #
+    # What you paid, where you got it, and a note to yourself. This block is
+    # what makes cataloguing worth doing rather than a chore — and it is
+    # never public, never shown to a buyer, and never price history. Price
+    # history is what *listings* sold for; this is what you spent.
+    purchase_price = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text='Private. What you paid, for your own records and an '
+                  'insurance export. Never shown to anybody else.',
+    )
+    acquired_note = models.CharField(
+        max_length=120, blank=True,
+        help_text='Private. When and where — "Mar 2026, Bloomsburg".',
+    )
+    private_note = models.TextField(
+        blank=True, max_length=1000,
+        help_text='Private. A note to yourself about this piece.',
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -102,11 +123,20 @@ class CollectionItem(models.Model):
 
 
 class CollectionItemImage(models.Model):
-    """Image for a collection item"""
+    """Image for a collection item.
+
+    ``image_role`` matches ``ListingImage`` so a photograph keeps its meaning
+    when an item is listed for sale — the front stays the front.
+    """
+
     collection_item = models.ForeignKey(
         CollectionItem, on_delete=models.CASCADE, related_name='images'
     )
     image = models.ImageField(upload_to='collections/')
+    image_role = models.CharField(
+        max_length=10, choices=IMAGE_ROLE_CHOICES, default='detail',
+        help_text='What this photograph is of.',
+    )
     sort_order = models.IntegerField(default=0)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
@@ -114,6 +144,13 @@ class CollectionItemImage(models.Model):
         verbose_name = 'Collection Item Image'
         verbose_name_plural = 'Collection Item Images'
         ordering = ['sort_order', 'uploaded_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['collection_item', 'image_role'],
+                condition=models.Q(image_role__in=('front', 'back')),
+                name='one_item_photograph_per_named_slot',
+            ),
+        ]
 
     def __str__(self):
         return f"Image for {self.collection_item.title}"

@@ -12,6 +12,9 @@ urlpatterns = [
     path('auction-house/', views.pillar_redirect('auction'), name='auction_house'),
     path('general-store/', views.pillar_redirect('buy_now'), name='general_store'),
     path('trading-block/', views.pillar_redirect('trade'), name='trading_block'),
+    # Step 1 is the front door. `create/` stays as step 2 so every existing
+    # link into it keeps working.
+    path('sell/', views.sell_start, name='sell_start'),
     path('create/', views.listing_create, name='create'),
     path('<int:listing_id>/bid-status/', bid_views.bid_status, name='bid_status'),
     path('<int:pk>/questions/ask/', views.ask_question, name='ask_question'),

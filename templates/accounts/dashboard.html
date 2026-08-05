@@ -16,7 +16,7 @@
                     {{ winning_bids_count }} winning bid{{ winning_bids_count|pluralize }}
                 </p>
             </div>
-            <a href="{% url 'listings:create' %}" class="btn-primary">+ Create Listing</a>
+            <a href="{% url 'listings:sell_start' %}" class="btn-primary">+ Create Listing</a>
         </div>
     </article>
 
@@ -95,7 +95,7 @@
                     {% endfor %}
                 </ul>
             {% else %}
-                <p class="muted" style="font-size:0.92rem;">No listings yet. <a href="{% url 'listings:create' %}" style="color:var(--color-aged-amber);">Create one &rarr;</a></p>
+                <p class="muted" style="font-size:0.92rem;">No listings yet. <a href="{% url 'listings:sell_start' %}" style="color:var(--color-aged-amber);">Create one &rarr;</a></p>
             {% endif %}
 
             {% if recent_sales %}

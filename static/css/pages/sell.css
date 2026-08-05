@@ -1,0 +1,254 @@
+/* ==========================================================================
+   Adding an item — where it's going, what it is, the terms
+
+   The destination cards each end with the questions they will ask, so the
+   choice is informed rather than a guess. That is the whole reason step 1
+   earns its own page.
+   ========================================================================== */
+
+.kb-sell {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: var(--kb-6) var(--kb-gutter) var(--kb-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--kb-5);
+}
+
+/* ── The three steps ─────────────────────────────────────────────────── */
+.sl-steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--kb-5);
+    border-bottom: 1px solid var(--kb-rule);
+    padding-bottom: var(--kb-3);
+}
+
+.sl-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    color: var(--kb-ink-4);
+}
+
+.sl-step-no {
+    width: 20px;
+    height: 20px;
+    border-radius: var(--kb-r-pill);
+    border: 1px solid var(--kb-rule-strong);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.sl-step--here {
+    color: var(--kb-forest);
+    font-weight: 600;
+}
+
+.sl-step--here .sl-step-no {
+    background: var(--kb-forest);
+    border-color: var(--kb-forest);
+    color: var(--kb-cream);
+}
+
+.sl-step--done {
+    color: var(--kb-live);
+}
+
+.sl-step--done .sl-step-no {
+    background: var(--kb-live);
+    border-color: var(--kb-live);
+    color: var(--kb-surface);
+}
+
+.sl-head {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.sl-lede {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--kb-ink-3);
+    max-width: 62ch;
+}
+
+/* ── The three destinations ──────────────────────────────────────────── */
+.sl-destinations {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--kb-4);
+}
+
+.sl-dest {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    text-decoration: none;
+}
+
+.sl-dest:hover {
+    border-color: var(--kb-forest);
+}
+
+.sl-dest-name {
+    font: var(--kb-text-h2);
+    color: var(--kb-forest);
+}
+
+.sl-dest-blurb {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--kb-ink-2);
+    flex: 1;
+}
+
+/* The promise of what comes next, set apart so it reads as a contract
+   rather than more description. */
+.sl-dest-asks {
+    border-top: 1px solid var(--kb-rule-soft);
+    padding-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--kb-ink-3);
+}
+
+/* ── The shelf ───────────────────────────────────────────────────────── */
+.sl-shelf {
+    display: flex;
+    flex-direction: column;
+    gap: var(--kb-3);
+}
+
+.sl-shelf-rule {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.sl-shelf-line {
+    flex: 1;
+    height: 1px;
+    background: var(--kb-rule);
+}
+
+.sl-shelf-note {
+    font-size: 11.5px;
+    color: var(--kb-ink-4);
+    white-space: nowrap;
+}
+
+.sl-shelf-search {
+    display: flex;
+    gap: 8px;
+    max-width: 420px;
+}
+
+.sl-shelf-search .kb-input {
+    flex: 1;
+}
+
+.sl-shelf-copy {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--kb-ink-3);
+    max-width: 62ch;
+}
+
+.sl-shelf-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--kb-3);
+}
+
+.sl-piece {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sl-piece-media {
+    aspect-ratio: 4 / 3;
+    background: var(--kb-hatch);
+    border-radius: var(--kb-r-chip);
+    overflow: hidden;
+    display: block;
+}
+
+.sl-piece-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.sl-piece-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+}
+
+.sl-piece-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--kb-ink);
+}
+
+.sl-piece-note {
+    font-size: 11.5px;
+    color: var(--kb-ink-4);
+}
+
+/* A duplicate is the piece most likely to be sold, so it says so in brass. */
+.sl-piece-note--dup {
+    color: var(--kb-brass);
+    font-weight: 600;
+}
+
+.sl-piece-shut {
+    font-size: 11.5px;
+    color: var(--kb-ink-5);
+    text-align: center;
+    padding: 6px 0;
+}
+
+.sl-shelf-all {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--kb-brass);
+    text-decoration: none;
+    align-self: flex-start;
+}
+
+@media (max-width: 900px) {
+    .sl-destinations { grid-template-columns: 1fr; }
+    .sl-shelf-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 560px) {
+    .sl-steps { gap: var(--kb-3); }
+    .sl-shelf-grid { grid-template-columns: 1fr; }
+}

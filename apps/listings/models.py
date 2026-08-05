@@ -156,6 +156,12 @@ class Listing(models.Model):
         default=False,
         help_text="Let buyers negotiate with a binding offer below your asking price",
     )
+    minimum_offer = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(Decimal('1'))],
+        help_text="Offers below this are declined for you, and the buyer is told "
+                  "why. Leave it empty and every offer reaches you.",
+    )
 
     # Trade fields
     trade_notes = models.TextField(blank=True, help_text="What the seller is looking for in trade")
@@ -328,10 +334,30 @@ class Listing(models.Model):
         return labels.get(self.shape, '')
 
 
+IMAGE_ROLE_CHOICES = [
+    ('front', 'Featured · front'),
+    ('back', 'Back'),
+    ('detail', 'Detail'),
+]
+
+
 class ListingImage(models.Model):
-    """Additional images for a listing"""
+    """Additional images for a listing.
+
+    ``image_role`` is what the slot means, not where it happens to sit. The
+    old page labelled "Featured" and "Back" client-side from the array index,
+    so reordering the grid relabelled the photographs and nothing persisted —
+    a buyer could be told they were looking at the back of a licence when
+    they were not.
+    """
+
     listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name='additional_images')
     image = models.ImageField(upload_to='listings/')
+    image_role = models.CharField(
+        max_length=10, choices=IMAGE_ROLE_CHOICES, default='detail',
+        help_text='What this photograph is of. Front and back are the two a '
+                  'buyer looks for; everything else is a detail.',
+    )
     sort_order = models.IntegerField(default=0)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
@@ -339,6 +365,15 @@ class ListingImage(models.Model):
         verbose_name = 'Listing Image'
         verbose_name_plural = 'Listing Images'
         ordering = ['sort_order', 'uploaded_at']
+        constraints = [
+            # One front and one back per listing. A second "back" is somebody
+            # mislabelling a detail shot, and the grid has no way to show two.
+            models.UniqueConstraint(
+                fields=['listing', 'image_role'],
+                condition=models.Q(image_role__in=('front', 'back')),
+                name='one_photograph_per_named_slot',
+            ),
+        ]
 
     def __str__(self):
         return f"Image for {self.listing.title}"

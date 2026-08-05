@@ -84,7 +84,7 @@
                     {% endif %}
                 </a>
 
-                <a href="{% url 'listings:create' %}" class="kb-sell">List an item</a>
+                <a href="{% url 'listings:sell_start' %}" class="kb-sell">List an item</a>
 
                 <div class="kb-account" id="kb-account">
                     <button type="button" class="kb-avatar" aria-haspopup="true" aria-expanded="false"
@@ -149,7 +149,7 @@
             <a href="{% url 'collectors' %}">Browse collectors</a>
             {% if user.is_authenticated %}
                 <a href="{% url 'bench' %}">My Bench</a>
-                <a href="{% url 'listings:create' %}">Sell an item</a>
+                <a href="{% url 'listings:sell_start' %}">Sell an item</a>
             {% else %}
                 <a href="{% url 'accounts:register' %}">Create an account</a>
             {% endif %}

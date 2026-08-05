@@ -43,7 +43,7 @@
         <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center;">
             <a class="btn-secondary" href="{% url 'collections:item_detail' item.pk %}" style="font-size: 0.82rem; padding: 0.25rem 0.55rem;">View</a>
             <a class="btn-secondary" href="{% url 'collections:edit' item.pk %}" style="font-size: 0.82rem; padding: 0.25rem 0.55rem;">Edit</a>
-            <a class="btn-secondary" href="{% url 'listings:create' %}?from_collection={{ item.pk }}" style="font-size: 0.82rem; padding: 0.25rem 0.55rem;">List for sale</a>
+            <a class="btn-secondary" href="{% url 'listings:sell_start' %}?q={{ item.title|urlencode }}" style="font-size: 0.82rem; padding: 0.25rem 0.55rem;">List for sale</a>
             <form method="post" action="{% url 'collections:feature_toggle' item.pk %}" style="display: inline;">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="{{ request.get_full_path }}">

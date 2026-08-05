@@ -1,0 +1,21 @@
+{% comment %}
+Three steps, always visible, always in the same order. Step 1 shows the
+destination once it is chosen, because the rest of the form is shaped by it
+and the seller should be able to see what they picked without going back.
+{% endcomment %}
+<ol class="sl-steps" aria-label="Adding an item">
+    <li class="sl-step{% if step == 1 %} sl-step--here{% elif step > 1 %} sl-step--done{% endif %}">
+        <span class="sl-step-no">1</span>
+        <span class="sl-step-name">
+            {% if step > 1 and destination %}{{ destination.name }}{% else %}Where it&rsquo;s going{% endif %}
+        </span>
+    </li>
+    <li class="sl-step{% if step == 2 %} sl-step--here{% elif step > 2 %} sl-step--done{% endif %}">
+        <span class="sl-step-no">2</span>
+        <span class="sl-step-name">The item</span>
+    </li>
+    <li class="sl-step{% if step == 3 %} sl-step--here{% endif %}">
+        <span class="sl-step-no">3</span>
+        <span class="sl-step-name">The terms</span>
+    </li>
+</ol>

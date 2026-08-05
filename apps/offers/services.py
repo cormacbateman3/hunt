@@ -104,6 +104,15 @@ def create_offer(*, listing, from_user, amount, message='',
             return None, 'A counter must be below the list price.'
     elif amount >= listing.buy_now_price:
         return None, 'Your offer must be below the list price — use Buy now to pay the asking price.'
+    elif listing.minimum_offer and amount < listing.minimum_offer:
+        # The seller's floor, applied here rather than silently. Telling the
+        # buyer the number is the point: an offer turned away without one is
+        # a guessing game, and the seller wanted to save both of them the
+        # round trip, not hide the price.
+        return None, (
+            f'The seller is not taking offers below ${listing.minimum_offer:,.2f} '
+            f'on this one. Offer that or more and it will reach them.'
+        )
 
     if counter_to is not None:
         if counter_to.listing_id != listing.id:

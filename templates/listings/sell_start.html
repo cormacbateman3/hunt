@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Add an item &middot; KeystoneBid{% endblock %}
+
+{% block context_band %}
+<nav class="kb-crumbs" aria-label="Breadcrumb">
+    <div class="kb-band-inner">
+        <a href="{% url 'bench' %}">My Bench</a>
+        <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
+        <span class="kb-crumb-current">Add an item</span>
+    </div>
+</nav>
+{% endblock %}
+
+{% block main_class %}kb-sell{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/sell.css' %}">{% endblock %}
+
+{% block content %}
+{% comment %}
+The destination is the first question because it is the thing a seller
+already knows when they walk up. Every card ends with the questions it will
+ask, so the choice is informed rather than a guess.
+{% endcomment %}
+
+{% include 'listings/_sell_steps.html' with step=1 %}
+
+<header class="sl-head">
+    <h1 class="kb-page-title">What are you adding?</h1>
+    <p class="sl-lede">
+        This only sets which questions you get next. You can move an item between
+        all three later.
+    </p>
+</header>
+
+<div class="sl-destinations">
+    {% for destination in destinations %}
+        <a href="{% url 'listings:create' %}?to={{ destination.key }}" class="sl-dest">
+            <span class="sl-dest-name">{{ destination.name }}</span>
+            <span class="sl-dest-blurb">{{ destination.blurb }}</span>
+            <span class="sl-dest-asks">
+                <span class="kb-eyebrow">Then you&rsquo;ll set</span>
+                {{ destination.asks }}
+            </span>
+        </a>
+    {% endfor %}
+</div>
+
+{% comment %}
+The second way in. Selling a duplicate should take under a minute, so it
+skips step 2 entirely — everything comes across already filled in.
+{% endcomment %}
+<section class="sl-shelf">
+    <div class="sl-shelf-rule">
+        <span class="kb-eyebrow">Or start from something you already own</span>
+        <span class="sl-shelf-line" aria-hidden="true"></span>
+        {% if shelf_total %}
+            <span class="sl-shelf-note">Duplicates first &middot; {{ shelf_total }} on your shelf</span>
+        {% endif %}
+    </div>
+
+    {% if shelf or query %}
+        <form method="get" class="sl-shelf-search">
+            <label class="kb-sr" for="sl-q">Search my collection</label>
+            <input type="search" id="sl-q" name="q" value="{{ query }}" class="kb-input"
+                   placeholder="Search my {{ shelf_total }}&hellip;">
+            <button type="submit" class="kb-btn kb-btn--secondary kb-btn--sm">Find</button>
+        </form>
+    {% endif %}
+
+    {% if shelf %}
+        <p class="sl-shelf-copy">
+            Everything comes across already filled in &mdash; photographs, county, year,
+            condition. You go straight to the terms.
+        </p>
+        <div class="sl-shelf-grid">
+            {% for row in shelf %}
+                <article class="sl-piece">
+                    <span class="sl-piece-media">
+                        {% if row.item.images.all %}
+                            <img src="{{ row.item.images.all.0.image.url }}" alt="" loading="lazy">
+                        {% endif %}
+                    </span>
+                    <span class="sl-piece-body">
+                        <span class="sl-piece-title">
+                            {{ row.item.license_year|default:row.item.effective_era }}
+                            {{ row.item.county.name|default:row.item.state.code|default:row.item.title|truncatechars:20 }}
+                        </span>
+                        <span class="sl-piece-note{% if row.copies > 1 %} sl-piece-note--dup{% endif %}">{{ row.note }}</span>
+                    </span>
+                    {% if row.already_listed %}
+                        <span class="sl-piece-shut">Already listed</span>
+                    {% else %}
+                        <a href="{% url 'listings:create' %}?from_item={{ row.item.pk }}"
+                           class="kb-btn kb-btn--secondary kb-btn--sm">Sell this</a>
+                    {% endif %}
+                </article>
+            {% endfor %}
+        </div>
+        {% if shelf_total > shelf|length %}
+            <a href="{% url 'collections:my_collection' %}" class="sl-shelf-all">All {{ shelf_total }} items &rarr;</a>
+        {% endif %}
+    {% elif query %}
+        <p class="sl-shelf-copy">Nothing on your shelf matches &ldquo;{{ query }}&rdquo;.</p>
+    {% else %}
+        <p class="sl-shelf-copy">
+            Nothing on your shelf yet. Once you have recorded a few, selling a
+            duplicate takes under a minute &mdash; the details carry straight over.
+        </p>
+    {% endif %}
+</section>
+
+{% comment %}
+DEFERRED — the lot route ("a box of several licences sold together goes in
+the other way"). Blocked on: ListingLotItem / inventory_format, dev plan
+10.15 and T13's lot amendment.
+Register: docs/internal/plan_design.md
+{% endcomment %}
+{% endblock %}

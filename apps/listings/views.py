@@ -9,7 +9,7 @@ from django.db.models import Count, Q
 from django.urls import reverse
 from django.views.generic import ListView
 from django.utils import timezone
-from . import seller_desk
+from . import sell_flow, seller_desk
 from .models import ERA_LABEL_CHOICES, Listing, ListingQuestion
 from .forms import ListingForm, ListingImageFormSet
 from apps.bids.forms import BidForm
@@ -841,6 +841,26 @@ def listing_detail(request, pk):
 
 
 @login_required
+@login_required
+def sell_start(request):
+    """Step 1 — where is it going?
+
+    The destination is the first question because it is the thing a seller
+    already knows when they walk up, and asking it first lets the next step
+    carry only the fields that destination needs.
+    """
+    query = request.GET.get('q', '').strip()
+    rows, total = sell_flow.shelf(request.user, query)
+
+    return render(request, 'listings/sell_start.html', {
+        'destinations': sell_flow.DESTINATIONS,
+        'shelf': rows,
+        'shelf_total': total,
+        'query': query,
+        'step': 1,
+    })
+
+
 def listing_create(request):
     """Create a new listing"""
     allowed, reason = enforce_capability(request.user, 'sell')
@@ -962,21 +982,29 @@ def listing_create(request):
                 messages.success(request, 'Listing created successfully!')
             return redirect('listings:detail', pk=listing.pk)
     else:
-        # Two-page create flow (10.8/T13): page 1 is a light config step —
-        # marketplace + source — page 2 is the details form shaped by it.
-        config_type = request.GET.get('listing_type', '')
-        if config_type not in ('auction', 'buy_now'):
-            return render(request, 'listings/listing_create_config.html', {
-                'collection_items': request.user.collection_items.order_by('-created_at'),
-                'preselected_item': request.GET.get('from_collection', ''),
-            })
+        # Step 2 of the three-step flow. The destination arrives from step 1
+        # as `?to=`; the config page that used to ask for it with two radio
+        # buttons and no consequences shown is gone.
+        config_type = request.GET.get('to') or request.GET.get('listing_type', '')
 
-        source_id = request.GET.get('from_collection')
+        # Starting from your own shelf carries everything across and skips
+        # this step's work — the details are already recorded.
+        source_id = request.GET.get('from_item') or request.GET.get('from_collection', '')
+        source_item = None
         if source_id and source_id.isdigit():
             source_item = get_object_or_404(
                 request.user.collection_items.select_related('state', 'county').prefetch_related('license_types'),
                 pk=int(source_id),
             )
+
+        if config_type not in ('auction', 'buy_now'):
+            # No destination yet: that is step 1's question, not this page's.
+            back = reverse('listings:sell_start')
+            if source_item:
+                back += f'?q={source_item.title}'
+            return redirect(back)
+
+        if source_item:
             initial = _prefill_from_collection_item(source_item)
             initial['listing_type'] = config_type
             form = ListingForm(initial=initial, user=request.user)

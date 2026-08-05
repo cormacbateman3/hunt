@@ -96,7 +96,7 @@
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                 {% if is_owner %}
                     <a class="btn-secondary" href="{% url 'collections:edit' item.pk %}">Edit</a>
-                    <a class="btn-secondary" href="{% url 'listings:create' %}?from_collection={{ item.pk }}">List for sale</a>
+                    <a class="btn-secondary" href="{% url 'listings:sell_start' %}?q={{ item.title|urlencode }}">List for sale</a>
                     <a class="btn-secondary" href="{% url 'collections:delete' item.pk %}" style="color: var(--color-hunting-rust);">Delete</a>
                 {% elif user.is_authenticated %}
                     <form method="post" action="{% url 'favorites:toggle_collection_item' item.pk %}">
