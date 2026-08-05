@@ -177,7 +177,7 @@ position plus a brass arrow, not from a rust border against a green one.
                     A first offer to {{ other.profile.get_display_name|default:other.username }}
                 {% endif %}
             </p>
-            <p class="tb-band-terms" id="tb-band-terms">{{ terms_line }}</p>
+            <p class="tb-band-terms" id="tb-band-terms">{{ band_terms }}</p>
             <p class="tb-band-small">
                 Both ship within {{ ship_by_days }} days of acceptance &middot; tracking required
                 &middot; each pays their own outbound
@@ -229,10 +229,11 @@ position plus a brass arrow, not from a rust border against a green one.
                 {% else %}
                     <a href="{% if listing %}{% url 'listings:detail' listing.pk %}{% else %}{% url 'collections:item_detail' subject.pk %}{% endif %}"
                        class="tb-decide tb-decide--quiet">Cancel</a>
-                    <button type="submit" class="tb-decide tb-decide--go" id="tb-send" disabled>Send this offer</button>
+                    <button type="submit" class="tb-decide tb-decide--go" id="tb-send"
+                            {% if not giving_count %}disabled{% endif %}>Send this offer</button>
                 {% endif %}
             </div>
-            <p class="tb-decide-hint{% if picked_count %} is-hidden{% endif %}" id="tb-hint">
+            <p class="tb-decide-hint{% if giving_count %} is-hidden{% endif %}" id="tb-hint">
                 Put at least one of your licences on the table.
             </p>
         </section>

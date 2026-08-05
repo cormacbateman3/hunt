@@ -161,9 +161,13 @@ def _trading_block(request, *, subject, other, listing=None, offer=None):
             cash_amount=offer.cash_amount if offer else None,
             cash_direction=(offer.cash_direction if offer else 'from_proposer'),
         ),
+        'band_terms': composer.terms_line(
+            giving=giving, receiving=receiving, mine=True,
+            cash_amount=offer.cash_amount if offer else None,
+            cash_direction=(offer.cash_direction if offer else 'from_proposer'),
+        ),
         'giving_count': giving,
         'receiving_count': receiving,
-        'picked_count': len(mine),
         'answering': answering,
         'waiting_on_them': bool(offer and request.user.id == offer.from_user_id
                                 and offer.status == 'pending'),

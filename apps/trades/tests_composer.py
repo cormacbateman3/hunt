@@ -418,6 +418,23 @@ class DecisionScreenTests(ComposerBase):
         self.assertEqual(set(page.context['table']['giving']),
                          {self.theirs_a, self.theirs_b})
 
+    def test_the_recipient_can_counter_with_only_the_piece_asked_for(self):
+        """A one-for-one where the licence they want is your whole side.
+
+        It has no checkbox — it is fixed on the table — so a form-level
+        "at least one offered item" refused a perfectly good counter.
+        """
+        self.client.force_login(self.walt)
+        self.client.post(reverse('trades:offer_detail', args=[self.offer.pk]), {
+            'requested_items': [self.mine_b.pk],
+            'expires_days': 4,
+        })
+
+        counter = TradeOffer.objects.exclude(pk=self.offer.pk).get()
+        offered = {i.collection_item for i in counter.items.all()
+                   if i.direction == 'offered'}
+        self.assertEqual(offered, {self.theirs_a})
+
     def test_a_settled_offer_stops_being_a_workbench(self):
         self.client.force_login(self.walt)
         self.client.post(reverse('trades:offer_action', args=[self.offer.pk, 'decline']))
@@ -456,19 +473,32 @@ class StoreActionTests(ComposerBase):
 
 
 class TermsLineTests(TestCase):
-    def test_it_reads_as_a_sentence(self):
+    def test_the_table_takes_the_short_reading(self):
         self.assertEqual(
             composer.terms_line(giving=3, receiving=2, cash_amount=None,
                                 cash_direction='from_proposer'),
-            '3 licences for 2 licences')
+            '3 for 2')
+
+    def test_the_band_takes_the_longer_one(self):
+        """It is the sentence the buttons are answering, so it says whose."""
+        self.assertEqual(
+            composer.terms_line(giving=3, receiving=2, cash_amount=None,
+                                cash_direction='from_proposer', mine=True),
+            'My 3 for their 2')
+
+    def test_it_never_guesses_a_pronoun(self):
+        line = composer.terms_line(giving=3, receiving=2, cash_amount=None,
+                                   cash_direction='from_proposer', mine=True)
+        self.assertNotIn('his', line)
+        self.assertNotIn('her', line)
 
     def test_it_says_which_way_the_money_runs(self):
         self.assertIn(
-            'to you',
+            'to me',
             composer.terms_line(giving=3, receiving=2, cash_amount=Decimal('40'),
                                 cash_direction='to_proposer'))
         self.assertIn(
-            'from you',
+            'from me',
             composer.terms_line(giving=3, receiving=2, cash_amount=Decimal('40'),
                                 cash_direction='from_proposer'))
 

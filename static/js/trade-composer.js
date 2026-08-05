@@ -49,8 +49,6 @@
         };
     }
 
-    function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
-
     function cashPart() {
         var amount = form.querySelector('[name="cash_amount"]');
         var value = amount ? parseFloat(amount.value || '0') : 0;
@@ -72,11 +70,19 @@
             el.classList.toggle('is-hidden', filled);
         });
 
-        var line = (n.give || n.get)
-            ? plural(n.give, 'licence') + ' for ' + plural(n.get, 'licence') + cashPart()
-            : 'Nothing on the table yet';
-        if (termsTop) { termsTop.textContent = line; }
-        if (termsBand) { termsBand.textContent = line; }
+        /* Two readings of one deal, matching the server's: the table takes
+         * the short one, the band the longer one it is asking you to agree
+         * to. "their", never a guessed pronoun. */
+        var cash = cashPart();
+        var empty = !(n.give || n.get);
+        if (termsTop) {
+            termsTop.textContent = empty ? 'Nothing on the table yet'
+                : n.give + ' for ' + n.get + cash;
+        }
+        if (termsBand) {
+            termsBand.textContent = empty ? 'Nothing on the table yet'
+                : 'My ' + n.give + ' for their ' + n.get + cash;
+        }
 
         /* A trade needs something from you. The button says so by being off,
          * and the line underneath says why — a disabled control with no

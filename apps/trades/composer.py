@@ -361,21 +361,28 @@ def trader_trust(user):
     return {'trades': completed, 'strikes': strikes, 'wants': wants}
 
 
-def terms_line(*, giving, receiving, cash_amount, cash_direction):
-    """'My 3 for his 2, and $40 to me' — the sentence above the buttons.
+def terms_line(*, giving, receiving, cash_amount, cash_direction, mine=False):
+    """'My 3 for their 2, and $40 to me' — the sentence above the buttons.
 
     The action band restates the deal in Petrona before it offers three
     buttons, because the one thing nobody should do on this page is accept
-    something they have stopped reading.
+    something they have stopped reading. Set ``mine`` for the band's longer
+    reading; the table's own header takes the short one.
+
+    The design writes this as *"My 3 for his 2"*. It says **their** here:
+    nobody on this site has told us their pronouns, and a wrong guess in a
+    sentence about somebody's property is worse than the neutral word.
     """
     if not giving and not receiving:
         return 'Nothing on the table yet'
 
-    def side(count, word):
-        return f'{count} {word}{"" if count == 1 else "s"}'
+    if mine:
+        deal = f'My {giving} for their {receiving}'
+    else:
+        deal = f'{giving} for {receiving}'
 
-    parts = [f'{side(giving, "licence")} for {side(receiving, "licence")}']
+    parts = [deal]
     if cash_amount:
         money = f'${cash_amount:,.2f}'.replace('.00', '')
-        parts.append(f'and {money} {"from you" if cash_direction == "from_proposer" else "to you"}')
+        parts.append(f'and {money} {"from me" if cash_direction == "from_proposer" else "to me"}')
     return ', '.join(parts)

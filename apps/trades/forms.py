@@ -13,9 +13,13 @@ class TradeOfferForm(forms.Form):
     input is a suggestion.
     """
 
+    # Not required at this layer: when you are the one being asked for a
+    # licence, the piece under negotiation is already yours to give and it
+    # has no checkbox — it is fixed on the table. The service decides whether
+    # the table has enough on it, after the subject is placed.
     offered_items = forms.ModelMultipleChoiceField(
         queryset=None,
-        required=True,
+        required=False,
         widget=forms.MultipleHiddenInput,
         help_text='Pieces of yours going on the table.',
     )

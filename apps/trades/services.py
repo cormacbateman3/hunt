@@ -427,8 +427,6 @@ def create_trade_offer(
         return None, reason
 
     offered_items = list(offered_items)
-    if not offered_items:
-        return None, 'At least one offered item is required.'
     for item in offered_items:
         if item.owner_id != from_user.id:
             return None, 'All offered items must belong to the proposer.'
@@ -457,8 +455,15 @@ def create_trade_offer(
             offered_items.insert(0, subject_item)
     elif subject_item.pk not in {item.pk for item in requested}:
         requested.insert(0, subject_item)
+
+    # Checked here rather than on the form, because the subject counts. When
+    # you are the one being asked for a licence it is already on your side
+    # and has no control of its own, so a form-level "required" would refuse
+    # a perfectly good one-for-one.
+    if not offered_items:
+        return None, 'Put at least one of your licences on the table.'
     if not requested:
-        return None, 'At least one requested item is required.'
+        return None, 'Ask for at least one of theirs.'
 
     # A lot's owner decides whether cash is welcome. A piece that was never
     # listed has nobody's answer on file, so cash is allowed — evening a swap
