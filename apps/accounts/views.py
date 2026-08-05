@@ -251,9 +251,9 @@ def profile_view(request, username):
     collection_total = collection_qs.count()
 
     # Chips over the collection: the decades they hold, plus trade-eligible.
-    decade_groups, trade_eligible_count = collection_groups(user, public_only=not is_owner)
+    decade_groups, open_to_trade_count = collection_groups(user, public_only=not is_owner)
     if group == 'trade':
-        collection_items = collection_items.filter(trade_eligible=True)
+        collection_items = collection_items.filter(tradeability='open')
     elif group.isdigit():
         decade = int(group)
         collection_items = collection_items.filter(
@@ -336,7 +336,7 @@ def profile_view(request, username):
         'collection_total': collection_total,
         'collection_shown': collection_items.count(),
         'decade_groups': decade_groups,
-        'trade_eligible_count': trade_eligible_count,
+        'trade_eligible_count': open_to_trade_count,
         'active_group': group,
         'ground': ground_covered(user, public_only=not is_owner),
         'active_listings': active_listings,

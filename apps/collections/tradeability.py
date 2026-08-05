@@ -3,8 +3,8 @@
 Two separate facts, and conflating them is what caused the bug this module
 replaces:
 
-* **`trade_eligible`** is the owner's standing answer — would I trade this at
-  all.
+* **`tradeability`** is the owner's standing answer — open, closed, or never
+  asked.
 * **Being on a live lot** is a temporary fact about today. You cannot offer a
   trade for something that is mid-auction, but that has nothing to do with
   whether the owner trades it.
@@ -38,8 +38,8 @@ def trade_block_reason(item):
     A reason rather than a boolean, because every refusal a member meets
     should be able to say what it was.
     """
-    if not item.trade_eligible:
-        return 'The owner is not offering this piece for trade.'
+    if item.tradeability != 'open':
+        return 'The owner has not opened this piece to trade.'
     if on_a_live_lot(item):
         return 'This piece is on a live lot right now.'
     return ''
@@ -52,7 +52,7 @@ def is_open_to_trade(item):
 def open_to_trade(queryset):
     """Narrow a CollectionItem queryset to what can take an offer today."""
     return (
-        queryset.filter(trade_eligible=True)
+        queryset.filter(tradeability='open')
         .exclude(listings__status__in=LIVE_LISTING_STATUSES)
     )
 
@@ -65,4 +65,4 @@ def would_trade(queryset):
     a trader because one piece is at auction. Item-level surfaces (a propose
     button, a badge on one piece) use :func:`open_to_trade` instead.
     """
-    return queryset.filter(trade_eligible=True)
+    return queryset.filter(tradeability='open')

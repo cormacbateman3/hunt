@@ -52,12 +52,26 @@ class CollectionItem(models.Model):
     colors = models.JSONField(default=list, blank=True)
     condition_grade = models.CharField(max_length=20, choices=CONDITION_CHOICES, blank=True)
     is_public = models.BooleanField(default=True, help_text="Visible on public profile")
-    # DEFERRED — `default=True` opts every item into trading, so any UI reading
-    # this flag says the same thing about everybody and carries no signal.
-    # Blocked on: 10.10 trade re-architecture, which replaces this with an
-    # explicit item-level `is_tradeable` choice.
-    # Register: docs/internal/plan_design.md
-    trade_eligible = models.BooleanField(default=True, help_text="Available for trade offers")
+    TRADEABILITY_CHOICES = [
+        ('unset', 'Not answered'),
+        ('open', 'Open to trade offers'),
+        ('closed', 'Not for trade'),
+    ]
+    tradeability = models.CharField(
+        max_length=10, choices=TRADEABILITY_CHOICES, default='unset',
+        help_text='Your own answer. Whether the piece can take an offer right '
+                  'now also depends on whether it is on a live lot, and that '
+                  'is worked out rather than stored.',
+    )
+    trade_wants = models.CharField(
+        max_length=250, blank=True,
+        help_text='What you would take for it. Shown beside the piece.',
+    )
+
+    # Superseded by `tradeability`. A boolean defaulting to True said the same
+    # thing about everybody, so no badge could honestly read it. Kept so the
+    # data migration has something to read; nothing writes to it.
+    trade_eligible = models.BooleanField(default=True, editable=False)
     featured = models.BooleanField(default=False, help_text="Pin to the top of your public profile (max 6)")
 
     # ── Only the owner ever sees these ───────────────────────────────────
@@ -89,7 +103,7 @@ class CollectionItem(models.Model):
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['owner', '-created_at']),
-            models.Index(fields=['is_public', 'trade_eligible']),
+            models.Index(fields=['is_public', 'tradeability']),
         ]
 
     def __str__(self):

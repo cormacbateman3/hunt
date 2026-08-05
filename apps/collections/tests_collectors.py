@@ -49,7 +49,7 @@ class CollectorsBaseTest(TestCase):
         return CollectionItem.objects.create(
             owner=owner, title=title or f'{year} {county.name}',
             state=cls.pa, county=county, license_year=year,
-            is_public=public, trade_eligible=trade, condition_grade='good',
+            is_public=public, tradeability='open' if trade else 'closed', condition_grade='good',
         )
 
 
@@ -130,22 +130,25 @@ class CollectorCardActionTests(CollectorsBaseTest):
         self.assertIn('?group=trade#the-collection', html)
 
     def test_a_collector_who_trades_nothing_is_not_offered_a_trade(self):
-        CollectionItem.objects.all().update(trade_eligible=False)
+        CollectionItem.objects.all().update(tradeability='closed')
         html = self.client.get(reverse('collectors')).content.decode()
         self.assertNotIn('Propose a trade', html)
         self.assertIn('See their case', html)
 
-    def test_the_will_trade_flag_is_not_rendered(self):
-        """It would read off `trade_eligible`, which defaults to True — so it
-        would sit on every card and mean nothing. Deferred to the trade
-        re-architecture; see the register in docs/internal/plan_design.md."""
+    def test_the_will_trade_flag_only_marks_people_who_said_so(self):
+        """It used to read a boolean defaulting to True, so it sat on every
+        card and said nothing about anybody."""
         html = self.client.get(reverse('collectors')).content.decode()
-        self.assertNotIn('Will trade', html)
+        self.assertIn('Will trade', html)
+
+        CollectionItem.objects.all().update(tradeability='unset')
+        quiet = self.client.get(reverse('collectors')).content.decode()
+        self.assertNotIn('Will trade', quiet)
 
 
 class CollectorFacetTests(CollectorsBaseTest):
     def test_will_trade_narrows_to_people_with_trade_eligible_items(self):
-        CollectionItem.objects.filter(owner=self.dale).update(trade_eligible=False)
+        CollectionItem.objects.filter(owner=self.dale).update(tradeability='closed')
         rows = self.client.get(
             reverse('collectors'), {'because': 'will_trade'}).context['rows']
         self.assertIn(self.walt, [row['user'] for row in rows])

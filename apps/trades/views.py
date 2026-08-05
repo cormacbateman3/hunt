@@ -10,6 +10,7 @@ from apps.reviews.forms import ReviewForm
 from apps.reviews.models import Review
 from apps.shipping.services import ShippoError
 from apps.collections.models import CollectionItem
+from apps.collections.tradeability import open_to_trade
 from apps.listings.models import Listing
 from .forms import TradeOfferForm
 from .models import Trade, TradeOffer, TradeShipment
@@ -45,7 +46,7 @@ def propose_offer(request, listing_id):
         messages.error(request, reason)
         return redirect('listings:detail', pk=listing.pk)
 
-    offered_queryset = CollectionItem.objects.filter(owner=request.user, trade_eligible=True).order_by('-created_at')
+    offered_queryset = open_to_trade(CollectionItem.objects.filter(owner=request.user)).order_by('-created_at')
     if not request.user.profile.phone_verified:
         messages.info(request, 'Phone verification is recommended for smoother trade trust.')
     form = TradeOfferForm(
@@ -69,11 +70,11 @@ def propose_offer(request, listing_id):
         messages.error(request, error)
 
     my_collection = CollectionItem.objects.filter(
-        owner=request.user, trade_eligible=True
+        owner=request.user, tradeability='open'
     ).prefetch_related('images').order_by('-created_at')
     exclude_pk = listing.source_collection_item_id
     their_qs = CollectionItem.objects.filter(
-        owner=listing.seller, is_public=True, trade_eligible=True
+        owner=listing.seller, is_public=True, tradeability='open'
     ).prefetch_related('images').order_by('-created_at')
     if exclude_pk:
         their_qs = their_qs.exclude(pk=exclude_pk)
@@ -106,7 +107,7 @@ def counter_offer(request, offer_id):
         return redirect('trades:offer_detail', offer_id=parent_offer.pk)
 
     listing = parent_offer.trade_listing
-    offered_queryset = CollectionItem.objects.filter(owner=request.user, trade_eligible=True).order_by('-created_at')
+    offered_queryset = open_to_trade(CollectionItem.objects.filter(owner=request.user)).order_by('-created_at')
     if not request.user.profile.phone_verified:
         messages.info(request, 'Phone verification is recommended for smoother trade trust.')
     form = TradeOfferForm(
@@ -131,11 +132,11 @@ def counter_offer(request, offer_id):
         messages.error(request, error)
 
     my_collection = CollectionItem.objects.filter(
-        owner=request.user, trade_eligible=True
+        owner=request.user, tradeability='open'
     ).prefetch_related('images').order_by('-created_at')
     exclude_pk = listing.source_collection_item_id
     their_qs = CollectionItem.objects.filter(
-        owner=listing.seller, is_public=True, trade_eligible=True
+        owner=listing.seller, is_public=True, tradeability='open'
     ).prefetch_related('images').order_by('-created_at')
     if exclude_pk:
         their_qs = their_qs.exclude(pk=exclude_pk)

@@ -50,6 +50,9 @@ class TradeabilityBase(TestCase):
         defaults = {
             'owner': owner or self.owner, 'title': '1931 Cameron',
             'state': self.pa, 'condition_grade': 'good', 'is_public': True,
+            # The model default is 'unset' — never answered. These tests are
+            # about what happens once somebody has said yes.
+            'tradeability': 'open',
         }
         defaults.update(kwargs)
         return CollectionItem.objects.create(**defaults)
@@ -100,15 +103,24 @@ class TheRatchetTests(TradeabilityBase):
                 self.assertTrue(is_open_to_trade(item))
 
     def test_the_owners_own_answer_still_wins(self):
-        item = self._item(trade_eligible=False)
+        for answer in ('closed', 'unset'):
+            with self.subTest(answer=answer):
+                item = self._item(tradeability=answer)
+                self.assertFalse(is_open_to_trade(item))
+                self.assertIn('not opened', trade_block_reason(item))
+
+    def test_never_asked_is_not_the_same_as_yes(self):
+        """The whole point of the three states: a piece nobody has answered
+        for does not get advertised as tradeable."""
+        item = self._item(tradeability='unset')
         self.assertFalse(is_open_to_trade(item))
-        self.assertIn('not offering', trade_block_reason(item))
+        self.assertNotIn(item, would_trade(CollectionItem.objects.all()))
 
     def test_the_queryset_and_the_predicate_agree(self):
         open_item = self._item(title='Open')
         listed = self._item(title='Listed')
         self._lot(listed)
-        closed = self._item(title='Closed', trade_eligible=False)
+        closed = self._item(title='Closed', tradeability='closed')
 
         available = set(open_to_trade(CollectionItem.objects.all()))
         self.assertEqual(available, {open_item})

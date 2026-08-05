@@ -235,10 +235,8 @@
     color: var(--kb-ink-3);
 }
 
-/* DEFERRED — parked, not dead. The "Will trade" flag comes back when 10.10
-   makes tradeability an explicit item-level choice; today `trade_eligible`
-   defaults to True, so the flag would sit on every card and mean nothing.
-   Register: docs/internal/plan_design.md */
+/* Only shown for collectors who have opened at least one piece to trade.
+   It used to read a boolean defaulting to True, which put it on every card. */
 .co-flag {
     font: 700 var(--kb-eyebrow-size)/1.2 var(--kb-font-body);
     letter-spacing: var(--kb-eyebrow-tracking);

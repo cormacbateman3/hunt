@@ -79,7 +79,8 @@ class CollectionItemForm(forms.ModelForm):
             'resident_status',
             'condition_grade',
             'is_public',
-            'trade_eligible',
+            'tradeability',
+            'trade_wants',
             'serial_number',
             'era_label',
         ]
@@ -92,13 +93,17 @@ class CollectionItemForm(forms.ModelForm):
             'resident_status': forms.Select(attrs={'class': 'form-select'}),
             'condition_grade': forms.Select(attrs={'class': 'form-select'}),
             'is_public': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
-            'trade_eligible': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+            'tradeability': forms.RadioSelect(),
+            'trade_wants': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Anything pre-1930 from a county I am missing'}),
         }
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         self.fields['state'].queryset = State.objects.order_by('-is_primary_default', 'name')
+        # "Not answered" is a real answer and the model's default, so the
+        # form never forces a choice it did not ask for clearly.
+        self.fields['tradeability'].required = False
 
         state = self._resolve_state()
         if state:
@@ -305,6 +310,9 @@ class WantedItemForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['state'].queryset = State.objects.order_by('-is_primary_default', 'name')
+        # "Not answered" is a real answer and the model's default, so the
+        # form never forces a choice it did not ask for clearly.
+        self.fields['tradeability'].required = False
         state = self._resolve_state()
         if state:
             self.fields['state'].initial = state

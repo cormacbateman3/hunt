@@ -207,5 +207,5 @@ def collection_groups(user, *, public_only=True, limit=5):
         for decade, count in sorted(decades.items(), reverse=True)
     ][:limit]
 
-    trade = items.filter(trade_eligible=True).count()
+    trade = items.filter(tradeability='open').count()
     return groups, trade

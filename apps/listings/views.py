@@ -979,7 +979,7 @@ def listing_create(request):
                     serial_number=listing.serial_number,
                     era_label=listing.era_label,
                     is_public=True,
-                    trade_eligible=True,
+                    tradeability='unset',
                 )
                 collection_item.license_types.set(listing.license_types.all())
                 _copy_listing_images_to_collection_item(listing, collection_item)

@@ -80,7 +80,7 @@ def base_queryset():
             item_count=Count('collection_items', filter=public, distinct=True),
             trade_count=Count(
                 'collection_items',
-                filter=public & Q(collection_items__trade_eligible=True),
+                filter=public & Q(collection_items__tradeability='open'),
                 distinct=True,
             ),
             # DEFERRED — the card's third figure should be "sets going".

@@ -133,7 +133,7 @@ class Command(BaseCommand):
                 county=county_ref,
                 condition_grade=condition,
                 is_public=True,
-                trade_eligible=True,
+                tradeability='open',
                 resident_status='resident',
             )
             if all_license_types:

@@ -79,11 +79,11 @@ class SavedTests(SavedBase):
 
     def test_pieces_report_only_what_the_flag_can_carry(self):
         item = CollectionItem.objects.create(
-            owner=self.them, title='1913 Lycoming', is_public=True, trade_eligible=True)
+            owner=self.them, title='1913 Lycoming', is_public=True, tradeability='open')
         Favorite.objects.create(user=self.me, collection_item=item)
         self.assertTrue(saved.page(self.me)['pieces'][0]['open_to_trades'])
 
-        CollectionItem.objects.filter(pk=item.pk).update(trade_eligible=False)
+        CollectionItem.objects.filter(pk=item.pk).update(tradeability='closed')
         self.assertFalse(saved.page(self.me)['pieces'][0]['open_to_trades'])
 
     def test_the_tab_counts_survive_being_on_another_tab(self):

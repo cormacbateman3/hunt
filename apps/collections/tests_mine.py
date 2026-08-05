@@ -129,10 +129,10 @@ class WantedListTests(MineBase):
     def test_it_counts_collectors_and_which_of_them_are_open_to_trades(self):
         self._want()
         self._item(owner=self.them, county=self.cameron, year=1931,
-                   is_public=True, trade_eligible=True)
+                   is_public=True, tradeability='open')
         third = User.objects.create_user('mn_third')
         self._item(owner=third, county=self.cameron, year=1932,
-                   is_public=True, trade_eligible=False)
+                   is_public=True, tradeability='closed')
 
         row = wants.rows(self.me)[0]
         self.assertEqual(row['holders'], 2)
@@ -174,7 +174,7 @@ class WantedListTests(MineBase):
     def test_the_page_says_what_each_want_is_worth_chasing(self):
         self._want()
         self._item(owner=self.them, county=self.cameron, year=1931,
-                   is_public=True, trade_eligible=True)
+                   is_public=True, tradeability='open')
 
         self.client.force_login(self.me)
         resp = self.client.get(reverse('collections:my_collection'), {'view': 'wants'})

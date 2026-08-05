@@ -442,7 +442,7 @@ def add_from_order(request, order_id):
             'serial_number': listing.serial_number or '',
             'era_label': listing.era_label or '',
             'is_public': True,
-            'trade_eligible': False,  # just purchased, not trading yet
+            'tradeability': 'unset',  # just purchased; ask later, do not assume
         }
         for category in ('residency', 'holder_eligibility', 'activity_scope', 'duration', 'material'):
             sel = listing.license_types.filter(category=category).order_by('name').first()

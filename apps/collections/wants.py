@@ -42,7 +42,7 @@ def _holders(want, exclude_user_id):
     )
     owners = set(items.values_list('owner_id', flat=True))
     traders = set(
-        items.filter(trade_eligible=True).values_list('owner_id', flat=True))
+        items.filter(tradeability='open').values_list('owner_id', flat=True))
     return len(owners), len(traders)
 
 

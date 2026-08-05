@@ -158,7 +158,7 @@ def _close_traded_pieces(trade):
     ]
     if item_ids:
         CollectionItem.objects.filter(pk__in=item_ids).update(
-            trade_eligible=False)
+            tradeability='closed')
 
 
 def sync_trade_status(trade, *, notify=True):
