@@ -105,8 +105,15 @@ def roster(*, owner, reader, on_table, side):
 
     Searching and the two chips happen in the browser against these rows,
     not in another request: the table is a form mid-composition, and no
-    filter is worth emptying it. Without JavaScript the whole shelf is on
-    the page and the chips simply do nothing — nothing is hidden.
+    filter is worth emptying it.
+
+    DEFERRED — searching without JavaScript. The whole shelf renders and the
+    checkboxes work, so nothing is hidden, but the box and the chips do
+    nothing.
+    Blocked on: a GET round trip would drop the picks, and preserving them
+    means carrying the table through the query string. Rides the mobile pass,
+    where the shelves change shape anyway.
+    Register: docs/internal/plan_design.md
     """
     items = list(
         CollectionItem.objects.filter(owner=owner)

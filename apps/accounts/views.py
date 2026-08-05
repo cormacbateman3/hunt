@@ -28,6 +28,7 @@ from apps.collections.tracker import collection_groups, ground_covered
 from apps.collections.tradeability import is_open_to_trade, open_to_trade
 from apps.enforcement.models import Strike
 from apps.favorites.models import Favorite
+from apps.messaging.models import Block
 from apps.reviews.models import Review
 from apps.trades.models import Trade
 
@@ -347,6 +348,10 @@ def profile_view(request, username):
         'collection_shown': collection_items.count(),
         'decade_groups': decade_groups,
         'open_to_trade_count': open_to_trade_count,
+        'viewer_has_blocked': (
+            request.user.is_authenticated and not is_owner
+            and Block.objects.filter(blocker=request.user, blocked=user).exists()
+        ),
         'active_group': group,
         'ground': ground_covered(user, public_only=not is_owner),
         'active_listings': active_listings,

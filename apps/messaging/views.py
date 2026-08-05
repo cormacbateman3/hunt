@@ -203,6 +203,33 @@ def block_user_view(request, pk):
 
 
 @login_required
+def block_person_view(request, user_id):
+    """POST-only: block somebody without needing a conversation first.
+
+    `block_user_view` takes a conversation, so the only way to block anybody
+    was to already be mid-argument with them. Blocking is most useful
+    *before* that.
+    """
+    if request.method != 'POST':
+        return redirect('accounts:profile', username=User.objects.filter(
+            pk=user_id).values_list('username', flat=True).first() or '')
+    other = get_object_or_404(User, pk=user_id)
+    if other.pk == request.user.pk:
+        messages.error(request, 'You cannot block yourself.')
+        return redirect('accounts:profile', username=other.username)
+
+    _, status = services.apply_block(request.user, other)
+    if status == 'blocked':
+        messages.success(
+            request,
+            f'You have blocked {other.username}. They cannot message you, and '
+            'any conversation between you is closed. They are not told.')
+    else:
+        messages.info(request, f'You have already blocked {other.username}.')
+    return redirect('accounts:profile', username=other.username)
+
+
+@login_required
 def unblock_user_view(request, user_id):
     """POST-only: unblock a previously blocked user."""
     if request.method != 'POST':
@@ -211,7 +238,9 @@ def unblock_user_view(request, user_id):
     deleted, _ = Block.objects.filter(blocker=request.user, blocked=blocked_user).delete()
     if deleted:
         messages.success(request, f'{blocked_user.username} has been unblocked.')
-    return redirect('accounts:profile_edit')
+    # Back where they came from, which is the privacy room rather than the
+    # settings front door.
+    return redirect(request.POST.get('next') or 'accounts:profile_edit')
 
 
 @login_required

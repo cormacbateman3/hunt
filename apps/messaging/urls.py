@@ -11,4 +11,7 @@ urlpatterns = [
     path('<int:pk>/report/', views.report_conversation_view, name='report_conversation'),
     path('<int:pk>/messages/<int:message_id>/report/', views.report_message_view, name='report_message'),
     path('unblock/<int:user_id>/', views.unblock_user_view, name='unblock_user'),
+    # Blocking used to require a conversation, so the only way to block
+    # somebody was to be mid-argument with them. This one takes a person.
+    path('block-person/<int:user_id>/', views.block_person_view, name='block_person'),
 ]

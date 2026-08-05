@@ -41,6 +41,16 @@ listed below and are the only places to be careful.
 reached the same conclusion independently, in nearly the same words. Both delete
 `listing_type='trade'` and make tradeability a property of the item.
 
+**The dev plan is the authority on the default**, and it is worth quoting because
+Pass 7 initially reached the opposite answer from the design's screens alone:
+
+> *"Every collection item (and General Store listing) gets an owner-set 'Is Tradeable'
+> flag. An item actively listed in The Auction House is automatically not tradeable."*
+> — dev_plan 10.10
+
+Open by default, closed by choice; the auction is the only thing that takes a piece
+off the table. Settled in Pass 7.
+
 ### What still stands, untouched
 
 Everything else in the data-model plan is unaffected, and several items the design
@@ -437,27 +447,113 @@ save nowhere. Each carries a `DEFERRED` marker and says what it does today:
 
 ---
 
-## Pass 7 — Trade board v2 ⬜ NEXT
+## Pass 7 — Trade board v2 ✅ DONE
 
-**Owes the deferred register** — three things unblock together when 10.10 makes
-tradeability a property of the item: the **"Will trade" flag** returns to the collector
-card (its CSS is parked in `static/css/pages/collectors.css`), **"Propose a trade"**
-becomes one click instead of a walk to their trade shelf, and the **Trade board tab**
-stops leaving the zone for `/hunt/?format=trade`.
-
+*2026-08-05 · commits `e2042bf`, `f41796f`, `7b55937`, `9387830`, `b4da1b1`,
+`fb75bca` · 408 tests green (99 added)*
 
 **Design refs** — turn 3a. Dev plan **10.10**.
 
-The two middle columns become **one dark panel — the table the licences are laid
-on** — so the items are the brightest thing on screen and direction is read from
-position plus a brass arrow, not from border colour. Dual rosters left and right,
-full right rail for the negotiation block and the other trader's card, and a light
-action band under the table restating the terms in Petrona 21px before three
-weighted decisions: **Review & accept** brass with a raised edge, counter outlined
-in forest, decline quietest.
+**Register debts settled** — the **"Will trade" flag** and the **Trade board tab**
+are both cleared. **Still owed:** "Propose a trade" as one click, now blocked on a
+narrower and better-understood thing (below); `display_caption` on `CollectionItem`;
+and the collection destination's own step 3 — all three carry forward.
 
-`propose_offer.html`, `offer_detail.html` and `trade_detail.html` are already
-strong — restyle onto the new system, do not restructure.
+### The rule, settled
+
+10.10 and the design agreed that tradeability belongs to the item. What they did not
+settle was the **default**, and Pass 7 got it wrong once before getting it right:
+
+> **A piece is open to trade from the moment it is recorded** — in a collection or in
+> the General Store — and the owner closes the ones that are not going anywhere.
+> **Only an auction lot takes a piece off the table**, because an auction is a binding
+> commitment to sell to the highest bidder and a trade struck mid-lot takes the goods
+> out from under them. A fixed-price shelf carries no such promise, so a Store listing
+> keeps all three ways of asking for the same licence: **buy it, offer money for it,
+> offer a licence for it.**
+
+The first attempt made `tradeability` three-state (`unset`/`open`/`closed`) so a
+universal flag could not advertise something nobody had said. That solved the symptom
+by asking a question the product does not ask. `unset` is gone; the field is
+`open`/`closed` with `open` the default, and the flag it used to feed became a
+**count** instead — see below.
+
+### What shipped
+
+| Piece | What landed |
+|---|---|
+| **`apps/collections/tradeability.py`** | Availability is **derived, never stored**. `open_to_trade()` (can take an offer today), `would_trade()` (the person-level question — somebody does not stop being a trader because one piece is at auction), `trade_block_reason()` — a sentence, not a boolean, because every refusal a member meets should say what it was. `HELD_BY_A_LOT` is exported so annotations ask the question in the one place it is defined. |
+| **The three-state retreat** | `collections/0013` releases `unset → open`, drops it from the choices, and **deletes `trade_eligible`**. The pair still reverses cleanly: 0013 puts the column back before 0012 reverses into it. |
+| **The owner's toggle** | `templates/collections/_trade_block.html`, shared by the item form and add-from-order. `tradeability` + `trade_wants` ("what you'd take for it, in your own words"), and a line saying an auction takes it off the table on its own and the Store does not. |
+| **A count, not a flag** | With open as the default, "Will trade" would sit on every card again. The collector card shows **N to trade** — pieces you could ask about *today* — which varies and drops as their lots go live. Same figure on the profile chip, and it is the number the chip filters to. |
+| **The dark table (3a)** | `propose_offer.html` rebuilt. One dark panel, 196px picker lists either side, 300px rail, light action band. `apps/trades/composer.py` holds the roster arithmetic: every row arrives with a **reason** (*they want this* / *closes a gap* / *duplicate ×2* / *at auction*), and the notes are what the sort reads. |
+| **The right roster became a control** | It was a display case you could not pick from. `create_trade_offer` takes `requested_items` and re-checks ownership, public-ness and availability server-side — a hidden input is a suggestion. The listing's own piece is added regardless: it is what you came for. |
+| **Cash both ways** | `TradeOffer.cash_direction` (`trades/0005`) under a `cash_amount >= 0` CheckConstraint. The direction carries the sign so no arithmetic has to remember whose side it is on; which strip lights is a question about *who is reading*, answered in `composer.table_for`. |
+| **Trades from the General Store** | `TRADEABLE_LISTING_TYPES = ('trade', 'buy_now')`. Listing detail gains **Offer a licence instead** beside Buy now and Make an offer. Auctions still refuse, and that is the whole distinction. |
+| **The decision screen** | `offer_detail.html` on the same table, then three weighted decisions — accept brass with a raised edge, counter outlined in forest, decline quietest. Accept goes through a confirmation naming what leaves and what arrives; **without JavaScript it cannot accept, never accepts without asking**. |
+| **The struck trade** | `trade_detail.html` restyled: the same table under *What was agreed*, then two parcel panels with **yours first and edged**, because the only question that page answers is whose turn it is. |
+
+### Four live bugs this pass found and fixed
+
+1. **The ratchet.** Listing a piece wrote `trade_eligible = False` and *nothing ever
+   wrote it back* — two places set it, four paths close a listing. A lot that expired
+   unsold left the piece un-tradeable for good, silently. Deriving means none of the
+   four can forget.
+2. **Offer history leaked.** `offer_detail` built its thread by filtering on the
+   listing alone, so what one proposer was willing to give up was shown to every rival
+   proposer. Now scoped to the two people having the negotiation.
+3. **Completed trades kept advertising pieces that had physically left.** A second
+   collector proposes for a licence that went months ago, the owner accepts, cannot
+   ship it, and takes a **non-shipment strike for something that was never theirs to
+   give**. `_close_traded_pieces` closes both sides at delivery.
+4. **Auto-created collection items had no photographs.** Listing something creates the
+   item behind it; a seller who photographed a licence found a blank tile in their own
+   collection while the same photographs sat on the lot.
+
+Three more surfaced while wiring the toggle: both forms rendered `form.trade_eligible`
+after that field went non-editable, so **the one control the whole rule depends on was
+not on the page**; `WantedItemForm.__init__` reached for a `tradeability` field the
+wanted list has never had (a `KeyError` on every wanted-item page); and a blank
+tradeability was about to save as `open`, which would have flipped a piece its owner
+had deliberately closed. It means *unchanged* now, and a test holds that.
+
+### What Pass 7 did **not** do — see `10.10 remainder` below
+
+The separate Trading Block browse and `listing_type='trade'` are still there. Removing
+them is a data migration over live listings, not a restyle, and it is the last third of
+10.10.
+
+---
+
+## Pass 7b — 10.10 remainder: retire `listing_type='trade'` 🚧
+
+*Split out of Pass 7 on 2026-08-05. Pass 7 delivered the screen and the rule; this is
+the schema work underneath, and it is the only thing standing between the site and a
+one-click "propose a trade" from a person or a piece.*
+
+**Design refs** — turn 3a (already built), 13a (the collector card's button). Dev plan
+**10.10**, remaining scope.
+
+Three knots, and they have to be untied together:
+
+1. **`TradeOffer.trade_listing` is a non-null FK.** So an offer cannot start from a
+   person or an unlisted piece — which is exactly what the collector card and the trade
+   board both want to do. Making it nullable is the easy half.
+2. **`Trade.listing` is a `OneToOneField` doing double duty** as the uniqueness anchor
+   ("this lot already has an accepted trade"). Null it and that guarantee evaporates;
+   something else has to hold it — most likely a partial `UniqueConstraint` over the
+   two parties plus an open status.
+3. **`listing_type='trade'` and the standalone Trading Block browse.** A data migration
+   over live listings, plus the 301s. The *name* stays as the trade dashboard's
+   terminology; only the separate browse goes.
+
+**Acceptance** — a trade can be proposed from a collector card, a collection item or a
+Store shelf; no standalone trade browse; existing trade listings and their accepted
+trades survive the migration with their history intact.
+
+**Two smaller pieces of 10.10 also still open**, both listed in the register:
+shared carrier/service chosen once in the offer and flowing into both shipments, and
+the composer's search working without JavaScript.
 
 ---
 
@@ -479,6 +575,40 @@ Dev plan **10.13**.
   and the footer draws the line between a poor review and an actual complaint.
 - **Report / Appeal** — both 10.13, neither built. **Blocked on the `Report` model**
   (see Carried-over).
+
+---
+
+## Pass 8b — The forms nobody restyled ⬜
+
+*Raised in review 2026-08-05 and confirmed: the create/edit forms were never brought
+onto the design system. Passes 5 and 7 built new screens around them and left the
+middle alone, which is why the trade block added in Pass 7 sits in old furniture.*
+
+**Design refs** — turn 6b (step 2, the item), 10a/11b (collection item), 4c (field
+grammar). Dev plan **10.8**, T13.
+
+| Screen | State today |
+|---|---|
+| `listings/listing_create.html` | pre-revamp: inline `<style>`, `--color-*` legacy tokens, **3 `kb-` classes in the whole file** |
+| `listings/listing_edit.html` | same shape, same problem |
+| `collections/collection_item_form.html` | same |
+| `collections/add_from_order.html` | same |
+
+Restyle onto `kb-ui.css`, not a rewrite: the field grammar, the prefill panel and the
+image slots all work. What changes is the furniture — the three uppercase label sizes,
+the 3px/4px geometry, hairlines instead of the dashed drop zone, and the same
+`_trade_block.html` / private-block fieldsets the design draws.
+
+**Two things ride along**, because they are the same files:
+
+- **`CollectionItem.disposition`** — `held` / `sold elsewhere` / `given away` / `lost`.
+  A lot that expires unsold already releases the piece on its own (Pass 7), but nothing
+  can record that a piece has physically **left**, so somebody who sold it at a show has
+  no way to stop it being offered. It is also the honest home for the ownership gap
+  `_close_traded_pieces` currently papers over.
+- **`issue_class` taxonomy** — *Special Issue*, *Limited Edition*, *Commemorative*. Its
+  own category, not `addon_type` (see the inbox for why). Touches the seed data and the
+  filter rail as well as these forms.
 
 ---
 
@@ -644,15 +774,17 @@ coming back for it.
 
 | What is reduced | Where it lives now | Blocked on | Clears in | Restore by |
 |---|---|---|---|---|
-| **"Will trade" flag** on the collector card | removed; marker in `templates/collections/collectors.html`, CSS parked in `static/css/pages/collectors.css` | `CollectionItem.trade_eligible` **defaults to True**, so the flag would sit on every card and carry no signal | **7** (10.10) | un-comment the flag; it becomes true only for an explicit item-level choice |
-| **"Propose a trade"** as one click | a two-step walk — the button opens their trade-eligible shelf | a proposal today needs a `listing_id`; tradeability is not yet a property of the item | **7** (10.10) | point the button at a person-level propose view |
+| ~~**"Will trade" flag** on the collector card~~ ✅ | now a **count** — *N to trade*, pieces you could ask about today | settled in Pass 7 — with open as the default a binary flag would sit on every card again, so the card carries a figure that varies instead | — | — |
+| **"Propose a trade"** as one click | a two-step walk — the button opens their trade shelf, where you pick something that is listed | **narrowed in Pass 7.** `TradeOffer.trade_listing` is a non-null FK **and** `Trade.listing` is a `OneToOneField` doubling as the uniqueness anchor. Both have to become nullable together, with something else holding uniqueness | **7b** (10.10 remainder) | point the button at a person-level propose view |
+| **Shared shipping choice** on a trade | each side picks its own carrier on the trade page | `TradeOffer` has no carrier/service field; 10.10 wants it chosen once in the offer and flowing into both shipments | **7b** | add the fields; `_create_trade_shipments` already builds both sides |
+| **Composer search without JavaScript** | the full shelf renders and the checkboxes work; the search box and chips do nothing | the table is a form mid-composition, and a GET round trip would empty it | **10** (with the mobile pass) | keep the client filter; add a no-JS fallback that preserves the picks |
 | **"Sets going"** — the card's third figure | shows **counties held** instead | no `CollectionSet` model | **13** (10.14) | swap the annotation in `apps/collections/collectors.py`; the layout does not change |
 | **Earned badges** under the profile bio | omitted; marker in `templates/accounts/profile.html` | no `Badge` model or its thirteen awards | **14** | render the badge row where the marker sits |
-| **Display-case captions** | reuses the item `description` | no `display_caption` field on `CollectionItem` | **7** | add the field, fall back to `description` |
+| **Display-case captions** | reuses the item `description` | no `display_caption` field on `CollectionItem` | **8** | add the field, fall back to `description` |
 | **The lot route** — a box of several licences | not built; marker in `templates/listings/sell_start.html` | `ListingLotItem` / `inventory_format` (10.15, T13) | **later** | add the second entry beside the three destinations |
-| **The collection terms panel** | those fields are still on the old collection item form | nothing — it is scope left, not a blocker | **7** | give the collection destination its own step 3 |
+| **The collection terms panel** | the trade half now has a proper block (`templates/collections/_trade_block.html`); public / display case / the private block are still on the old form | nothing — it is scope left, not a blocker | **8** | give the collection destination its own step 3 |
 | **The map** (Collections tab, profile *Ground covered*) | honest placeholder + a hatched panel; the figures beside it are real | county **geometry** does not exist; `GeographicUnit.valid_from`/`valid_to` absent | **9 / 10** | draw the choropleth; the arithmetic in `apps/collections/tracker.py` is already there |
-| **Trade board** tab | leaves the zone for `/hunt/?format=trade` | the designed board is its own screen | **7** | make the tab local |
+| ~~**Trade board** tab~~ ✅ | local at `/collections/?tab=trade`, built from collection items and sorted by overlap with your wanted list | settled in Pass 7 | — | — |
 | **Distance** — *"41 within a hundred miles"* | reads *N will trade · N selling now* | no geocoding, no geometry | **9 / 10** | add the measure to the header line |
 | ~~**Filtering people by where they live**~~ ✅ | the rail now asks which question you mean | settled in Pass 6 | — | — |
 | **Per-type mail preferences** | Notifications & mail says what arrives today | no `NotificationPreference` model | **later** | render the switches where the marker sits |
@@ -690,7 +822,11 @@ Verified against the code on 2026-08-04.
 | **Moderation action on `Review`** | 19b | Pass 11 — *today a libellous review cannot be taken down from the admin at all* |
 | `WantedItem` — minimum grade, repairs-ok, **private ceiling price**, notify-me, show-on-profile | 11b (designer's own correction: they drew five fields that don't exist) | Pass 3 |
 | `Listing.minimum_offer` floor | 5c / 6c / 8b | Pass 5 |
-| `CollectionItem` — purchase price, acquisition, private note | 6c | Pass 5 |
+| `CollectionItem` — purchase price, acquisition, private note | 6c | Pass 5 ✅ |
+| ~~`CollectionItem.trade_eligible` is a boolean defaulting to True~~ | 3a / 13a / 10.10 | ✅ **Shipped in Pass 7** — `tradeability` (`open`/`closed`, default `open`) + `trade_wants`. Availability is derived from live lots, never stored. |
+| ~~`TradeOffer` cash runs one way only~~ | 3a / 10.10 | ✅ **Shipped in Pass 7** — `cash_direction` under a `cash_amount >= 0` CheckConstraint. |
+| `TradeOffer` — shared carrier + service for both shipments | 10.10 | **Pass 7b** — each side currently picks its own on the trade page |
+| `TradeOffer.trade_listing` nullable + a new home for `Trade`'s uniqueness | 3a / 13a / 10.10 | **Pass 7b** — until then no trade can start from a person or an unlisted piece |
 | `GeographicUnit.valid_from` / `valid_to` | 14b | Pass 10 — until it exists, a Colorado collector's "19 of 185" is measured against today's map and **overstates their gaps** |
 | ~~**`UserProfile.county` is a `CharField`**~~ | 4c / CLAUDE.md | ✅ **Shipped in Pass 6** — `home_state` + `home_county` FKs, with a timid data migration that leaves anything it cannot match exactly. |
 | ~~Terms version + acceptance~~ | 4b / 10.16 | ✅ **Shipped in Pass 6** — `core.TermsVersion` + `TermsAcceptance`, recorded at registration. |
@@ -732,9 +868,9 @@ Where every `data-screen-label` in the design document lands.
 
 | Turn | Screens | Pass |
 |---|---|---|
-| 1b/1c | shell, Bench, Hunt, listing detail, propose trade | 1 ✅ / 7 |
-| 2a–2e | masthead, home signed in/out, trade board | 2 |
-| 3a–3d | trade board v2, collector profile, settings | 7, **3 ✅**, 6 |
+| 1b/1c | shell, Bench, Hunt, listing detail, propose trade | 1 ✅ / **7 ✅** |
+| 2a–2e | masthead, home signed in/out, trade board | 2 ✅ |
+| 3a–3d | trade board v2, collector profile, settings | **7 ✅**, **3 ✅**, 6 ✅ |
 | 4a–4c | sign in, create account, ten settings rooms | 6 |
 | 5a–5c | one door, add an item, offer it | 5 (superseded by 6) |
 | 6a–6c | step 1 destination, step 2 item, step 3 terms | 5 |
@@ -780,14 +916,87 @@ And the design adds what the data-model plan deferred: it explicitly parked Want
 
 
 
-add Special Issue or Limited Edition as an add-on attribute.
+---
 
-on user sign in, should go to the home page - right now it directs to My Bench.
+# The inbox — raised in review, triaged 2026-08-05
 
-If an auction listing is expired and didn't sell and is not being renewed or a user takes down listing then it goes back to their collection - should probably actually add this option (in case like they got rid of it off site or something because wouldn't want to put it back in their collection if they don't have it anymore).
+Each of these was verified against the code before being given a status. Two were
+one-line faults and are fixed; the rest are scheduled.
 
-the listing form/add new item looks nothing like docs\internal\design\ui-ux-redesign-model is this in the plan to get updated in a future pass/task and we just haven't gotten to it yet?
+### ✅ Sign-in landed on My Bench instead of home — **fixed**
 
-user blocking doesn't work. you can't unblock a user - when you select unblock it just takes you to your messages and also there isn't really an entry point to even block anyone in the first place. it was working previous to the ui/ux updates so not sure what changed.
+`LOGIN_REDIRECT_URL` was `/accounts/dashboard/`. Turn 2b makes the signed-in home the
+page a returning member actually wants — what closed, what is closing, what arrived —
+whereas the bench is where you go when you already know there is something to do.
+Landing on a to-do list is a worse greeting than a newspaper. Now `/`, with a test.
 
-why was the google autocomplete/lookup taken out of the address entry. i had it in there before.
+### ✅ Blocking was broken both ways — **fixed**
+
+Two faults, both from **rendering a write as a link**:
+
+1. **Unblock silently did nothing.** `unblock_user_view` is POST-only, but the privacy
+   room rendered it as an `<a href>` — wrapped, confusingly, in a `<form>` posting to
+   `profile_edit`. Clicking it issued a GET, hit the method guard, and bounced you to
+   your messages. That is exactly what it looked like from outside. It is a POST
+   button now, and it returns to the room you were in rather than the settings front
+   door.
+2. **There was no way to block anybody.** The only route was `messaging:block_user`,
+   which takes a **conversation** — so you had to already be mid-argument with somebody
+   to block them, and blocking is most useful before that. New
+   `messaging:block_person` takes a person, and the profile carries Block / Unblock as
+   the quietest thing in the action row. 4c is clear that blocking works quietly and is
+   not a complaint, so it is never styled as an accusation.
+
+Seven tests, including one asserting the privacy room renders a `<form>` and not an
+`<a href>` — the fault was invisible from behaviour alone.
+
+### ℹ️ Google address autocomplete — **nothing was removed**
+
+Still there, intact, at `templates/accounts/address_form.html:56–87`: a Places
+`Autocomplete` on `line1` that fills city/state/postcode from the components. It is
+wrapped in `{% if google_maps_api_key %}`, which reads `GOOGLE_MAPS_API_KEY` from the
+environment (`config/settings/base.py:49`, listed in `.env.example`). **An empty key in
+this `.env` is why it stopped appearing** — no code changed. Set the key and it returns.
+
+### ⬜ The listing form still looks nothing like the design — **correct, and scheduled**
+
+Honest answer: **not yet done, and the plan did not say so clearly enough.** Pass 5
+rebuilt step 1 (`sell_start.html`, the three destination cards) and step 3 (the terms
+panels), but **step 2 — `listing_create.html`, the actual item form — was never
+touched.** It is pre-revamp markup: an inline `<style>` block, `--color-*` legacy
+tokens, three `kb-` classes in the whole file. The same is true of
+`collection_item_form.html` and `add_from_order.html`, which is why the trade block
+added in Pass 7 sits in old furniture.
+
+Now **Pass 8b** below, so it stops being invisible.
+
+### ⬜ An unsold lot should come back to the collection — **and let them say it is gone**
+
+Half of this is already true and became true in Pass 7: availability is derived, so a
+lot that expires or is taken down releases the piece **on its own**, with no flag to
+restore. What is missing is the second half — **nothing can record that a piece has
+left**. Somebody who sold it at a show off-site has no way to say so, and the piece
+sits in their collection being offered to people.
+
+Needs a disposition on `CollectionItem` (`held` / `sold elsewhere` / `given away` /
+`lost`), which is genuinely useful beyond this: it is what the ledger and the export
+need, and it is the honest place for the ownership-transfer gap that
+`_close_traded_pieces` currently papers over by closing tradeability. **Pass 8b.**
+
+### ⬜ Special Issue / Limited Edition as an attribute
+
+Wanted, but **`addon_type` is the wrong home** and it is worth saying why before
+somebody adds it there. `addon_type` holds things like *Turkey Tag* — physical add-ons
+attached to a licence, one per item. A Special Issue turkey tag is **both**, so putting
+them in the same category makes the collector choose between two true things.
+
+It is a property of the **issue**, so it wants its own taxonomy category —
+`issue_class`, seeded with *Special Issue*, *Limited Edition*, *Commemorative*. That
+inherits everything the other categories already have: the browse rail, faceted counts,
+the "Other" free-text flow with admin promotion, and the prefill resolver. The cost is
+that it touches the seed data, the six form dimensions, the filter rail and the prefill
+config, which makes it a **data-model task, not a UI one** — it belongs with T5, and it
+is listed there as well. **Pass 8b**, unless the category name should be something else,
+which is a call worth making before the seed data exists.
+
+---

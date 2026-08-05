@@ -166,7 +166,11 @@ SHIPPO_DEFAULT_HEIGHT_IN = os.getenv('SHIPPO_DEFAULT_HEIGHT_IN', '1.0')
 
 # Authentication URLs
 LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/accounts/dashboard/'
+# Home, not the bench. Turn 2b makes the signed-in home page the thing a
+# returning member wants — what closed, what is closing, what arrived —
+# whereas the bench is where you go when you already know there is something
+# to do. Landing on a to-do list is a worse greeting than a newspaper.
+LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 
 

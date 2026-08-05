@@ -109,6 +109,26 @@ rail is cross-referenced against the viewer's own shelves.
                         <input type="hidden" name="conversation_type" value="general">
                         <button type="submit" class="kb-btn kb-btn--secondary kb-btn--sm">Mail</button>
                     </form>
+                    {% comment %}
+                    The only way to block anybody used to be from inside a
+                    conversation with them, which meant you had to be mid-
+                    argument first. Kept quiet and last: 4c is clear that
+                    blocking works quietly and is not a complaint.
+                    {% endcomment %}
+                    {% if user.is_authenticated %}
+                        {% if viewer_has_blocked %}
+                            <form method="post" action="{% url 'messaging:unblock_user' profile_user.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button type="submit" class="pf-quiet-action">Unblock</button>
+                            </form>
+                        {% else %}
+                            <form method="post" action="{% url 'messaging:block_person' profile_user.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="pf-quiet-action">Block</button>
+                            </form>
+                        {% endif %}
+                    {% endif %}
                 {% endif %}
             </div>
         </aside>

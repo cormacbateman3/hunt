@@ -222,9 +222,16 @@ Nothing is in two groups.
                     {% for block in blocked_users %}
                         <div class="st-row">
                             <span class="st-row-title">{{ block.blocked.profile.get_display_name }}</span>
-                            <form method="post" action="{% url 'accounts:profile_edit' %}">
+                            {% comment %}
+                            A button, not a link. Unblocking is a write, and
+                            the view is POST-only — rendered as an anchor it
+                            issued a GET, hit the guard and silently bounced
+                            the member to their messages.
+                            {% endcomment %}
+                            <form method="post" action="{% url 'messaging:unblock_user' block.blocked.pk %}">
                                 {% csrf_token %}
-                                <a href="{% url 'messaging:unblock_user' block.blocked.pk %}" class="st-quiet">Unblock</a>
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button type="submit" class="st-quiet">Unblock</button>
                             </form>
                         </div>
                     {% endfor %}

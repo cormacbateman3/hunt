@@ -90,6 +90,12 @@ the only thing this page is really for is finding out whose turn it is.
                         Two ways to ship, side by side — the same pair the
                         order page offers. Somebody with a label already
                         printed should not have to buy another one.
+
+                        DEFERRED — 10.10 wants the carrier and service chosen
+                        once in the offer and shared by both shipments, so
+                        the two halves of a trade travel the same way.
+                        Blocked on: TradeOffer has no carrier/service field.
+                        Register: docs/internal/plan_design.md
                         {% endcomment %}
                         <div class="tb-ship">
                             <form method="post" action="{% url 'trades:trade_shipment_manual_tracking' trade.pk shipment.pk %}" class="tb-ship-way">
