@@ -98,17 +98,27 @@ class StabilityPassTests(TestCase):
         )
 
     def test_favorites_render_as_cards_with_links(self):
-        """Was: plain text that didn't look clickable."""
+        """Was: plain text that didn't look clickable.
+
+        Saved is now two tabs rather than two grids — lots you're watching
+        open first, pieces in other collections sit behind their own chip —
+        so each is checked where it actually lives. Forgetting something is
+        still offered, just no longer the only verb on the page.
+        """
         listing = make_listing(self.seller)
         item = CollectionItem.objects.create(owner=self.seller, title='Fav item', is_public=True)
         Favorite.objects.create(user=self.buyer, listing=listing)
         Favorite.objects.create(user=self.buyer, collection_item=item)
         self.client.force_login(self.buyer)
-        resp = self.client.get(reverse('favorites:list'))
-        self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, reverse('listings:detail', args=[listing.pk]))
-        self.assertContains(resp, reverse('collections:item_detail', args=[item.pk]))
-        self.assertContains(resp, 'Unfavorite')
+
+        watching = self.client.get(reverse('favorites:list'))
+        self.assertEqual(watching.status_code, 200)
+        self.assertContains(watching, reverse('listings:detail', args=[listing.pk]))
+        self.assertContains(watching, 'Stop watching')
+
+        pieces = self.client.get(reverse('favorites:list'), {'tab': 'pieces'})
+        self.assertContains(pieces, reverse('collections:item_detail', args=[item.pk]))
+        self.assertContains(pieces, 'Forget it')
 
     def test_phone_readiness_item_has_no_dead_link(self):
         """Was: 'Verify phone' linked to a page with no phone verification."""

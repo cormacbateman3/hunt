@@ -1,86 +1,196 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}My Favorites | KeystoneBid{% endblock %}
+{% block title %}Saved &middot; My Bench &middot; KeystoneBid{% endblock %}
+
+{% block context_band %}{% include 'components/_bench_tabs.html' %}{% endblock %}
+
+{% block main_class %}kb-desk{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/saved.css' %}">{% endblock %}
 
 {% block content %}
-<section style="display: grid; gap: 1rem;">
-    <article class="card">
-        <h1 style="margin-bottom: 0.5rem;">My Favorites</h1>
-        <p style="color: var(--color-muted);">Track listings and public collection items you want to revisit.</p>
-    </article>
+{% comment %}
+A favourite is a reminder, not a bookmark. The page was two grids with an
+Unfavorite button under every tile — the only verb it offered was "forget
+this". Sorted by what closes soonest, with the countdown and your own bid
+state on the card, it becomes the page you open at nine in the evening.
+{% endcomment %}
 
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Favorited Listings</h2>
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0.75rem;">
-            {% for favorite in listing_favorites %}
-                {% with listing=favorite.listing %}
-                <article style="border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden;">
-                    <a href="{% url 'listings:detail' listing.pk %}">
-                        {% if listing.featured_image %}
-                            <img src="{{ listing.featured_image.url }}" alt="{{ listing.title }}"
-                                 style="width: 100%; height: 130px; object-fit: cover; display: block;">
-                        {% else %}
-                            <div style="width: 100%; height: 130px; background: var(--color-parchment); display: flex; align-items: center; justify-content: center;">
-                                <span style="color: var(--color-muted); font-size: 0.8rem;">No image</span>
-                            </div>
-                        {% endif %}
-                    </a>
-                    <div style="padding: 0.5rem;">
-                        <p style="font-size: 0.88rem; font-weight: 600; margin-bottom: 0.2rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
-                            <a href="{% url 'listings:detail' listing.pk %}" style="color: inherit;">{{ listing.title }}</a>
-                        </p>
-                        <p style="font-size: 0.78rem; color: var(--color-muted); margin-bottom: 0.35rem;">{{ listing.get_listing_type_display }}</p>
-                        <form method="post" action="{% url 'favorites:toggle_listing' listing.pk %}">
-                            {% csrf_token %}
-                            <input type="hidden" name="next" value="{{ request.path }}">
-                            <button type="submit" class="btn-secondary" style="font-size: 0.78rem; padding: 0.2rem 0.5rem; width: 100%;">Unfavorite</button>
-                        </form>
-                    </div>
-                </article>
-                {% endwith %}
-            {% empty %}
-                <p style="grid-column: 1 / -1;">No favorited listings yet.</p>
-            {% endfor %}
+<header class="kb-between desk-head">
+    <div>
+        <h1 class="kb-page-title">Saved</h1>
+        <p class="desk-lede">
+            {% if closing_tonight %}
+                {{ closing_tonight }} of the lots you&rsquo;re watching close{{ closing_tonight|pluralize:'s,' }} tonight.
+            {% else %}
+                Nothing here is public.
+            {% endif %}
+        </p>
+    </div>
+    <div class="kb-inline">
+        {% for chip in tabs %}
+            <a href="?tab={{ chip.key }}" class="kb-chip {% if chip.active %}is-on{% endif %}">{{ chip.label }} {{ chip.count }}</a>
+        {% endfor %}
+    </div>
+</header>
+
+{% comment %}
+DEFERRED — the "Saved hunts" strip: standing searches that go looking for you.
+Blocked on: a SavedHunt model, which does not exist.
+Register: docs/internal/plan_design.md
+{% endcomment %}
+
+{% if tab == 'watching' %}
+    <section class="sv-section">
+        <div class="sv-rule">
+            <h2 class="sv-rule-title">Watching</h2>
+            <span class="sv-rule-line" aria-hidden="true"></span>
+            <span class="sv-rule-note">Soonest to close first</span>
         </div>
-    </article>
 
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Favorited Collection Items</h2>
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0.75rem;">
-            {% for favorite in collection_favorites %}
-                {% with item=favorite.collection_item %}
-                <article style="border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden;">
-                    <a href="{% url 'collections:item_detail' item.pk %}">
-                        {% with primary=item.images.first %}
-                            {% if primary %}
-                                <img src="{{ primary.image.url }}" alt="{{ item.title }}"
-                                     style="width: 100%; height: 130px; object-fit: cover; display: block;">
-                            {% else %}
-                                <div style="width: 100%; height: 130px; background: var(--color-parchment); display: flex; align-items: center; justify-content: center;">
-                                    <span style="color: var(--color-muted); font-size: 0.8rem;">No image</span>
-                                </div>
+        {% if watching %}
+            <div class="sv-grid">
+                {% for row in watching %}
+                    <article class="sv-card">
+                        <a href="{{ row.listing.get_absolute_url }}" class="sv-media">
+                            {% if row.listing.featured_image %}
+                                <img src="{{ row.listing.featured_image.url }}" alt="" loading="lazy">
                             {% endif %}
-                        {% endwith %}
-                    </a>
-                    <div style="padding: 0.5rem;">
-                        <p style="font-size: 0.88rem; font-weight: 600; margin-bottom: 0.2rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
-                            <a href="{% url 'collections:item_detail' item.pk %}" style="color: inherit;">{{ item.title }}</a>
-                        </p>
-                        <p style="font-size: 0.78rem; color: var(--color-muted); margin-bottom: 0.35rem;">
-                            by <a href="{% url 'accounts:profile' item.owner.username %}" style="color: var(--color-aged-amber);">{{ item.owner.username }}</a>
-                        </p>
-                        <form method="post" action="{% url 'favorites:toggle_collection_item' item.pk %}">
+                            <span class="sv-flag {% if row.ends_soon %}sv-flag--rust{% elif row.closes_in %}sv-flag--brass{% else %}sv-flag--quiet{% endif %}">
+                                {{ row.closes_in|default:row.kind }}
+                            </span>
+                        </a>
+                        <div class="sv-body">
+                            <a href="{{ row.listing.get_absolute_url }}" class="sv-title">{{ row.listing.title|truncatechars:34 }}</a>
+                            {% if row.state %}
+                                <span class="sv-state sv-state--{{ row.tone }}">{{ row.state }}</span>
+                            {% else %}
+                                <span class="sv-state">{{ row.listing.county_ref.name|default:row.listing.state.code }}</span>
+                            {% endif %}
+                            <span class="sv-price">${{ row.listing.current_price|floatformat:2 }}</span>
+                        </div>
+                        <form method="post" action="{% url 'favorites:toggle_listing' row.listing.pk %}" class="sv-forget">
                             {% csrf_token %}
-                            <input type="hidden" name="next" value="{{ request.path }}">
-                            <button type="submit" class="btn-secondary" style="font-size: 0.78rem; padding: 0.2rem 0.5rem; width: 100%;">Unfavorite</button>
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <button type="submit" class="sv-forget-btn">Stop watching</button>
                         </form>
-                    </div>
-                </article>
-                {% endwith %}
-            {% empty %}
-                <p style="grid-column: 1 / -1;">No favorited collection items yet.</p>
-            {% endfor %}
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="kb-empty">
+                <h2>Nothing on your list</h2>
+                <p>Save a lot and it turns up here with its countdown and where your
+                   bid stands, so you don&rsquo;t have to go looking for it twice.</p>
+                <div class="kb-empty-actions">
+                    <a href="{% url 'hunt' %}?tab=ending" class="kb-btn kb-btn--primary">See what&rsquo;s closing</a>
+                </div>
+            </div>
+        {% endif %}
+    </section>
+
+{% elif tab == 'pieces' %}
+    <section class="sv-section">
+        <div class="sv-rule">
+            <h2 class="sv-rule-title">Pieces in other collections</h2>
+            <span class="sv-rule-line" aria-hidden="true"></span>
+            <span class="sv-rule-note">
+                {% if tradeable %}
+                    Not for sale &mdash; but {{ tradeable }} of these {{ tradeable|pluralize:"is,are" }} open to trades
+                {% else %}
+                    Not for sale
+                {% endif %}
+            </span>
         </div>
-    </article>
-</section>
+
+        {% if pieces %}
+            <div class="sv-grid">
+                {% for piece in pieces %}
+                    <article class="sv-card">
+                        <a href="{% url 'collections:item_detail' piece.item.pk %}" class="sv-media">
+                            {% if piece.item.images.all %}
+                                <img src="{{ piece.item.images.all.0.image.url }}" alt="" loading="lazy">
+                            {% endif %}
+                        </a>
+                        <div class="sv-body">
+                            <a href="{% url 'collections:item_detail' piece.item.pk %}" class="sv-title">{{ piece.item.title|truncatechars:34 }}</a>
+                            <a href="{% url 'accounts:profile' piece.owner.username %}" class="sv-owner">{{ piece.owner.profile.get_display_name }}</a>
+                            {% comment %}
+                            "Open to trades" is the item's own flag said literally.
+                            Whether the *owner* trades is a bigger claim than the
+                            field can carry — see the DEFERRED note in
+                            templates/collections/collectors.html.
+                            {% endcomment %}
+                            {% if piece.open_to_trades %}
+                                <span class="sv-state sv-state--live">Open to trades</span>
+                            {% else %}
+                                <span class="sv-state">Not offered for trade</span>
+                            {% endif %}
+                        </div>
+                        <form method="post" action="{% url 'favorites:toggle_collection_item' piece.item.pk %}" class="sv-forget">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <button type="submit" class="sv-forget-btn">Forget it</button>
+                        </form>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="kb-empty">
+                <h2>No pieces saved</h2>
+                <p>Saving something out of somebody&rsquo;s case is how you remember who
+                   holds what you are missing.</p>
+                <div class="kb-empty-actions">
+                    <a href="{% url 'collectors' %}" class="kb-btn kb-btn--primary">Browse collectors</a>
+                </div>
+            </div>
+        {% endif %}
+    </section>
+
+{% else %}
+    <section class="sv-section">
+        <div class="sv-rule">
+            <h2 class="sv-rule-title">Sold &amp; gone</h2>
+            <span class="sv-rule-line" aria-hidden="true"></span>
+            <span class="sv-rule-note">What got away</span>
+        </div>
+
+        {% if gone %}
+            <div class="sv-grid">
+                {% for row in gone %}
+                    <article class="sv-card sv-card--gone">
+                        <a href="{{ row.listing.get_absolute_url }}" class="sv-media">
+                            {% if row.listing.featured_image %}
+                                <img src="{{ row.listing.featured_image.url }}" alt="" loading="lazy">
+                            {% endif %}
+                            <span class="sv-flag sv-flag--quiet">{{ row.listing.get_status_display }}</span>
+                        </a>
+                        <div class="sv-body">
+                            <a href="{{ row.listing.get_absolute_url }}" class="sv-title">{{ row.listing.title|truncatechars:34 }}</a>
+                            {% comment %}
+                            What it made is price history, which does not exist yet.
+                            DEFERRED — show the closing price on this row.
+                            Blocked on: price history (Pass 12).
+                            Register: docs/internal/plan_design.md
+                            {% endcomment %}
+                            <span class="sv-state">
+                                {% if row.listing.status == 'sold' %}Sold{% else %}Ended{% endif %}
+                                {{ row.listing.updated_at|date:"F" }}
+                            </span>
+                            {% comment %}The same search against what is live.{% endcomment %}
+                            <a class="sv-again" href="{% url 'hunt' %}?q={{ row.listing.title|urlencode }}">Find another &rarr;</a>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="kb-empty">
+                <h2>Nothing has got away yet</h2>
+                <p>Lots you were watching stay here after they close, so you can see
+                   what you missed and go looking for another.</p>
+            </div>
+        {% endif %}
+    </section>
+{% endif %}
 {% endblock %}

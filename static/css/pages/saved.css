@@ -1,0 +1,202 @@
+/* ==========================================================================
+   Saved
+
+   A favourite is a reminder, not a bookmark. The countdown and the bid state
+   are the point of the card; "forget this" drops to a quiet line at the foot
+   where it belongs.
+   ========================================================================== */
+
+.sv-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sv-rule {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.sv-rule-title {
+    font: var(--kb-text-h2);
+    color: var(--kb-forest);
+    margin: 0;
+    white-space: nowrap;
+}
+
+.sv-rule-line {
+    flex: 1;
+    height: 1px;
+    background: var(--kb-rule-panel);
+}
+
+.sv-rule-note {
+    font-size: 11.5px;
+    color: var(--kb-ink-4);
+    white-space: nowrap;
+}
+
+.sv-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: var(--kb-4);
+}
+
+.sv-card {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.sv-card:hover {
+    border-color: var(--kb-rule-strong);
+}
+
+.sv-card--gone {
+    opacity: 0.72;
+}
+
+.sv-media {
+    aspect-ratio: 4 / 3;
+    background: var(--kb-hatch);
+    display: block;
+    position: relative;
+}
+
+.sv-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* The countdown is the loudest thing on the card, because it is the only
+   thing that can run out. */
+.sv-flag {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    font: 700 var(--kb-badge-size)/1.2 var(--kb-font-body);
+    letter-spacing: var(--kb-badge-tracking);
+    text-transform: uppercase;
+    padding: 4px 8px;
+    border-radius: var(--kb-r-chip);
+    font-variant-numeric: tabular-nums;
+}
+
+.sv-flag--rust {
+    background: var(--kb-rust);
+    color: var(--kb-surface);
+}
+
+.sv-flag--brass {
+    background: var(--kb-brass);
+    color: var(--kb-forest-ink);
+}
+
+.sv-flag--quiet {
+    background: rgba(28, 31, 24, 0.62);
+    color: var(--kb-cream);
+}
+
+.sv-body {
+    padding: 11px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.sv-title {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--kb-forest);
+    text-decoration: none;
+}
+
+.sv-title:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.sv-owner {
+    font-size: 11.5px;
+    color: var(--kb-ink-3);
+    text-decoration: none;
+}
+
+.sv-owner:hover {
+    color: var(--kb-brass);
+}
+
+.sv-state {
+    font-size: 11.5px;
+    color: var(--kb-ink-4);
+}
+
+.sv-state--rust {
+    color: var(--kb-rust);
+    font-weight: 600;
+}
+
+.sv-state--live {
+    color: var(--kb-live);
+    font-weight: 600;
+}
+
+.sv-price {
+    font-family: var(--kb-font-display);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--kb-forest);
+    font-variant-numeric: tabular-nums;
+    margin-top: auto;
+    padding-top: 4px;
+}
+
+.sv-again {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--kb-brass);
+    text-decoration: none;
+    margin-top: auto;
+    padding-top: 6px;
+}
+
+/* Forgetting something is not a headline action. */
+.sv-forget {
+    border-top: 1px solid var(--kb-rule-soft);
+}
+
+.sv-forget-btn {
+    width: 100%;
+    background: none;
+    border: 0;
+    padding: 8px 12px;
+    font: 400 11px/1.4 var(--kb-font-body);
+    color: var(--kb-ink-5);
+    cursor: pointer;
+    text-align: center;
+}
+
+.sv-forget-btn:hover {
+    color: var(--kb-rust);
+    background: var(--kb-page);
+}
+
+@media (max-width: 1100px) {
+    .sv-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+@media (max-width: 900px) {
+    .sv-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 640px) {
+    .sv-grid { grid-template-columns: repeat(2, 1fr); }
+}

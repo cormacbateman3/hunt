@@ -1,61 +1,107 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Notifications | KeystoneBid{% endblock %}
+{% block title %}Notifications &middot; My Bench &middot; KeystoneBid{% endblock %}
+
+{% block context_band %}{% include 'components/_bench_tabs.html' %}{% endblock %}
+
+{% block main_class %}kb-desk{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/notices.css' %}">{% endblock %}
 
 {% block content %}
-<section style="display: grid; gap: 1rem;">
-    <article class="card">
-        <h1 style="margin-bottom: 0.5rem;">Notifications Center</h1>
-        <form method="post" action="{% url 'notifications:mark_all_read' %}">
-            {% csrf_token %}
-            <input type="hidden" name="next" value="{{ request.get_full_path }}">
-            <button class="btn-secondary" type="submit">Mark all as read</button>
-        </form>
-    </article>
+{% comment %}
+One sentence, the hour in the margin, one button. The per-row "Mark read"
+form is gone — reading it marks it read. It matches the Day Book on the home
+page, which is right: they are the same events, one kept for a day and one
+for a year.
+{% endcomment %}
 
-    <article class="card">
-        {% for notification in page_obj %}
-            <div style="padding: 0.7rem 0; border-bottom: 1px solid var(--color-border);">
-                <p style="margin-bottom: 0.25rem;">
-                    {% if not notification.is_read %}<strong>[Unread]</strong>{% endif %}
-                    {{ notification.message }}
-                </p>
-                <p style="color: var(--color-muted); margin-bottom: 0.4rem;">
-                    {{ notification.get_notification_type_display }} - {{ notification.created_at|date:"M j, Y g:i a" }}
-                </p>
-                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                    {% if notification.link_url %}
-                        <a class="btn-secondary" href="{% url 'notifications:go' notification.pk %}">Open</a>
-                    {% endif %}
-                    {% if not notification.is_read %}
-                        <form method="post" action="{% url 'notifications:mark_read' notification.pk %}">
-                            {% csrf_token %}
-                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                            <button class="btn-secondary" type="submit">Mark read</button>
-                        </form>
-                    {% endif %}
-                </div>
-            </div>
-        {% empty %}
-            <p>No notifications yet.</p>
+<header class="kb-between desk-head">
+    <div>
+        <h1 class="kb-page-title">Notifications</h1>
+        <p class="desk-lede">
+            {% if unread_here %}
+                {{ unread_here }} unread.
+                {% if wants_you %}
+                    {{ wants_you }} of them want{{ wants_you|pluralize:'s,' }} something from you.
+                {% endif %}
+            {% else %}
+                Nothing unread. Kept for twelve months.
+            {% endif %}
+        </p>
+    </div>
+    <div class="kb-inline">
+        {% for chip in chips %}
+            <a href="?{% if chip.key %}show={{ chip.key }}{% endif %}"
+               class="kb-chip {% if chip.active %}is-on{% endif %}">{{ chip.label }} {{ chip.count }}</a>
         {% endfor %}
-    </article>
+        {% if unread_total %}
+            <form method="post" action="{% url 'notifications:mark_all_read' %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="kb-btn kb-btn--text kb-btn--sm">Mark all read</button>
+            </form>
+        {% endif %}
+    </div>
+</header>
+
+{% if days %}
+    {% for day in days %}
+        <section class="nt-day">
+            <h2 class="nt-day-label">{{ day.label }}</h2>
+            <div class="nt-list">
+                {% for row in day.rows %}
+                    <div class="nt-row{% if not row.note.is_read %} nt-row--fresh{% endif %}">
+                        <span class="nt-hour">{{ row.note.created_at|date:"g:i a" }}</span>
+                        {% comment %}
+                        Rust on a clock, brass wanting an answer, nothing for
+                        news. Three states are what let you scan the column in
+                        two seconds and close the tab.
+                        {% endcomment %}
+                        <span class="nt-dot nt-dot--{{ row.tone }}" aria-hidden="true"></span>
+                        <span class="nt-text">{{ row.note.message }}</span>
+                        {% if row.action %}
+                            <a href="{% url 'notifications:go' row.note.pk %}" class="nt-action">{{ row.action }}</a>
+                        {% elif row.note.link_url %}
+                            <a href="{% url 'notifications:go' row.note.pk %}" class="nt-action">Look</a>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+    {% endfor %}
 
     {% if page_obj.has_other_pages %}
-    <article class="card" style="display: flex; justify-content: space-between; align-items: center;">
-        {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
-        {% else %}
-            <span></span>
-        {% endif %}
-        <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-        {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}">Next</a>
-        {% else %}
-            <span></span>
-        {% endif %}
-    </article>
+        <nav class="nt-pager" aria-label="Pagination">
+            <span class="nt-pager-where">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            <span class="nt-pager-links">
+                {% if page_obj.has_previous %}
+                    <a href="?{% if which %}show={{ which }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">&larr; Newer</a>
+                {% endif %}
+                {% if page_obj.has_next %}
+                    <a href="?{% if which %}show={{ which }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Older &rarr;</a>
+                {% endif %}
+            </span>
+        </nav>
     {% endif %}
-</section>
+{% else %}
+    <div class="kb-empty">
+        <h2>{% if which %}Nothing in that group{% else %}Nothing yet{% endif %}</h2>
+        <p>
+            {% if which %}
+                Try another filter above.
+            {% else %}
+                Outbids, offers, questions and parcels land here. What arrives is
+                set under your notification settings.
+            {% endif %}
+        </p>
+        <div class="kb-empty-actions">
+            {% if which %}
+                <a href="{% url 'notifications:center' %}" class="kb-btn kb-btn--secondary">Everything</a>
+            {% endif %}
+            <a href="{% url 'hunt' %}" class="kb-btn kb-btn--primary">Go hunting</a>
+        </div>
+    </div>
+{% endif %}
 {% endblock %}
-

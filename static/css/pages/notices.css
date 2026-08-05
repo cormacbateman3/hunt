@@ -1,0 +1,133 @@
+/* ==========================================================================
+   The notification centre
+
+   One sentence, the hour in the margin, one button. Deliberately the same
+   shape as the Day Book on the home page — they are the same events, one
+   kept for a day and one for a year.
+   ========================================================================== */
+
+.nt-day {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.nt-day-label {
+    font: 700 var(--kb-label-size)/1.2 var(--kb-font-body);
+    letter-spacing: var(--kb-label-tracking);
+    text-transform: uppercase;
+    color: var(--kb-ink-3);
+    margin: 0;
+}
+
+.nt-list {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    overflow: hidden;
+}
+
+.nt-row {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--kb-rule-soft);
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+}
+
+.nt-row:last-child {
+    border-bottom: 0;
+}
+
+/* Unread is a tint, not a badge. It fades on the next visit without anybody
+   having to press anything. */
+.nt-row--fresh {
+    background: var(--kb-tint-attention);
+}
+
+.nt-hour {
+    font-family: var(--kb-font-mono);
+    font-size: 11px;
+    color: var(--kb-ink-5);
+    width: 62px;
+    flex-shrink: 0;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Three states, no more. A fourth would make people read the column instead
+   of scanning it. */
+.nt-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: var(--kb-r-pill);
+    flex-shrink: 0;
+    background: transparent;
+    align-self: center;
+}
+
+.nt-dot--urgent { background: var(--kb-rust); }
+.nt-dot--answer { background: var(--kb-brass); }
+
+.nt-text {
+    flex: 1;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--kb-ink);
+    min-width: 0;
+}
+
+.nt-action {
+    font: 700 var(--kb-label-size)/1.2 var(--kb-font-body);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--kb-brass);
+    text-decoration: none;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.nt-action:hover {
+    color: var(--kb-brass-deep);
+}
+
+.nt-pager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--kb-4);
+    padding-top: var(--kb-2);
+}
+
+.nt-pager-where {
+    font-size: 12.5px;
+    color: var(--kb-ink-3);
+}
+
+.nt-pager-links {
+    display: flex;
+    gap: var(--kb-4);
+}
+
+.nt-pager-links a {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--kb-forest);
+    text-decoration: none;
+}
+
+@media (max-width: 620px) {
+    .nt-row {
+        flex-wrap: wrap;
+        row-gap: 6px;
+    }
+
+    .nt-text {
+        flex-basis: 100%;
+        order: 3;
+    }
+
+    .nt-action {
+        order: 4;
+    }
+}

@@ -4,25 +4,18 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 from apps.collections.models import CollectionItem
 from apps.listings.models import Listing
+from . import saved
 from .models import Favorite
 
 
 @login_required
 def favorites_list(request):
-    listing_favorites = (
-        Favorite.objects.filter(user=request.user, listing__isnull=False)
-        .select_related('listing')
-        .order_by('-created_at')
-    )
-    collection_favorites = (
-        Favorite.objects.filter(user=request.user, collection_item__isnull=False)
-        .select_related('collection_item', 'collection_item__owner')
-        .order_by('-created_at')
-    )
-    return render(request, 'favorites/list.html', {
-        'listing_favorites': listing_favorites,
-        'collection_favorites': collection_favorites,
-    })
+    """Saved — sorted by what closes soonest, not by when you saved it.
+
+    The arithmetic is in :mod:`apps.favorites.saved`.
+    """
+    return render(request, 'favorites/list.html',
+                  saved.page(request.user, request.GET.get('tab', '')))
 
 
 @login_required
