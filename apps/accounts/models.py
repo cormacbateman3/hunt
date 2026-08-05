@@ -69,10 +69,36 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     display_name = models.CharField(max_length=100, blank=True)
     bio = models.TextField(blank=True)
+    # Where you collect from. An FK to the same list the listings use, so a
+    # profile can never disagree with a listing about what a county is called
+    # — free text is the bug class that produces "Towson, MD, PA".
+    home_state = models.ForeignKey(
+        'core.State', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='members',
+    )
+    home_county = models.ForeignKey(
+        'core.GeographicUnit', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='members',
+        help_text='Picked from the same unit list the listings use.',
+    )
+    # Kept only so the 0011 data migration has something to read and so a
+    # profile written before the FK existed still shows something. Nothing
+    # writes to it; read `home_county` instead.
     county = models.CharField(
-        max_length=50,
-        blank=True,
-        help_text="User's home Pennsylvania county"
+        max_length=50, blank=True, editable=False,
+        help_text='Superseded by home_county. Retained for anything migrated '
+                  'from free text that could not be matched to a unit.',
+    )
+
+    SHOWCASE_CHOICES = [
+        ('case', 'Display case first'),
+        ('map', 'Map first'),
+        ('one', 'One piece at a time'),
+        ('collection', 'Just the collection'),
+    ]
+    showcase_layout = models.CharField(
+        max_length=20, choices=SHOWCASE_CHOICES, default='case',
+        help_text='The order visitors see your profile in.',
     )
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
     email_verified = models.BooleanField(default=False)
@@ -109,6 +135,22 @@ class UserProfile(models.Model):
     def get_display_name(self):
         """Return display name if set, otherwise username"""
         return self.display_name or self.user.username
+
+    @property
+    def place(self):
+        """Where they collect from, in the state's own vocabulary.
+
+        Falls back to whatever free text a pre-FK profile carried, so nobody
+        loses their county to a migration that could not match it.
+        """
+        if self.home_county_id:
+            unit = self.home_county
+            label = unit.state.issuance_unit_label if unit.state_id else ''
+            place = f'{unit.name} {label}'.strip() if label else unit.name
+            return f'{place}, {unit.state.code}' if unit.state_id else place
+        if self.home_state_id:
+            return self.home_state.name
+        return self.county or ''
 
     @property
     def account_readiness(self):

@@ -8,8 +8,8 @@
     <div class="kb-band-inner">
         <a href="{% url 'collectors' %}">Collections</a>
         <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
-        {% if profile.county %}
-            <a href="{% url 'collectors' %}?q={{ profile.county|urlencode }}">{{ profile.county }}</a>
+        {% if profile.place %}
+            <a href="{% url 'collectors' %}?q={{ profile.place|urlencode }}">{{ profile.place }}</a>
             <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
         {% endif %}
         <span class="kb-crumb-current">{{ profile.get_display_name }}</span>
@@ -42,7 +42,7 @@ rail is cross-referenced against the viewer's own shelves.
                 <span class="pf-handle">@{{ profile_user.username }}</span>
             </div>
             <p class="pf-where">
-                {% if profile.county %}{{ profile.county }} &middot; {% endif %}
+                {% if profile.place %}{{ profile.place }} &middot; {% endif %}
                 here since {{ profile_user.date_joined|date:"Y" }}
                 {% if follower_count %} &middot; {{ follower_count }} follower{{ follower_count|pluralize }}{% endif %}
             </p>

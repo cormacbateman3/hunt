@@ -64,25 +64,81 @@ class UserLoginForm(AuthenticationForm):
 
 
 class UserProfileForm(forms.ModelForm):
-    """Form for editing user profile"""
+    """Profile & display — how you appear to other collectors.
+
+    The county is picked from the same unit list the listings use, so a
+    profile can never disagree with a listing about what a county is called.
+    """
+
     class Meta:
         model = UserProfile
-        fields = ['display_name', 'bio', 'county', 'avatar']
+        fields = ['display_name', 'home_state', 'home_county', 'bio',
+                  'avatar', 'showcase_layout']
+        labels = {
+            'home_state': 'State',
+            'home_county': 'Home county',
+            'bio': 'A few lines about your collecting',
+            'showcase_layout': 'How your profile is laid out',
+        }
+        help_texts = {
+            'display_name': 'Leave it blank and we’ll show your username.',
+            'bio': 'What you collect and what you’re after — that’s what other '
+                   'collectors read this for.',
+        }
         widgets = {
             'display_name': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'Display Name'
+                'class': 'form-input', 'placeholder': 'Ray Miller',
             }),
+            'home_state': forms.Select(attrs={'class': 'form-select'}),
+            'home_county': forms.Select(attrs={'class': 'form-select'}),
             'bio': forms.Textarea(attrs={
-                'class': 'form-input',
-                'placeholder': 'Tell us about yourself...',
-                'rows': 4
+                'class': 'form-input', 'rows': 4, 'maxlength': 400,
+                'placeholder': 'Chasing a full run of numbered county tags, '
+                               '1913 to 1937. Twenty-six counties to go.',
             }),
-            'county': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'Your Pennsylvania County'
-            }),
+            'showcase_layout': forms.RadioSelect(),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from apps.core.models import GeographicUnit, State
+
+        self.fields['home_state'].queryset = State.objects.order_by(
+            '-is_primary_default', 'name')
+        self.fields['home_state'].empty_label = 'Not saying'
+
+        # Only offer units inside the chosen state; offering all of them is
+        # how "Towson, MD, PA" happens.
+        state_id = (
+            self.data.get('home_state')
+            or (self.instance.home_state_id if self.instance.pk else None)
+        )
+        units = GeographicUnit.objects.none()
+        if state_id:
+            units = GeographicUnit.objects.filter(
+                state_id=state_id).order_by('sort_order', 'name')
+        self.fields['home_county'].queryset = units
+        self.fields['home_county'].empty_label = 'Not saying'
+        self.fields['home_county'].required = False
+
+        unit_label = 'County'
+        if state_id:
+            state = State.objects.filter(pk=state_id).first()
+            if state and state.issuance_unit_label:
+                unit_label = state.issuance_unit_label
+        self.fields['home_county'].label = f'Home {unit_label.lower()}'
+
+    def clean(self):
+        cleaned = super().clean()
+        state = cleaned.get('home_state')
+        county = cleaned.get('home_county')
+        if county and state and county.state_id != state.id:
+            self.add_error(
+                'home_county',
+                f'{county.name} is not in {state.name}. Pick one from the list.')
+        if county and not state:
+            cleaned['home_state'] = county.state
+        return cleaned
 
 
 class AddressForm(forms.ModelForm):

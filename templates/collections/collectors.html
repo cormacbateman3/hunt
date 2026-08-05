@@ -81,7 +81,24 @@ select reaches back into it with the `form` attribute instead.
                 </div>
 
                 <div class="co-facet">
-                    <h2 class="co-facet-title">Where they collect</h2>
+                    {% comment %}
+                    Where somebody lives and where they collect are different
+                    questions — a collector in Erie can spend thirty years on
+                    Cameron County — so the rail asks which one you mean.
+                    {% endcomment %}
+                    <h2 class="co-facet-title">Where</h2>
+                    <div class="co-era">
+                        <label class="co-era-chip {% if where != 'live' %}is-on{% endif %}">
+                            <input type="radio" name="where" value="collect"
+                                   {% if where != 'live' %}checked{% endif %}
+                                   onchange="this.form.submit()"> They collect
+                        </label>
+                        <label class="co-era-chip {% if where == 'live' %}is-on{% endif %}">
+                            <input type="radio" name="where" value="live"
+                                   {% if where == 'live' %}checked{% endif %}
+                                   onchange="this.form.submit()"> They live
+                        </label>
+                    </div>
                     <select name="state_id" class="kb-select" onchange="this.form.submit()">
                         <option value="">Anywhere</option>
                         {% for state in states %}

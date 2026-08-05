@@ -63,6 +63,19 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('core', '0003_marketplacesettings_trade_label_fee_amount'),
+        # RenameModel rewrites references that are already in the migration
+        # state when it runs, so it has to run *after* every migration that
+        # names the old model. collections/0001 declares two FKs as
+        # `core.county`; without this edge the graph is free to order the
+        # rename first, and rendering the state then raises
+        #
+        #     Related model 'core.county' cannot be resolved
+        #
+        # It stayed hidden until accounts/0006 added accounts→core edges and
+        # changed the topological order. Nothing about the database changes —
+        # this only pins an ordering that was always required.
+        ('collections', '0001_initial'),
+        ('listings', '0002_listing_allow_cash_listing_buy_now_price_and_more'),
     ]
 
     operations = [

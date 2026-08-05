@@ -26,11 +26,14 @@ class ProfileTests(TestCase):
             state=cls.pa, name='Cameron', slug='pf-cameron')
         cls.fulton = GeographicUnit.objects.create(
             state=cls.pa, name='Fulton', slug='pf-fulton')
+        cls.lycoming = GeographicUnit.objects.create(
+            state=cls.pa, name='Lycoming', slug='pf-lycoming')
 
         cls.harold = User.objects.create_user('pf_harold', password='pw')
         cls.harold.profile.display_name = 'Harold Kreider'
         cls.harold.profile.bio = 'Third-generation Lycoming hunter.'
-        cls.harold.profile.county = 'Lycoming County'
+        cls.harold.profile.home_state = cls.pa
+        cls.harold.profile.home_county = cls.lycoming
         cls.harold.profile.save()
 
         cls.viewer = User.objects.create_user('pf_viewer', password='pw')

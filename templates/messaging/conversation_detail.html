@@ -23,7 +23,7 @@ to remember which of four deals this is.
             <div class="kb-stack">
                 <a href="{% url 'accounts:profile' other.username %}" class="ms-who-name">{{ other.profile.get_display_name }}</a>
                 <span class="ms-who-sub">
-                    {% if other.profile.county %}{{ other.profile.county }} &middot; {% endif %}
+                    {% if other.profile.place %}{{ other.profile.place }} &middot; {% endif %}
                     here since {{ other.date_joined|date:"Y" }}
                 </span>
             </div>

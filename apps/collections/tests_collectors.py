@@ -252,3 +252,40 @@ class GroundCoveredTests(CollectorsBaseTest):
         self.assertEqual(plural_unit('Parish'), 'Parishes')
         self.assertEqual(plural_unit('Borough'), 'Boroughs')
         self.assertEqual(plural_unit('Census Area'), 'Census Areas')
+
+
+class WhereTheyLiveTests(CollectorsBaseTest):
+    """The register debt from Pass 3: `UserProfile.county` was free text, so
+    the rail could only ask where somebody *collects*. Now it can ask both."""
+
+    def setUp(self):
+        self.walt.profile.home_state = self.pa
+        self.walt.profile.home_county = self.lycoming
+        self.walt.profile.save()
+
+    def test_where_they_live_reads_the_profile_not_the_shelf(self):
+        """Walt lives in Lycoming and collects Cameron. Both are true and the
+        rail must not confuse them."""
+        live = self.client.get(reverse('collectors'), {
+            'where': 'live', 'county_id': self.lycoming.id}).context['rows']
+        self.assertIn(self.walt, [row['user'] for row in live])
+
+        collect = self.client.get(reverse('collectors'), {
+            'where': 'collect', 'county_id': self.lycoming.id}).context['rows']
+        self.assertNotIn(self.walt, [row['user'] for row in collect])
+
+    def test_where_they_collect_is_still_the_default(self):
+        rows = self.client.get(reverse('collectors'), {
+            'county_id': self.cameron.id}).context['rows']
+        self.assertIn(self.walt, [row['user'] for row in rows])
+
+    def test_the_place_line_prefers_the_profile(self):
+        rows = self.client.get(reverse('collectors')).context['rows']
+        walt = next(row for row in rows if row['user'] == self.walt)
+        self.assertEqual(walt['place'], 'Lycoming County, PA')
+
+    def test_a_profile_that_says_nothing_still_gets_a_place(self):
+        """Nobody gets an empty card."""
+        rows = self.client.get(reverse('collectors')).context['rows']
+        dale = next(row for row in rows if row['user'] == self.dale)
+        self.assertTrue(dale['place'])

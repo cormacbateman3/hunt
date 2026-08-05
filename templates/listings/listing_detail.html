@@ -473,7 +473,7 @@ Header. Format and state read first, then the title, then the object line.
                 <span class="kb-stack">
                     <a href="{% url 'accounts:profile' listing.seller.username %}" class="kb-person-name">{{ listing.seller.profile.get_display_name }}</a>
                     <span class="kb-person-sub">
-                        {% if listing.seller.profile.county %}Collecting from {{ listing.seller.profile.county }}{% else %}@{{ listing.seller.username }}{% endif %}
+                        {% if listing.seller.profile.place %}Collecting from {{ listing.seller.profile.place }}{% else %}@{{ listing.seller.username }}{% endif %}
                     </span>
                 </span>
             </div>

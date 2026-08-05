@@ -127,14 +127,25 @@ def _apply_filters(qs, params, *, viewer_wants_owners, wants_mine_ids,
             | Q(last_name__icontains=name)
         )
 
+    # Two different questions, and they are genuinely different: somebody in
+    # Erie can spend thirty years on Cameron County. `where` says which one
+    # the rail is asking.
+    where = params.get('where', 'collect')
     state_id = params.get('state_id', '')
-    if state_id.isdigit():
-        qs = qs.filter(collection_items__is_public=True,
-                       collection_items__state_id=state_id)
     county_id = params.get('county_id', '')
-    if county_id.isdigit():
-        qs = qs.filter(collection_items__is_public=True,
-                       collection_items__county_id=county_id)
+
+    if where == 'live':
+        if state_id.isdigit():
+            qs = qs.filter(profile__home_state_id=state_id)
+        if county_id.isdigit():
+            qs = qs.filter(profile__home_county_id=county_id)
+    else:
+        if state_id.isdigit():
+            qs = qs.filter(collection_items__is_public=True,
+                           collection_items__state_id=state_id)
+        if county_id.isdigit():
+            qs = qs.filter(collection_items__is_public=True,
+                           collection_items__county_id=county_id)
 
     if skip != 'era':
         eras = _selected(params, 'era')
@@ -242,8 +253,8 @@ def _place(user, home_counties):
     """Where they are if they've said, else where they collect. Never blank —
     county and size are the two things always known about a collector."""
     profile = getattr(user, 'profile', None)
-    if profile and profile.county:
-        return profile.county
+    if profile and profile.place:
+        return profile.place
     home = home_counties.get(user.id)
     if home:
         return home
@@ -339,6 +350,7 @@ def collector_rows(viewer, params):
         'selling_total': filtered.filter(selling_count__gt=0).count(),
         'facets': _facets(qs, params, has_my_wants, wants_mine_ids),
         'sorts': [{'key': k, 'label': l, 'active': k == sort} for k, l in SORTS],
+        'where': params.get('where', 'collect'),
         'sort': sort,
         'has_wants': bool(wants),
     }
