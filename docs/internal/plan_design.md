@@ -251,7 +251,7 @@ of the shell. `/collections/` is one dispatching view (`collections_zone`).
 
 ---
 
-## Pass 4 — My Bench: the rest of the workspace ⬜ NEXT
+## Pass 4 — My Bench: the rest of the workspace 🔄 IN PROGRESS
 
 **Owes the deferred register** — `display_caption` on `CollectionItem` (the display
 case currently reuses `description`), and `SHIP_BY_DAYS` moved out of
@@ -265,13 +265,17 @@ case currently reuses `description`), and `SHIP_BY_DAYS` moved out of
 > `apps/collections/tracker.py`, which now exists; and a **display-case caption**
 > field, if the item description proves to be the wrong thing to show.
 
-- **My listings** — the **Interest** column is the missing one: bids, watchers,
-  offers, unanswered questions in one place. Unanswered things get the rust edge
-  and the only filled button. Honest observations on duds ("nineteen days, six
-  watchers — try $165?"; "one relist left of three").
-- **Bids & offers** — merge `my_bids` and the offers list, split by **direction**:
-  *Chasing* and *On my things*. Three money columns: mine, theirs, what it means
-  ("You'd keep $214 of it").
+### Shipped so far
+
+*2026-08-05 · 236 tests green (33 added)*
+
+| Screen | Commit | What landed |
+|---|---|---|
+| **My listings** ✅ | `290a8bd` | `apps/listings/seller_desk.py` + rebuilt template. The **Interest** column — offers, unanswered questions, bids, watchers — from data already in the models. Anything waiting on the seller wins its row outright (edge marker, brass tint, the only filled button) **even against a lot closing in twenty minutes**: the reply is the thing that can lose the sale, the auction closes either way. Observations are checkable and hedged — "Quiet — try $170?" only above three watchers, "Nobody has looked yet" below it; relists counted down before they run out. Status chips filter without losing the other counts. |
+| **Bids & offers** ✅ | `e417b3f` | `apps/accounts/ledger.py` + `templates/accounts/_ledger_row.html`. One page split by **direction** — *Chasing* / *On my things*; `/offers/mine/` redirects in. Three money columns everywhere: yours, theirs, what it means (`You'd keep $237.50 of it`, `next bid $412`). Row colour carries state: rust losing, green ahead, brass your turn. Withdraw is a POST form — **a bid cannot be taken back, an offer can until it's answered**, and the markup has to say which is which. |
+
+### Still to do in this pass
+
 - **Saved** — favourites sorted by what closes soonest, with countdown and bid
   state on the card. Sold ones stay, greyed. Saved hunts strip.
 - **Messages** — two panes, not two pages. The deal stays pinned on screen with
