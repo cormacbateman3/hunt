@@ -136,19 +136,30 @@ class CollectorCardActionTests(CollectorsBaseTest):
         self.assertNotIn('Propose a trade', html)
         self.assertIn('See their case', html)
 
-    def test_the_will_trade_flag_only_marks_people_who_said_so(self):
-        """It used to read a boolean defaulting to True, so it sat on every
-        card and said nothing about anybody."""
-        html = self.client.get(reverse('collectors')).content.decode()
-        self.assertIn('Will trade', html)
+    def test_the_card_counts_what_you_could_ask_about_rather_than_flagging(self):
+        """Pieces are open to trade by default, so a "will trade" badge would
+        sit on every card. A count varies — and it drops when a lot goes up."""
+        from datetime import timedelta
+        from decimal import Decimal
+        from django.utils import timezone
 
-        CollectionItem.objects.all().update(tradeability='unset')
-        quiet = self.client.get(reverse('collectors')).content.decode()
-        self.assertNotIn('Will trade', quiet)
+        html = self.client.get(reverse('collectors')).content.decode()
+        self.assertIn('2 to trade', html)   # Walt holds two
+        self.assertNotIn('Will trade', html)
+
+        piece = CollectionItem.objects.filter(owner=self.walt).first()
+        Listing.objects.create(
+            seller=self.walt, source_collection_item=piece, title=piece.title,
+            description='d', state=self.pa, condition_grade='good',
+            status='active', listing_type='auction', starting_price=Decimal('40'),
+            auction_end=timezone.now() + timedelta(days=3))
+
+        after = self.client.get(reverse('collectors')).content.decode()
+        self.assertIn('1 to trade', after)
 
 
 class CollectorFacetTests(CollectorsBaseTest):
-    def test_will_trade_narrows_to_people_with_trade_eligible_items(self):
+    def test_will_trade_narrows_to_people_with_something_to_trade(self):
         CollectionItem.objects.filter(owner=self.dale).update(tradeability='closed')
         rows = self.client.get(
             reverse('collectors'), {'because': 'will_trade'}).context['rows']
@@ -318,7 +329,24 @@ class TradeBoardTests(CollectorsBaseTest):
         self.assertIn(self.walt, owners)
         self.assertNotIn(self.dale, owners)
 
-    def test_a_piece_on_a_live_lot_comes_off_the_board(self):
+    def test_a_piece_at_auction_comes_off_the_board(self):
+        from datetime import timedelta
+        from decimal import Decimal
+        from django.utils import timezone
+
+        piece = CollectionItem.objects.filter(owner=self.walt).first()
+        Listing.objects.create(
+            seller=self.walt, source_collection_item=piece, title=piece.title,
+            description='d', state=self.pa, condition_grade='good',
+            status='active', listing_type='auction', starting_price=Decimal('40'),
+            auction_end=timezone.now() + timedelta(days=3))
+
+        rows = self.client.get(reverse('collectors'), {'tab': 'trade'}).context['rows']
+        self.assertNotIn(piece, [row['item'] for row in rows])
+
+    def test_a_piece_in_the_general_store_stays_on_the_board(self):
+        """Three ways to ask for the same licence — buy it, offer money for
+        it, offer a licence for it. Shelving it takes away none of them."""
         from decimal import Decimal
         piece = CollectionItem.objects.filter(owner=self.walt).first()
         Listing.objects.create(
@@ -327,7 +355,7 @@ class TradeBoardTests(CollectorsBaseTest):
             status='active', listing_type='buy_now', buy_now_price=Decimal('50'))
 
         rows = self.client.get(reverse('collectors'), {'tab': 'trade'}).context['rows']
-        self.assertNotIn(piece, [row['item'] for row in rows])
+        self.assertIn(piece, [row['item'] for row in rows])
 
     def test_what_answers_your_wanted_list_is_marked_and_leads(self):
         self.client.force_login(self.me)

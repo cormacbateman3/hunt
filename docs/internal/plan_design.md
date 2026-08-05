@@ -781,3 +781,9 @@ And the design adds what the data-model plan deferred: it explicitly parked Want
 
 
 add Special Issue or Limited Edition as an add-on attribute.
+
+on user sign in, should go to the home page - right now it directs to My Bench.
+
+If an auction listing is expired and didn't sell and is not being renewed or a user takes down listing then it goes back to their collection - should probably actually add this option (in case like they got rid of it off site or something because wouldn't want to put it back in their collection if they don't have it anymore).
+
+why was the google autocomplete/lookup taken out of the address entry.

@@ -17,6 +17,7 @@ from django.db.models import Count, Max, Min, Q
 
 from .matching import holdings, holdings_matching, owners_by_want
 from .models import CollectionItem, WantedItem
+from .tradeability import HELD_BY_A_LOT
 
 # How many people get the big card. Past eight or so the page stops being a
 # shortlist and becomes a directory.
@@ -29,7 +30,10 @@ PER_PAGE = 24
 
 REASONS = [
     ('has_my_wants', 'They own something I want'),
-    ('will_trade', 'They’ll trade'),
+    # Not "would they trade" — nearly everybody would, that being the
+    # default. This narrows to people with something you could ask about
+    # today, which is a question with a useful answer.
+    ('will_trade', 'They have something to trade'),
     ('wants_mine', 'I own something they want'),
     ('selling', 'Selling right now'),
 ]
@@ -73,14 +77,23 @@ def _public_items():
 def base_queryset():
     """Everybody with something on public show, with their card numbers on."""
     public = _public_items()
+    # Pieces an auction lot (or an open checkout) has a claim on. Excluded by
+    # primary key rather than by a negated join, because a piece with two
+    # listings would otherwise satisfy "not held" on the wrong one.
+    held = CollectionItem.objects.filter(HELD_BY_A_LOT).values('pk')
     qs = (
         User.objects.filter(is_active=True)
         .select_related('profile')
         .annotate(
             item_count=Count('collection_items', filter=public, distinct=True),
+            # What a visitor could ask about today, not what this collector
+            # would trade in principle. Open is the default, so the standing
+            # answer is true of nearly everybody and says nothing.
             trade_count=Count(
                 'collection_items',
-                filter=public & Q(collection_items__tradeability='open'),
+                filter=(public
+                        & Q(collection_items__tradeability='open')
+                        & ~Q(collection_items__pk__in=held)),
                 distinct=True,
             ),
             # DEFERRED — the card's third figure should be "sets going".
@@ -337,6 +350,7 @@ def collector_rows(viewer, params):
             'county_count': user.county_count,
             'selling_count': user.selling_count,
             'will_trade': bool(user.trade_count),
+            'open_to_trade': user.trade_count,
             'of_your_wants': overlap,
             'wants_from_you': wants_mine_count.get(user.id, 0),
             'case': strips.get(user.id, []),

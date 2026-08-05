@@ -25,6 +25,7 @@ from apps.collections.matching import (
 )
 from apps.collections.models import CollectionItem, WantedItem
 from apps.collections.tracker import collection_groups, ground_covered
+from apps.collections.tradeability import is_open_to_trade, open_to_trade
 from apps.enforcement.models import Strike
 from apps.favorites.models import Favorite
 from apps.reviews.models import Review
@@ -247,13 +248,22 @@ def profile_view(request, username):
         collection_qs = collection_qs.filter(is_public=True)
 
     featured_items = list(collection_qs.filter(featured=True).order_by('-created_at')[:4])
+    # One query for the whole case rather than a lot lookup per piece.
+    open_featured = set(
+        open_to_trade(CollectionItem.objects.filter(
+            pk__in=[item.pk for item in featured_items]))
+        .values_list('pk', flat=True)
+    )
+    for item in featured_items:
+        item.open_to_trade = item.pk in open_featured
     collection_items = collection_qs
     collection_total = collection_qs.count()
 
-    # Chips over the collection: the decades they hold, plus trade-eligible.
+    # Chips over the collection: the decades they hold, plus what a visitor
+    # could actually ask about today.
     decade_groups, open_to_trade_count = collection_groups(user, public_only=not is_owner)
     if group == 'trade':
-        collection_items = collection_items.filter(tradeability='open')
+        collection_items = open_to_trade(collection_items)
     elif group.isdigit():
         decade = int(group)
         collection_items = collection_items.filter(
@@ -336,7 +346,7 @@ def profile_view(request, username):
         'collection_total': collection_total,
         'collection_shown': collection_items.count(),
         'decade_groups': decade_groups,
-        'trade_eligible_count': open_to_trade_count,
+        'open_to_trade_count': open_to_trade_count,
         'active_group': group,
         'ground': ground_covered(user, public_only=not is_owner),
         'active_listings': active_listings,

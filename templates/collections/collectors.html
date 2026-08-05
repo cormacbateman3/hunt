@@ -26,7 +26,7 @@ select reaches back into it with the `form` attribute instead.
         <h1 class="kb-page-title">Collectors</h1>
         <p class="co-head-sub">
             {{ total }} {% if total == 1 %}person{% else %}people{% endif %}
-            {% if trade_total %}&middot; {{ trade_total }} will trade{% endif %}
+            {% if trade_total %}&middot; {{ trade_total }} with something to trade{% endif %}
             {% if selling_total %}&middot; {{ selling_total }} selling now{% endif %}
         </p>
     </div>
@@ -171,12 +171,14 @@ select reaches back into it with the `form` attribute instead.
                                     <span class="co-where">{{ row.place }}{% if row.since %} &middot; {{ row.since }}{% endif %}</span>
                                 </div>
                                 {% comment %}
-                                Only for collectors who have actually opened a
-                                piece to trade. It used to read a boolean that
-                                defaulted to True, so it sat on every card and
-                                said nothing about anybody.
+                                A figure, not a flag. Pieces are open to trade
+                                by default, so "will trade" would be true of
+                                everybody; how many you could ask about today
+                                varies, and it drops as their lots go live.
                                 {% endcomment %}
-                                {% if row.will_trade %}<span class="co-flag">Will trade</span>{% endif %}
+                                {% if row.open_to_trade %}
+                                    <span class="co-flag">{{ row.open_to_trade }} to trade</span>
+                                {% endif %}
                             </div>
 
                             <div class="co-stats">
@@ -264,7 +266,7 @@ select reaches back into it with the `form` attribute instead.
                             {% include 'accounts/_follow_button.html' with target=row.user %}
                             <span class="co-foot-note">
                                 {% if row.selling_count %}{{ row.selling_count }} selling now
-                                {% elif row.will_trade %}Open to trades{% else %}Nothing for sale{% endif %}
+                                {% elif row.open_to_trade %}{{ row.open_to_trade }} open to trade{% else %}Nothing for sale{% endif %}
                             </span>
                         </div>
                     </article>

@@ -14,6 +14,7 @@ from django.db.models import Count
 from apps.core.models import GeographicUnit
 
 from .models import CollectionItem
+from .tradeability import open_to_trade
 
 
 def plural_unit(label):
@@ -207,5 +208,7 @@ def collection_groups(user, *, public_only=True, limit=5):
         for decade, count in sorted(decades.items(), reverse=True)
     ][:limit]
 
-    trade = items.filter(tradeability='open').count()
-    return groups, trade
+    # Not "would they trade this" — nearly every piece is open, that being
+    # the default. What a visitor can use is how many they could ask about
+    # today, which is the same number the chip filters down to.
+    return groups, open_to_trade(items).count()

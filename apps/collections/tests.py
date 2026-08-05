@@ -1,9 +1,10 @@
 """10.8 collection-form parity tests: year bounds + addon dimension clearing."""
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import timezone
 
-from apps.collections.forms import CollectionItemForm
+from apps.collections.forms import CollectionItemForm, WantedItemForm
 from apps.collections.models import CollectionItem
 from apps.core.models import LicenseType, State
 
@@ -62,3 +63,73 @@ class CollectionItemFormTests(TestCase):
         item = form.save()
         self.assertFalse(item.license_types.filter(category='residency').exists())
         self.assertTrue(item.license_types.filter(name='Turkey Tag').exists())
+
+
+class TheTradeToggleTests(TestCase):
+    """The owner has to be able to turn it off, and the form has to offer it.
+
+    Both templates rendered `form.trade_eligible` after the field became
+    non-editable, which silently rendered nothing — so the one control the
+    whole tradeability rule depends on was not on the page at all.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = User.objects.create_user('toggler', password='pw')
+        cls.pa, _ = State.objects.get_or_create(
+            code='PA', defaults={'name': 'Pennsylvania', 'slug': 'pennsylvania',
+                                 'min_license_year': 1913, 'is_primary_default': True})
+
+    def _data(self, **overrides):
+        data = {
+            'item_kind': 'license', 'title': 'A license', 'state': str(self.pa.pk),
+            'license_year': '1942', 'condition_grade': 'good', 'colors': ['red'],
+            'resident_status': 'unknown',
+        }
+        data.update(overrides)
+        return data
+
+    def test_the_control_is_actually_on_the_page(self):
+        self.client.force_login(self.owner)
+        page = self.client.get(reverse('collections:create'))
+        self.assertContains(page, 'name="tradeability"')
+        self.assertContains(page, 'name="trade_wants"')
+
+    def test_a_new_piece_is_open_without_being_told_to_be(self):
+        form = CollectionItemForm(data=self._data(),
+                                  instance=CollectionItem(owner=self.owner),
+                                  user=self.owner)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.save().tradeability, 'open')
+
+    def test_the_owner_can_close_one_and_say_what_they_want(self):
+        form = CollectionItemForm(
+            data=self._data(tradeability='closed', trade_wants='Anything pre-1930'),
+            instance=CollectionItem(owner=self.owner), user=self.owner)
+        self.assertTrue(form.is_valid(), form.errors)
+        item = form.save()
+        self.assertEqual(item.tradeability, 'closed')
+        self.assertEqual(item.trade_wants, 'Anything pre-1930')
+
+    def test_a_form_without_the_block_leaves_a_closed_piece_closed(self):
+        """A silence is 'unchanged', never 'open'."""
+        item = CollectionItem.objects.create(
+            owner=self.owner, title='Shut', state=self.pa,
+            condition_grade='good', tradeability='closed')
+        form = CollectionItemForm(data=self._data(title='Shut'),
+                                  instance=item, user=self.owner)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.save().tradeability, 'closed')
+
+
+class WantedItemFormTests(TestCase):
+    """It reached for a `tradeability` field the wanted list does not have,
+    so every wanted-item page raised KeyError before rendering."""
+
+    def test_it_builds_without_reaching_for_a_field_it_does_not_have(self):
+        State.objects.get_or_create(
+            code='PA', defaults={'name': 'Pennsylvania', 'slug': 'pennsylvania',
+                                 'is_primary_default': True})
+        form = WantedItemForm()
+        self.assertIn('state', form.fields)
+        self.assertNotIn('tradeability', form.fields)

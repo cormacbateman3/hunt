@@ -54,13 +54,28 @@
                 {% if item.condition_grade %}
                     <span class="badge" style="background: var(--color-parchment);">{{ item.get_condition_grade_display }}</span>
                 {% endif %}
-                <span class="badge {% if item.trade_eligible %}badge-active{% else %}badge-expired{% endif %}">
-                    {% if item.trade_eligible %}Trade eligible{% else %}Not for trade{% endif %}
-                </span>
+                {% comment %}
+                Availability, not the owner's standing answer — a piece can be
+                open to trade and still unavailable because it is on an
+                auction lot, and those two facts want different sentences.
+                {% endcomment %}
+                {% if trade_block %}
+                    <span class="badge badge-expired" title="{{ trade_block }}">Not open to offers</span>
+                {% else %}
+                    <span class="badge badge-active">Open to trade</span>
+                {% endif %}
                 {% if item.addons_attached %}
                     <span class="badge badge-active">Tags intact</span>
                 {% endif %}
             </div>
+
+            {% if trade_block %}
+                <p style="color: var(--color-muted); margin: -0.4rem 0 0.9rem; font-size: 0.9rem;">{{ trade_block }}</p>
+            {% elif item.trade_wants %}
+                <p style="margin: -0.4rem 0 0.9rem; font-size: 0.9rem; font-style: italic;">
+                    Would take: &ldquo;{{ item.trade_wants }}&rdquo;
+                </p>
+            {% endif %}
 
             <dl style="display: grid; grid-template-columns: auto 1fr; gap: 0.3rem 1rem; margin: 0 0 1rem; font-size: 0.95rem;">
                 {% if item.state %}

@@ -27,6 +27,7 @@ from .board import board
 from .browse import page as browse_page
 from .collectors import collector_rows
 from .tracker import ground_covered, matrix as tracker_matrix
+from .tradeability import trade_block_reason
 from .forms import CollectionItemForm, CollectionItemImageFormSet, WantedItemForm
 from .models import CollectionItem, CollectionItemImage, WantedItem
 
@@ -303,6 +304,9 @@ def collection_item_detail(request, pk):
         'item': item,
         'is_owner': is_owner,
         'is_favorited': is_favorited,
+        # A sentence rather than a flag, so a visitor who cannot ask is told
+        # why — and whether waiting would fix it.
+        'trade_block': trade_block_reason(item),
         'taxonomy_groups': [
             (label, item.license_types_for_category(category))
             for category, _other, label in TAXONOMY_FIELDS
@@ -449,7 +453,6 @@ def add_from_order(request, order_id):
             'serial_number': listing.serial_number or '',
             'era_label': listing.era_label or '',
             'is_public': True,
-            'tradeability': 'unset',  # just purchased; ask later, do not assume
         }
         for category in ('residency', 'holder_eligibility', 'activity_scope', 'duration', 'material'):
             sel = listing.license_types.filter(category=category).order_by('name').first()

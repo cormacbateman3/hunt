@@ -101,8 +101,8 @@ class CollectionItemForm(forms.ModelForm):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         self.fields['state'].queryset = State.objects.order_by('-is_primary_default', 'name')
-        # "Not answered" is a real answer and the model's default, so the
-        # form never forces a choice it did not ask for clearly.
+        # Not required, because a silence must not be read as an answer —
+        # see clean_tradeability.
         self.fields['tradeability'].required = False
 
         state = self._resolve_state()
@@ -156,6 +156,21 @@ class CollectionItemForm(forms.ModelForm):
             f'{state_label}: {min_year}–{max_year}. Only expired, antique items (25+ years old) '
             'belong here — leave blank if the year is unknown.'
         )
+
+    def clean_tradeability(self):
+        """A missing answer means *unchanged* — never *open*.
+
+        The radio always posts something, so this only fires for a form built
+        without the trade block. Reading a silence as "open" would flip a
+        piece somebody had deliberately closed, which is the exact class of
+        bug this field replaced a boolean to end.
+        """
+        answer = self.cleaned_data.get('tradeability')
+        if answer:
+            return answer
+        if self.instance and self.instance.pk:
+            return self.instance.tradeability
+        return CollectionItem._meta.get_field('tradeability').get_default()
 
     def clean(self):
         cleaned_data = super().clean()
@@ -310,9 +325,6 @@ class WantedItemForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['state'].queryset = State.objects.order_by('-is_primary_default', 'name')
-        # "Not answered" is a real answer and the model's default, so the
-        # form never forces a choice it did not ask for clearly.
-        self.fields['tradeability'].required = False
         state = self._resolve_state()
         if state:
             self.fields['state'].initial = state

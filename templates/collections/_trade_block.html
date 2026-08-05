@@ -1,0 +1,35 @@
+{% comment %}
+The owner's standing answer on one piece, plus what they'd take for it.
+
+Shared by the collection item form and the add-from-order form so the two
+never drift — the answer is the same question in both places.
+
+Everything is open the moment it is recorded; this is where somebody closes
+the pieces that are not going anywhere. The note about auctions is here
+because the alternative is a member finding out at the moment somebody tries
+to offer, and wondering which of their own settings did it.
+{% endcomment %}
+<fieldset class="kb-fieldset kb-fieldset--trade">
+    <legend class="kb-fieldset-legend">Trade</legend>
+
+    <div class="kb-radio-row">
+        {{ form.tradeability }}
+        {{ form.tradeability.errors }}
+    </div>
+
+    <div class="kb-field">
+        <label class="form-label" for="{{ form.trade_wants.id_for_label }}">What you&rsquo;d take for it</label>
+        {{ form.trade_wants }}
+        <small class="kb-field-note">
+            In your own words &mdash; it sits beside the piece on the trade board.
+            Leave it blank and people will ask.
+        </small>
+        {{ form.trade_wants.errors }}
+    </div>
+
+    <p class="kb-field-note">
+        A piece on an auction lot is off the table until the lot closes. Nothing
+        to change here &mdash; it comes back on its own. A General Store listing
+        does not take it off: buyers can still offer a licence instead of money.
+    </p>
+</fieldset>

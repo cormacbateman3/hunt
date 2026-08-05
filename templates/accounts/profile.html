@@ -99,7 +99,7 @@ rail is cross-referenced against the viewer's own shelves.
                     <a href="{% url 'accounts:profile_edit' %}" class="kb-btn kb-btn--primary">Edit profile</a>
                     <a href="{% url 'collections:my_collection' %}" class="kb-btn kb-btn--secondary">My collection</a>
                 {% else %}
-                    {% if trade_eligible_count %}
+                    {% if open_to_trade_count %}
                         <a href="?group=trade#the-collection" class="kb-btn kb-btn--primary">What they&rsquo;ll trade</a>
                     {% endif %}
                     {% include 'accounts/_follow_button.html' with target=profile_user %}
@@ -144,7 +144,7 @@ rail is cross-referenced against the viewer's own shelves.
                                 {% if item.images.all %}
                                     <img src="{{ item.images.all.0.image.url }}" alt="" loading="lazy">
                                 {% endif %}
-                                {% if item.trade_eligible %}<span class="pf-case-flag">Trade eligible</span>{% endif %}
+                                {% if item.open_to_trade %}<span class="pf-case-flag">Open to trade</span>{% endif %}
                             </span>
                             <span class="pf-case-body">
                                 <span class="pf-case-title">{{ item.title }}</span>
@@ -240,16 +240,23 @@ rail is cross-referenced against the viewer's own shelves.
                 <span class="pf-rule-note">{{ collection_total }} item{{ collection_total|pluralize }}</span>
             </div>
 
-            {% if decade_groups or trade_eligible_count %}
+            {% if decade_groups or open_to_trade_count %}
                 <div class="pf-chips">
                     <a href="?#the-collection" class="kb-chip {% if not active_group %}is-on{% endif %}">All {{ collection_total }}</a>
                     {% for group in decade_groups %}
                         <a href="?group={{ group.key }}#the-collection"
                            class="kb-chip {% if active_group == group.key %}is-on{% endif %}">{{ group.label }} {{ group.count }}</a>
                     {% endfor %}
-                    {% if trade_eligible_count %}
+                    {% comment %}
+                    The count is what a visitor could ask about today, not
+                    what the owner would trade in principle — almost every
+                    piece is open, that being the default, so the standing
+                    answer is not worth a chip. Anything on an auction lot is
+                    out until the lot closes.
+                    {% endcomment %}
+                    {% if open_to_trade_count %}
                         <a href="?group=trade#the-collection"
-                           class="kb-chip pf-chip--right {% if active_group == 'trade' %}is-on{% endif %}">Trade eligible {{ trade_eligible_count }}</a>
+                           class="kb-chip pf-chip--right {% if active_group == 'trade' %}is-on{% endif %}">Open to trade {{ open_to_trade_count }}</a>
                     {% endif %}
                 </div>
             {% endif %}

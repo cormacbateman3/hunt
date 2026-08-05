@@ -47,12 +47,11 @@ class TradeabilityBase(TestCase):
                 update_fields=['email_verified', 'shipping_address'])
 
     def _item(self, owner=None, **kwargs):
+        # `tradeability` is deliberately left out: open is the model default,
+        # and half of what these tests are checking is that it stays that way.
         defaults = {
             'owner': owner or self.owner, 'title': '1931 Cameron',
             'state': self.pa, 'condition_grade': 'good', 'is_public': True,
-            # The model default is 'unset' — never answered. These tests are
-            # about what happens once somebody has said yes.
-            'tradeability': 'open',
         }
         defaults.update(kwargs)
         return CollectionItem.objects.create(**defaults)
@@ -64,6 +63,13 @@ class TradeabilityBase(TestCase):
             status=status, listing_type='auction', starting_price=Decimal('40'),
             auction_end=timezone.now() + timedelta(days=3))
 
+    def _shelf(self, item, status='active'):
+        """The same piece in the General Store, which does not block a trade."""
+        return Listing.objects.create(
+            seller=item.owner, source_collection_item=item, title=item.title,
+            description='d', state=self.pa, condition_grade='good',
+            status=status, listing_type='buy_now', buy_now_price=Decimal('50'))
+
 
 class TheRatchetTests(TradeabilityBase):
     """Listing a piece used to mark it un-tradeable forever.
@@ -73,13 +79,13 @@ class TheRatchetTests(TradeabilityBase):
     lot that expired unsold left the piece un-tradeable for good, silently.
     """
 
-    def test_a_live_lot_blocks_a_trade_offer(self):
+    def test_an_auction_lot_blocks_a_trade_offer(self):
         item = self._item()
         self.assertTrue(is_open_to_trade(item))
 
         self._lot(item)
         self.assertFalse(is_open_to_trade(item))
-        self.assertIn('live lot', trade_block_reason(item))
+        self.assertIn('auction lot', trade_block_reason(item))
 
     def test_a_lot_that_ends_gives_the_piece_back(self):
         """This is the bug. The old code never restored the flag."""
@@ -102,30 +108,66 @@ class TheRatchetTests(TradeabilityBase):
                 lot.save(update_fields=['status'])
                 self.assertTrue(is_open_to_trade(item))
 
-    def test_the_owners_own_answer_still_wins(self):
-        for answer in ('closed', 'unset'):
-            with self.subTest(answer=answer):
-                item = self._item(tradeability=answer)
-                self.assertFalse(is_open_to_trade(item))
-                self.assertIn('not opened', trade_block_reason(item))
+    def test_the_general_store_does_not_take_a_piece_off_the_table(self):
+        """The point of the Store: buy it, offer money, or offer a licence.
 
-    def test_never_asked_is_not_the_same_as_yes(self):
-        """The whole point of the three states: a piece nobody has answered
-        for does not get advertised as tradeable."""
-        item = self._item(tradeability='unset')
+        An auction is a binding commitment to sell to the highest bidder, so
+        a trade struck mid-lot would take the goods out from under them. A
+        fixed-price shelf carries no such promise.
+        """
+        item = self._item()
+        self._shelf(item)
+        self.assertTrue(is_open_to_trade(item))
+        self.assertEqual(trade_block_reason(item), '')
+        self.assertIn(item, open_to_trade(CollectionItem.objects.all()))
+
+    def test_a_checkout_in_progress_does_take_it_off(self):
+        """Somebody is at the till with money out. Worst possible moment."""
+        item = self._item()
+        self._shelf(item, status='pending')
         self.assertFalse(is_open_to_trade(item))
-        self.assertNotIn(item, would_trade(CollectionItem.objects.all()))
+        self.assertIn('sale is going through', trade_block_reason(item))
+
+    def test_the_owners_own_answer_still_wins(self):
+        """A store shelf does not override somebody saying no."""
+        item = self._item(tradeability='closed')
+        self._shelf(item)
+        self.assertFalse(is_open_to_trade(item))
+        self.assertIn('closed this piece', trade_block_reason(item))
+
+    def test_a_piece_is_open_without_anybody_being_asked(self):
+        """Open is the default, and that is the settled product rule: a
+        collection is a shelf of things other collectors might want."""
+        item = self._item()
+        self.assertEqual(item.tradeability, 'open')
+        self.assertTrue(is_open_to_trade(item))
+        self.assertIn(item, would_trade(CollectionItem.objects.all()))
 
     def test_the_queryset_and_the_predicate_agree(self):
         open_item = self._item(title='Open')
+        shelved = self._item(title='Shelved')
+        self._shelf(shelved)
         listed = self._item(title='Listed')
         self._lot(listed)
         closed = self._item(title='Closed', tradeability='closed')
 
         available = set(open_to_trade(CollectionItem.objects.all()))
-        self.assertEqual(available, {open_item})
-        for item in (open_item, listed, closed):
+        self.assertEqual(available, {open_item, shelved})
+        for item in (open_item, shelved, listed, closed):
             self.assertEqual(item in available, is_open_to_trade(item))
+
+    def test_a_second_listing_cannot_argue_the_first_one_away(self):
+        """A piece with a closed lot and a live one is held by the live one.
+
+        Worth its own test: the count on the collectors card excludes held
+        pieces by primary key rather than by a negated join, because a
+        negated join would find the closed row and call the piece free.
+        """
+        item = self._item()
+        self._lot(item, status='expired')
+        self._lot(item)
+        self.assertFalse(is_open_to_trade(item))
+        self.assertNotIn(item, open_to_trade(CollectionItem.objects.all()))
 
     def test_a_person_does_not_stop_trading_because_one_piece_is_at_auction(self):
         """The person-level question and the piece-level one are different."""

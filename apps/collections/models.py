@@ -52,26 +52,25 @@ class CollectionItem(models.Model):
     colors = models.JSONField(default=list, blank=True)
     condition_grade = models.CharField(max_length=20, choices=CONDITION_CHOICES, blank=True)
     is_public = models.BooleanField(default=True, help_text="Visible on public profile")
+    # Recorded, so open — a collection is a shelf of things other collectors
+    # might want, and the owner closes the ones that are not going anywhere.
+    # A CharField rather than a boolean because "closed" will eventually want
+    # to carry a reason, and because a negated flag reads worse everywhere it
+    # is used than a word that says which way it points.
     TRADEABILITY_CHOICES = [
-        ('unset', 'Not answered'),
         ('open', 'Open to trade offers'),
         ('closed', 'Not for trade'),
     ]
     tradeability = models.CharField(
-        max_length=10, choices=TRADEABILITY_CHOICES, default='unset',
-        help_text='Your own answer. Whether the piece can take an offer right '
-                  'now also depends on whether it is on a live lot, and that '
-                  'is worked out rather than stored.',
+        max_length=10, choices=TRADEABILITY_CHOICES, default='open',
+        help_text='Whether you will hear trade offers on this piece. Whether '
+                  'it can take one right now also depends on whether it is on '
+                  'an auction lot, and that is worked out rather than stored.',
     )
     trade_wants = models.CharField(
         max_length=250, blank=True,
         help_text='What you would take for it. Shown beside the piece.',
     )
-
-    # Superseded by `tradeability`. A boolean defaulting to True said the same
-    # thing about everybody, so no badge could honestly read it. Kept so the
-    # data migration has something to read; nothing writes to it.
-    trade_eligible = models.BooleanField(default=True, editable=False)
     featured = models.BooleanField(default=False, help_text="Pin to the top of your public profile (max 6)")
 
     # ── Only the owner ever sees these ───────────────────────────────────

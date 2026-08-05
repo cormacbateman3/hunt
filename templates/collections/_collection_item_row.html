@@ -33,9 +33,14 @@
             <span class="badge {% if item.is_public %}badge-active{% else %}badge-expired{% endif %}">
                 {% if item.is_public %}Public{% else %}Private{% endif %}
             </span>
-            <span class="badge {% if item.trade_eligible %}badge-active{% else %}badge-expired{% endif %}">
-                {% if item.trade_eligible %}Trade eligible{% else %}Trade off{% endif %}
-            </span>
+            {% comment %}
+            Only the exception is worth a chip. Everything is open to trade
+            unless its owner said otherwise, so a badge saying so would sit
+            on every row and carry nothing.
+            {% endcomment %}
+            {% if item.tradeability == 'closed' %}
+                <span class="badge badge-expired">Not for trade</span>
+            {% endif %}
             {% if item.condition_grade %}
                 <span class="badge" style="background: var(--color-parchment);">{{ item.get_condition_grade_display }}</span>
             {% endif %}
