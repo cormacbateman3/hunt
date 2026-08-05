@@ -11,9 +11,9 @@
 
 {% block content %}
 {% comment %}
-Turn 13a. Sorted by overlap with you, never by join date — a collector
-holding four things off your wanted list belongs above one who signed up
-yesterday, and the page is worthless if it doesn't say so.
+Sorted by overlap with you, never by join date — a collector holding four
+things off your wanted list belongs above one who signed up yesterday, and
+the page is worthless if it doesn't say so.
 {% endcomment %}
 
 {% comment %}
@@ -153,7 +153,15 @@ select reaches back into it with the `form` attribute instead.
                                     <a href="{% url 'accounts:profile' row.user.username %}" class="co-name">{{ row.name }}</a>
                                     <span class="co-where">{{ row.place }}{% if row.since %} &middot; {{ row.since }}{% endif %}</span>
                                 </div>
-                                {% if row.will_trade %}<span class="co-flag">Will trade</span>{% endif %}
+                                {% comment %}
+                                DEFERRED — the "Will trade" flag.
+                                Blocked on: 10.10 trade re-architecture (Pass 7).
+                                `CollectionItem.trade_eligible` defaults to True, so
+                                a flag reading off it would appear on every card and
+                                mean nothing. It returns when tradeability is an
+                                explicit item-level choice.
+                                Register: docs/internal/plan_design.md
+                                {% endcomment %}
                             </div>
 
                             <div class="co-stats">
@@ -189,8 +197,24 @@ select reaches back into it with the `form` attribute instead.
                                 <span class="co-strip-more">their case &rarr;</span>
                             </a>
 
+                            {% comment %}
+                            DEFERRED — "Propose a trade" is a two-step walk, not one
+                            click: it opens their trade-eligible shelf, where you pick
+                            the piece. Blocked on: 10.10 trade re-architecture (Pass 7),
+                            which makes tradeability a property of the item so a
+                            proposal can start from a person.
+                            Register: docs/internal/plan_design.md
+                            {% endcomment %}
                             <div class="co-card-foot">
-                                <a href="{% url 'accounts:profile' row.user.username %}" class="kb-btn kb-btn--primary kb-btn--sm">See their case</a>
+                                {% if row.will_trade %}
+                                    <a href="{% url 'accounts:profile' row.user.username %}?group=trade#the-collection"
+                                       class="kb-btn kb-btn--primary kb-btn--sm">Propose a trade</a>
+                                    <a href="{% url 'accounts:profile' row.user.username %}"
+                                       class="kb-btn kb-btn--secondary kb-btn--sm">See their case</a>
+                                {% else %}
+                                    <a href="{% url 'accounts:profile' row.user.username %}"
+                                       class="kb-btn kb-btn--primary kb-btn--sm">See their case</a>
+                                {% endif %}
                                 {% include 'accounts/_follow_button.html' with target=row.user %}
                                 <span class="co-foot-note">
                                     {% if row.selling_count %}{{ row.selling_count }} selling now

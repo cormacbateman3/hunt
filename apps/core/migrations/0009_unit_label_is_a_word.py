@@ -6,9 +6,9 @@ Migration 0004 seeds Pennsylvania with
 
 which is a true and useful sentence in the wrong field. Templates put this
 straight into a label — "Any county", "Counties 52 / 67", the filter caption
-in 13a that says *the label follows the state, parishes in Louisiana* — so a
-fresh install renders "Any county (historical); Wildlife Management Unit
-(WMU since 2003)".
+that promises the label follows the state — parishes in Louisiana, boroughs
+in Alaska. A fresh install renders "Any county (historical); Wildlife
+Management Unit (WMU since 2003)".
 
 `issuance_unit_type` already holds the short form. Anything carrying a
 semicolon or a parenthesis falls back to it.

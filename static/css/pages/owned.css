@@ -1,7 +1,5 @@
 /* ==========================================================================
    Everything owned — the item browse, second tab of Collections
-   Spec: design turn 13b.
-
    Every filter the old bar had is still here. What changed: the six
    license-type categories read as questions, what you've chosen shows as
    removable chips instead of hiding inside nine closed dropdowns, and
@@ -85,8 +83,8 @@
 }
 
 /* A trigger reads as its own question, with the number chosen in brass —
-   the point of 13b is that you can see what you've narrowed without
-   opening anything. */
+   the point is that you can see what you've narrowed without opening
+   anything. */
 .ms-trigger {
     font: var(--kb-text-meta);
     color: var(--kb-ink-2);
@@ -114,7 +112,7 @@
 }
 
 /* Child of the filter item, not of document.body — it moves with its
-   trigger for free (18a, defect 2). */
+   trigger for free — there is no stale position left to recalculate. */
 .ms-panel {
     position: absolute;
     top: calc(100% + 3px);

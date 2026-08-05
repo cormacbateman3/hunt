@@ -1,23 +1,28 @@
+"""Collections views.
+
+Thin on purpose. The work each screen does lives beside it in its own module,
+so none of it gets buried in a four-hundred-line view:
+
+* :mod:`apps.collections.collectors` — the collectors browse and its ranking
+* :mod:`apps.collections.browse`     — the Everything-owned item browse
+* :mod:`apps.collections.matching`   — wanted-list matching, both directions
+* :mod:`apps.collections.tracker`    — ground covered, the collection meters
+"""
+
 import json
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.accounts.follows import following_ids
 from apps.core.forms import ReferenceDataSuggestionForm
-from apps.core.constants import (
-    FORM_LICENSE_TYPE_CATEGORIES,
-    LICENSE_TYPE_CATEGORY_QUESTIONS,
-)
 from apps.core.models import GeographicUnit, LicenseType, State
-from apps.listings.models import ERA_LABEL_CHOICES
-from apps.listings.views import _era_to_year_range
 from apps.orders.models import Order
 
+from .browse import page as browse_page
 from .collectors import collector_rows
 from .forms import CollectionItemForm, CollectionItemImageFormSet, WantedItemForm
 from .models import CollectionItem, CollectionItemImage, WantedItem
@@ -182,14 +187,14 @@ def feature_toggle(request, pk):
 
 
 def collections_zone(request):
-    """The Collections zone (13a) — four tabs, people first.
+    """The Collections zone — four tabs, people first.
 
-    ``Browse Collections`` browsed items, which is the wrong first question:
-    nobody wants an item from a stranger, they want to know who has the rest.
-    So Collectors opens the zone and the item browse becomes its second tab.
+    Browsing items answers the wrong question first: nobody wants an item
+    from a stranger, they want to know who has the rest. So Collectors opens
+    the zone and the item browse is its second tab.
 
-    Trade board leaves the zone for the catalog's trade format until Pass 7
-    builds the designed board; The map is honest about having no geometry yet.
+    Trade board and The map are not built here yet — see the DEFERRED
+    markers in ``templates/components/_collections_tabs.html``.
     """
     tab = request.GET.get('tab', 'people')
     if tab == 'owned':
@@ -227,193 +232,15 @@ def collections_zone(request):
 
 
 def browse_collections(request):
-    """Public collection browse — all public items across all users."""
-    qs = (
-        CollectionItem.objects.filter(is_public=True)
-        .select_related('owner__profile', 'state', 'county')
-        .prefetch_related('images', 'license_types')
-    )
+    """Everything owned — the public item browse.
 
-    search = request.GET.get('search', '').strip()
-    state_id = request.GET.get('state_id', '')
-    county_id = request.GET.get('county_id', '')
-    year_min = request.GET.get('year_min', '')
-    year_max = request.GET.get('year_max', '')
-    era = request.GET.get('era', '')
-    owner_search = request.GET.get('owner', '').strip()
-    sort = request.GET.get('sort', 'newest')
-
-    if search:
-        qs = qs.filter(Q(title__icontains=search) | Q(description__icontains=search))
-    if state_id and state_id.isdigit():
-        qs = qs.filter(state_id=state_id)
-    if county_id and county_id.isdigit():
-        qs = qs.filter(county_id=county_id)
-    if year_min:
-        try:
-            qs = qs.filter(license_year__gte=int(year_min))
-        except ValueError:
-            pass
-    if year_max:
-        try:
-            qs = qs.filter(license_year__lte=int(year_max))
-        except ValueError:
-            pass
-    for cat in FORM_LICENSE_TYPE_CATEGORIES:
-        cat_ids = [v for v in request.GET.getlist(f'{cat}_id') if v.isdigit()]
-        if cat_ids:
-            qs = qs.filter(license_types__id__in=cat_ids)
-    eras = [v for v in request.GET.getlist('era') if v]
-    if eras:
-        era_q = Q()
-        for era_val in eras:
-            era_years = _era_to_year_range(era_val)
-            if era_years:
-                year_from, year_to = era_years
-                era_q |= Q(license_year__gte=year_from, license_year__lte=year_to) | Q(license_year__isnull=True, era_label=era_val)
-            else:
-                era_q |= Q(era_label=era_val, license_year__isnull=True)
-        qs = qs.filter(era_q)
-    if owner_search:
-        qs = qs.filter(
-            Q(owner__username__icontains=owner_search)
-            | Q(owner__profile__display_name__icontains=owner_search)
-        )
-
-    sort_map = {
-        'newest': '-created_at',
-        'year_asc': 'license_year',
-        'year_desc': '-license_year',
-        'owner_az': 'owner__username',
-    }
-    qs = qs.order_by(sort_map.get(sort, '-created_at')).distinct()
-
-    paginator = Paginator(qs, 24)
-    page_obj = paginator.get_page(request.GET.get('page'))
-
-    default_state = State.objects.filter(is_primary_default=True).first() or State.objects.order_by('name').first()
-    if 'state_id' in request.GET:
-        selected_state = State.objects.filter(pk=state_id).first() if state_id and state_id.isdigit() else None
-    else:
-        selected_state = default_state
-    counties = GeographicUnit.objects.filter(state=selected_state).order_by('sort_order', 'name') if selected_state else GeographicUnit.objects.none()
-    states = State.objects.order_by('-is_primary_default', 'name')
-
-    category_labels = LICENSE_TYPE_CATEGORY_QUESTIONS
-    if selected_state:
-        all_types = LicenseType.objects.filter(
-            is_system_value=True,
-        ).filter(
-            Q(state=selected_state) | Q(state__isnull=True) | Q(state__code='FD')
-        ).order_by('category', 'name').distinct()
-        all_types_list = list(all_types)
-    else:
-        all_types_list = []
-    license_type_groups = []
-    for cat in FORM_LICENSE_TYPE_CATEGORIES:
-        types = [lt for lt in all_types_list if lt.category == cat]
-        if types:
-            license_type_groups.append({
-                'category': cat,
-                'label': category_labels.get(cat, cat.replace('_', ' ').title()),
-                'types': types,
-                'filter_key': f'{cat}_id',
-                'selected_id': request.GET.get(f'{cat}_id', ''),
-                'selected_ids': request.GET.getlist(f'{cat}_id'),
-            })
-
-    filters = {
-        'search': search,
-        'state_id': request.GET.get('state_id', str(default_state.id) if default_state else ''),
-        'county_id': county_id,
-        'year_min': year_min,
-        'year_max': year_max,
-        'era': era,
-        'era_list': request.GET.getlist('era'),
-        'owner': owner_search,
-        'sort': sort,
-    }
-
-    query_params = request.GET.copy()
-    query_params.pop('page', None)
-
-    return render(request, 'collections/browse_collections.html', {
-        'zone_tab': 'owned',
-        'page_obj': page_obj,
-        'result_total': paginator.count,
-        'collector_total': (
-            CollectionItem.objects.filter(is_public=True)
-            .values('owner_id').distinct().count()
-        ),
-        'applied_filters': _applied_collection_filters(request, license_type_groups),
-        'states': states,
-        'selected_state': selected_state,
-        'counties': counties,
-        'license_type_groups': license_type_groups,
-        'era_choices': ERA_LABEL_CHOICES,
-        'filters': filters,
-        'query_string': query_params.urlencode(),
-    })
-
-
-def _without(params, key, value=None):
-    """The current query string with one filter (or one value of one) taken out."""
-    out = params.copy()
-    out.pop('page', None)
-    if value is None:
-        out.pop(key, None)
-    else:
-        kept = [v for v in out.getlist(key) if v != value]
-        out.setlist(key, kept)
-        if not kept:
-            out.pop(key, None)
-    encoded = out.urlencode()
-    return f'?{encoded}' if encoded else '?tab=owned'
-
-
-def _applied_collection_filters(request, license_type_groups):
-    """What you've chosen, as chips you can take off again (13b).
-
-    Nine closed dropdowns hid the answer to "why am I seeing so little?".
-    Every narrowing choice now says so out loud and can be undone in one click.
+    All the work is in :mod:`apps.collections.browse`; this view exists to
+    choose the template.
     """
-    params = request.GET
-    chips = []
-
-    simple = [
-        ('search', 'Search: {}'),
-        ('owner', 'Collector: {}'),
-        ('year_min', 'From {}'),
-        ('year_max', 'To {}'),
-    ]
-    for key, template in simple:
-        value = params.get(key, '').strip()
-        if value:
-            chips.append({'label': template.format(value), 'url': _without(params, key)})
-
-    county_id = params.get('county_id', '')
-    if county_id.isdigit():
-        unit = GeographicUnit.objects.filter(pk=county_id).first()
-        if unit:
-            chips.append({'label': unit.name, 'url': _without(params, 'county_id')})
-
-    for era in params.getlist('era'):
-        if era:
-            chips.append({'label': era, 'url': _without(params, 'era', era)})
-
-    for group in license_type_groups:
-        chosen = set(group['selected_ids'])
-        for license_type in group['types']:
-            if str(license_type.id) in chosen:
-                chips.append({
-                    'label': license_type.name,
-                    'url': _without(params, group['filter_key'], str(license_type.id)),
-                })
-
-    return chips
+    return render(request, 'collections/browse_collections.html',
+                  browse_page(request.GET))
 
 
-@login_required
 def collection_item_create(request):
     image_formset = CollectionItemImageFormSet(request.POST or None, request.FILES or None)
     if request.method == 'POST':
@@ -445,7 +272,7 @@ def collection_item_create(request):
 
 
 def collection_item_detail(request, pk):
-    """Public detail page for a collection item (10.6: items are clickable)."""
+    """Public detail page for a collection item."""
     item = get_object_or_404(
         CollectionItem.objects.select_related('owner', 'state', 'county').prefetch_related('images', 'license_types'),
         pk=pk,

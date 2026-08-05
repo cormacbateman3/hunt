@@ -58,11 +58,10 @@ FORM_LICENSE_TYPE_CATEGORIES = [
     'material',
 ]
 
-# The same six categories, asked the way a person would ask them (design 13b:
-# they "were labelled with their database names — holder_eligibility,
-# activity_scope, addon_type — and now read as questions a person would ask").
-# Filters and browse UI use these; the admin and the model keep the schema
-# names, which is where they belong.
+# The same six categories, asked the way a person would ask them. Nobody
+# outside this codebase knows what holder_eligibility or activity_scope mean,
+# so no filter should say them out loud. Browse UI uses these; the admin and
+# the model keep the schema names, which is where they belong.
 LICENSE_TYPE_CATEGORY_QUESTIONS = {
     'residency': 'Residency',
     'holder_eligibility': 'Who could hold it',

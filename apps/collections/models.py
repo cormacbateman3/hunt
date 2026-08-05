@@ -52,6 +52,11 @@ class CollectionItem(models.Model):
     colors = models.JSONField(default=list, blank=True)
     condition_grade = models.CharField(max_length=20, choices=CONDITION_CHOICES, blank=True)
     is_public = models.BooleanField(default=True, help_text="Visible on public profile")
+    # DEFERRED — `default=True` opts every item into trading, so any UI reading
+    # this flag says the same thing about everybody and carries no signal.
+    # Blocked on: 10.10 trade re-architecture, which replaces this with an
+    # explicit item-level `is_tradeable` choice.
+    # Register: docs/internal/plan_design.md
     trade_eligible = models.BooleanField(default=True, help_text="Available for trade offers")
     featured = models.BooleanField(default=False, help_text="Pin to the top of your public profile (max 6)")
     created_at = models.DateTimeField(auto_now_add=True)

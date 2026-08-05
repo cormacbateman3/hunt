@@ -9,10 +9,10 @@ import uuid
 class Follow(models.Model):
     """One collector keeping another within reach.
 
-    13a and 3b both put Follow beside Propose a trade, and it means the
-    smaller of the two things: keep this person's case where I can find it.
-    It is deliberately not a notification subscription and deliberately not
-    symmetrical — nobody has to accept being followed.
+    Following means the smaller of the two things it could mean: keep this
+    person's case where I can find it. It is deliberately not a notification
+    subscription and deliberately not symmetrical — nobody has to accept
+    being followed.
     """
 
     follower = models.ForeignKey(
@@ -133,7 +133,7 @@ class UserProfile(models.Model):
             },
             {
                 # No phone-verification flow exists yet — no fix link until one
-                # ships (10.6: the old link pointed at a page with no phone UI).
+                # ships — the link used to point at a page with no phone UI.
                 'label': 'Phone verified',
                 'complete': self.phone_verified,
                 'fix_url': None,

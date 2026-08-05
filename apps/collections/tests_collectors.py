@@ -119,6 +119,30 @@ class OverlapRankingTests(CollectorsBaseTest):
             self.assertGreater(row['item_count'], 0)
 
 
+class CollectorCardActionTests(CollectorsBaseTest):
+    def test_a_trading_collector_gets_both_actions(self):
+        html = self.client.get(reverse('collectors')).content.decode()
+        self.assertIn('Propose a trade', html)
+        self.assertIn('See their case', html)
+
+    def test_propose_a_trade_opens_their_trade_shelf(self):
+        html = self.client.get(reverse('collectors')).content.decode()
+        self.assertIn('?group=trade#the-collection', html)
+
+    def test_a_collector_who_trades_nothing_is_not_offered_a_trade(self):
+        CollectionItem.objects.all().update(trade_eligible=False)
+        html = self.client.get(reverse('collectors')).content.decode()
+        self.assertNotIn('Propose a trade', html)
+        self.assertIn('See their case', html)
+
+    def test_the_will_trade_flag_is_not_rendered(self):
+        """It would read off `trade_eligible`, which defaults to True — so it
+        would sit on every card and mean nothing. Deferred to the trade
+        re-architecture; see the register in docs/internal/plan_design.md."""
+        html = self.client.get(reverse('collectors')).content.decode()
+        self.assertNotIn('Will trade', html)
+
+
 class CollectorFacetTests(CollectorsBaseTest):
     def test_will_trade_narrows_to_people_with_trade_eligible_items(self):
         CollectionItem.objects.filter(owner=self.dale).update(trade_eligible=False)

@@ -1,6 +1,6 @@
 {% comment %}
 Follow, wherever a collector is named. Its own POST form, so it can never be
-nested inside a filter form — see 13a's rail, which is a GET form itself.
+nested inside a filter form — the collectors rail is a GET form itself.
 {% endcomment %}
 {% if user.is_authenticated and target.id != user.id %}
     <form method="post" action="{% url 'accounts:follow_toggle' target.username %}" class="co-follow">

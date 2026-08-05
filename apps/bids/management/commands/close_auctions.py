@@ -172,7 +172,7 @@ class Command(BaseCommand):
         )
 
     def _maybe_relist(self, listing, now):
-        """Auto-relist an unsold auction if eligible (4b)."""
+        """Auto-relist an unsold auction if eligible."""
         from apps.listings.services import seller_shipping_ready
 
         if not listing.auto_relist:

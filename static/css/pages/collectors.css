@@ -1,7 +1,5 @@
 /* ==========================================================================
    Collectors — people, sorted by overlap with you
-   Spec: design turn 13a.
-
    Two cards, one grammar. The big card is for the handful who overlap with
    you; the compact one is everybody else. Nobody gets an empty card, because
    county and size are known even when a collector has written nothing about
@@ -237,6 +235,10 @@
     color: var(--kb-ink-3);
 }
 
+/* DEFERRED — parked, not dead. The "Will trade" flag comes back when 10.10
+   makes tradeability an explicit item-level choice; today `trade_eligible`
+   defaults to True, so the flag would sit on every card and mean nothing.
+   Register: docs/internal/plan_design.md */
 .co-flag {
     font: 700 var(--kb-eyebrow-size)/1.2 var(--kb-font-body);
     letter-spacing: var(--kb-eyebrow-tracking);

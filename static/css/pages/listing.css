@@ -1,6 +1,5 @@
 /* ==========================================================================
    Listing detail
-   Spec: design turn 1c, screen 3.
 
    The old page was a `2fr 1fr` grid with three children, so the bid box —
    the only reason the page exists — wrapped into the wide left column below

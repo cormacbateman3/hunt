@@ -1,6 +1,5 @@
 /* ==========================================================================
    Home
-   Spec: design turn 2b (signed in) and 2c (signed out).
 
    Loads after components.css and kb-ui.css, so duplicating a selector from
    either silently overrides it. Every home-specific rule lives here.
@@ -371,7 +370,7 @@
 .hm-want:hover .hm-want-title { color: var(--kb-brass); }
 
 /* ══════════════════════════════════════════════════════════════════════
-   Signed out — turn 2c
+   Signed out
    ══════════════════════════════════════════════════════════════════════ */
 
 .hm-hero {

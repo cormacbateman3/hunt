@@ -253,6 +253,11 @@ of the shell. `/collections/` is one dispatching view (`collections_zone`).
 
 ## Pass 4 — My Bench: the rest of the workspace ⬜ NEXT
 
+**Owes the deferred register** — `display_caption` on `CollectionItem` (the display
+case currently reuses `description`), and `SHIP_BY_DAYS` moved out of
+`apps/accounts/bench.py` into `MarketplaceSettings` with a job that enforces it.
+
+
 **Design refs** — turn 8a–8e, turn 7a–7d.
 
 > Pass 3 left two things here on purpose: **my collection** (10a/10b — case →
@@ -316,6 +321,10 @@ slots**, which the design reinforces; drop T13's **config page**, which it doesn
 
 ## Pass 6 — Auth and the ten settings rooms ⬜
 
+**Owes the deferred register** — `UserProfile.county` becomes an FK, after which the
+collectors rail can filter people by **where they live** as well as where they collect.
+
+
 **Design refs** — turn 4a (sign in), 4b (create account), 4c (all ten rooms),
 3c/3d. Dev plan **10.16** (versioned terms).
 
@@ -336,6 +345,13 @@ slots**, which the design reinforces; drop T13's **config page**, which it doesn
 ---
 
 ## Pass 7 — Trade board v2 ⬜
+
+**Owes the deferred register** — three things unblock together when 10.10 makes
+tradeability a property of the item: the **"Will trade" flag** returns to the collector
+card (its CSS is parked in `static/css/pages/collectors.css`), **"Propose a trade"**
+becomes one click instead of a walk to their trade shelf, and the **Trade board tab**
+stops leaving the zone for `/hunt/?format=trade`.
+
 
 **Design refs** — turn 3a. Dev plan **10.10**.
 
@@ -374,6 +390,12 @@ Dev plan **10.13**.
 ---
 
 ## Pass 9 — The map ⬜
+
+**Owes the deferred register** — the Collections **map tab** and the profile's
+**Ground covered** panel both draw a placeholder today. The arithmetic already exists
+in `apps/collections/tracker.py`; only the geometry is missing. The header line on the
+collectors browse also regains its **distance** measure.
+
 
 **Design refs** — turn 9e (at size), **9f (the specimen sheet — read this one
 carefully)**. Dev plan **10.17**.
@@ -461,6 +483,11 @@ across seven turns quietly depend on it.** Nothing else unlocks as much.
 
 ## Pass 13 — CollectionSet 🚧 · dev plan **10.14** (called CollectionFolder there)
 
+**Owes the deferred register** — the collector card's third figure goes back to
+**"sets going"**. Swap the annotation in `apps/collections/collectors.py`; the layout
+does not change.
+
+
 Name, optional rule, membership table for hand-picked ones. **Without it there is
 no definition of what counts as a gap**, so the matrix (10b), the sets tabs, the
 gap counts and the seed-the-wanted-list flow are all unbuildable.
@@ -470,6 +497,10 @@ what's missing, feed the matrix, seed the wanted list, and tell you a gap came u
 for sale. Three sets ship as suggestions to every new collector.
 
 ## Pass 14 — The Almanac + badges 🚧
+
+**Owes the deferred register** — the **earned badge row** under the profile bio, where
+the marker sits in `templates/accounts/profile.html`.
+
 
 **This is the one I missed on the first read.** It is a **nav-level zone** in every
 turn from 2 to 21, currently a placeholder page.
@@ -500,6 +531,36 @@ Daily set, attempt per member, streak, monthly board. Last, because it is the on
 thing on the sheet nobody asked for, and because the questions are generated from
 real items with the identifying field hidden — **it needs the taxonomy clean first**
 (17b).
+
+---
+
+# Deferred, not dropped
+
+Everything shipped in a reduced form because something else has to land first.
+**This table is the register.** Every entry has a matching marker in the code
+reading `DEFERRED — … Blocked on: … Register: docs/internal/plan_design.md`, so
+either end finds the other:
+
+```bash
+grep -rn "DEFERRED —" apps/ templates/ static/
+```
+
+Nothing here is a decision to do less. Each one is scheduled against the pass
+that clears its blocker, and the pass that clears the blocker is responsible for
+coming back for it.
+
+| What is reduced | Where it lives now | Blocked on | Clears in | Restore by |
+|---|---|---|---|---|
+| **"Will trade" flag** on the collector card | removed; marker in `templates/collections/collectors.html`, CSS parked in `static/css/pages/collectors.css` | `CollectionItem.trade_eligible` **defaults to True**, so the flag would sit on every card and carry no signal | **7** (10.10) | un-comment the flag; it becomes true only for an explicit item-level choice |
+| **"Propose a trade"** as one click | a two-step walk — the button opens their trade-eligible shelf | a proposal today needs a `listing_id`; tradeability is not yet a property of the item | **7** (10.10) | point the button at a person-level propose view |
+| **"Sets going"** — the card's third figure | shows **counties held** instead | no `CollectionSet` model | **13** (10.14) | swap the annotation in `apps/collections/collectors.py`; the layout does not change |
+| **Earned badges** under the profile bio | omitted; marker in `templates/accounts/profile.html` | no `Badge` model or its thirteen awards | **14** | render the badge row where the marker sits |
+| **Display-case captions** | reuses the item `description` | no `display_caption` field on `CollectionItem` | **4** | add the field, fall back to `description` |
+| **The map** (Collections tab, profile *Ground covered*) | honest placeholder + a hatched panel; the figures beside it are real | county **geometry** does not exist; `GeographicUnit.valid_from`/`valid_to` absent | **9 / 10** | draw the choropleth; the arithmetic in `apps/collections/tracker.py` is already there |
+| **Trade board** tab | leaves the zone for `/hunt/?format=trade` | the designed board is its own screen | **7** | make the tab local |
+| **Distance** — *"41 within a hundred miles"* | reads *N will trade · N selling now* | no geocoding, no geometry | **9 / 10** | add the measure to the header line |
+| **Filtering people by where they live** | filters on **where they collect** | `UserProfile.county` is free text | **6** | switch the facet to the FK |
+| **`SHIP_BY_DAYS`** promise in the bench | a constant in `apps/accounts/bench.py` | belongs in `MarketplaceSettings` | **4** | move it, and give it a job that enforces it |
 
 ---
 

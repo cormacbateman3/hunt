@@ -165,9 +165,9 @@ def create_reference_data_suggestion(request):
 def almanac(request):
     """The Almanac — a nav-level destination with no model behind it yet.
 
-    Turn 12 designs an index of member-written entries about a county, an
+    The design calls for an index of member-written entries about a county, an
     era or a single licence, with a corrections queue and a moderator step.
-    Turn 20 puts the model third in its own build order, after price history
+    The build order puts the model third, after price history
     and CollectionSet.
 
     Shipping the nav slot without the app is deliberate: the four-zone
@@ -182,7 +182,7 @@ def almanac(request):
 def home(request):
     """The home page.
 
-    Turn 2b (signed in) and 2c (signed out). These are deliberately two
+    Signed in and signed out are deliberately two
     different pages, not the same page with the greeting removed: a stranger
     needs to be told what this is, a member needs to be told what changed.
 

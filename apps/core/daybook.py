@@ -1,6 +1,6 @@
 """The Day Book — the home page's ledger of what happened today.
 
-Turn 2b. The activity feed is the biggest missing engagement driver, but
+The activity feed is the biggest missing engagement driver, but
 written as a shop's day book — the hour in the margin, one sentence per line —
 it reads like a record rather than a social timeline.
 

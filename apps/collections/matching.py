@@ -1,8 +1,8 @@
 """Wanted-list matching, pointed at people instead of at new listings.
 
-Turn 3b: *"it needs no new models — it is the wanted-list matcher from 10.14
-pointed at one user instead of new listings."* Both the collectors browse and
-the "looking for" rail on a profile ask the same two questions:
+The same matcher that decides whether a new listing answers somebody's want,
+aimed at one person's shelves instead. Both the collectors browse and the
+"looking for" rail on a profile ask the same two questions:
 
     who holds something on my wanted list?
     do I hold something on theirs?

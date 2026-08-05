@@ -1,10 +1,8 @@
 /* ==========================================================================
    Everything owned — the filter bar
-   Spec: design turn 13b (behaviour) and 18a (the two defects it inherited).
-
    Three things this file has to get right:
 
-   1. Apply is gone. The grid updates as you go, which is what the
+   1. There is no Apply button. The grid updates as you go, which is what the
       multi-select panels always implied.
    2. Fetch first, clear second. The old handler emptied the county and all
       six license-type selects and *then* fetched replacements inside a bare

@@ -1,6 +1,7 @@
 /* ==========================================================================
    The shell
-   Spec: design turn 2a, "every other page — compressed to 56px, with the
+   Four bands: masthead, contextual tabs, the trail, the page. "Every other page —
+   compressed to 56px, with the
    trail on the left", as carried by every turn from 2 to 21.
 
    Band 1  masthead     56px, forest — mark, four zones, search, actions
@@ -292,7 +293,7 @@
     color: var(--kb-cream);
 }
 
-/* ── Band 2a — workspace / catalog tabs ──────────────────────────────── */
+/* ── Band 2 — workspace / catalog tabs ──────────────────────────────── */
 .kb-context {
     background: var(--kb-parchment-soft);
     border-bottom: 1px solid var(--kb-rule-panel);
@@ -349,7 +350,7 @@
     color: var(--kb-ink-4);
 }
 
-/* ── Band 2b — the trail ─────────────────────────────────────────────── */
+/* ── Band 2, alternate — the trail ─────────────────────────────────────────────── */
 .kb-crumbs {
     background: var(--kb-surface);
     border-bottom: 1px solid var(--kb-rule);
@@ -609,7 +610,7 @@ body {
 
 /* ==========================================================================
    The full masthead — home only, 158px
-   Spec: design turn 2a. Three bands: 32px strapline, 82px nameplate, 42px
+   The full masthead, home only. Three bands: 32px strapline, 82px nameplate, 42px
    nav rule. A broadsheet nameplate, not an app bar.
    ========================================================================== */
 

@@ -205,7 +205,7 @@ class ListingForm(forms.ModelForm):
         for optional_field in ('bid_increment', 'shipping_service', 'shipping_payer'):
             self.fields[optional_field].required = False
 
-        # Trade is not a listing type (10.10: trades start from collections);
+        # Trade is not a listing type — trades start from collections;
         # legacy trade rows keep the option only while being edited.
         if not (self.instance.pk and self.instance.listing_type == 'trade'):
             self.fields['listing_type'].choices = [
@@ -235,7 +235,7 @@ class ListingForm(forms.ModelForm):
                 elif selected.first():
                     self.fields[category].initial = selected.first()
         elif self.user and self.user.is_authenticated and not self.is_bound:
-            # New listing: apply the seller's saved listing defaults (10.8)
+            # New listing: apply the seller's saved listing defaults
             saved = getattr(getattr(self.user, 'profile', None), 'listing_defaults', None) or {}
             for field in ('shipping_service', 'shipping_payer', 'package_weight_oz',
                           'package_length_in', 'package_width_in', 'package_height_in',

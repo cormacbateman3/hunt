@@ -167,13 +167,13 @@ class Listing(models.Model):
     auction_end = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
 
-    # Scheduled go-live (4a)
+    # Scheduled go-live
     scheduled_at = models.DateTimeField(
         null=True, blank=True,
         help_text="Schedule when this listing goes live (leave blank to publish immediately)"
     )
 
-    # Auto-relist (4b)
+    # Auto-relist
     auto_relist = models.BooleanField(
         default=True,
         help_text="Automatically relist this auction if it ends without a winner (up to 3 times)"
@@ -206,7 +206,7 @@ class Listing(models.Model):
         max_length=10, choices=SHIPPING_PAYER_CHOICES, default='buyer',
     )
 
-    # Local pickup (4c)
+    # Local pickup
     local_pickup_available = models.BooleanField(
         default=False,
         help_text="Offer local pickup as an alternative to shipping"

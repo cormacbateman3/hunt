@@ -217,7 +217,7 @@ def _get_or_create_demo_user(stdout):
         stdout.write(f'Using existing demo user: {DEMO_USERNAME}')
 
     # Demo listings must be fully sellable: without a default shipping address a
-    # buyer gets blocked at payment for a seller-side gap (the 10.6 gating bug).
+    # buyer gets blocked at payment for a seller-side gap.
     from apps.accounts.models import Address
     profile = user.profile
     if not profile.shipping_address_id:

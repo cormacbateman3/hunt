@@ -135,7 +135,7 @@ def listing_defaults_save(request):
 
 @login_required
 def follow_toggle(request, username):
-    """Follow or unfollow a collector (13a, 3b)."""
+    """Follow or unfollow a collector."""
     if request.method != 'POST':
         return redirect('accounts:profile', username=username)
 
@@ -156,7 +156,7 @@ def follow_toggle(request, username):
 
 
 def profile_view(request, username):
-    """The collector profile — a display case with a person attached (3b).
+    """The collector profile — a display case with a person attached.
 
     Not a settings page in public. Trust sits beside the name where it can be
     read in one glance, the display case carries the owner's own words about

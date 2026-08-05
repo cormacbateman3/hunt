@@ -23,9 +23,9 @@
 
 {% block content %}
 {% comment %}
-Turn 3b. A display case with a person attached, not a settings page in
-public. Trust moves up beside the name as a card you can read in one glance;
-the "looking for" rail is cross-referenced against the viewer's own shelves.
+A display case with a person attached, not a settings page in public. Trust
+sits beside the name as a card you can read in one glance; the "looking for"
+rail is cross-referenced against the viewer's own shelves.
 {% endcomment %}
 
 <header class="pf-head">
@@ -55,6 +55,11 @@ the "looking for" rail is cross-referenced against the viewer's own shelves.
                     a stranger open a trade.
                 </p>
             {% endif %}
+            {% comment %}
+            DEFERRED — the earned badge row sits here, under the bio.
+            Blocked on: the Badge model and its thirteen awards (Pass 14).
+            Register: docs/internal/plan_design.md
+            {% endcomment %}
         </div>
 
         {% comment %}
@@ -150,6 +155,12 @@ the "looking for" rail is cross-referenced against the viewer's own shelves.
                                 {% comment %}
                                 The caption is the whole point of a display case —
                                 it turns inventory into a person.
+
+                                DEFERRED — this should be a caption the owner
+                                writes for the case, not the item description.
+                                Blocked on: a `display_caption` field on
+                                CollectionItem, candidate for Pass 4.
+                                Register: docs/internal/plan_design.md
                                 {% endcomment %}
                                 {% if item.description %}
                                     <span class="pf-case-caption">{{ item.description|truncatechars:110 }}</span>

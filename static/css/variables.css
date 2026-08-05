@@ -3,15 +3,15 @@
 
    Source of truth: docs/internal/design/ui-ux-redesign-model.
 
-   The document is ordered newest-first. Turn 1 proposed the design language;
-   turn 2a then revised the shell ("every other page — compressed to 56px")
+   Consolidated from the design model. Its first proposal was superseded by
+   the settled shell ("every other page — compressed to 56px")
    and turns 2 through 21 all use that revision. Where the two disagree, the
    later turns win — they are the settled answer and the ~90 screens drawn
    against them.
 
-   The largest single difference is radius. Turn 1 was soft (7/10/11px);
+   The largest single difference is radius. The first proposal was soft (7/10/11px);
    every turn after it is square (3px used 844 times, 4px 359, 2px 212).
-   Turn 2 states the rule outright: "square 3px corners… hairline rules
+   The settled rule is stated outright: "square 3px corners… hairline rules
    instead of shadows". Paper doesn't float.
    ========================================================================== */
 

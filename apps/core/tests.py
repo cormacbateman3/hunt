@@ -1,4 +1,4 @@
-"""10.6 stability-pass smoke tests — one per fixed bug."""
+"""Stability-pass smoke tests — one per fixed bug."""
 from datetime import timedelta
 from io import BytesIO
 

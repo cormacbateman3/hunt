@@ -1,12 +1,10 @@
-"""Browse collectors — people, sorted by overlap with you (13a).
+"""Browse collectors — people, sorted by overlap with you.
 
-*"Browse Collections browses items. Nobody wants an item from a stranger —
-they want to know who has the rest."*
-
-So the Collections zone opens on people. The ranking is overlap with the
-viewer, never join date: a collector who holds four things off your wanted
-list belongs above one who signed up yesterday, and the whole page is
-worthless if it doesn't say so.
+Browsing items answers the wrong question first: nobody wants an item from a
+stranger, they want to know who has the rest. So the Collections zone opens
+on people, and the ranking is overlap with the viewer, never join date. A
+collector who holds four things off your wanted list belongs above one who
+signed up yesterday, and the whole page is worthless if it doesn't say so.
 
 Two card shapes, one grammar. The big card is for the handful who overlap
 with you; the compact one is everybody else. Nobody gets an empty card,
@@ -20,8 +18,7 @@ from django.db.models import Count, Max, Min, Q
 from .matching import holdings, holdings_matching, owners_by_want
 from .models import CollectionItem, WantedItem
 
-# How many people get the big card. The design says "the eight or so
-# collectors who overlap with you"; past that the page stops being a
+# How many people get the big card. Past eight or so the page stops being a
 # shortlist and becomes a directory.
 FEATURED_LIMIT = 8
 
@@ -86,6 +83,11 @@ def base_queryset():
                 filter=public & Q(collection_items__trade_eligible=True),
                 distinct=True,
             ),
+            # DEFERRED — the card's third figure should be "sets going".
+            # Blocked on: the CollectionSet model (10.14, Pass 13). Counties
+            # held keeps the three-figure shape with a number that is true
+            # today; swap the annotation, not the layout, when sets exist.
+            # Register: docs/internal/plan_design.md
             county_count=Count(
                 'collection_items__county', filter=public, distinct=True,
             ),
@@ -252,7 +254,7 @@ def _place(user, home_counties):
 
 
 def collector_rows(viewer, params):
-    """The whole 13a page: rows, facet counts and the state of the rail."""
+    """The whole page: rows, facet counts and the state of the rail."""
     viewer_id = viewer.id if viewer and viewer.is_authenticated else None
 
     wants = []

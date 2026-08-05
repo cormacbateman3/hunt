@@ -1,9 +1,9 @@
 """Ground covered — what somebody has actually got round to.
 
-Turn 3b puts the 10.14 tracker on the public profile, so the page answers
-"what does this person collect" with a shape rather than a sentence. The
-same numbers feed the matrix in Pass 4; this module is the arithmetic, not
-the drawing.
+Counties held against counties issuing, the years, and the deepest unbroken
+run. It answers "what does this person collect" with a shape rather than a
+sentence — on the public profile now, in the tracker matrix later. This
+module is the arithmetic, not the drawing.
 
 Deliberately derived, never stored. A collector adds an item and the figures
 move — there is no counter to keep in step and nothing to backfill.
@@ -19,8 +19,8 @@ from .models import CollectionItem
 def plural_unit(label):
     """'County' → 'Counties', 'Parish' → 'Parishes', 'Borough' → 'Boroughs'.
 
-    The unit word is read from the state (14a), so this has to survive the
-    handful of labels the fifty states actually use rather than assume -y.
+    The unit word is read from the state, so this has to survive the handful
+    of labels the fifty states actually use rather than assume -y.
     """
     if not label:
         return 'Units'
