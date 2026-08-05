@@ -1,0 +1,20 @@
+{% comment %}
+Band 2 for Collections — the four tabs of 13a.
+
+People opens the zone, because the question the zone is named after is who
+collects what I collect. Trade board leaves for the catalog's trade format
+until Pass 7 builds the designed board.
+{% endcomment %}
+<nav class="kb-context" aria-label="Collections views">
+    <div class="kb-band-inner">
+        <a href="{% url 'collectors' %}" class="kb-tab"
+           {% if zone_tab == 'people' %}aria-current="page"{% endif %}>Collectors</a>
+        <a href="{% url 'collectors' %}?tab=owned" class="kb-tab"
+           {% if zone_tab == 'owned' %}aria-current="page"{% endif %}>Everything owned</a>
+        <a href="{% url 'hunt' %}?format=trade" class="kb-tab">Trade board</a>
+        <a href="{% url 'collectors' %}?tab=map" class="kb-tab"
+           {% if zone_tab == 'map' %}aria-current="page"{% endif %}>The map</a>
+        <div class="kb-context-spacer"></div>
+        {% if zone_note %}<span class="kb-context-note">{{ zone_note }}</span>{% endif %}
+    </div>
+</nav>

@@ -7,13 +7,18 @@ from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
+from apps.accounts.follows import following_ids
 from apps.core.forms import ReferenceDataSuggestionForm
-from apps.core.constants import FORM_LICENSE_TYPE_CATEGORIES, LICENSE_TYPE_CATEGORY_CHOICES
+from apps.core.constants import (
+    FORM_LICENSE_TYPE_CATEGORIES,
+    LICENSE_TYPE_CATEGORY_QUESTIONS,
+)
 from apps.core.models import GeographicUnit, LicenseType, State
 from apps.listings.models import ERA_LABEL_CHOICES
 from apps.listings.views import _era_to_year_range
 from apps.orders.models import Order
 
+from .collectors import collector_rows
 from .forms import CollectionItemForm, CollectionItemImageFormSet, WantedItemForm
 from .models import CollectionItem, CollectionItemImage, WantedItem
 
@@ -176,6 +181,51 @@ def feature_toggle(request, pk):
     return redirect(next_url)
 
 
+def collections_zone(request):
+    """The Collections zone (13a) — four tabs, people first.
+
+    ``Browse Collections`` browsed items, which is the wrong first question:
+    nobody wants an item from a stranger, they want to know who has the rest.
+    So Collectors opens the zone and the item browse becomes its second tab.
+
+    Trade board leaves the zone for the catalog's trade format until Pass 7
+    builds the designed board; The map is honest about having no geometry yet.
+    """
+    tab = request.GET.get('tab', 'people')
+    if tab == 'owned':
+        return browse_collections(request)
+    if tab == 'map':
+        return render(request, 'collections/zone_map.html',
+                      {'zone_tab': 'map'})
+
+    page = collector_rows(request.user, request.GET)
+
+    default_state = (
+        State.objects.filter(is_primary_default=True).first()
+        or State.objects.order_by('name').first()
+    )
+    state_id = request.GET.get('state_id', '')
+    selected_state = (
+        State.objects.filter(pk=state_id).first() if state_id.isdigit() else None
+    )
+    counties = (
+        GeographicUnit.objects.filter(state=selected_state).order_by('sort_order', 'name')
+        if selected_state else GeographicUnit.objects.none()
+    )
+
+    return render(request, 'collections/collectors.html', {
+        'zone_tab': 'people',
+        'following_ids': following_ids(request.user),
+        'states': State.objects.order_by('-is_primary_default', 'name'),
+        'default_state': default_state,
+        'selected_state': selected_state,
+        'counties': counties,
+        'unit_label': selected_state.issuance_unit_label if selected_state else 'County',
+        'name_query': request.GET.get('q', ''),
+        **page,
+    })
+
+
 def browse_collections(request):
     """Public collection browse — all public items across all users."""
     qs = (
@@ -249,7 +299,7 @@ def browse_collections(request):
     counties = GeographicUnit.objects.filter(state=selected_state).order_by('sort_order', 'name') if selected_state else GeographicUnit.objects.none()
     states = State.objects.order_by('-is_primary_default', 'name')
 
-    category_labels = dict(LICENSE_TYPE_CATEGORY_CHOICES)
+    category_labels = LICENSE_TYPE_CATEGORY_QUESTIONS
     if selected_state:
         all_types = LicenseType.objects.filter(
             is_system_value=True,
@@ -288,7 +338,14 @@ def browse_collections(request):
     query_params.pop('page', None)
 
     return render(request, 'collections/browse_collections.html', {
+        'zone_tab': 'owned',
         'page_obj': page_obj,
+        'result_total': paginator.count,
+        'collector_total': (
+            CollectionItem.objects.filter(is_public=True)
+            .values('owner_id').distinct().count()
+        ),
+        'applied_filters': _applied_collection_filters(request, license_type_groups),
         'states': states,
         'selected_state': selected_state,
         'counties': counties,
@@ -297,6 +354,63 @@ def browse_collections(request):
         'filters': filters,
         'query_string': query_params.urlencode(),
     })
+
+
+def _without(params, key, value=None):
+    """The current query string with one filter (or one value of one) taken out."""
+    out = params.copy()
+    out.pop('page', None)
+    if value is None:
+        out.pop(key, None)
+    else:
+        kept = [v for v in out.getlist(key) if v != value]
+        out.setlist(key, kept)
+        if not kept:
+            out.pop(key, None)
+    encoded = out.urlencode()
+    return f'?{encoded}' if encoded else '?tab=owned'
+
+
+def _applied_collection_filters(request, license_type_groups):
+    """What you've chosen, as chips you can take off again (13b).
+
+    Nine closed dropdowns hid the answer to "why am I seeing so little?".
+    Every narrowing choice now says so out loud and can be undone in one click.
+    """
+    params = request.GET
+    chips = []
+
+    simple = [
+        ('search', 'Search: {}'),
+        ('owner', 'Collector: {}'),
+        ('year_min', 'From {}'),
+        ('year_max', 'To {}'),
+    ]
+    for key, template in simple:
+        value = params.get(key, '').strip()
+        if value:
+            chips.append({'label': template.format(value), 'url': _without(params, key)})
+
+    county_id = params.get('county_id', '')
+    if county_id.isdigit():
+        unit = GeographicUnit.objects.filter(pk=county_id).first()
+        if unit:
+            chips.append({'label': unit.name, 'url': _without(params, 'county_id')})
+
+    for era in params.getlist('era'):
+        if era:
+            chips.append({'label': era, 'url': _without(params, 'era', era)})
+
+    for group in license_type_groups:
+        chosen = set(group['selected_ids'])
+        for license_type in group['types']:
+            if str(license_type.id) in chosen:
+                chips.append({
+                    'label': license_type.name,
+                    'url': _without(params, group['filter_key'], str(license_type.id)),
+                })
+
+    return chips
 
 
 @login_required

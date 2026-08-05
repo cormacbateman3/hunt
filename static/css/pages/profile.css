@@ -1,0 +1,602 @@
+/* ==========================================================================
+   The collector profile
+   Spec: design turn 3b.
+
+   A display case with a person attached, not a settings page in public.
+   Trust sits beside the name where it can be read in one glance; the
+   captions on display-case pieces are what turn inventory into a person.
+   ========================================================================== */
+
+.kb-profile {
+    padding-bottom: var(--kb-8);
+}
+
+/* ── The head band ───────────────────────────────────────────────────── */
+.pf-head {
+    background: var(--kb-parchment);
+    border-bottom: 1px solid var(--kb-rule-panel);
+    padding: var(--kb-6) 0 0;
+}
+
+.pf-head-main,
+.pf-tabs,
+.pf-body {
+    max-width: var(--kb-page-max);
+    margin: 0 auto;
+    padding: 0 var(--kb-gutter);
+}
+
+.pf-head-main {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--kb-5);
+}
+
+.pf-portrait {
+    width: 88px;
+    height: 88px;
+    border-radius: var(--kb-r-sm);
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.pf-portrait--blank {
+    background: var(--kb-hatch-dark);
+    display: block;
+}
+
+.pf-identity {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.pf-name-line {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.pf-name {
+    font: var(--kb-text-h1-lg);
+    color: var(--kb-forest);
+    margin: 0;
+}
+
+.pf-handle {
+    font-size: 13px;
+    color: var(--kb-ink-3);
+}
+
+.pf-where {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--kb-ink-2);
+}
+
+.pf-bio {
+    margin: 2px 0 0;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--kb-ink);
+    max-width: 62ch;
+}
+
+/* ── Trust, read in one glance ───────────────────────────────────────── */
+.pf-trust {
+    width: 268px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.pf-trust-card {
+    background: var(--kb-surface);
+    border: 1px solid var(--kb-rule-panel);
+    border-radius: var(--kb-r-sm);
+    padding: 13px 15px;
+}
+
+.pf-trust-score {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.pf-trust-pct {
+    font-family: var(--kb-font-display);
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--kb-forest);
+    font-variant-numeric: tabular-nums;
+}
+
+.pf-trust-pct--none {
+    color: var(--kb-ink-4);
+}
+
+.pf-trust-of {
+    font-size: 12px;
+    color: var(--kb-ink-3);
+}
+
+.pf-trust-lines {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.pf-trust-lines li {
+    font-size: 12.5px;
+    color: var(--kb-ink);
+    padding-left: 18px;
+    position: relative;
+}
+
+.pf-trust-lines li::before {
+    position: absolute;
+    left: 0;
+    font-weight: 700;
+}
+
+.pf-trust-lines .is-yes::before {
+    content: "\2713";
+    color: var(--kb-live);
+}
+
+.pf-trust-lines .is-no::before {
+    content: "\2013";
+    color: var(--kb-ink-4);
+}
+
+.pf-actions {
+    display: flex;
+    gap: 7px;
+    align-items: stretch;
+    flex-wrap: wrap;
+}
+
+.pf-actions form {
+    display: inline-flex;
+}
+
+/* ── Sub-tabs ────────────────────────────────────────────────────────── */
+.pf-tabs {
+    display: flex;
+    align-items: stretch;
+    gap: 2px;
+    margin-top: 22px;
+}
+
+.pf-tab {
+    padding: 11px 16px;
+    font: 700 var(--kb-nav-size)/1.2 var(--kb-font-body);
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--kb-ink-3);
+    text-decoration: none;
+}
+
+.pf-tab:first-child {
+    padding-left: 0;
+}
+
+.pf-tab[aria-current="page"] {
+    color: var(--kb-forest);
+    box-shadow: inset 0 -2px 0 var(--kb-forest);
+}
+
+.pf-tab:hover {
+    color: var(--kb-forest);
+}
+
+.pf-tab-count {
+    color: var(--kb-ink-5);
+}
+
+/* ── Body ────────────────────────────────────────────────────────────── */
+.pf-body {
+    padding-top: var(--kb-6);
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 26px;
+    align-items: start;
+}
+
+.pf-main {
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+    min-width: 0;
+}
+
+.pf-section {
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+    scroll-margin-top: calc(var(--kb-topbar-h) + var(--kb-4));
+}
+
+.pf-rule {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.pf-rule-title {
+    font: var(--kb-text-h2);
+    color: var(--kb-forest);
+    margin: 0;
+    white-space: nowrap;
+}
+
+.pf-rule-line {
+    flex: 1;
+    height: 1px;
+    background: var(--kb-rule-panel);
+}
+
+.pf-rule-note {
+    font-size: 11.5px;
+    color: var(--kb-ink-4);
+    white-space: nowrap;
+}
+
+/* ── The display case ────────────────────────────────────────────────── */
+.pf-case {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--kb-4);
+}
+
+.pf-case-piece {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+}
+
+.pf-case-piece:hover {
+    border-color: var(--kb-rule-strong);
+}
+
+.pf-case-media {
+    aspect-ratio: 1;
+    background: var(--kb-hatch);
+    position: relative;
+    display: block;
+}
+
+.pf-case-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.pf-case-flag {
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: var(--kb-brass);
+    color: var(--kb-surface);
+    font: 700 9.5px/1.2 var(--kb-font-body);
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    padding: 4px 8px;
+}
+
+.pf-case-body {
+    padding: 11px 12px 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.pf-case-title {
+    font: var(--kb-text-card-title);
+    color: var(--kb-forest);
+}
+
+.pf-case-meta {
+    font-size: 11.5px;
+    color: var(--kb-ink-3);
+}
+
+/* The caption is the whole point of a display case. */
+.pf-case-caption {
+    margin-top: 3px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--kb-ink-2);
+    font-style: italic;
+}
+
+/* ── Ground covered ──────────────────────────────────────────────────── */
+.pf-ground {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    padding: 18px;
+    display: grid;
+    grid-template-columns: 1fr 220px;
+    gap: 20px;
+}
+
+.pf-ground-figure {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.pf-ground-hatch {
+    aspect-ratio: 3 / 2;
+    border: 1px solid var(--kb-rule-soft);
+    border-radius: var(--kb-r-sm);
+    background: repeating-linear-gradient(-45deg, #eef3ea 0 5px, #e2ebdd 5px 10px);
+    display: block;
+}
+
+.pf-ground-note {
+    margin: 0;
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: var(--kb-ink-4);
+}
+
+.pf-ground-meters {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.pf-meter-row {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.pf-meter-row--last {
+    border-top: 1px solid var(--kb-rule-soft);
+    padding-top: 12px;
+}
+
+.pf-meter-label {
+    font-size: 12.5px;
+    color: var(--kb-ink-2);
+}
+
+.pf-meter-figure {
+    font-family: var(--kb-font-display);
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--kb-forest);
+    font-variant-numeric: tabular-nums;
+}
+
+.pf-meter-sub,
+.pf-deepest {
+    margin: 0;
+    font-size: 12px;
+    color: var(--kb-ink-4);
+}
+
+.pf-deepest {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--kb-ink);
+}
+
+/* ── The collection ──────────────────────────────────────────────────── */
+.pf-chips {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.pf-chip--right {
+    margin-left: auto;
+}
+
+.pf-shelf {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+}
+
+.pf-piece {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    overflow: hidden;
+    text-decoration: none;
+    display: block;
+}
+
+.pf-piece:hover {
+    border-color: var(--kb-rule-strong);
+}
+
+.pf-piece-media {
+    aspect-ratio: 4 / 3;
+    background: var(--kb-hatch);
+    display: block;
+}
+
+.pf-piece-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.pf-piece-body {
+    padding: 9px 11px 11px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.pf-piece-title {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--kb-forest);
+}
+
+.pf-piece-meta {
+    font-size: 11px;
+    color: var(--kb-ink-3);
+}
+
+.pf-more {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--kb-ink-3);
+}
+
+.pf-quiet {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--kb-ink-3);
+}
+
+/* ── Rail ────────────────────────────────────────────────────────────── */
+.pf-rail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--kb-4);
+    position: sticky;
+    top: calc(var(--kb-topbar-h) + var(--kb-3));
+}
+
+.pf-rail .kb-panel-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.pf-hit {
+    font-size: 11px;
+    color: var(--kb-ink-4);
+}
+
+.pf-want {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--kb-rule-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.pf-want:last-child {
+    border-bottom: 0;
+}
+
+.pf-want-what {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--kb-ink);
+}
+
+/* The one line that turns a profile you read into a profile you act on. */
+.pf-want-hit {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--kb-live);
+}
+
+.pf-want-note {
+    font-size: 11.5px;
+    color: var(--kb-ink-4);
+}
+
+.pf-want--foot {
+    background: var(--kb-parchment-soft);
+    border-top: 1px solid var(--kb-rule-soft);
+}
+
+.pf-review {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--kb-rule-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.pf-review:last-child {
+    border-bottom: 0;
+}
+
+.pf-review-body {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--kb-ink);
+}
+
+.pf-review-who {
+    font-size: 11px;
+    color: var(--kb-ink-4);
+}
+
+/* ── Narrow ──────────────────────────────────────────────────────────── */
+@media (max-width: 1040px) {
+    .pf-body {
+        grid-template-columns: 1fr;
+    }
+
+    .pf-rail {
+        position: static;
+    }
+
+    .pf-shelf {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 860px) {
+    .pf-head-main {
+        flex-wrap: wrap;
+    }
+
+    .pf-trust {
+        width: 100%;
+    }
+
+    .pf-tabs {
+        overflow-x: auto;
+    }
+
+    .pf-case {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .pf-ground {
+        grid-template-columns: 1fr;
+    }
+
+    .pf-shelf {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 520px) {
+    .pf-case,
+    .pf-shelf {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

@@ -1,0 +1,429 @@
+/* ==========================================================================
+   Collectors — people, sorted by overlap with you
+   Spec: design turn 13a.
+
+   Two cards, one grammar. The big card is for the handful who overlap with
+   you; the compact one is everybody else. Nobody gets an empty card, because
+   county and size are known even when a collector has written nothing about
+   themselves — so nothing here may collapse when the bio is blank.
+   ========================================================================== */
+
+.kb-collectors {
+    max-width: var(--kb-page-max);
+    margin: 0 auto;
+    padding: 0 var(--kb-gutter) var(--kb-8);
+}
+
+.co-head {
+    padding: var(--kb-6) 0 var(--kb-4);
+    align-items: flex-end;
+}
+
+.co-head-sub {
+    margin: 5px 0 0;
+    font-size: 13.5px;
+    color: var(--kb-ink-3);
+}
+
+.co-sort {
+    flex-shrink: 0;
+}
+
+.co-layout {
+    display: grid;
+    grid-template-columns: 244px 1fr;
+    align-items: start;
+}
+
+/* ── The rail. It is the form; the results sit outside it so the Follow
+      buttons are never nested inside a GET form. ─────────────────────── */
+.co-rail {
+    border-right: 1px solid var(--kb-rule);
+    padding: 4px 20px 34px 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--kb-4);
+    position: sticky;
+    top: var(--kb-topbar-h);
+}
+
+.co-rail-search .kb-input {
+    width: 100%;
+}
+
+.co-panel {
+    padding: 0;
+}
+
+.co-panel .kb-panel-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+}
+
+.co-clear {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--kb-brass);
+    text-decoration: none;
+}
+
+.co-facet {
+    border-bottom: 1px solid var(--kb-rule);
+    padding: 14px 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.co-facet--last {
+    border-bottom: 0;
+}
+
+.co-facet-title {
+    font: 700 var(--kb-label-size)/1.2 var(--kb-font-body);
+    letter-spacing: var(--kb-label-tracking);
+    text-transform: uppercase;
+    color: var(--kb-ink-3);
+    margin: 0;
+}
+
+.co-facet .kb-select {
+    width: 100%;
+}
+
+.co-era {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+/* A chip that is really a checkbox. The input stays in the accessibility
+   tree and keeps keyboard focus; only its box is hidden. */
+.co-era-chip {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--kb-ink-2);
+    border: 1px solid var(--kb-rule-strong);
+    background: var(--kb-surface);
+    border-radius: var(--kb-r-chip);
+    padding: 4px 8px;
+    cursor: pointer;
+}
+
+.co-era-chip input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+}
+
+.co-era-chip:hover {
+    border-color: var(--kb-forest);
+}
+
+.co-era-chip.is-on {
+    background: var(--kb-forest);
+    border-color: var(--kb-forest);
+    color: var(--kb-cream);
+}
+
+.co-era-chip:focus-within {
+    outline: 2px solid var(--kb-brass);
+    outline-offset: 1px;
+}
+
+/* ── Results ─────────────────────────────────────────────────────────── */
+.co-results {
+    padding: 4px 0 0 var(--kb-6);
+    display: flex;
+    flex-direction: column;
+    gap: var(--kb-4);
+}
+
+.co-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--kb-4);
+}
+
+.co-grid:empty {
+    display: none;
+}
+
+/* ── The big card ────────────────────────────────────────────────────── */
+.co-card {
+    background: var(--kb-surface);
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Rust when they hold something off your wanted list, brass otherwise —
+   the same two-tone rule the bench uses for "needs you" versus "worth
+   knowing". */
+.co-card-edge {
+    height: 4px;
+    background: var(--kb-brass);
+    flex-shrink: 0;
+}
+
+.co-card--overlap .co-card-edge {
+    background: var(--kb-rust);
+}
+
+.co-card-body {
+    padding: 17px 18px 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+    flex: 1;
+}
+
+.co-card-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.co-portrait {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid var(--kb-rule-strong);
+}
+
+.co-portrait--blank {
+    background: var(--kb-chip);
+}
+
+.co-portrait--sm {
+    width: 38px;
+    height: 38px;
+}
+
+.co-card-who {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.co-name {
+    font-family: var(--kb-font-display);
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--kb-forest);
+    text-decoration: none;
+}
+
+.co-name:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.co-name--sm {
+    font-family: var(--kb-font-body);
+    font-size: 15px;
+}
+
+.co-where {
+    font-size: 12.5px;
+    color: var(--kb-ink-3);
+}
+
+.co-flag {
+    font: 700 var(--kb-eyebrow-size)/1.2 var(--kb-font-body);
+    letter-spacing: var(--kb-eyebrow-tracking);
+    text-transform: uppercase;
+    color: var(--kb-rust);
+    border: 1px solid var(--kb-alert-chip-border);
+    background: var(--kb-alert-chip-bg);
+    border-radius: var(--kb-r-chip);
+    padding: 3px 7px;
+    flex-shrink: 0;
+}
+
+/* ── Three figures, one box ──────────────────────────────────────────── */
+.co-stats {
+    display: flex;
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-sm);
+    overflow: hidden;
+}
+
+.co-stat {
+    flex: 1;
+    padding: 9px 11px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    border-left: 1px solid var(--kb-rule);
+}
+
+.co-stat:first-child {
+    border-left: 0;
+}
+
+.co-stat--lead {
+    background: var(--kb-parchment);
+}
+
+.co-stat-figure {
+    font-family: var(--kb-font-display);
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--kb-forest);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.15;
+}
+
+.co-stat-label {
+    font: 700 var(--kb-eyebrow-size)/1.2 var(--kb-font-body);
+    letter-spacing: var(--kb-eyebrow-tracking);
+    text-transform: uppercase;
+    color: var(--kb-ink-3);
+}
+
+.co-words {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.co-words p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--kb-ink);
+}
+
+/* ── The strip of their case ─────────────────────────────────────────── */
+.co-strip {
+    display: flex;
+    gap: 7px;
+    text-decoration: none;
+}
+
+.co-strip-cell {
+    width: 52px;
+    height: 36px;
+    background: var(--kb-chip);
+    border: 1px solid var(--kb-rule-strong);
+    border-radius: var(--kb-r-micro);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.co-strip-cell img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.co-strip-more {
+    flex: 1;
+    border: 1px dashed var(--kb-rule-strong);
+    border-radius: var(--kb-r-micro);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: var(--kb-ink-4);
+}
+
+.co-strip:hover .co-strip-more {
+    border-color: var(--kb-forest);
+    color: var(--kb-forest);
+}
+
+.co-card-foot {
+    border-top: 1px solid var(--kb-rule-soft);
+    padding-top: 12px;
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.co-follow {
+    display: inline-flex;
+}
+
+.co-foot-note {
+    font-size: 12px;
+    color: var(--kb-ink-4);
+    margin-left: auto;
+    text-align: right;
+}
+
+/* ── The compact card ────────────────────────────────────────────────── */
+.co-mini {
+    background: var(--kb-surface);
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    padding: 15px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+
+.co-mini-overlap {
+    font-size: 12px;
+    color: var(--kb-ink-4);
+    flex-shrink: 0;
+    text-align: right;
+}
+
+.co-mini-words {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--kb-ink-2);
+}
+
+.co-mini .co-card-foot {
+    border-top: 0;
+    padding-top: 0;
+}
+
+/* ── Narrow ──────────────────────────────────────────────────────────── */
+@media (max-width: 1000px) {
+    .co-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .co-rail {
+        position: static;
+        border-right: 0;
+        border-bottom: 1px solid var(--kb-rule);
+        padding: 0 0 var(--kb-5);
+    }
+
+    .co-results {
+        padding-left: 0;
+        padding-top: var(--kb-5);
+    }
+}
+
+@media (max-width: 720px) {
+    .co-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .co-card-foot {
+        flex-wrap: wrap;
+    }
+
+    .co-foot-note {
+        margin-left: 0;
+        width: 100%;
+        text-align: left;
+    }
+}

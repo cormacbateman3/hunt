@@ -1,206 +1,368 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}{{ profile_user.username }} | KeystoneBid{% endblock %}
+{% block title %}{{ profile.get_display_name }} &middot; Collectors &middot; KeystoneBid{% endblock %}
+
+{% block context_band %}
+<nav class="kb-crumbs" aria-label="Breadcrumb">
+    <div class="kb-band-inner">
+        <a href="{% url 'collectors' %}">Collections</a>
+        <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
+        {% if profile.county %}
+            <a href="{% url 'collectors' %}?q={{ profile.county|urlencode }}">{{ profile.county }}</a>
+            <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
+        {% endif %}
+        <span class="kb-crumb-current">{{ profile.get_display_name }}</span>
+    </div>
+</nav>
+{% endblock %}
+
+{% block main_class %}kb-profile{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/profile.css' %}">{% endblock %}
 
 {% block content %}
-<section style="display: grid; gap: 1rem;">
-    <!-- Profile header -->
-    <article class="card" style="background: linear-gradient(135deg, #f5ecd7 0%, #fafaf5 100%); border: 1px solid #d9cfb7;">
-        <div style="display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
-            {% if profile.avatar %}
-                <img src="{{ profile.avatar.url }}" alt="{{ profile.get_display_name }}"
-                     style="width: 64px; height: 64px; border-radius: 50%; object-fit: cover; flex-shrink: 0;">
-            {% else %}
-                <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--color-parchment); display: flex; align-items: center; justify-content: center; font-size: 1.8rem; font-weight: 700; color: var(--color-aged-amber); flex-shrink: 0;">
-                    {{ profile.get_display_name|first|upper }}
-                </div>
+{% comment %}
+Turn 3b. A display case with a person attached, not a settings page in
+public. Trust moves up beside the name as a card you can read in one glance;
+the "looking for" rail is cross-referenced against the viewer's own shelves.
+{% endcomment %}
+
+<header class="pf-head">
+    <div class="pf-head-main">
+        {% if profile.avatar %}
+            <img src="{{ profile.avatar.url }}" alt="" class="pf-portrait">
+        {% else %}
+            <span class="pf-portrait pf-portrait--blank" aria-hidden="true"></span>
+        {% endif %}
+
+        <div class="pf-identity">
+            <div class="pf-name-line">
+                <h1 class="pf-name">{{ profile.get_display_name }}</h1>
+                <span class="pf-handle">@{{ profile_user.username }}</span>
+            </div>
+            <p class="pf-where">
+                {% if profile.county %}{{ profile.county }} &middot; {% endif %}
+                here since {{ profile_user.date_joined|date:"Y" }}
+                {% if follower_count %} &middot; {{ follower_count }} follower{{ follower_count|pluralize }}{% endif %}
+            </p>
+            {% if profile.bio %}
+                <p class="pf-bio">{{ profile.bio }}</p>
+            {% elif is_owner %}
+                <p class="pf-bio kb-muted">
+                    You haven&rsquo;t said what you collect.
+                    <a href="{% url 'accounts:profile_edit' %}">Two sentences</a> is what makes
+                    a stranger open a trade.
+                </p>
             {% endif %}
-            <div style="flex: 1; min-width: 0;">
-                <h1 style="margin-bottom: 0.2rem;">{{ profile.get_display_name }}</h1>
-                <p style="color: var(--color-muted); margin-bottom: 0.6rem;">@{{ profile_user.username }}</p>
-                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.7rem;">
-                    {% if profile.county %}
-                        <span class="badge badge-active">{{ profile.county }}</span>
-                    {% endif %}
-                    <span class="badge {% if profile.email_verified %}badge-active{% else %}badge-expired{% endif %}">
-                        {% if profile.email_verified %}Email Verified{% else %}Email Unverified{% endif %}
-                    </span>
-                    {% if review_summary.total > 0 %}
-                        <span class="badge badge-active">{{ review_summary.positive_pct }}% positive &bull; {{ review_summary.total }} review{{ review_summary.total|pluralize }}</span>
-                    {% endif %}
-                    {% if completed_transaction_count > 0 %}
-                        <span class="badge" style="background: #f0eadb; color: var(--color-muted);">{{ completed_transaction_count }} completed transaction{{ completed_transaction_count|pluralize }}</span>
-                    {% endif %}
-                </div>
-                {% if profile.bio %}
-                    <p>{{ profile.bio }}</p>
+        </div>
+
+        {% comment %}
+        Trust, read in one glance. Nothing here is a claim the site can't
+        stand behind: every line is a count of something that happened.
+        {% endcomment %}
+        <aside class="pf-trust">
+            <div class="pf-trust-card">
+                {% if review_summary.total %}
+                    <div class="pf-trust-score">
+                        <span class="pf-trust-pct">{{ review_summary.positive_pct }}%</span>
+                        <span class="pf-trust-of">positive &middot; {{ review_summary.total }} review{{ review_summary.total|pluralize }}</span>
+                    </div>
                 {% else %}
-                    <p style="color: var(--color-muted);">No bio provided yet.</p>
+                    <div class="pf-trust-score">
+                        <span class="pf-trust-pct pf-trust-pct--none">&mdash;</span>
+                        <span class="pf-trust-of">no reviews yet</span>
+                    </div>
+                {% endif %}
+                <ul class="pf-trust-lines">
+                    <li class="{% if profile.email_verified %}is-yes{% else %}is-no{% endif %}">
+                        {% if profile.email_verified and profile.phone_verified %}Email and phone verified
+                        {% elif profile.email_verified %}Email verified
+                        {% else %}Not yet verified{% endif %}
+                    </li>
+                    <li class="{% if not strike_count %}is-yes{% else %}is-no{% endif %}">
+                        {{ sale_count }} sale{{ sale_count|pluralize }},
+                        {{ trade_count }} trade{{ trade_count|pluralize }},
+                        {{ strike_count }} strike{{ strike_count|pluralize }}
+                    </li>
+                    <li class="is-yes">{{ collection_total }} item{{ collection_total|pluralize }} on show</li>
+                </ul>
+            </div>
+
+            <div class="pf-actions">
+                {% if is_owner %}
+                    <a href="{% url 'accounts:profile_edit' %}" class="kb-btn kb-btn--primary">Edit profile</a>
+                    <a href="{% url 'collections:my_collection' %}" class="kb-btn kb-btn--secondary">My collection</a>
+                {% else %}
+                    {% if trade_eligible_count %}
+                        <a href="?group=trade#the-collection" class="kb-btn kb-btn--primary">What they&rsquo;ll trade</a>
+                    {% endif %}
+                    {% include 'accounts/_follow_button.html' with target=profile_user %}
+                    <form method="post" action="{% url 'messaging:start' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="recipient_id" value="{{ profile_user.pk }}">
+                        <input type="hidden" name="conversation_type" value="general">
+                        <button type="submit" class="kb-btn kb-btn--secondary kb-btn--sm">Mail</button>
+                    </form>
                 {% endif %}
             </div>
-        </div>
-        <div style="margin-top: 0.9rem; display: flex; gap: 0.6rem; flex-wrap: wrap;">
-            {% if user.is_authenticated and user.username == profile_user.username %}
-                <a href="{% url 'accounts:profile_edit' %}" class="btn-secondary">Edit profile</a>
-                <a href="{% url 'collections:my_collection' %}" class="btn-secondary">Manage collection</a>
-            {% else %}
-                <form method="post" action="{% url 'messaging:start' %}" style="display: inline;">
-                    {% csrf_token %}
-                    <input type="hidden" name="recipient_id" value="{{ profile_user.pk }}">
-                    <input type="hidden" name="conversation_type" value="general">
-                    <button type="submit" class="btn-secondary">Message</button>
-                </form>
-            {% endif %}
-        </div>
-    </article>
-
-    <!-- Featured display case -->
-    {% if featured_items %}
-    <article class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-            <h2 style="font-size: 1.2rem; margin: 0;">Featured Display Case</h2>
-            <span style="color: var(--color-muted); font-size: 0.85rem;">{{ featured_items|length }} featured</span>
-        </div>
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.75rem;">
-            {% for item in featured_items %}
-                <article style="border: 1px solid var(--color-aged-amber); border-radius: 8px; overflow: hidden; position: relative;">
-                    {% with primary=item.images.first %}
-                        {% if primary %}
-                            <a href="{% url 'collections:item_detail' item.pk %}"><img src="{{ primary.image.url }}" alt="{{ item.title }}"
-                                 style="width: 100%; height: 130px; object-fit: cover; display: block;"></a>
-                        {% else %}
-                            <div style="width: 100%; height: 130px; background: var(--color-parchment); display: flex; align-items: center; justify-content: center;">
-                                <span style="color: var(--color-muted); font-size: 0.8rem;">No image</span>
-                            </div>
-                        {% endif %}
-                    {% endwith %}
-                    <div style="padding: 0.5rem;">
-                        <p style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.2rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;"><a href="{% url 'collections:item_detail' item.pk %}" style="color: inherit;">{{ item.title }}</a></p>
-                        <p style="font-size: 0.8rem; color: var(--color-muted);">
-                            {% if item.state %}{{ item.state.code }}{% endif %}{% if item.license_year %} · {{ item.license_year }}{% elif item.effective_era %} · {{ item.effective_era }}{% endif %}
-                        </p>
-                        {% if item.favorites.count > 0 %}
-                            <p style="font-size: 0.78rem; color: var(--color-muted);">{{ item.favorites.count }} favorite{{ item.favorites.count|pluralize }}</p>
-                        {% endif %}
-                        {% if item.trade_eligible %}
-                            <span class="badge badge-active" style="font-size: 0.72rem; margin-top: 0.3rem;">Trade eligible</span>
-                        {% endif %}
-                        {% if user.is_authenticated and user.id != profile_user.id %}
-                            <form method="post" action="{% url 'favorites:toggle_collection_item' item.pk %}" style="margin-top: 0.45rem;">
-                                {% csrf_token %}
-                                <input type="hidden" name="next" value="{{ request.path }}">
-                                <button type="submit" class="btn-secondary" style="font-size: 0.8rem; padding: 0.2rem 0.5rem; width: 100%;">
-                                    {% if item.id in favorite_collection_ids %}Unfavorite{% else %}Favorite{% endif %}
-                                </button>
-                            </form>
-                        {% endif %}
-                    </div>
-                </article>
-            {% endfor %}
-        </div>
-    </article>
-    {% endif %}
-
-    <!-- Tabs: Collection | Active Listings -->
-    <div style="display: flex; gap: 0; border-bottom: 2px solid var(--color-border); margin-bottom: -1rem;">
-        <a href="?tab=collection"
-           style="padding: 0.55rem 1.1rem; font-weight: 600; font-size: 0.95rem; text-decoration: none;
-                  {% if active_tab != 'listings' %}border-bottom: 3px solid var(--color-aged-amber); color: var(--color-aged-amber);{% else %}color: var(--color-muted);{% endif %}">
-            Collection
-            <span style="color: var(--color-muted); font-weight: 400; font-size: 0.85rem;">({{ collection_items|length }})</span>
-        </a>
-        <a href="?tab=listings"
-           style="padding: 0.55rem 1.1rem; font-weight: 600; font-size: 0.95rem; text-decoration: none;
-                  {% if active_tab == 'listings' %}border-bottom: 3px solid var(--color-aged-amber); color: var(--color-aged-amber);{% else %}color: var(--color-muted);{% endif %}">
-            Active Listings
-            <span style="color: var(--color-muted); font-weight: 400; font-size: 0.85rem;">({{ active_listings|length }})</span>
-        </a>
+        </aside>
     </div>
 
-    {% if active_tab == 'listings' %}
-    <!-- Active Listings tab -->
-    <article class="card">
-        {% if active_listings %}
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem;">
-                {% for listing in active_listings %}
-                    {% include 'listings/_listing_card.html' %}
-                {% endfor %}
-            </div>
-        {% else %}
-            <p style="color: var(--color-muted);">No active listings at this time.</p>
-        {% endif %}
-    </article>
+    <div class="pf-tabs">
+        <a href="#the-display-case" class="pf-tab" aria-current="page">Display case</a>
+        <a href="#the-collection" class="pf-tab">Collection <span class="pf-tab-count">{{ collection_total }}</span></a>
+        <a href="#looking-for" class="pf-tab">Looking for <span class="pf-tab-count">{{ wanted_total }}</span></a>
+        <a href="#selling" class="pf-tab">Selling <span class="pf-tab-count">{{ active_listing_count }}</span></a>
+        <a href="#reviews" class="pf-tab">Reviews <span class="pf-tab-count">{{ review_summary.total }}</span></a>
+    </div>
+</header>
 
-    {% else %}
-    <!-- Collection tab (default) -->
-    <article class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-            <h2 style="font-size: 1.2rem; margin: 0;">Collection</h2>
-            <span style="color: var(--color-muted);">{{ collection_items|length }} item{{ collection_items|length|pluralize }}</span>
-        </div>
-        {% if collection_items %}
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem;">
-                {% for item in collection_items %}
-                    <article style="border: 1px solid var(--color-border); border-radius: 8px; padding: 0.7rem;">
-                        {% with primary=item.images.first %}
-                            {% if primary %}
-                                <img src="{{ primary.image.url }}" alt="{{ item.title }}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 6px; margin-bottom: 0.55rem;">
-                            {% endif %}
-                        {% endwith %}
-                        <h3 style="font-size: 1.02rem; margin-bottom: 0.35rem;">{{ item.title }}</h3>
-                        <p style="color: var(--color-muted); margin-bottom: 0.45rem;">
-                            {% if item.state %}{{ item.state.code }} - {% endif %}
-                            {% if item.county %}{{ item.county.name }}{% else %}Unknown unit{% endif %}
-                            {% if item.license_year %} - {{ item.license_year }}{% elif item.effective_era %} - {{ item.effective_era }}{% endif %}
-                        </p>
-                        {% if item.display_license_type_summary %}
-                            <p style="color: var(--color-muted); margin-bottom: 0.45rem;">{{ item.display_license_type_summary }}</p>
+<div class="pf-body">
+    <div class="pf-main">
+
+        <section class="pf-section" id="the-display-case">
+            <div class="pf-rule">
+                <h2 class="pf-rule-title">The display case</h2>
+                <span class="pf-rule-line" aria-hidden="true"></span>
+                <span class="pf-rule-note">
+                    {% if featured_items %}
+                        {{ featured_items|length }} piece{{ featured_items|length|pluralize }} they chose themselves
+                    {% endif %}
+                </span>
+            </div>
+            {% if featured_items %}
+                <div class="pf-case">
+                    {% for item in featured_items %}
+                        <a href="{% url 'collections:item_detail' item.pk %}" class="pf-case-piece">
+                            <span class="pf-case-media">
+                                {% if item.images.all %}
+                                    <img src="{{ item.images.all.0.image.url }}" alt="" loading="lazy">
+                                {% endif %}
+                                {% if item.trade_eligible %}<span class="pf-case-flag">Trade eligible</span>{% endif %}
+                            </span>
+                            <span class="pf-case-body">
+                                <span class="pf-case-title">{{ item.title }}</span>
+                                <span class="pf-case-meta">
+                                    {% if item.license_year %}{{ item.license_year }}{% elif item.effective_era %}{{ item.effective_era }}{% endif %}
+                                    {% if item.condition_grade %} &middot; {{ item.get_condition_grade_display }}{% endif %}
+                                </span>
+                                {% comment %}
+                                The caption is the whole point of a display case —
+                                it turns inventory into a person.
+                                {% endcomment %}
+                                {% if item.description %}
+                                    <span class="pf-case-caption">{{ item.description|truncatechars:110 }}</span>
+                                {% endif %}
+                            </span>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="kb-empty">
+                    <h2>Nothing in the case yet</h2>
+                    <p>
+                        {% if is_owner %}
+                            Pin up to four pieces and say why each one matters. A case with
+                            captions is what makes a stranger read the rest of the page.
+                        {% else %}
+                            {{ profile.get_display_name }} hasn&rsquo;t pinned anything yet.
+                            The collection below is the whole of it.
                         {% endif %}
-                        <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.4rem;">
-                            {% if item.trade_eligible %}<span class="badge badge-active">Trade Eligible</span>{% endif %}
-                            {% if is_owner and not item.is_public %}<span class="badge badge-expired">Private</span>{% endif %}
+                    </p>
+                    {% if is_owner %}
+                        <div class="kb-empty-actions">
+                            <a href="{% url 'collections:my_collection' %}" class="kb-btn kb-btn--primary">Choose four</a>
                         </div>
-                        {% with fav_count=item.favorites.count %}
-                            {% if fav_count > 0 %}
-                                <p style="font-size: 0.82rem; color: var(--color-muted); margin-bottom: 0.4rem;">{{ fav_count }} favorite{{ fav_count|pluralize }}</p>
-                            {% endif %}
-                        {% endwith %}
-                        {% if user.is_authenticated and user.id != profile_user.id and item.is_public %}
-                            <form method="post" action="{% url 'favorites:toggle_collection_item' item.pk %}" style="margin-top: 0.55rem;">
-                                {% csrf_token %}
-                                <input type="hidden" name="next" value="{{ request.path }}">
-                                <button type="submit" class="btn-secondary">
-                                    {% if item.id in favorite_collection_ids %}Unfavorite{% else %}Favorite{% endif %}
-                                </button>
-                            </form>
-                        {% endif %}
-                    </article>
-                {% endfor %}
-            </div>
-        {% else %}
-            <p style="color: var(--color-muted);">
-                {% if is_owner %}Your public collection is empty.{% else %}No public collection items yet.{% endif %}
-            </p>
-        {% endif %}
-    </article>
-    {% endif %}
+                    {% endif %}
+                </div>
+            {% endif %}
+        </section>
 
-    {% if wanted_items %}
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.75rem;">Looking For</h2>
-        <div style="display: grid; gap: 0.45rem;">
-            {% for wanted in wanted_items %}
-                <p>
-                    {% if wanted.state %}{{ wanted.state.code }} - {% endif %}
-                    {% if wanted.county %}{{ wanted.county.name }}{% else %}Any unit{% endif %}
-                    {% if wanted.year_min %} from {{ wanted.year_min }}{% endif %}
-                    {% if wanted.year_max %} to {{ wanted.year_max }}{% endif %}
-                    {% if wanted.license_type %} - {{ wanted.license_type.name }}{% endif %}
-                    {% if wanted.notes %} - {{ wanted.notes }}{% endif %}
-                </p>
+        {% if ground %}
+            <section class="pf-section" id="ground-covered">
+                <div class="pf-rule">
+                    <h2 class="pf-rule-title">Ground covered</h2>
+                    <span class="pf-rule-line" aria-hidden="true"></span>
+                    <span class="pf-rule-note">{{ ground.state_name }}</span>
+                </div>
+                <div class="pf-ground">
+                    <div class="pf-ground-figure">
+                        <span class="pf-ground-hatch" aria-hidden="true"></span>
+                        <p class="pf-ground-note">
+                            The map isn&rsquo;t drawn yet &mdash; the counties are records, not outlines.
+                            The figures beside it are the same ground, counted.
+                        </p>
+                    </div>
+                    <div class="pf-ground-meters">
+                        <div class="pf-meter-row">
+                            <div class="kb-between">
+                                <span class="pf-meter-label">{{ ground.unit_label_plural }}</span>
+                                <span class="pf-meter-figure">{{ ground.held }} / {{ ground.total }}</span>
+                            </div>
+                            <div class="kb-meter"><span style="width: {{ ground.pct }}%"></span></div>
+                        </div>
+                        {% if ground.span %}
+                            <div class="pf-meter-row">
+                                <div class="kb-between">
+                                    <span class="pf-meter-label">Years held</span>
+                                    <span class="pf-meter-figure">{{ ground.span.0 }}&ndash;{{ ground.span.1 }}</span>
+                                </div>
+                                <p class="pf-meter-sub">{{ ground.span_count }} distinct year{{ ground.span_count|pluralize }}</p>
+                            </div>
+                        {% endif %}
+                        {% if ground.deepest %}
+                            <div class="pf-meter-row pf-meter-row--last">
+                                <span class="pf-meter-label">Deepest run</span>
+                                <p class="pf-deepest">{{ ground.deepest.county }}, {{ ground.deepest.from }}&ndash;{{ ground.deepest.to }} unbroken</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </section>
+        {% endif %}
+
+        <section class="pf-section" id="the-collection">
+            <div class="pf-rule">
+                <h2 class="pf-rule-title">The collection</h2>
+                <span class="pf-rule-line" aria-hidden="true"></span>
+                <span class="pf-rule-note">{{ collection_total }} item{{ collection_total|pluralize }}</span>
+            </div>
+
+            {% if decade_groups or trade_eligible_count %}
+                <div class="pf-chips">
+                    <a href="?#the-collection" class="kb-chip {% if not active_group %}is-on{% endif %}">All {{ collection_total }}</a>
+                    {% for group in decade_groups %}
+                        <a href="?group={{ group.key }}#the-collection"
+                           class="kb-chip {% if active_group == group.key %}is-on{% endif %}">{{ group.label }} {{ group.count }}</a>
+                    {% endfor %}
+                    {% if trade_eligible_count %}
+                        <a href="?group=trade#the-collection"
+                           class="kb-chip pf-chip--right {% if active_group == 'trade' %}is-on{% endif %}">Trade eligible {{ trade_eligible_count }}</a>
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            {% if collection_items %}
+                <div class="pf-shelf">
+                    {% for item in collection_items %}
+                        <a href="{% url 'collections:item_detail' item.pk %}" class="pf-piece">
+                            <span class="pf-piece-media">
+                                {% if item.images.all %}
+                                    <img src="{{ item.images.all.0.image.url }}" alt="" loading="lazy">
+                                {% endif %}
+                            </span>
+                            <span class="pf-piece-body">
+                                <span class="pf-piece-title">{{ item.license_year|default:item.effective_era }} {{ item.county.name|default:item.state.code|default:"" }}</span>
+                                <span class="pf-piece-meta">
+                                    {{ item.title|truncatechars:34 }}
+                                    {% if item.condition_grade %} &middot; {{ item.get_condition_grade_display }}{% endif %}
+                                </span>
+                            </span>
+                        </a>
+                    {% endfor %}
+                </div>
+                {% if collection_shown > 10 %}
+                    <p class="pf-more">Showing 10 of {{ collection_shown }}.
+                        <a href="{% url 'collectors' %}?tab=owned&amp;owner={{ profile_user.username }}">See every one &rarr;</a></p>
+                {% endif %}
+            {% else %}
+                <div class="kb-empty">
+                    <h2>{% if active_group %}Nothing in that group{% else %}Nothing on public show{% endif %}</h2>
+                    <p>
+                        {% if active_group %}Try another chip above.
+                        {% elif is_owner %}Items you add are public unless you say otherwise.
+                        {% else %}{{ profile.get_display_name }} keeps their collection private.{% endif %}
+                    </p>
+                </div>
+            {% endif %}
+        </section>
+
+        <section class="pf-section" id="selling">
+            <div class="pf-rule">
+                <h2 class="pf-rule-title">Selling now</h2>
+                <span class="pf-rule-line" aria-hidden="true"></span>
+                <span class="pf-rule-note">{{ active_listing_count }} active listing{{ active_listing_count|pluralize }}</span>
+            </div>
+            {% if active_listings %}
+                <div class="kb-grid">
+                    {% for listing in active_listings %}{% include 'listings/_card.html' %}{% endfor %}
+                </div>
+            {% else %}
+                <p class="pf-quiet">Nothing listed at the moment.</p>
+            {% endif %}
+        </section>
+    </div>
+
+    <aside class="pf-rail">
+        {% comment %}
+        The trade hook. Cross-referenced against the viewer's own collection —
+        "you have one, 1931, mint" is the line that turns a profile you read
+        into a profile you act on.
+        {% endcomment %}
+        <section class="kb-panel" id="looking-for">
+            <div class="kb-panel-head">
+                <span class="kb-eyebrow">{{ profile.get_display_name }} is looking for</span>
+                {% if wanted_answerable %}<span class="pf-hit">{{ wanted_answerable }} you can answer</span>{% endif %}
+            </div>
+            {% for row in wanted_items|slice:":4" %}
+                <div class="pf-want">
+                    <span class="pf-want-what">{{ row.summary }}</span>
+                    {% if row.you_have %}
+                        <span class="pf-want-hit">{{ row.you_have }}</span>
+                    {% elif row.note %}
+                        <span class="pf-want-note">{{ row.note }}</span>
+                    {% endif %}
+                </div>
+            {% empty %}
+                <div class="kb-panel-divide">
+                    <p class="pf-quiet">
+                        {% if is_owner %}
+                            You haven&rsquo;t named anything you&rsquo;re after.
+                            <a href="{% url 'collections:wanted_create' %}">A want is a standing search</a> &mdash;
+                            and it puts you in front of people who hold it.
+                        {% else %}
+                            Nothing named yet.
+                        {% endif %}
+                    </p>
+                </div>
             {% endfor %}
-        </div>
-    </article>
-    {% endif %}
-</section>
+            {% if wanted_total > 4 %}
+                <div class="pf-want pf-want--foot">
+                    <span class="kb-eyebrow kb-eyebrow--brass">All {{ wanted_total }}</span>
+                </div>
+            {% endif %}
+        </section>
+
+        <section class="kb-panel" id="reviews">
+            <div class="kb-panel-head">
+                <span class="kb-eyebrow">What people say</span>
+                <span class="pf-hit">{{ review_summary.total }}</span>
+            </div>
+            {% for review in recent_reviews %}
+                <div class="pf-review">
+                    {% if review.body %}<p class="pf-review-body">&ldquo;{{ review.body }}&rdquo;</p>{% endif %}
+                    <span class="pf-review-who">
+                        {{ review.reviewer.profile.get_display_name }} &middot;
+                        {% if review.trade_id %}traded{% else %}bought{% endif %},
+                        {{ review.created_at|date:"F" }}
+                    </span>
+                </div>
+            {% empty %}
+                <div class="kb-panel-divide">
+                    <p class="pf-quiet">No reviews yet. The first completed sale or trade writes one.</p>
+                </div>
+            {% endfor %}
+        </section>
+
+        {% if completed_transaction_count %}
+            <section class="kb-panel kb-panel--parchment">
+                <div class="kb-panel-divide">
+                    <span class="kb-eyebrow kb-eyebrow--brass">On the record</span>
+                    <p class="pf-quiet">{{ completed_transaction_count }} transaction{{ completed_transaction_count|pluralize }} completed here.</p>
+                </div>
+            </section>
+        {% endif %}
+    </aside>
+</div>
 {% endblock %}

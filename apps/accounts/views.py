@@ -11,16 +11,23 @@ from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
 from .bench import needs_you
+from .follows import follower_count, following_ids
 from .forms import UserRegistrationForm, UserProfileForm, AddressForm
-from .models import UserProfile, Address
+from .models import Address, Follow, UserProfile
 from apps.core.models import GeographicUnit, State
 from apps.listings.models import Listing
 from apps.bids.models import Bid
 from apps.orders.models import Order
 from apps.notifications.models import Notification
+from apps.collections.matching import (
+    held_match_note, holdings, holdings_matching, want_summary,
+)
 from apps.collections.models import CollectionItem, WantedItem
+from apps.collections.tracker import collection_groups, ground_covered
+from apps.enforcement.models import Strike
 from apps.favorites.models import Favorite
 from apps.reviews.models import Review
+from apps.trades.models import Trade
 
 
 def register(request):
@@ -126,13 +133,43 @@ def listing_defaults_save(request):
     return redirect('accounts:profile_edit')
 
 
+@login_required
+def follow_toggle(request, username):
+    """Follow or unfollow a collector (13a, 3b)."""
+    if request.method != 'POST':
+        return redirect('accounts:profile', username=username)
+
+    target = get_object_or_404(User, username=username, is_active=True)
+    if target.id == request.user.id:
+        messages.error(request, 'You cannot follow yourself.')
+    else:
+        existing = Follow.objects.filter(follower=request.user, following=target)
+        if existing.exists():
+            existing.delete()
+            messages.success(request, f'No longer following {target.profile.get_display_name()}.')
+        else:
+            Follow.objects.create(follower=request.user, following=target)
+            messages.success(request, f'Following {target.profile.get_display_name()}.')
+
+    return redirect(request.POST.get('next') or reverse(
+        'accounts:profile', kwargs={'username': username}))
+
+
 def profile_view(request, username):
-    """Public profile view"""
+    """The collector profile — a display case with a person attached (3b).
+
+    Not a settings page in public. Trust sits beside the name where it can be
+    read in one glance, the display case carries the owner's own words about
+    each piece, and the "looking for" rail is cross-referenced against the
+    viewer's own shelves: *you have one, 1931, mint*. That single line is the
+    difference between a profile you read and a profile you act on.
+    """
     user = get_object_or_404(User, username=username)
     profile = user.profile
     is_owner = request.user.is_authenticated and request.user.id == user.id
 
     tab = request.GET.get('tab', 'collection')
+    group = request.GET.get('group', '')
 
     collection_qs = (
         CollectionItem.objects.filter(owner=user)
@@ -143,8 +180,19 @@ def profile_view(request, username):
     if not is_owner:
         collection_qs = collection_qs.filter(is_public=True)
 
-    featured_items = list(collection_qs.filter(featured=True).order_by('-created_at')[:6])
+    featured_items = list(collection_qs.filter(featured=True).order_by('-created_at')[:4])
     collection_items = collection_qs
+    collection_total = collection_qs.count()
+
+    # Chips over the collection: the decades they hold, plus trade-eligible.
+    decade_groups, trade_eligible_count = collection_groups(user, public_only=not is_owner)
+    if group == 'trade':
+        collection_items = collection_items.filter(trade_eligible=True)
+    elif group.isdigit():
+        decade = int(group)
+        collection_items = collection_items.filter(
+            license_year__gte=decade, license_year__lte=decade + 9)
+    shown_items = list(collection_items[:10])
 
     # Active listings tab — auction house + general store only (not trade)
     active_listings = (
@@ -158,11 +206,29 @@ def profile_view(request, username):
         .order_by('-created_at')
     )
 
-    wanted_items = (
+    # The trade hook. Every want they've named, read against what the viewer
+    # actually holds — the wanted-list matcher pointed at one person.
+    all_wants = list(
         WantedItem.objects.filter(user=user)
         .select_related('state', 'county', 'license_type')
-        .order_by('-created_at')[:8]
+        .order_by('-created_at')
     )
+    viewer_holdings = holdings(request.user) if not is_owner else []
+    wanted_items, answerable = [], 0
+    for want in all_wants:
+        matches = holdings_matching(want, viewer_holdings)
+        if matches:
+            answerable += 1
+        wanted_items.append({
+            'want': want,
+            'summary': want_summary(want),
+            'note': want.notes,
+            'you_have': held_match_note(matches),
+        })
+    # Anything the viewer can answer floats to the top; that is the whole
+    # point of showing somebody else's wanted list.
+    wanted_items.sort(key=lambda row: not row['you_have'])
+
     favorite_collection_ids = set()
     if request.user.is_authenticated:
         favorite_collection_ids = set(
@@ -189,17 +255,48 @@ def profile_view(request, username):
         ).count()
     )
 
+    trade_count = Trade.objects.filter(
+        Q(initiator=user) | Q(counterparty=user), status='completed').count()
+    sale_count = Order.objects.filter(seller=user, status='completed').count()
+    strike_count = Strike.objects.filter(user=user, is_excused=False).count()
+
     context = {
         'profile_user': user,
         'profile': profile,
+        'kb_zone': 'collections',
+        'zone_tab': 'people',
         'featured_items': featured_items,
-        'collection_items': collection_items,
+        'collection_items': shown_items,
+        'collection_total': collection_total,
+        'collection_shown': collection_items.count(),
+        'decade_groups': decade_groups,
+        'trade_eligible_count': trade_eligible_count,
+        'active_group': group,
+        'ground': ground_covered(user, public_only=not is_owner),
         'active_listings': active_listings,
+        'active_listing_count': active_listings.count(),
         'wanted_items': wanted_items,
+        'wanted_total': len(all_wants),
+        'wanted_answerable': answerable,
+        'recent_reviews': (
+            Review.objects.filter(reviewed_user=user)
+            .exclude(moderation_state='hidden')
+            .select_related('reviewer')
+            .order_by('-created_at')[:2]
+        ),
         'is_owner': is_owner,
+        'is_following': (
+            request.user.is_authenticated
+            and Follow.objects.filter(follower=request.user, following=user).exists()
+        ),
+        'following_ids': following_ids(request.user),
+        'follower_count': follower_count(user),
         'favorite_collection_ids': favorite_collection_ids,
         'review_summary': review_summary,
         'completed_transaction_count': completed_transaction_count,
+        'trade_count': trade_count,
+        'sale_count': sale_count,
+        'strike_count': strike_count,
         'active_tab': tab,
     }
 

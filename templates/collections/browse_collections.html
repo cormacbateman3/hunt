@@ -1,302 +1,186 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Browse Collections | KeystoneBid{% endblock %}
+{% block title %}Everything owned &middot; Collections &middot; KeystoneBid{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/pages/browse.css' %}">
-{% endblock %}
+{% block context_band %}{% include 'components/_collections_tabs.html' %}{% endblock %}
+
+{% block main_class %}kb-owned{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/owned.css' %}">{% endblock %}
 
 {% block content %}
+{% comment %}
+Turn 13b. Every filter the old bar had is still here; three things changed.
+The six license-type categories read as questions instead of column names,
+what you've chosen shows as removable chips instead of hiding inside nine
+closed dropdowns, and Apply is gone — the grid updates as you go, which is
+what the multi-select panels always implied.
+{% endcomment %}
 
-<div class="browse-section-header">
-    <h1>Browse Collections</h1>
-    <p>Explore items from all collectors.</p>
-</div>
+<div class="ow-frame">
+    <div class="ow-frame-head">
+        <span class="kb-eyebrow kb-eyebrow--brass">Collectors &rsaquo; Everything owned</span>
+        <span class="ow-count">{{ result_total }} item{{ result_total|pluralize }} in {{ collector_total }} collection{{ collector_total|pluralize }}</span>
+    </div>
 
-<div class="card browse-filter-bar">
-    <form method="get" id="browse-filter-form">
-    <div class="filter-scroll">
-        <div class="filter-row">
-            <div class="filter-item filter-item--wide">
-                <label class="form-label" for="search">Search</label>
-                <input class="form-input" id="search" name="search" value="{{ filters.search }}" placeholder="Title, description…">
+    <form method="get" id="browse-filter-form" class="ow-filters" data-live-filters>
+        <input type="hidden" name="tab" value="owned">
+
+        <div class="ow-row">
+            <div class="ow-field ow-field--wide">
+                <label class="kb-label" for="search">Search</label>
+                <input class="kb-input" id="search" name="search" value="{{ filters.search }}"
+                       placeholder="Title or description">
             </div>
-            <div class="filter-item">
-                <label class="form-label" for="owner">Collector</label>
-                <input class="form-input" id="owner" name="owner" value="{{ filters.owner }}" placeholder="Username">
+            <div class="ow-field">
+                <label class="kb-label" for="owner">Collector</label>
+                <input class="kb-input" id="owner" name="owner" value="{{ filters.owner }}" placeholder="Username">
             </div>
-            <div class="filter-item">
-                <label class="form-label" for="state_id">State</label>
-                <select class="form-select" id="state_id" name="state_id">
+            <div class="ow-field">
+                <label class="kb-label" for="state_id">State</label>
+                <select class="kb-select" id="state_id" name="state_id">
                     <option value="" {% if not filters.state_id %}selected{% endif %}>Any</option>
                     {% for state in states %}
                         <option value="{{ state.id }}" {% if filters.state_id == state.id|stringformat:'s' %}selected{% endif %}>{{ state.name }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="filter-item">
-                <label class="form-label" for="county_id">{{ selected_state.issuance_unit_label|default:"County" }}</label>
-                <select class="form-select" id="county_id" name="county_id">
+            <div class="ow-field">
+                <label class="kb-label" id="county-label" for="county_id">{{ selected_state.issuance_unit_label|default:"County" }}</label>
+                <select class="kb-select" id="county_id" name="county_id">
                     <option value="">Any</option>
                     {% for county in counties %}
                         <option value="{{ county.id }}" {% if filters.county_id == county.id|stringformat:'s' %}selected{% endif %}>{{ county.name }}</option>
                     {% endfor %}
                 </select>
             </div>
+        </div>
+
+        {% comment %}
+        The six categories, asked the way a person would ask them. The schema
+        names stay in the model and the admin, where they belong.
+        {% endcomment %}
+        <div class="ow-row ow-row--types">
+            <span class="kb-label ow-row-label">License type</span>
             {% for group in license_type_groups %}
-            <div class="filter-item">
-                <label class="form-label">{{ group.label }}</label>
-                <select class="form-select" id="{{ group.filter_key }}" name="{{ group.filter_key }}" multiple data-ms>
-                    {% for lt in group.types %}
-                        <option value="{{ lt.id }}" {% if lt.id|stringformat:'s' in group.selected_ids %}selected{% endif %}>{{ lt.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
+                <div class="ow-ms">
+                    <label class="kb-sr" for="{{ group.filter_key }}">{{ group.label }}</label>
+                    <select class="kb-select" id="{{ group.filter_key }}" name="{{ group.filter_key }}"
+                            multiple data-ms data-ms-label="{{ group.label }}">
+                        {% for lt in group.types %}
+                            <option value="{{ lt.id }}" {% if lt.id|stringformat:'s' in group.selected_ids %}selected{% endif %}>{{ lt.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
             {% endfor %}
-            <div class="filter-item">
-                <label class="form-label">Era</label>
-                <select class="form-select" id="era" name="era" multiple data-ms>
+            <div class="ow-ms">
+                <label class="kb-sr" for="era">Era</label>
+                <select class="kb-select" id="era" name="era" multiple data-ms data-ms-label="Era">
                     {% for value, label in era_choices %}
                         <option value="{{ value }}" {% if value in filters.era_list %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="filter-item filter-item--narrow">
-                <label class="form-label" for="year_min">Year from</label>
-                <input class="form-input" id="year_min" type="number" name="year_min" value="{{ filters.year_min }}" placeholder="1930">
-            </div>
-            <div class="filter-item filter-item--narrow">
-                <label class="form-label" for="year_max">Year to</label>
-                <input class="form-input" id="year_max" type="number" name="year_max" value="{{ filters.year_max }}" placeholder="2000">
-            </div>
-            <div class="filter-item">
-                <label class="form-label" for="sort">Sort</label>
-                <select class="form-select" id="sort" name="sort">
-                    <option value="newest"   {% if filters.sort == 'newest' %}selected{% endif %}>Newest</option>
-                    <option value="year_desc" {% if filters.sort == 'year_desc' %}selected{% endif %}>Year ↓</option>
-                    <option value="year_asc"  {% if filters.sort == 'year_asc' %}selected{% endif %}>Year ↑</option>
-                    <option value="owner_az"  {% if filters.sort == 'owner_az' %}selected{% endif %}>Collector A–Z</option>
-                </select>
-            </div>
-            <div class="filter-actions">
-                <button class="btn-primary" type="submit">Apply</button>
-                <a class="btn-secondary" href="{% url 'collections:browse' %}">Reset</a>
+            <div class="ow-years">
+                <label class="kb-sr" for="year_min">Year from</label>
+                <input class="kb-input kb-input--year" id="year_min" type="number" name="year_min"
+                       value="{{ filters.year_min }}" placeholder="From">
+                <span class="ow-years-dash" aria-hidden="true">&ndash;</span>
+                <label class="kb-sr" for="year_max">Year to</label>
+                <input class="kb-input kb-input--year" id="year_max" type="number" name="year_max"
+                       value="{{ filters.year_max }}" placeholder="To">
             </div>
         </div>
-    </div>
+
+        <div class="ow-row ow-row--applied">
+            {% for chip in applied_filters %}
+                <a href="{{ chip.url }}" class="kb-chip is-on">{{ chip.label }} <span class="kb-chip-x" aria-hidden="true">&times;</span></a>
+            {% empty %}
+                <span class="ow-nothing">Nothing narrowed &mdash; everything on public show.</span>
+            {% endfor %}
+            {% if applied_filters %}
+                <a href="{% url 'collectors' %}?tab=owned" class="ow-clear">Clear all</a>
+            {% endif %}
+            <div class="ow-row-spacer"></div>
+            <label class="ow-sort">
+                <span class="kb-sr">Sort items</span>
+                <select class="kb-select" id="sort" name="sort">
+                    <option value="newest"    {% if filters.sort == 'newest' %}selected{% endif %}>Sort: Newest</option>
+                    <option value="year_desc" {% if filters.sort == 'year_desc' %}selected{% endif %}>Sort: Year, newest</option>
+                    <option value="year_asc"  {% if filters.sort == 'year_asc' %}selected{% endif %}>Sort: Year, oldest</option>
+                    <option value="owner_az"  {% if filters.sort == 'owner_az' %}selected{% endif %}>Sort: Collector A&ndash;Z</option>
+                </select>
+            </label>
+        </div>
+
+        <p class="ow-filter-error" id="ow-filter-error" role="status" hidden></p>
+        <noscript><button type="submit" class="kb-btn kb-btn--primary kb-btn--sm">Apply</button></noscript>
     </form>
-</div>
 
-{% if user.is_authenticated %}
-<div style="text-align: right; margin-bottom: 0.25rem;">
-    <a href="{% url 'collections:my_collection' %}" class="btn-secondary" style="font-size: 0.88rem; padding: 0.35rem 0.85rem;">My Collection</a>
-</div>
-{% endif %}
-
-<section>
-    <div class="listing-grid">
+    <div class="ow-grid">
         {% for item in page_obj %}
-            <article class="listing-card">
-                <a href="{% url 'collections:item_detail' item.pk %}">
-                {% with primary=item.images.first %}
-                    {% if primary %}
-                        <img class="listing-card-img" src="{{ primary.image.url }}" alt="{{ item.title }}" loading="lazy">
-                    {% else %}
-                        <div class="listing-card-img-placeholder">
-                            <span>No image</span>
-                        </div>
-                    {% endif %}
-                {% endwith %}
-                </a>
-                <div class="listing-card-body">
-                    <h3 class="listing-card-title">
-                        <a href="{% url 'collections:item_detail' item.pk %}" style="color: inherit;">{{ item.title }}</a>
-                    </h3>
-                    <div class="listing-card-meta">
-                        {% if item.state %}{{ item.state.code }}{% endif %}
-                        {% if item.county %} · {{ item.county.name }}{% endif %}
-                        {% if item.license_year %}
-                            · {{ item.license_year }}
-                        {% elif item.effective_era %}
-                            · {{ item.effective_era }}
+            <article class="ow-item">
+                <a href="{% url 'collections:item_detail' item.pk %}" class="ow-item-media">
+                    {% with primary=item.images.first %}
+                        {% if primary %}
+                            <img src="{{ primary.image.url }}" alt="{{ item.title }}" loading="lazy">
+                        {% else %}
+                            <span class="ow-item-blank">No photograph</span>
                         {% endif %}
-                    </div>
-                    {% if item.display_license_type_summary %}
-                        <div class="listing-card-meta" style="margin-top: 0.2rem;">{{ item.display_license_type_summary }}</div>
-                    {% endif %}
+                    {% endwith %}
+                </a>
+                <div class="ow-item-body">
+                    <a href="{% url 'collections:item_detail' item.pk %}" class="ow-item-title">{{ item.title }}</a>
+                    <span class="ow-item-meta">
+                        {% if item.state %}{{ item.state.code }}{% endif %}
+                        {% if item.county %} &middot; {{ item.county.name }}{% endif %}
+                        {% if item.license_year %} &middot; {{ item.license_year }}
+                        {% elif item.effective_era %} &middot; {{ item.effective_era }}{% endif %}
+                    </span>
                     {% if item.condition_grade %}
-                        <div style="margin-top: 0.3rem;">
-                            <span class="badge" style="font-size: 0.75rem;">{{ item.get_condition_grade_display }}</span>
-                        </div>
+                        <span class="ow-item-grade">{{ item.get_condition_grade_display }}</span>
                     {% endif %}
                 </div>
-                <div class="listing-card-footer" style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 0.82rem; color: var(--color-muted);">
-                        {% if item.owner.profile.display_name %}{{ item.owner.profile.display_name }}{% else %}{{ item.owner.username }}{% endif %}
-                        {% with fav_count=item.favorites.count %}
-                            {% if fav_count > 0 %}&bull; {{ fav_count }} fav{{ fav_count|pluralize }}{% endif %}
-                        {% endwith %}
-                    </span>
-                    <a href="{% url 'accounts:profile' item.owner.username %}" class="btn-secondary"
-                       style="font-size: 0.8rem; padding: 0.2rem 0.55rem;">View profile</a>
+                {% comment %}
+                The owner stays — it is the seam between this tab and the
+                other one. The favourite count goes: it tells a browsing
+                stranger nothing.
+                {% endcomment %}
+                <div class="ow-item-foot">
+                    <span class="ow-item-owner">{{ item.owner.profile.get_display_name }}</span>
+                    <a href="{% url 'accounts:profile' item.owner.username %}" class="ow-item-profile">Profile</a>
                 </div>
             </article>
         {% empty %}
-            <div class="card" style="grid-column: 1 / -1;">
-                <p>No collection items found. Try adjusting the filters.</p>
+            <div class="ow-empty">
+                <div class="kb-empty">
+                    <h2>Nothing on the shelves matches that</h2>
+                    <p>Take a chip off above &mdash; the license-type filters narrow hardest, because
+                       an item has to carry every type you tick.</p>
+                    <div class="kb-empty-actions">
+                        <a href="{% url 'collectors' %}?tab=owned" class="kb-btn kb-btn--secondary">Clear the filters</a>
+                        <a href="{% url 'collectors' %}" class="kb-btn kb-btn--primary">Browse collectors instead</a>
+                    </div>
+                </div>
             </div>
         {% endfor %}
     </div>
 
     {% if page_obj.paginator.num_pages > 1 %}
-        <nav style="margin-top: var(--space-3); display: flex; gap: 0.75rem; align-items: center;" aria-label="Pagination">
-            {% if page_obj.has_previous %}
-                <a class="btn-secondary" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}">&larr; Previous</a>
-            {% endif %}
-            <span style="font-size: 0.9rem; color: var(--color-muted);">
-                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+        <nav class="ow-pager" aria-label="Pagination">
+            <span class="ow-pager-where">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            <span class="ow-pager-links">
+                {% if page_obj.has_previous %}
+                    <a href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">&larr; Previous</a>
+                {% endif %}
+                {% if page_obj.has_next %}
+                    <a href="?{% if query_string %}{{ query_string }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next {{ page_obj.paginator.per_page }} &rarr;</a>
+                {% endif %}
             </span>
-            {% if page_obj.has_next %}
-                <a class="btn-secondary" href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}">Next &rarr;</a>
-            {% endif %}
         </nav>
     {% endif %}
-</section>
+</div>
 {% endblock %}
 
-{% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const stateSelect = document.getElementById('state_id');
-    const countySelect = document.getElementById('county_id');
-    const countyLabel = countySelect ? countySelect.previousElementSibling : null;
-    const LT_CATS = ['residency', 'holder_eligibility', 'activity_scope', 'duration', 'addon_type', 'material'];
-    if (!stateSelect) return;
-
-    stateSelect.addEventListener('change', async () => {
-        const stateId = stateSelect.value;
-
-        if (countySelect) {
-            countySelect.innerHTML = '<option value="">Any</option>';
-            if (countyLabel) countyLabel.textContent = 'County';
-        }
-        LT_CATS.forEach(cat => {
-            const sel = document.getElementById(cat + '_id');
-            if (sel) {
-                sel.innerHTML = '';
-                if (sel._msTrigger) { sel._msTrigger.textContent = 'Any'; sel._msTrigger.dataset.active = 'false'; }
-            }
-        });
-
-        if (!stateId) return;
-
-        const [geoData, ltData] = await Promise.all([
-            fetch(`/api/geo-units/?state=${encodeURIComponent(stateId)}`).then(r => r.json()),
-            fetch(`/api/license-types/?state=${encodeURIComponent(stateId)}`).then(r => r.json()),
-        ]);
-
-        if (countySelect) {
-            (geoData.results || []).forEach(unit => {
-                const opt = document.createElement('option');
-                opt.value = unit.id;
-                opt.textContent = unit.name;
-                countySelect.appendChild(opt);
-            });
-            if (countyLabel) countyLabel.textContent = geoData.issuance_unit_label || 'County';
-        }
-
-        LT_CATS.forEach(cat => {
-            const sel = document.getElementById(cat + '_id');
-            if (!sel) return;
-            (ltData.results[cat] || []).forEach(lt => {
-                const opt = document.createElement('option');
-                opt.value = lt.id;
-                opt.textContent = lt.name;
-                sel.appendChild(opt);
-            });
-            if (sel._msRebuild) sel._msRebuild();
-        });
-    });
-
-    /* ── Custom multi-select ── */
-    let openPanel = null;
-
-    function closeAll() {
-        if (openPanel) { openPanel.remove(); openPanel = null; }
-    }
-
-    document.addEventListener('click', closeAll);
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAll(); });
-
-    function buildMultiSelect(selectEl) {
-        const wrapper = selectEl.parentElement;
-        selectEl.style.display = 'none';
-        const trigger = document.createElement('button');
-        trigger.type = 'button';
-        trigger.className = 'ms-trigger';
-        selectEl._msTrigger = trigger;
-        wrapper.appendChild(trigger);
-
-        function updateLabel() {
-            const checked = Array.from(selectEl.selectedOptions).filter(o => o.value);
-            trigger.textContent = checked.length === 0 ? 'Any' : `${checked.length} selected`;
-            trigger.dataset.active = checked.length > 0 ? 'true' : 'false';
-        }
-        updateLabel();
-
-        function buildPanel() {
-            const panel = document.createElement('div');
-            panel.className = 'ms-panel';
-            Array.from(selectEl.options).forEach(opt => {
-                if (!opt.value) return;
-                const lbl = document.createElement('label');
-                lbl.className = 'ms-option';
-                const cb = document.createElement('input');
-                cb.type = 'checkbox';
-                cb.value = opt.value;
-                cb.checked = opt.selected;
-                cb.addEventListener('change', () => { opt.selected = cb.checked; updateLabel(); });
-                lbl.appendChild(cb);
-                lbl.appendChild(document.createTextNode(' ' + opt.text));
-                panel.appendChild(lbl);
-            });
-            const clearBtn = document.createElement('button');
-            clearBtn.type = 'button';
-            clearBtn.className = 'ms-clear';
-            clearBtn.textContent = 'Clear selection';
-            clearBtn.addEventListener('click', e => {
-                e.stopPropagation();
-                Array.from(selectEl.options).forEach(o => { o.selected = false; });
-                updateLabel();
-                closeAll();
-            });
-            panel.appendChild(clearBtn);
-            panel.addEventListener('click', e => e.stopPropagation());
-            return panel;
-        }
-
-        selectEl._msRebuild = () => {
-            if (openPanel && openPanel._owner === selectEl) { openPanel.remove(); openPanel = null; }
-            updateLabel();
-        };
-
-        trigger.addEventListener('click', e => {
-            e.stopPropagation();
-            if (openPanel && openPanel._owner === selectEl) { closeAll(); return; }
-            closeAll();
-            const panel = buildPanel();
-            panel._owner = selectEl;
-            document.body.appendChild(panel);
-            const rect = trigger.getBoundingClientRect();
-            panel.style.top  = (rect.bottom + window.scrollY + 2) + 'px';
-            panel.style.left = (rect.left + window.scrollX) + 'px';
-            panel.style.minWidth = rect.width + 'px';
-            openPanel = panel;
-        });
-    }
-
-    document.querySelectorAll('select[data-ms]').forEach(buildMultiSelect);
-});
-</script>
-{% endblock %}
+{% block extra_js %}<script src="{% static 'js/collections-filters.js' %}"></script>{% endblock %}

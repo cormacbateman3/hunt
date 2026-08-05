@@ -1,0 +1,13 @@
+{% comment %}
+Follow, wherever a collector is named. Its own POST form, so it can never be
+nested inside a filter form — see 13a's rail, which is a GET form itself.
+{% endcomment %}
+{% if user.is_authenticated and target.id != user.id %}
+    <form method="post" action="{% url 'accounts:follow_toggle' target.username %}" class="co-follow">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button type="submit" class="kb-btn kb-btn--secondary kb-btn--sm{% if target.id in following_ids %} is-on{% endif %}">
+            {% if target.id in following_ids %}Following{% else %}Follow{% endif %}
+        </button>
+    </form>
+{% endif %}

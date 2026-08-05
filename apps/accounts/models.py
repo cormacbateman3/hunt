@@ -1,8 +1,40 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.db.models import F, Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 import uuid
+
+
+class Follow(models.Model):
+    """One collector keeping another within reach.
+
+    13a and 3b both put Follow beside Propose a trade, and it means the
+    smaller of the two things: keep this person's case where I can find it.
+    It is deliberately not a notification subscription and deliberately not
+    symmetrical — nobody has to accept being followed.
+    """
+
+    follower = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='following')
+    following = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='followers')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Follow'
+        verbose_name_plural = 'Follows'
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['follower', 'following'], name='unique_follow'),
+            models.CheckConstraint(
+                check=~Q(follower=F('following')), name='no_self_follow'),
+        ]
+        indexes = [models.Index(fields=['following', '-created_at'])]
+
+    def __str__(self):
+        return f'{self.follower.username} follows {self.following.username}'
 
 
 class Address(models.Model):

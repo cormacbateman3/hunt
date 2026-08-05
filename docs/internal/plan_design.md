@@ -203,34 +203,62 @@ Dev plan **10.17**.
 
 ---
 
-## Pass 3 — Collections zone ⬜ NEXT
+## Pass 3 — Collections zone ✅ DONE
+
+*2026-08-04 · 199 tests green (40 added)*
 
 **Design refs** — turn 13a (browse collectors), 13b (everything owned), 3b
-(collector profile), 10a (my collection), 10b (matrix + wanted list).
+(collector profile), 18a (two of the three defects).
 
-The zone has **four tabs**: `Collectors` (opens first) · `Everything owned` ·
-`Trade board` · `The map`.
+The zone now has **four tabs**: `Collectors` (opens first) · `Everything owned` ·
+`Trade board` · `The map` — `templates/components/_collections_tabs.html`, band 2
+of the shell. `/collections/` is one dispatching view (`collections_zone`).
 
-- **Collectors** — people sorted by *overlap with you*, not join date. Big card for
-  the ~8 who overlap (of-your-wants / items / sets going, "in his words", a strip
-  of the display case, Propose a trade + Follow); compact card for everyone else.
-  Nobody gets an empty card — county and size are always known.
-- **Everything owned** — the existing item browse, kept. Three changes: the six
-  license-type categories stop being labelled with database names and read as
-  questions a person would ask; choices show as removable chips, not nine closed
-  dropdowns; **Apply is gone**, the grid updates as you go.
-- **Collector profile** — a display case with a person attached, not a settings
-  page in public. Trust card, display case, and a "looking for" rail
-  cross-referenced against the viewer's own collection (*you have one, 1931, mint*).
-- **My collection** (lives in My Bench, not here) — reorder to case → results →
-  list, bulk bar leading into selling, group-by, gaps as Map/Matrix/List.
-- **Two JS defects to fix in `browse_collections.html`** (18a) — see Carried-over.
+**What actually shipped**
+
+| Area | Detail |
+|---|---|
+| Collectors (13a) | `apps/collections/collectors.py` + `templates/collections/collectors.html`. Sorted by **overlap with you**, never join date. Big card for the ≤8 who overlap; compact card for everyone else; both carry county and size, so **nobody gets an empty card**. Rail: *Worth a look because* (four reasons, with counts), *Where they collect* (state + unit), *Era they collect* (chips), *Collection size* — all faceted the Hunt way, counts measured with every **other** filter applied. |
+| Matching (13a + 3b) | `apps/collections/matching.py` — the 10.14 wanted-list matcher pointed at people instead of new listings, exactly as 3b says it should be. Answers both directions: who holds something I want, and do I hold something on theirs. |
+| Everything owned (13b) | `templates/collections/browse_collections.html` rebuilt. Every filter kept; three things changed — categories read as **questions** (`LICENSE_TYPE_CATEGORY_QUESTIONS` in `apps/core/constants.py`), choices show as **removable chips**, and **Apply is gone** (it survives only inside `<noscript>`). Favourite count dropped from the card, owner kept — it is the seam between the two tabs. |
+| Collector profile (3b) | `templates/accounts/profile.html` rebuilt from a gradient header into a display case with a person attached. Trust card beside the name, captioned display case, **Ground covered** (the 10.14 tracker on a public profile), decade chips over the collection, and the *"looking for"* rail cross-referenced against the viewer's own shelves — **you have one, 1931, mint**. Wants the viewer can answer float to the top. |
+| Ground covered | `apps/collections/tracker.py` — units held against units issuing, the year span, and the **deepest unbroken run in one county**. Derived, never stored. Pass 4's matrix reads the same module. |
+| Follow | New `accounts.Follow` (migration `0005`) with a unique constraint and a `no_self_follow` check. Not symmetrical, not a notification subscription — 13a and 3b both want the smaller thing: keep this person's case within reach. |
+| Defect 1 (18a) | **Fixed.** `static/js/collections-filters.js` fetches first and clears second, so a dropped connection leaves the bar the collector was using intact; on failure it restores the previous state and says *couldn't load Colorado — try again* instead of rendering an empty select over nothing. |
+| Defect 2 (18a) | **Fixed.** The multi-select panel is an absolutely positioned child of its filter item instead of a `document.body` append positioned once, so it moves with its trigger and can no longer float over unrelated rows mid-scroll. |
+| Data defect found | `core/0004` seeds Pennsylvania's `issuance_unit_label` as *"County (historical); Wildlife Management Unit (WMU since 2003)"* — a true sentence in a field templates render as a **word** ("Any county…", "Counties 52 / 67"). Fresh installs got it; this dev DB happened not to. Migration `core/0009` falls any label carrying `;` or `(` back to `issuance_unit_type`. |
+
+**Deviations, and why**
+
+- **"Sets going"** on the collector card is **counties held** instead. There is no
+  `CollectionSet` model until Pass 13; the card keeps the design's three-figure
+  shape using a number that is real today. Swap it when 10.14 lands.
+- **"Propose a trade"** on the collector card is **"See their case"**. A trade
+  proposal today requires a *listing* (`trades:propose` takes a `listing_id`), so a
+  button promising a proposal would not have delivered one. It becomes the designed
+  action when 10.10 makes tradeability a property of the item — Pass 7.
+- **Display-case captions** use the item's own `description`. The design draws a
+  separate caption; a dedicated field is a candidate for Pass 4's my-collection work.
+- **Badges** under the bio are omitted, not faked — no model until Pass 14.
+- **"41 within a hundred miles"** in the header is **N will trade · N selling now**.
+  Distance needs geometry we do not have (same reason as the map).
+- The **State/County** facet reads *Where they collect*, filtered on their items,
+  not on `UserProfile.county` — that field is still free text until Pass 6, and
+  filtering people by an unvalidated string would quietly lose collectors.
+- The **map tab** says it isn't drawn rather than drawing a control over nothing
+  (16b's rule, and the design's own *"Map — no geometry"* screen).
+- **Trade board** leaves the zone for `/hunt/?format=trade` until Pass 7.
 
 ---
 
-## Pass 4 — My Bench: the rest of the workspace ⬜
+## Pass 4 — My Bench: the rest of the workspace ⬜ NEXT
 
 **Design refs** — turn 8a–8e, turn 7a–7d.
+
+> Pass 3 left two things here on purpose: **my collection** (10a/10b — case →
+> results → list, bulk bar into selling, group-by, gaps as Map/Matrix/List) reads
+> `apps/collections/tracker.py`, which now exists; and a **display-case caption**
+> field, if the item description proves to be the wrong thing to show.
 
 - **My listings** — the **Interest** column is the missing one: bids, watchers,
   offers, unanswered questions in one place. Unanswered things get the rust edge
@@ -507,22 +535,24 @@ Verified against the code on 2026-08-04.
 | Terms version + acceptance | 4b / 10.16 | Pass 6 |
 | `MarketplaceSettings.ship_by_days` | Pass 1 note | Pass 4 |
 
-## Two JS defects in `browse_collections.html` (18a)
+## Two JS defects in `browse_collections.html` (18a) ✅ FIXED in Pass 3
 
-Both fail by **showing a plausible-looking interface rather than an error** — the
-same rule as the empty states in 16b: never render a control over nothing.
+Both failed by **showing a plausible-looking interface rather than an error** — the
+same rule as the empty states in 16b: never render a control over nothing. The JS
+moved out of the template into `static/js/collections-filters.js` in the process.
 
-1. **Silent fetch failure.** Changing state clears the county select and all six
-   type selects *first*, then fetches replacements in a bare `Promise.all` with no
-   catch. Offline or a 500 leaves empty dropdowns in a state that definitely has
-   counties, with nothing suggesting a retry. Fix: fetch first, clear second;
-   restore the previous selection on rejection and say so.
-2. **Floating multi-select panel.** Appended to `document.body` and positioned once
-   from `getBoundingClientRect`. Nothing recalculates. Six of these sit in a strip
-   that scrolls sideways on any narrow window, so a live checkbox list floats over
-   unrelated rows — you can tick the wrong filter without knowing which one you
-   touched. Fix: close on scroll/resize, or better, position it as a child of the
-   filter item.
+1. **Silent fetch failure.** ✅ Changing state cleared the county select and all six
+   type selects *first*, then fetched replacements in a bare `Promise.all` with no
+   catch. Now: fetch first, clear second — nothing is touched until both responses
+   are in hand — and on rejection the previous state is restored with one line
+   under the bar saying which state couldn't be loaded.
+2. **Floating multi-select panel.** ✅ Was appended to `document.body` and positioned
+   once from `getBoundingClientRect`, so it floated over unrelated rows on any
+   scroll. Now an absolutely positioned child of the filter item, which moves with
+   its trigger for free — there is no position left to forget to recalculate.
+
+Defect 3 (the unconstrained `Strike` excuse) is untouched and still due before
+Pass 11 — see the carried-over table above.
 
 ## Three decisions the designer flags for the product owner (20a)
 
@@ -543,22 +573,50 @@ Where every `data-screen-label` in the design document lands.
 |---|---|---|
 | 1b/1c | shell, Bench, Hunt, listing detail, propose trade | 1 ✅ / 7 |
 | 2a–2e | masthead, home signed in/out, trade board | 2 |
-| 3a–3d | trade board v2, collector profile, settings | 7, 3, 6 |
+| 3a–3d | trade board v2, collector profile, settings | 7, **3 ✅**, 6 |
 | 4a–4c | sign in, create account, ten settings rooms | 6 |
 | 5a–5c | one door, add an item, offer it | 5 (superseded by 6) |
 | 6a–6c | step 1 destination, step 2 item, step 3 terms | 5 |
 | 7a–7d | orders list, order page, buyer states, handshake | 4 |
 | 8a–8e | my listings, bids & offers, saved, messages, notifications | 4 |
 | 9a–9f | letters, Q&A, review, report, appeal, lot, the map | 8, 9 |
-| 10a/10b | my collection, matrix, wanted list | 3 (matrix 🚧 13) |
-| 11a/11b | new set, new want | 13 🚧, 3 |
+| 10a/10b | my collection, matrix, wanted list | 4 (matrix 🚧 13) |
+| 11a/11b | new set, new want | 13 🚧, 4 |
 | 12a/12b | Almanac index, era guide, three questions, leaderboard | 14 🚧, 15 🚧 |
-| 13a/13b | browse collectors, everything owned | 3 |
+| 13a/13b | browse collectors, everything owned | **3 ✅** |
 | 14a/14b | units, matrix, map fallback, state picker | 10 |
 | 15a/15b | six mobile screens | 10 |
 | 16a/16b | all empty states | 10 |
 | 17a/17b | staff desk, strike review, taxonomy, prefill | 11 |
-| 18a | three defects | 11 (+ constraint before it) |
+| 18a | three defects | **two fixed in 3 ✅**; the `Strike` constraint before 11 |
 | 19a/19b | member page, moderation queue | 11 |
 | 20a | readiness sheet — the designer's own build order | reference |
 | 21a/21b | write an entry, thirteen badges | 14 🚧 |
+
+
+
+Other Notes:
+Where the design genuinely overrules — four places
+T13's two-page create flow, which is already shipped. listing_create_config.html is live. Turn 6 makes it three steps, deletes the "yours or stock" radio ("it was solving a problem the destination choice solves better"), and turns "from my collection" into a route that skips step 2 rather than a config toggle. I've put a ⚠ on Pass 5 noting it replaces working code — and that we keep T13's image slots while dropping T13's config page.
+
+10.20 Final UI/UX Polish Pass — I read its scope: global navigation, sensible grouping, consistent cards, an engaging home page, the brand voice, a mobile pass. That's the redesign, verbatim. 10.20 becomes a sign-off checklist rather than a task.
+
+10.11's "move filters to a horizontal layout" — turn 1c makes it a vertical rail with counts. Already built that way in Pass 1.
+
+Turn 5 → turn 6, internal to the design itself.
+
+10.10 is not a conflict. The dev plan and the design independently landed on the same thing — tradeability is a property of the item, not a marketplace. Worth saying because it looks like overlap and isn't.
+
+What's still owed from the data-model plan
+Untouched, and some of it the design actively needs:
+
+T3/T4 year ranges now have a new consumer — the tracker matrix reads first_year/last_year to hatch the "never issued" cells, so a gap you could never fill isn't counted against you
+T13 image slots (image_role) — reinforced by turn 6b, not superseded; still absent from the schema
+T13 lot images — turn 9d draws exactly T13's spec
+T5 taxonomy cleanup, T11 governance — 19b says ReferenceDataSuggestion's accept-and-apply "is the whole job"
+T14 ledger, R6 gold labels, prefill polish, Postgres check — all stand
+And the design adds what the data-model plan deferred: it explicitly parked WantedItem ("revisit with 10.14"), and turn 11b now specifies its five fields.
+
+
+
+add Special Issue or Limited Edition as an add-on attribute.

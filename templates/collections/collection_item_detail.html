@@ -5,7 +5,7 @@
 {% block content %}
 <section style="max-width: 1000px; margin: 0 auto;">
     <p style="margin-bottom: 0.75rem;">
-        <a href="{% url 'collections:browse' %}" style="color: var(--color-aged-amber);">&larr; Browse collections</a>
+        <a href="{% url 'collectors' %}?tab=owned" style="color: var(--color-aged-amber);">&larr; Everything owned</a>
         {% if is_owner %}
             &middot; <a href="{% url 'collections:my_collection' %}" style="color: var(--color-aged-amber);">My collection</a>
         {% endif %}

@@ -1,0 +1,258 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Collectors &middot; KeystoneBid{% endblock %}
+
+{% block context_band %}{% include 'components/_collections_tabs.html' %}{% endblock %}
+
+{% block main_class %}kb-collectors{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/collectors.css' %}">{% endblock %}
+
+{% block content %}
+{% comment %}
+Turn 13a. Sorted by overlap with you, never by join date — a collector
+holding four things off your wanted list belongs above one who signed up
+yesterday, and the page is worthless if it doesn't say so.
+{% endcomment %}
+
+{% comment %}
+The rail *is* the form. Wrapping the results in it as well would nest the
+per-collector Follow forms inside a GET form, which is invalid; the sort
+select reaches back into it with the `form` attribute instead.
+{% endcomment %}
+<header class="kb-between co-head">
+    <div>
+        <h1 class="kb-page-title">Collectors</h1>
+        <p class="co-head-sub">
+            {{ total }} {% if total == 1 %}person{% else %}people{% endif %}
+            {% if trade_total %}&middot; {{ trade_total }} will trade{% endif %}
+            {% if selling_total %}&middot; {{ selling_total }} selling now{% endif %}
+        </p>
+    </div>
+    <label class="co-sort">
+        <span class="kb-sr">Sort collectors</span>
+        <select name="sort" form="co-filters" class="kb-select" onchange="this.form.submit()">
+            {% for option in sorts %}
+                <option value="{{ option.key }}" {% if option.active %}selected{% endif %}>Sort: {{ option.label }}</option>
+            {% endfor %}
+        </select>
+    </label>
+</header>
+
+<div class="co-layout">
+
+        <form method="get" id="co-filters" class="co-rail" aria-label="Who to show">
+            <input type="hidden" name="tab" value="people">
+            <div class="co-rail-search">
+                <label class="kb-sr" for="co-name">Find a collector by name</label>
+                <input type="search" id="co-name" name="q" value="{{ name_query }}"
+                       class="kb-input" placeholder="Find a collector by name">
+            </div>
+
+            <section class="kb-panel co-panel">
+                <div class="kb-panel-head">
+                    <span class="kb-eyebrow kb-eyebrow--brass">Who to show</span>
+                    {% if request.GET.urlencode %}
+                        <a href="{% url 'collectors' %}" class="co-clear">Clear all</a>
+                    {% endif %}
+                </div>
+
+                <div class="co-facet">
+                    <h2 class="co-facet-title">Worth a look because</h2>
+                    {% for reason in facets.because %}
+                        <label class="kb-check">
+                            <span class="kb-check-label">
+                                <input type="checkbox" name="because" value="{{ reason.key }}"
+                                       {% if reason.checked %}checked{% endif %}
+                                       onchange="this.form.submit()">
+                                {{ reason.label }}
+                            </span>
+                            <span class="kb-check-count">{{ reason.count }}</span>
+                        </label>
+                    {% endfor %}
+                    {% if not has_wants and user.is_authenticated %}
+                        <p class="kb-hint">
+                            Two of these read your wanted list, which is empty.
+                            <a href="{% url 'collections:wanted_create' %}">Name one thing you&rsquo;re after</a>
+                            and this page rearranges itself around it.
+                        </p>
+                    {% endif %}
+                </div>
+
+                <div class="co-facet">
+                    <h2 class="co-facet-title">Where they collect</h2>
+                    <select name="state_id" class="kb-select" onchange="this.form.submit()">
+                        <option value="">Anywhere</option>
+                        {% for state in states %}
+                            <option value="{{ state.id }}" {% if selected_state.id == state.id %}selected{% endif %}>{{ state.name }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if counties %}
+                        <select name="county_id" class="kb-select" onchange="this.form.submit()">
+                            <option value="">Any {{ unit_label|lower }}</option>
+                            {% for county in counties %}
+                                <option value="{{ county.id }}" {% if request.GET.county_id == county.id|stringformat:'s' %}selected{% endif %}>{{ county.name }}</option>
+                            {% endfor %}
+                        </select>
+                    {% endif %}
+                    <p class="kb-hint">The label follows the state &mdash; parishes in Louisiana, boroughs in Alaska.</p>
+                </div>
+
+                <div class="co-facet">
+                    <h2 class="co-facet-title">Era they collect</h2>
+                    <div class="co-era">
+                        {% for era in facets.eras %}
+                            <label class="co-era-chip {% if era.checked %}is-on{% endif %}">
+                                <input type="checkbox" name="era" value="{{ era.key }}"
+                                       {% if era.checked %}checked{% endif %}
+                                       onchange="this.form.submit()">
+                                {{ era.label }}
+                            </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="co-facet co-facet--last">
+                    <h2 class="co-facet-title">Collection size</h2>
+                    {% for size in facets.sizes %}
+                        <label class="kb-check">
+                            <span class="kb-check-label">
+                                <input type="checkbox" name="size" value="{{ size.key }}"
+                                       {% if size.checked %}checked{% endif %}
+                                       onchange="this.form.submit()">
+                                {{ size.label }}
+                            </span>
+                            <span class="kb-check-count">{{ size.count }}</span>
+                        </label>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <noscript><button type="submit" class="kb-btn kb-btn--primary kb-btn--block">Apply</button></noscript>
+        </form>
+
+        <div class="co-results">
+
+            {% comment %}
+            Two cards, one shape. The big card is for the handful who overlap
+            with you; the compact one is everybody else.
+            {% endcomment %}
+            <div class="co-grid">
+                {% for row in rows %}{% if row.big %}
+                    <article class="co-card {% if row.of_your_wants %}co-card--overlap{% endif %}">
+                        <span class="co-card-edge" aria-hidden="true"></span>
+                        <div class="co-card-body">
+                            <div class="co-card-head">
+                                {% if row.user.profile.avatar %}
+                                    <img src="{{ row.user.profile.avatar.url }}" alt="" class="co-portrait">
+                                {% else %}
+                                    <span class="co-portrait co-portrait--blank" aria-hidden="true"></span>
+                                {% endif %}
+                                <div class="co-card-who">
+                                    <a href="{% url 'accounts:profile' row.user.username %}" class="co-name">{{ row.name }}</a>
+                                    <span class="co-where">{{ row.place }}{% if row.since %} &middot; {{ row.since }}{% endif %}</span>
+                                </div>
+                                {% if row.will_trade %}<span class="co-flag">Will trade</span>{% endif %}
+                            </div>
+
+                            <div class="co-stats">
+                                <div class="co-stat co-stat--lead">
+                                    <span class="co-stat-figure">{{ row.of_your_wants }}</span>
+                                    <span class="co-stat-label">of your wants</span>
+                                </div>
+                                <div class="co-stat">
+                                    <span class="co-stat-figure">{{ row.item_count }}</span>
+                                    <span class="co-stat-label">item{{ row.item_count|pluralize }}</span>
+                                </div>
+                                <div class="co-stat">
+                                    <span class="co-stat-figure">{{ row.county_count }}</span>
+                                    <span class="co-stat-label">count{{ row.county_count|pluralize:'y,ies' }} held</span>
+                                </div>
+                            </div>
+
+                            {% if row.bio %}
+                                <div class="co-words">
+                                    <span class="kb-eyebrow">In their words</span>
+                                    <p>{{ row.bio|truncatechars:190 }}</p>
+                                </div>
+                            {% endif %}
+
+                            <a href="{% url 'accounts:profile' row.user.username %}" class="co-strip">
+                                {% for item in row.case %}
+                                    <span class="co-strip-cell">
+                                        {% if item.images.all %}
+                                            <img src="{{ item.images.all.0.image.url }}" alt="" loading="lazy">
+                                        {% endif %}
+                                    </span>
+                                {% endfor %}
+                                <span class="co-strip-more">their case &rarr;</span>
+                            </a>
+
+                            <div class="co-card-foot">
+                                <a href="{% url 'accounts:profile' row.user.username %}" class="kb-btn kb-btn--primary kb-btn--sm">See their case</a>
+                                {% include 'accounts/_follow_button.html' with target=row.user %}
+                                <span class="co-foot-note">
+                                    {% if row.selling_count %}{{ row.selling_count }} selling now
+                                    {% elif row.wants_from_you %}Wants {{ row.wants_from_you }} thing{{ row.wants_from_you|pluralize }} you hold
+                                    {% else %}Nothing for sale{% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </article>
+                {% endif %}{% endfor %}
+            </div>
+
+            <div class="co-grid">
+                {% for row in rows %}{% if not row.big %}
+                    <article class="co-mini">
+                        <div class="co-card-head">
+                            {% if row.user.profile.avatar %}
+                                <img src="{{ row.user.profile.avatar.url }}" alt="" class="co-portrait co-portrait--sm">
+                            {% else %}
+                                <span class="co-portrait co-portrait--sm co-portrait--blank" aria-hidden="true"></span>
+                            {% endif %}
+                            <div class="co-card-who">
+                                <a href="{% url 'accounts:profile' row.user.username %}" class="co-name co-name--sm">{{ row.name }}</a>
+                                <span class="co-where">{{ row.place }} &middot; {{ row.item_count }} item{{ row.item_count|pluralize }} &middot; {{ row.county_count }} count{{ row.county_count|pluralize:'y,ies' }}</span>
+                            </div>
+                            <span class="co-mini-overlap">
+                                {% if row.of_your_wants %}{{ row.of_your_wants }} of your wants{% else %}none of your wants{% endif %}
+                            </span>
+                        </div>
+                        {% if row.bio %}<p class="co-mini-words">{{ row.bio|truncatechars:120 }}</p>{% endif %}
+                        <div class="co-card-foot">
+                            <a href="{% url 'accounts:profile' row.user.username %}" class="kb-btn kb-btn--secondary kb-btn--sm">See their collection</a>
+                            {% include 'accounts/_follow_button.html' with target=row.user %}
+                            <span class="co-foot-note">
+                                {% if row.selling_count %}{{ row.selling_count }} selling now
+                                {% elif row.will_trade %}Open to trades{% else %}Nothing for sale{% endif %}
+                            </span>
+                        </div>
+                    </article>
+                {% endif %}{% endfor %}
+            </div>
+
+            {% if not rows %}
+                <div class="kb-empty">
+                    <h2>Nobody matches that yet</h2>
+                    <p>
+                        {% if total %}
+                            Loosen one of the filters on the left &mdash; &ldquo;worth a look because&rdquo;
+                            narrows hardest.
+                        {% else %}
+                            No collector has put anything on public show yet. The first one to do it
+                            will be the whole of this page.
+                        {% endif %}
+                    </p>
+                    <div class="kb-empty-actions">
+                        <a href="{% url 'collectors' %}" class="kb-btn kb-btn--secondary">Clear the filters</a>
+                        {% if user.is_authenticated %}
+                            <a href="{% url 'collections:create' %}" class="kb-btn kb-btn--primary">Add an item of your own</a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+</div>
+{% endblock %}

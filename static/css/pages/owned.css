@@ -1,0 +1,377 @@
+/* ==========================================================================
+   Everything owned — the item browse, second tab of Collections
+   Spec: design turn 13b.
+
+   Every filter the old bar had is still here. What changed: the six
+   license-type categories read as questions, what you've chosen shows as
+   removable chips instead of hiding inside nine closed dropdowns, and
+   Apply is gone.
+   ========================================================================== */
+
+.kb-owned {
+    max-width: var(--kb-page-max);
+    margin: 0 auto;
+    padding: var(--kb-6) var(--kb-gutter) var(--kb-8);
+}
+
+.ow-frame {
+    background: var(--kb-surface);
+    border: 1px solid var(--kb-rule-panel);
+    border-radius: var(--kb-r-xl);
+    overflow: hidden;
+}
+
+.ow-frame-head {
+    background: var(--kb-parchment-soft);
+    border-bottom: 1px solid var(--kb-rule-panel);
+    padding: 11px 20px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--kb-4);
+}
+
+.ow-count {
+    font-size: 12.5px;
+    color: var(--kb-ink-3);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── The bar ─────────────────────────────────────────────────────────── */
+.ow-filters {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--kb-rule-panel);
+    background: var(--kb-page);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ow-row {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr 1fr 1fr;
+    gap: 10px;
+}
+
+.ow-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.ow-field .kb-input,
+.ow-field .kb-select {
+    width: 100%;
+}
+
+.ow-row--types {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+}
+
+.ow-row-label {
+    color: var(--kb-ink-3);
+}
+
+.ow-ms {
+    position: relative;
+}
+
+.ow-ms select[data-ms] {
+    display: none;
+}
+
+/* A trigger reads as its own question, with the number chosen in brass —
+   the point of 13b is that you can see what you've narrowed without
+   opening anything. */
+.ms-trigger {
+    font: var(--kb-text-meta);
+    color: var(--kb-ink-2);
+    border: 1px solid var(--kb-rule-strong);
+    background: var(--kb-surface);
+    border-radius: var(--kb-r-chip);
+    padding: 5px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.ms-trigger:hover {
+    border-color: var(--kb-forest);
+}
+
+.ms-trigger[data-active="true"] {
+    color: var(--kb-forest);
+    border-color: var(--kb-forest);
+    font-weight: 600;
+}
+
+.ms-trigger-count {
+    color: var(--kb-brass);
+    font-weight: 600;
+}
+
+/* Child of the filter item, not of document.body — it moves with its
+   trigger for free (18a, defect 2). */
+.ms-panel {
+    position: absolute;
+    top: calc(100% + 3px);
+    left: 0;
+    z-index: 40;
+    min-width: 210px;
+    max-height: 280px;
+    overflow-y: auto;
+    background: var(--kb-surface);
+    border: 1px solid var(--kb-rule-strong);
+    border-radius: var(--kb-r-sm);
+    box-shadow: var(--kb-shadow-panel);
+    padding: 7px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ms-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--kb-ink);
+    padding: 5px 7px;
+    border-radius: var(--kb-r-micro);
+    cursor: pointer;
+}
+
+.ms-option:hover {
+    background: var(--kb-parchment-soft);
+}
+
+.ms-option input {
+    accent-color: var(--kb-forest);
+    margin: 0;
+}
+
+.ms-none {
+    margin: 0;
+    padding: 8px 7px;
+    font-size: 12.5px;
+    color: var(--kb-ink-4);
+}
+
+.ow-years {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.kb-input--year {
+    width: 78px;
+    padding: 5px 8px;
+    font-size: 12.5px;
+}
+
+.ow-years-dash {
+    color: var(--kb-ink-4);
+}
+
+/* ── Applied chips ───────────────────────────────────────────────────── */
+.ow-row--applied {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+    border-top: 1px solid var(--kb-rule);
+    padding-top: 12px;
+}
+
+.ow-nothing {
+    font-size: 12.5px;
+    color: var(--kb-ink-4);
+}
+
+.ow-clear {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--kb-brass);
+    text-decoration: none;
+}
+
+.ow-row-spacer {
+    flex: 1;
+}
+
+.ow-sort .kb-select {
+    font-size: 12px;
+    padding: 5px 10px;
+}
+
+.ow-filter-error {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--kb-rust);
+}
+
+/* ── Items ───────────────────────────────────────────────────────────── */
+.ow-grid {
+    padding: 18px 20px 20px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+}
+
+.ow-empty {
+    grid-column: 1 / -1;
+}
+
+.ow-item {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-sm);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: var(--kb-surface);
+}
+
+.ow-item:hover {
+    border-color: var(--kb-rule-strong);
+}
+
+.ow-item-media {
+    aspect-ratio: 3 / 2;
+    background: var(--kb-fill-placeholder);
+    border-bottom: 1px solid var(--kb-rule);
+    display: block;
+    position: relative;
+}
+
+.ow-item-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.ow-item-blank {
+    position: absolute;
+    inset: 0;
+    background: var(--kb-parchment);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11.5px;
+    color: var(--kb-ink-5);
+}
+
+.ow-item-body {
+    padding: 11px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.ow-item-title {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--kb-forest);
+    text-decoration: none;
+}
+
+.ow-item-title:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.ow-item-meta {
+    font-size: 11.5px;
+    color: var(--kb-ink-3);
+}
+
+.ow-item-grade {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--kb-ink-2);
+    border: 1px solid var(--kb-rule-strong);
+    border-radius: var(--kb-r-chip);
+    padding: 2px 6px;
+    align-self: flex-start;
+    margin-top: 3px;
+}
+
+/* The owner stays; it is the seam between this tab and Collectors. */
+.ow-item-foot {
+    border-top: 1px solid var(--kb-rule-soft);
+    padding: 9px 12px;
+    background: var(--kb-page);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.ow-item-owner {
+    font-size: 11.5px;
+    color: var(--kb-ink-3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ow-item-profile {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--kb-brass);
+    text-decoration: none;
+    flex-shrink: 0;
+}
+
+/* ── Pager ───────────────────────────────────────────────────────────── */
+.ow-pager {
+    border-top: 1px solid var(--kb-rule-panel);
+    background: var(--kb-page);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--kb-4);
+}
+
+.ow-pager-where {
+    font-size: 12.5px;
+    color: var(--kb-ink-3);
+}
+
+.ow-pager-links {
+    display: flex;
+    gap: var(--kb-4);
+}
+
+.ow-pager-links a {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--kb-forest);
+    text-decoration: none;
+}
+
+.ow-pager-links a:hover {
+    color: var(--kb-brass);
+}
+
+/* ── Narrow ──────────────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+    .ow-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 860px) {
+    .ow-row { grid-template-columns: 1fr 1fr; }
+    .ow-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 520px) {
+    .ow-row { grid-template-columns: 1fr; }
+    .ow-grid { grid-template-columns: 1fr; }
+    .ow-row-spacer { display: none; }
+}

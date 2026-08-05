@@ -58,6 +58,20 @@ FORM_LICENSE_TYPE_CATEGORIES = [
     'material',
 ]
 
+# The same six categories, asked the way a person would ask them (design 13b:
+# they "were labelled with their database names — holder_eligibility,
+# activity_scope, addon_type — and now read as questions a person would ask").
+# Filters and browse UI use these; the admin and the model keep the schema
+# names, which is where they belong.
+LICENSE_TYPE_CATEGORY_QUESTIONS = {
+    'residency': 'Residency',
+    'holder_eligibility': 'Who could hold it',
+    'activity_scope': 'What it covered',
+    'duration': 'How long',
+    'addon_type': 'Attachments',
+    'material': 'Material',
+}
+
 SHAPE_CHOICES = [
     ('rectangle', 'Rectangle'),
     ('square', 'Square'),

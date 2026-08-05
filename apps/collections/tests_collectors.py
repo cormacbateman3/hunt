@@ -1,0 +1,230 @@
+"""Collectors — people, sorted by overlap with you.
+
+Turn 13a (browse collectors) and 13b (everything owned). The thing worth
+testing hardest is the ranking: the page is worthless if a collector holding
+four things off your wanted list doesn't beat one who signed up yesterday.
+"""
+
+from django.contrib.auth.models import User
+from django.test import TestCase
+from django.urls import reverse
+
+from apps.collections.models import CollectionItem, WantedItem
+from apps.collections.tracker import ground_covered, plural_unit
+from apps.core.models import GeographicUnit, LicenseType, State
+
+
+class CollectorsBaseTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.pa, _ = State.objects.get_or_create(
+            code='PA',
+            defaults={'name': 'Pennsylvania', 'slug': 'pennsylvania',
+                      'is_primary_default': True, 'issuance_unit_label': 'County'},
+        )
+        cls.cameron = GeographicUnit.objects.create(
+            state=cls.pa, name='Cameron', slug='pa-cameron')
+        cls.lycoming = GeographicUnit.objects.create(
+            state=cls.pa, name='Lycoming', slug='pa-lycoming')
+
+        cls.me = User.objects.create_user('co_me', password='pw')
+        cls.walt = User.objects.create_user('co_walt', password='pw')
+        cls.dale = User.objects.create_user('co_dale', password='pw')
+        cls.quiet = User.objects.create_user('co_quiet', password='pw')
+
+        # Walt holds exactly what I want, in one county.
+        for year in (1931, 1932):
+            cls._item(cls.walt, county=cls.cameron, year=year)
+        # Dale holds far more, but nothing I asked for.
+        for year in range(1950, 1960):
+            cls._item(cls.dale, county=cls.lycoming, year=year)
+
+        cls.want = WantedItem.objects.create(
+            user=cls.me, state=cls.pa, county=cls.cameron,
+            year_min=1930, year_max=1935,
+        )
+
+    @classmethod
+    def _item(cls, owner, *, county, year, public=True, trade=True, title=None):
+        return CollectionItem.objects.create(
+            owner=owner, title=title or f'{year} {county.name}',
+            state=cls.pa, county=county, license_year=year,
+            is_public=public, trade_eligible=trade, condition_grade='good',
+        )
+
+
+class CollectorsZoneTests(CollectorsBaseTest):
+    def test_the_zone_opens_on_people_not_items(self):
+        """13a: 'Browse Collections browses items. Nobody wants an item from
+        a stranger — they want to know who has the rest.'"""
+        resp = self.client.get(reverse('collectors'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'collections/collectors.html')
+        self.assertTemplateNotUsed(resp, 'collections/browse_collections.html')
+
+    def test_the_zone_carries_four_tabs(self):
+        html = self.client.get(reverse('collectors')).content.decode()
+        for label in ('Collectors', 'Everything owned', 'Trade board', 'The map'):
+            self.assertIn(f'>{label}</a>', html)
+
+    def test_the_owned_tab_renders_the_item_browse(self):
+        resp = self.client.get(reverse('collectors'), {'tab': 'owned'})
+        self.assertTemplateUsed(resp, 'collections/browse_collections.html')
+
+    def test_the_map_says_it_is_not_drawn_rather_than_drawing_nothing(self):
+        """16b: never render a control over nothing."""
+        resp = self.client.get(reverse('collectors'), {'tab': 'map'})
+        self.assertContains(resp, 'isn&rsquo;t drawn yet')
+
+
+class OverlapRankingTests(CollectorsBaseTest):
+    def test_overlap_beats_size(self):
+        self.client.force_login(self.me)
+        rows = self.client.get(reverse('collectors')).context['rows']
+        order = [row['user'].username for row in rows]
+        self.assertLess(order.index('co_walt'), order.index('co_dale'))
+
+    def test_overlap_counts_wants_not_items(self):
+        """Walt holds two items against one want — that is 1 of your wants."""
+        self.client.force_login(self.me)
+        rows = self.client.get(reverse('collectors')).context['rows']
+        walt = next(r for r in rows if r['user'] == self.walt)
+        self.assertEqual(walt['of_your_wants'], 1)
+        self.assertEqual(walt['item_count'], 2)
+
+    def test_a_stranger_sees_the_biggest_cases_first(self):
+        """No wanted list means no overlap to rank by, so the page keeps its
+        shape by leading with the largest collections instead."""
+        rows = self.client.get(reverse('collectors')).context['rows']
+        self.assertEqual(rows[0]['user'], self.dale)
+        self.assertTrue(rows[0]['big'])
+
+    def test_you_are_never_in_your_own_collectors_list(self):
+        self._item(self.me, county=self.lycoming, year=1940)
+        self.client.force_login(self.me)
+        rows = self.client.get(reverse('collectors')).context['rows']
+        self.assertNotIn(self.me, [row['user'] for row in rows])
+
+    def test_a_collector_with_nothing_public_is_not_listed(self):
+        self._item(self.quiet, county=self.lycoming, year=1941, public=False)
+        rows = self.client.get(reverse('collectors')).context['rows']
+        self.assertNotIn(self.quiet, [row['user'] for row in rows])
+
+    def test_nobody_gets_an_empty_card(self):
+        """'County and size are always known even when a collector has
+        written nothing about themselves.'"""
+        rows = self.client.get(reverse('collectors')).context['rows']
+        for row in rows:
+            self.assertTrue(row['place'], f'{row["user"]} has no place line')
+            self.assertGreater(row['item_count'], 0)
+
+
+class CollectorFacetTests(CollectorsBaseTest):
+    def test_will_trade_narrows_to_people_with_trade_eligible_items(self):
+        CollectionItem.objects.filter(owner=self.dale).update(trade_eligible=False)
+        rows = self.client.get(
+            reverse('collectors'), {'because': 'will_trade'}).context['rows']
+        self.assertIn(self.walt, [row['user'] for row in rows])
+        self.assertNotIn(self.dale, [row['user'] for row in rows])
+
+    def test_i_own_something_they_want_reads_the_other_persons_list(self):
+        WantedItem.objects.create(
+            user=self.dale, state=self.pa, county=self.cameron,
+            year_min=1930, year_max=1935)
+        self._item(self.me, county=self.cameron, year=1931)
+
+        self.client.force_login(self.me)
+        rows = self.client.get(
+            reverse('collectors'), {'because': 'wants_mine'}).context['rows']
+        self.assertEqual([row['user'] for row in rows], [self.dale])
+
+    def test_size_bands_count_people_not_items(self):
+        facets = self.client.get(reverse('collectors')).context['facets']
+        bands = {row['label']: row['count'] for row in facets['sizes']}
+        self.assertEqual(bands['Under 50'], 2)     # Walt and Dale
+        self.assertEqual(bands['Over 250'], 0)
+
+    def test_era_facet_measures_against_the_other_filters(self):
+        facets = self.client.get(
+            reverse('collectors'), {'size': 'small'}).context['facets']
+        eras = {row['label']: row['count'] for row in facets['eras']}
+        self.assertEqual(eras['1930s'], 1)         # Walt
+        self.assertEqual(eras['1950s+'], 1)        # Dale
+
+    def test_filtering_by_where_they_collect(self):
+        erie = GeographicUnit.objects.create(state=self.pa, name='Erie', slug='pa-erie')
+        rows = self.client.get(
+            reverse('collectors'), {'county_id': erie.id}).context['rows']
+        self.assertEqual(rows, [])
+
+
+class EverythingOwnedTests(CollectorsBaseTest):
+    def test_categories_read_as_questions_not_column_names(self):
+        """13b: they 'were labelled with their database names ... and now
+        read as questions a person would ask'."""
+        LicenseType.objects.create(
+            name='Resident', category='residency', is_system_value=True)
+        LicenseType.objects.create(
+            name='Junior', category='holder_eligibility', is_system_value=True)
+
+        html = self.client.get(
+            reverse('collectors'), {'tab': 'owned'}).content.decode()
+        self.assertIn('Who could hold it', html)
+        self.assertNotIn('Holder Eligibility', html)
+
+    def test_apply_is_gone(self):
+        """'Apply is gone: the grid updates as you go.' It survives only
+        inside <noscript>, where there is nothing else to submit with."""
+        html = self.client.get(
+            reverse('collectors'), {'tab': 'owned'}).content.decode()
+        before_noscript = html.split('<noscript>')[0]
+        self.assertNotIn('>Apply<', before_noscript)
+        self.assertIn('<noscript>', html)
+
+    def test_what_you_chose_shows_as_a_removable_chip(self):
+        resp = self.client.get(
+            reverse('collectors'), {'tab': 'owned', 'search': 'cameron'})
+        chips = resp.context['applied_filters']
+        self.assertEqual([chip['label'] for chip in chips], ['Search: cameron'])
+        self.assertNotIn('search=cameron', chips[0]['url'])
+        self.assertIn('tab=owned', chips[0]['url'])
+
+    def test_a_chip_removes_only_its_own_value(self):
+        resp = self.client.get(reverse('collectors'), {
+            'tab': 'owned', 'era': ['1930s', '1950s'],
+        })
+        chips = {chip['label']: chip['url'] for chip in resp.context['applied_filters']}
+        self.assertIn('era=1950s', chips['1930s'])
+        self.assertNotIn('era=1930s', chips['1930s'])
+
+    def test_the_card_keeps_the_owner_and_drops_the_favourite_count(self):
+        html = self.client.get(
+            reverse('collectors'), {'tab': 'owned'}).content.decode()
+        self.assertIn('co_walt', html)
+        self.assertNotIn('fav', html.split('ow-grid')[1])
+
+
+class GroundCoveredTests(CollectorsBaseTest):
+    def test_deepest_run_is_the_longest_unbroken_stretch_in_one_county(self):
+        for year in (1913, 1914, 1915, 1920):
+            self._item(self.quiet, county=self.lycoming, year=year)
+        self._item(self.quiet, county=self.cameron, year=1913)
+
+        ground = ground_covered(self.quiet)
+        self.assertEqual(ground['deepest'],
+                         {'county': 'Lycoming', 'from': 1913, 'to': 1915})
+        self.assertEqual(ground['held'], 2)
+        self.assertEqual(ground['span'], (1913, 1920))
+
+    def test_a_single_year_is_not_a_run(self):
+        self._item(self.quiet, county=self.lycoming, year=1913)
+        self.assertIsNone(ground_covered(self.quiet)['deepest'])
+
+    def test_nothing_located_measures_nothing(self):
+        self.assertIsNone(ground_covered(self.quiet))
+
+    def test_the_unit_word_survives_the_states_that_are_not_counties(self):
+        self.assertEqual(plural_unit('County'), 'Counties')
+        self.assertEqual(plural_unit('Parish'), 'Parishes')
+        self.assertEqual(plural_unit('Borough'), 'Boroughs')
+        self.assertEqual(plural_unit('Census Area'), 'Census Areas')
