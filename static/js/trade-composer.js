@@ -175,6 +175,69 @@
         if (box) { box.checked = false; box.dispatchEvent(new Event('change', {bubbles: true})); }
     });
 
+    /* ── Dragging ──────────────────────────────────────────────────────
+     * The panel says "drag from my collection", so it drags. It also says
+     * "or press +", because a keyboard and a touchscreen both need the
+     * checkbox — and the checkbox is what actually submits either way.
+     *
+     * A licence can only cross to its owner's half: you cannot drag one of
+     * yours onto "I receive", because that is not a thing you can offer. */
+    function setPick(pk, on) {
+        var box = form.querySelector('.tb-piece-pick[value="' + pk + '"]');
+        if (!box || box.disabled || box.checked === on) { return; }
+        box.checked = on;
+        box.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    form.addEventListener('dragstart', function (e) {
+        var piece = e.target.closest('.tb-piece');
+        if (!piece || piece.classList.contains('is-held')) { return; }
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', piece.dataset.pk);
+        piece.classList.add('is-lifting');
+        form.dataset.dragging = piece.dataset.side;
+    });
+
+    form.addEventListener('dragend', function (e) {
+        var piece = e.target.closest('.tb-piece');
+        if (piece) { piece.classList.remove('is-lifting'); }
+        delete form.dataset.dragging;
+        form.querySelectorAll('.is-drop-target').forEach(function (zone) {
+            zone.classList.remove('is-drop-target');
+        });
+    });
+
+    function zoneFor(target) {
+        var laid = target.closest('.tb-laid');
+        if (laid) { return { el: laid, side: laid.dataset.table, on: true }; }
+        var shelf = target.closest('.tb-shelf');
+        if (shelf) { return { el: shelf, side: shelf.dataset.shelf, on: false }; }
+        return null;
+    }
+
+    form.addEventListener('dragover', function (e) {
+        var zone = zoneFor(e.target);
+        if (!zone || zone.side !== form.dataset.dragging) { return; }
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        zone.el.classList.add('is-drop-target');
+    });
+
+    form.addEventListener('dragleave', function (e) {
+        var zone = zoneFor(e.target);
+        if (zone && !zone.el.contains(e.relatedTarget)) {
+            zone.el.classList.remove('is-drop-target');
+        }
+    });
+
+    form.addEventListener('drop', function (e) {
+        var zone = zoneFor(e.target);
+        if (!zone || zone.side !== form.dataset.dragging) { return; }
+        e.preventDefault();
+        zone.el.classList.remove('is-drop-target');
+        setPick(e.dataTransfer.getData('text/plain'), zone.on);
+    });
+
     /* ── Finding, on the shelves ───────────────────────────────────── */
     var state = { mine: { q: '', filter: '' }, theirs: { q: '', filter: '' } };
 

@@ -16,6 +16,8 @@ side posts to. Pass `laid=True` for the table card.
 {% endcomment %}
 <li class="tb-piece{% if row.on_table %} is-on-table{% endif %}{% if not row.available %} is-held{% endif %}"
     data-pk="{{ row.item.pk }}"
+    data-side="{% if field == 'requested_items' or laid_side == 'theirs' %}theirs{% else %}mine{% endif %}"
+    {% if row.available %}draggable="true"{% endif %}
     data-note="{{ row.note_kind }}"
     data-find="{{ row.item.title|lower }} {{ row.item.county.name|default:''|lower }} {{ row.item.license_year|default:'' }}">
     <{% if laid %}span{% else %}label{% endif %} class="tb-piece-hit">

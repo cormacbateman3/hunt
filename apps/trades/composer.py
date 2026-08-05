@@ -19,7 +19,7 @@ from django.db.models import Q
 
 from apps.collections.matching import holdings, holdings_matching
 from apps.collections.models import CollectionItem, WantedItem
-from apps.collections.tradeability import open_to_trade, trade_block_label
+from apps.collections.tradeability import trade_block_label, would_trade
 
 # Past this the list stops being something you scroll and starts being
 # something you search. The count above it always tells the truth about how
@@ -93,7 +93,7 @@ def _year_by_county(user):
     return out
 
 
-def roster(*, owner, reader, on_table, side, pinned=None):
+def roster(*, owner, reader, on_table, side, came_for=None):
     """One shelf, annotated for the person reading it.
 
     ``owner`` holds the pieces. ``reader`` is whoever is looking — which is
@@ -122,19 +122,17 @@ def roster(*, owner, reader, on_table, side, pinned=None):
         .order_by('-created_at')[:ROSTER_LIMIT]
     )
     if side == 'theirs':
-        # Somebody else's shelf shows only what they put on public show, and
-        # only what they have left open.
+        # **Tradeability is the toggle, not visibility.** These are two
+        # separate answers: `is_public` decides whether a piece shows on a
+        # profile, `tradeability` decides whether its owner will hear an
+        # offer on it. Filtering on both hid pieces their owner had opened
+        # to trade and simply not put on public show — which is exactly the
+        # piece somebody would want asked about.
         allowed = set(
-            open_to_trade(CollectionItem.objects.filter(owner=owner, is_public=True))
+            would_trade(CollectionItem.objects.filter(owner=owner))
             .values_list('pk', flat=True)
         )
         items = [i for i in items if i.pk in allowed]
-
-    # The piece the negotiation is about is already laid out on the table and
-    # cannot be taken off, so listing it again on the shelf offers a pick
-    # that does nothing.
-    if pinned is not None:
-        items = [i for i in items if i.pk != pinned]
 
     # "7 of 61" has to count the same set at both ends. Reading the total off
     # a query while the rows came from a trimmed list produced "1 of 0".
@@ -157,7 +155,10 @@ def roster(*, owner, reader, on_table, side, pinned=None):
 
     rows = []
     for item in items:
-        blocked = trade_block_label(item, mine=True) if side == 'mine' else ''
+        # Both shelves, not just your own: a piece the other trader has
+        # opened but which is mid-auction is still theirs and still worth
+        # seeing — it just cannot be asked for today.
+        blocked = trade_block_label(item, mine=(side == 'mine'))
         note, kind = '', ''
 
         if blocked:
@@ -177,10 +178,15 @@ def roster(*, owner, reader, on_table, side, pinned=None):
             elif item.county_id and item.license_year in years.get(item.county_id, ()):
                 note, kind = f'You have {item.license_year}', 'wanted'
 
+        # The piece you arrived about keeps saying so wherever it ends up.
+        # It is the answer to "why am I on this page", and it stays true
+        # after you take it off the table to ask for something else.
+        if item.pk == came_for:
+            note, kind = 'What you came for', 'laid'
         # Already laid out: say so, and say nothing else. Whatever made the
         # row worth picking has been acted on, and repeating it competes
         # with the rows still asking to be read.
-        if item.pk in on_table:
+        elif item.pk in on_table:
             note, kind = 'On the table', 'laid'
         # A row with nothing else to say falls back to condition, which is
         # the next thing you would want to know and stops the shelf reading

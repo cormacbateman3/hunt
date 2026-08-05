@@ -447,19 +447,11 @@ def create_trade_offer(
         if blocked:
             return None, f'"{item.title}" cannot be traded: {blocked}'
 
-    # The subject is always on the table, on whichever side its owner is.
-    # Taking it off would turn the negotiation into a different one without
-    # anybody saying so.
-    if subject_item.owner_id == from_user.id:
-        if subject_item.pk not in {item.pk for item in offered_items}:
-            offered_items.insert(0, subject_item)
-    elif subject_item.pk not in {item.pk for item in requested}:
-        requested.insert(0, subject_item)
-
-    # Checked here rather than on the form, because the subject counts. When
-    # you are the one being asked for a licence it is already on your side
-    # and has no control of its own, so a form-level "required" would refuse
-    # a perfectly good one-for-one.
+    # `subject_item` is what the negotiation is **filed under**, not a piece
+    # nailed to the table. Swapping it out is an ordinary move — the design's
+    # own second round is "asked for the 1944 Fulton instead" — so every
+    # licence here has an ×, including the one you arrived about. The subject
+    # keeps the thread together; the table is free.
     if not offered_items:
         return None, 'Put at least one of your licences on the table.'
     if not requested:

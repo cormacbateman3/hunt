@@ -124,7 +124,12 @@ class RosterTests(ComposerBase):
         row = next(r for r in shelf['rows'] if r['item'] == self.theirs_a)
         self.assertEqual(row['note'], 'Closes a gap')
 
-    def test_their_shelf_only_shows_what_is_public_and_open(self):
+    def test_their_shelf_reads_tradeability_and_not_visibility(self):
+        """Two separate answers. `is_public` decides whether a piece shows
+        on a profile; `tradeability` decides whether its owner will hear an
+        offer on it. Filtering on both hid the pieces somebody had opened to
+        trade and simply not put on show — exactly the ones worth asking
+        about."""
         self.theirs_a.tradeability = 'closed'
         self.theirs_a.save(update_fields=['tradeability'])
         self.theirs_b.is_public = False
@@ -132,7 +137,7 @@ class RosterTests(ComposerBase):
 
         shelf = composer.roster(owner=self.walt, reader=self.rae,
                                 on_table=set(), side='theirs')
-        self.assertEqual(shelf['rows'], [])
+        self.assertEqual([r['item'] for r in shelf['rows']], [self.theirs_b])
 
     def test_what_is_on_the_table_leads_the_shelf(self):
         shelf = composer.roster(owner=self.rae, reader=self.rae,
@@ -157,11 +162,34 @@ class ComposerScreenTests(ComposerBase):
         self.assertContains(page, 'name="offered_items"')
         self.assertContains(page, 'name="requested_items"')
 
-    def test_the_listings_own_piece_is_already_on_the_table(self):
+    def test_the_piece_you_came_about_starts_on_the_table_and_can_come_off(self):
+        """It is laid out for you, but it is an ordinary row with an ×.
+
+        Nailing it down would refuse the commonest counter there is — the
+        design's own second round is "asked for the 1944 Fulton instead".
+        """
         listing = self._listing(self.theirs_a)
         page = self.client.get(reverse('trades:propose', args=[listing.pk]))
-        self.assertEqual(page.context['anchor'], self.theirs_a)
+
+        row = next(r for r in page.context['theirs']['rows']
+                   if r['item'] == self.theirs_a)
+        self.assertTrue(row['on_table'])
+        self.assertTrue(row['available'])
         self.assertContains(page, 'What you came for')
+
+    def test_you_can_ask_for_something_else_instead(self):
+        listing = self._listing(self.theirs_a)
+        self.client.post(reverse('trades:propose', args=[listing.pk]), {
+            'offered_items': [self.mine_a.pk],
+            'requested_items': [self.theirs_b.pk],   # not the one we arrived at
+            'expires_days': 4,
+        })
+        offer = TradeOffer.objects.get()
+        requested = {i.collection_item for i in offer.items.all()
+                     if i.direction == 'requested'}
+        self.assertEqual(requested, {self.theirs_b})
+        # It still belongs to the same negotiation.
+        self.assertEqual(offer.subject_item, self.theirs_a)
 
     def test_a_general_store_shelf_can_take_a_trade_offer(self):
         """Three ways to ask for the same licence, and this is the third."""
@@ -185,12 +213,15 @@ class ComposerScreenTests(ComposerBase):
         offer = TradeOffer.objects.get()
         requested = {i.collection_item for i in offer.items.all()
                      if i.direction == 'requested'}
-        self.assertEqual(requested, {self.theirs_a, self.theirs_b})
+        # Only what was actually picked. The piece you arrived about is laid
+        # out for you, not welded down.
+        self.assertEqual(requested, {self.theirs_b})
 
     def test_cash_can_run_towards_the_proposer(self):
         listing = self._listing(self.theirs_a, allow_cash=True)
         self.client.post(reverse('trades:propose', args=[listing.pk]), {
             'offered_items': [self.mine_a.pk],
+            'requested_items': [self.theirs_a.pk],
             'cash_amount': '40.00',
             'cash_direction': 'to_proposer',
             'expires_days': 4,
@@ -254,12 +285,13 @@ class PersonLevelProposeTests(ComposerBase):
         page = self.client.get(
             reverse('trades:propose_on_item', args=[self.theirs_a.pk]))
         self.assertEqual(page.status_code, 200)
-        self.assertEqual(page.context['anchor'], self.theirs_a)
+        self.assertEqual(page.context['subject'], self.theirs_a)
         self.assertIsNone(page.context['listing'])
 
     def test_the_offer_records_the_piece_and_no_lot(self):
         self.client.post(reverse('trades:propose_on_item', args=[self.theirs_a.pk]), {
             'offered_items': [self.mine_a.pk],
+            'requested_items': [self.theirs_a.pk],
             'expires_days': 4,
         })
         offer = TradeOffer.objects.get()
@@ -290,7 +322,8 @@ class PersonLevelProposeTests(ComposerBase):
 
     def test_a_piece_already_committed_cannot_be_asked_for_twice(self):
         self.client.post(reverse('trades:propose_on_item', args=[self.theirs_a.pk]), {
-            'offered_items': [self.mine_a.pk], 'expires_days': 4})
+            'offered_items': [self.mine_a.pk],
+            'requested_items': [self.theirs_a.pk], 'expires_days': 4})
         offer = TradeOffer.objects.get()
         self.client.force_login(self.walt)
         self.client.post(reverse('trades:offer_action', args=[offer.pk, 'accept']))
@@ -334,15 +367,11 @@ class DecisionScreenTests(ComposerBase):
         self.offer = TradeOffer.objects.get()
 
     def _laid(self, context):
-        """What is on each half of the table, from the reader's side.
-
-        The subject piece sits with its owner, which flips when the reader
-        does — that is the thing worth asserting.
-        """
-        give = {r['item'] for r in context['mine']['rows'] if r['on_table']}
-        get = {r['item'] for r in context['theirs']['rows'] if r['on_table']}
-        (give if context['anchor_is_mine'] else get).add(context['anchor'])
-        return give, get
+        """What is on each half of the table, from the reader's side."""
+        return (
+            {r['item'] for r in context['mine']['rows'] if r['on_table']},
+            {r['item'] for r in context['theirs']['rows'] if r['on_table']},
+        )
 
     def test_arriving_at_an_offer_gets_the_table_and_both_shelves(self):
         self.client.force_login(self.walt)
@@ -356,12 +385,12 @@ class DecisionScreenTests(ComposerBase):
         giving, receiving = self._laid(self.client.get(
             reverse('trades:offer_detail', args=[self.offer.pk])).context)
         self.assertEqual(giving, {self.mine_a})
-        self.assertEqual(receiving, {self.theirs_a, self.theirs_b})
+        self.assertEqual(receiving, {self.theirs_b})
 
         self.client.force_login(self.walt)
         giving, receiving = self._laid(self.client.get(
             reverse('trades:offer_detail', args=[self.offer.pk])).context)
-        self.assertEqual(giving, {self.theirs_a, self.theirs_b})
+        self.assertEqual(giving, {self.theirs_b})
         self.assertEqual(receiving, {self.mine_a})
 
     def test_the_cash_arrow_turns_round_with_the_reader(self):
@@ -418,17 +447,13 @@ class DecisionScreenTests(ComposerBase):
         page = self.client.get(reverse('trades:trade_detail', args=[trade.pk]))
         self.assertEqual(page.status_code, 200)
         self.assertContains(page, 'What was agreed')
-        self.assertEqual(set(page.context['table']['giving']),
-                         {self.theirs_a, self.theirs_b})
+        self.assertEqual(set(page.context['table']['giving']), {self.theirs_b})
 
-    def test_the_recipient_can_counter_with_only_the_piece_asked_for(self):
-        """A one-for-one where the licence they want is your whole side.
-
-        It has no checkbox — it is fixed on the table — so a form-level
-        "at least one offered item" refused a perfectly good counter.
-        """
+    def test_the_recipient_can_counter_one_for_one(self):
+        """The licence they asked for is your whole side of the table."""
         self.client.force_login(self.walt)
         self.client.post(reverse('trades:offer_detail', args=[self.offer.pk]), {
+            'offered_items': [self.theirs_b.pk],
             'requested_items': [self.mine_b.pk],
             'expires_days': 4,
         })
@@ -436,7 +461,7 @@ class DecisionScreenTests(ComposerBase):
         counter = TradeOffer.objects.exclude(pk=self.offer.pk).get()
         offered = {i.collection_item for i in counter.items.all()
                    if i.direction == 'offered'}
-        self.assertEqual(offered, {self.theirs_a})
+        self.assertEqual(offered, {self.theirs_b})
 
     def test_a_settled_offer_stops_being_a_workbench(self):
         self.client.force_login(self.walt)
@@ -462,6 +487,7 @@ class TheDrawingTests(ComposerBase):
         self.client.force_login(self.rae)
         self.client.post(reverse('trades:propose', args=[listing.pk]), {
             'offered_items': [self.mine_a.pk],
+            'requested_items': [self.theirs_a.pk],
             'cash_amount': '40.00',
             'cash_direction': 'to_proposer',
             'expires_days': 4,

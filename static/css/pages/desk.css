@@ -189,6 +189,10 @@
     font-variant-numeric: tabular-nums;
 }
 
+/* A trade has no price — the licences are the figures. Same slot, same
+   weight, so the two kinds of row still scan as one column. */
+.desk-price--pieces { color: var(--kb-forest); }
+
 .desk-from {
     font-size: 11px;
     color: var(--kb-ink-4);

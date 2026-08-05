@@ -284,6 +284,19 @@
 .tb-piece.is-held .tb-piece-title { color: var(--kb-ink-3); }
 .tb-piece.is-hidden { display: none; }
 
+/* ── Dragging ──────────────────────────────────────────────────────── */
+.tb-piece[draggable="true"] { cursor: grab; }
+.tb-piece.is-lifting { opacity: 0.4; }
+
+/* Only the half a licence could legitimately cross to lights up, so an
+   impossible drop never looks like an available one. */
+.tb-laid.is-drop-target {
+    outline: 1px dashed var(--kb-brass);
+    outline-offset: -4px;
+}
+
+.tb-shelf.is-drop-target { background: var(--kb-parchment-soft); }
+
 /* ── The table ─────────────────────────────────────────────────────── */
 .tb-table {
     background: var(--kb-table);

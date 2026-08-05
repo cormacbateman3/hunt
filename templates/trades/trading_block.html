@@ -114,9 +114,8 @@ full width underneath all three columns.
                             I give <span class="tb-half-count" data-count="give">{{ giving_count }}</span>
                         </h3>
                         <ul class="tb-laid" data-table="mine">
-                            {% if anchor_is_mine %}{% include 'trades/_anchor.html' %}{% endif %}
                             {% for row in mine.rows %}{% if row.on_table %}
-                                {% include 'trades/_piece.html' with row=row laid=True %}
+                                {% include 'trades/_piece.html' with row=row laid=True laid_side='mine' %}
                             {% endif %}{% endfor %}
                         </ul>
                         {% comment %}
@@ -124,7 +123,7 @@ full width underneath all three columns.
                         next one goes, and the only thing saying the shelf
                         beside it is a source.
                         {% endcomment %}
-                        <p class="tb-empty" data-empty="mine">Drag from my collection</p>
+                        <p class="tb-empty" data-empty="mine">Drag from my collection, or press +</p>
                         {% comment %}
                         Lit when it is in play, dim when it isn't — and the
                         figure is rendered here rather than left to a script,
@@ -156,13 +155,12 @@ full width underneath all three columns.
                             I receive <span class="tb-half-count" data-count="get">{{ receiving_count }}</span>
                         </h3>
                         <ul class="tb-laid" data-table="theirs">
-                            {% if not anchor_is_mine %}{% include 'trades/_anchor.html' %}{% endif %}
                             {% for row in theirs.rows %}{% if row.on_table %}
-                                {% include 'trades/_piece.html' with row=row laid=True %}
+                                {% include 'trades/_piece.html' with row=row laid=True laid_side='theirs' %}
                             {% endif %}{% endfor %}
                         </ul>
                         <p class="tb-empty" data-empty="theirs">
-                            Drag from {{ other.profile.get_display_name|default:other.username }}&rsquo;s collection
+                            Drag from {{ other.profile.get_display_name|default:other.username }}&rsquo;s collection, or press +
                         </p>
                         <div class="tb-cash{% if cash_amount and cash_side == 'to_proposer' %} is-on{% endif %}"
                              data-cash="to_proposer">
@@ -318,14 +316,12 @@ full width underneath all three columns.
                 <div>
                     <span class="kb-eyebrow">Leaving you</span>
                     <ul>
-                        {% if anchor_is_mine %}<li>{{ anchor.title }}</li>{% endif %}
                         {% for row in mine.rows %}{% if row.on_table %}<li>{{ row.item.title }}</li>{% endif %}{% endfor %}
                     </ul>
                 </div>
                 <div>
                     <span class="kb-eyebrow">Coming to you</span>
                     <ul>
-                        {% if not anchor_is_mine %}<li>{{ anchor.title }}</li>{% endif %}
                         {% for row in theirs.rows %}{% if row.on_table %}<li>{{ row.item.title }}</li>{% endif %}{% endfor %}
                     </ul>
                 </div>

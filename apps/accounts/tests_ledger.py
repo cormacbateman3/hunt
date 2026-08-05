@@ -204,3 +204,81 @@ class LedgerPageTests(LedgerBase):
         html = self.client.get(reverse('bids:my_bids')).content.decode()
         self.assertIn('csrfmiddlewaretoken', html)
         self.assertNotIn('href="/offers/1/action/withdraw/"', html)
+
+
+class TradesOnTheLedgerTests(LedgerBase):
+    """A trade offer is money committed too — it just isn't cash.
+
+    They were invisible here: the page read `Bid` and `Offer` and nothing
+    else, so you could send a trade offer and find no trace of it anywhere
+    on your bench. A negotiation that only exists on its own screen is one
+    nobody remembers to answer.
+    """
+
+    def _piece(self, owner, title):
+        from apps.collections.models import CollectionItem
+        return CollectionItem.objects.create(
+            owner=owner, title=title, state=self.pa,
+            condition_grade='good', is_public=True)
+
+    def _trade(self, *, proposer, recipient, **kwargs):
+        from apps.trades.models import TradeOffer, TradeOfferItem
+        offer = TradeOffer.objects.create(
+            subject_item=self._piece(recipient, 'Their 1916 Cameron'),
+            from_user=proposer, to_user=recipient, status='pending',
+            expires_at=timezone.now() + timedelta(days=3), **kwargs)
+        TradeOfferItem.objects.create(
+            offer=offer, collection_item=self._piece(proposer, 'My 1929 Potter'),
+            direction='offered')
+        TradeOfferItem.objects.create(
+            offer=offer, collection_item=offer.subject_item, direction='requested')
+        return offer
+
+    def test_one_i_sent_sits_with_the_offers_i_made(self):
+        self._trade(proposer=self.me, recipient=self.them)
+        rows = ledger(self.me)['chasing']
+        self.assertEqual(len(rows), 1)
+        self.assertTrue(rows[0]['context'].startswith('Trade'))
+        self.assertEqual(rows[0]['headline'], 'Waiting on them')
+
+    def test_one_sent_to_me_sits_with_the_offers_on_my_things(self):
+        self._trade(proposer=self.them, recipient=self.me)
+        rows = ledger(self.me)['on_my_things']
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]['headline'], 'Your turn')
+        self.assertEqual(ledger(self.me)['waiting_on_you'], 1)
+
+    def test_the_money_columns_carry_licences_instead_of_a_price(self):
+        self._trade(proposer=self.me, recipient=self.them)
+        row = ledger(self.me)['chasing'][0]
+        self.assertEqual(row['mine_text'], '1 licence')
+        self.assertEqual(row['theirs_text'], '1 licence')
+        self.assertNotIn('mine', row)
+
+    def test_a_trade_i_sent_can_still_be_withdrawn(self):
+        """A bid cannot be taken back; a trade offer can, until answered."""
+        self._trade(proposer=self.me, recipient=self.them)
+        action = ledger(self.me)['chasing'][0]['action']
+        self.assertEqual(action['label'], 'Withdraw')
+        self.assertTrue(action['post'])
+
+    def test_the_cash_note_turns_round_with_the_reader(self):
+        from decimal import Decimal as D
+        self._trade(proposer=self.them, recipient=self.me,
+                    cash_amount=D('40'), cash_direction='to_proposer')
+        # They asked for $40, so it comes out of my pocket.
+        self.assertIn('from you', ledger(self.me)['on_my_things'][0]['note'])
+
+    def test_the_page_renders_a_trade_without_a_listing_behind_it(self):
+        self._trade(proposer=self.them, recipient=self.me)
+        self.client.force_login(self.me)
+        page = self.client.get(reverse('bids:my_bids'))
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, 'Their 1916 Cameron')
+        self.assertContains(page, '1 licence')
+
+    def test_a_settled_trade_leaves_the_ledger(self):
+        offer = self._trade(proposer=self.me, recipient=self.them)
+        offer.status = 'declined'
+        offer.save(update_fields=['status'])
+        self.assertEqual(ledger(self.me)['chasing'], [])

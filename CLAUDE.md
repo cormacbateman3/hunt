@@ -7,6 +7,8 @@ https://claude.ai/design/p/5353903d-008e-4c32-8ae3-7e06d53e3302?file=KeystoneBid
 
 The design plans are not a suggestion they are what we are building.
 
+You may use react.
+
 Focus on these files (the whole project is readable):
 - `KeystoneBid UX Revamp.dc.html`
 

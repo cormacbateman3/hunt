@@ -136,15 +136,15 @@ def _trading_block(request, *, subject, other, listing=None, offer=None):
         theirs = {i.collection_item_id for i in items
                   if i.direction == ('requested' if proposing else 'offered')}
     else:
-        mine, theirs = set(), set()
+        # Opening a negotiation lays the piece you came about on the table
+        # already — but as an ordinary row with an ×, because swapping it out
+        # is a normal move. The design's own second round is "asked for the
+        # 1944 Fulton instead".
+        mine, theirs = set(), {subject.pk}
 
     thread = composer.thread(offer) if offer else []
-    # The subject sits on whichever side its owner is. On a counter that is
-    # the reader's own side, so the table has to move it across rather than
-    # pinning it under "I receive" and quietly lying.
     subject_is_mine = subject.owner_id == request.user.id
-    giving = len(mine | ({subject.pk} if subject_is_mine else set()))
-    receiving = len(theirs | (set() if subject_is_mine else {subject.pk}))
+    giving, receiving = len(mine), len(theirs)
 
     # Cash direction is recorded from the proposer's side and never changes,
     # because it is a record. Which strip lights, and whether the sentence
@@ -161,14 +161,12 @@ def _trading_block(request, *, subject, other, listing=None, offer=None):
         'offer': offer,
         'form': form,
         'other': other,
-        'mine': composer.roster(owner=request.user, reader=request.user,
-                                side='mine', on_table=mine,
-                                pinned=subject.pk if subject_is_mine else None),
-        'theirs': composer.roster(owner=other, reader=request.user,
-                                  side='theirs', on_table=theirs,
-                                  pinned=None if subject_is_mine else subject.pk),
-        'anchor': subject,
-        'anchor_is_mine': subject_is_mine,
+        'mine': composer.roster(
+            owner=request.user, reader=request.user, side='mine',
+            on_table=mine, came_for=subject.pk if subject_is_mine else None),
+        'theirs': composer.roster(
+            owner=other, reader=request.user, side='theirs',
+            on_table=theirs, came_for=None if subject_is_mine else subject.pk),
         'allow_cash': listing.allow_cash if listing else True,
         'trader_trust': composer.trader_trust(other),
         # A date, not a duration. "Both ship by Mon 10 Aug" is a thing you

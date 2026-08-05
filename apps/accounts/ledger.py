@@ -99,6 +99,7 @@ def _chasing_bids(user, now):
         if ahead:
             rows.append({
                 'listing': listing, 'thumb': _thumb(listing),
+                'title': listing.title, 'url': listing.get_absolute_url(),
                 'context': f'Auction · {listing.seller.profile.get_display_name()}',
                 'mine_label': 'Yours', 'mine': amount,
                 'theirs_label': 'Now at', 'theirs': at, 'theirs_tone': 'live',
@@ -113,6 +114,7 @@ def _chasing_bids(user, now):
             next_bid = minimum_bid_for(listing)
             rows.append({
                 'listing': listing, 'thumb': _thumb(listing),
+                'title': listing.title, 'url': listing.get_absolute_url(),
                 'context': f'Auction · {listing.seller.profile.get_display_name()}',
                 'mine_label': 'Yours', 'mine': amount,
                 'theirs_label': 'Now at', 'theirs': at, 'theirs_tone': 'rust',
@@ -132,6 +134,7 @@ def _my_offer_row(offer, now):
     seller = listing.seller.profile.get_display_name()
     base = {
         'listing': listing, 'thumb': _thumb(listing),
+        'title': listing.title, 'url': listing.get_absolute_url(),
         'context': f'Store offer · {seller}',
         'mine_label': 'You offered', 'mine': offer.amount,
         'at': offer.expires_at,
@@ -179,6 +182,7 @@ def _on_my_things_row(offer, now):
 
     return {
         'listing': listing, 'thumb': _thumb(listing),
+        'title': listing.title, 'url': listing.get_absolute_url(),
         'context': f'From {buyer}',
         'mine_label': 'They offered', 'mine': offer.amount,
         'theirs_label': 'You’re asking', 'theirs': listing.buy_now_price,
@@ -192,8 +196,80 @@ def _on_my_things_row(offer, now):
     }
 
 
+def _trade_row(offer, user, now):
+    """A trade offer, in the same two columns as everything else.
+
+    It has no price, and that is the point: the money columns carry the
+    licences instead. A collector with three trades open and one bid wants
+    them on one page — the split that matters is direction, not mechanism,
+    and a negotiation that only exists on its own screen is one nobody
+    remembers to answer.
+    """
+    from apps.trades.composer import table_for
+
+    table = table_for(offer, user)
+    mine_to_answer = offer.to_user_id == user.id
+    other = offer.from_user if mine_to_answer else offer.to_user
+    subject = offer.subject_item
+
+    cash = ''
+    if offer.cash_amount:
+        cash = (f' · ${offer.cash_amount:,.0f} to you' if table['cash_to_me']
+                else f' · ${offer.cash_amount:,.0f} from you')
+
+    row = {
+        'listing': offer.trade_listing,
+        'title': subject.title if subject else 'A trade',
+        'thumb': _piece_thumb(subject),
+        'context': f'Trade · {other.profile.get_display_name()}',
+        'mine_label': 'You give', 'mine_text': _pieces(table['giving']),
+        'theirs_label': 'You get', 'theirs_text': _pieces(table['receiving']),
+        'theirs_tone': 'plain',
+        'at': offer.expires_at,
+        'url': reverse('trades:offer_detail', args=[offer.pk]),
+    }
+
+    if mine_to_answer:
+        lapse = _lapses_in(offer, now)
+        return {
+            **row,
+            'headline': 'Your turn',
+            'tone': 'brass',
+            'note': (f'{subject.title}{cash}' if subject else cash.lstrip(' ·')),
+            'action': {'label': 'Decide', 'url': row['url'], 'style': 'primary'},
+            'sort': 0,
+        }
+
+    return {
+        **row,
+        'headline': 'Waiting on them',
+        'tone': 'plain',
+        'note': _lapses_in(offer, now) or (cash.lstrip(' ·') if cash else ''),
+        # A bid cannot be taken back; a trade offer can, until it is answered.
+        'action': {'label': 'Withdraw',
+                   'url': reverse('trades:offer_action', args=[offer.pk, 'withdraw']),
+                   'style': 'secondary', 'post': True},
+        'sort': 1,
+    }
+
+
+def _piece_thumb(item):
+    if not item:
+        return ''
+    image = item.images.first()
+    return image.image.url if image and image.image else ''
+
+
+def _pieces(items):
+    """'3 licences' — the trade equivalent of a figure in the money column."""
+    count = len(items)
+    return f'{count} licence{"" if count == 1 else "s"}'
+
+
 def ledger(user):
     """Both directions, each already sorted by what needs deciding first."""
+    from apps.trades.models import TradeOffer
+
     now = timezone.now()
 
     offers = (
@@ -201,6 +277,13 @@ def ledger(user):
         .filter(Q(from_user=user) | Q(to_user=user))
         .select_related('listing__seller__profile', 'from_user__profile',
                         'to_user__profile')
+    )
+    trades = (
+        TradeOffer.objects.filter(status='pending')
+        .filter(Q(from_user=user) | Q(to_user=user))
+        .select_related('from_user__profile', 'to_user__profile',
+                        'subject_item', 'trade_listing')
+        .prefetch_related('items__collection_item', 'subject_item__images')
     )
 
     chasing = _chasing_bids(user, now)
@@ -210,6 +293,12 @@ def ledger(user):
             chasing.append(_my_offer_row(offer, now))
         else:
             on_my_things.append(_on_my_things_row(offer, now))
+
+    # Direction, not mechanism: a trade you proposed sits with the offers you
+    # made, and one that landed on you sits with the offers on your things.
+    for offer in trades:
+        row = _trade_row(offer, user, now)
+        (chasing if offer.from_user_id == user.id else on_my_things).append(row)
 
     def order(row):
         # Whatever needs a decision first, then whatever runs out soonest.

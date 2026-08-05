@@ -13,19 +13,36 @@ link: withdrawing an offer is one of them.
             <span class="desk-thumb desk-thumb--blank" aria-hidden="true"></span>
         {% endif %}
         <span class="kb-stack desk-item-text">
-            <a href="{{ row.listing.get_absolute_url }}" class="desk-title">{{ row.listing.title }}</a>
+            {% comment %}
+            A trade need not have a listing behind it since 10.10, so the
+            title and the link come off the row rather than out of one.
+            {% endcomment %}
+            <a href="{{ row.url }}" class="desk-title">{{ row.title }}</a>
             <span class="desk-sub">{{ row.context }}</span>
         </span>
     </div>
 
+    {% comment %}
+    Two columns, whatever is being weighed. A trade has no price — the
+    licences are the figures — so the same slots carry a count instead of a
+    sum rather than the row being shaped differently and read differently.
+    {% endcomment %}
     <div class="desk-money">
         <span class="desk-money-label">{{ row.mine_label }}</span>
-        <span class="desk-price">${{ row.mine|floatformat:2 }}</span>
+        {% if row.mine_text %}
+            <span class="desk-price desk-price--pieces">{{ row.mine_text }}</span>
+        {% else %}
+            <span class="desk-price">${{ row.mine|floatformat:2 }}</span>
+        {% endif %}
     </div>
 
     <div class="desk-money">
         <span class="desk-money-label">{{ row.theirs_label }}</span>
-        <span class="desk-price desk-price--{{ row.theirs_tone }}">${{ row.theirs|floatformat:2 }}</span>
+        {% if row.theirs_text %}
+            <span class="desk-price desk-price--pieces">{{ row.theirs_text }}</span>
+        {% else %}
+            <span class="desk-price desk-price--{{ row.theirs_tone }}">${{ row.theirs|floatformat:2 }}</span>
+        {% endif %}
     </div>
 
     <div class="kb-stack desk-stands">
