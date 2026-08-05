@@ -68,7 +68,8 @@ def trade_block_reason(item):
     """Why this piece cannot take an offer, or '' when it can.
 
     A reason rather than a boolean, because every refusal a member meets
-    should be able to say what it was.
+    should be able to say what it was. This is the sentence — see
+    :func:`trade_block_label` for the two words a 196px shelf row can hold.
     """
     if item.tradeability != 'open':
         return 'The owner has closed this piece to trade.'
@@ -78,6 +79,22 @@ def trade_block_reason(item):
     if held.listing_type == 'auction':
         return 'This piece is on an auction lot right now.'
     return 'A sale is going through on this piece right now.'
+
+
+def trade_block_label(item, *, mine=False):
+    """The same refusal in two words, for a list rather than a sentence.
+
+    A shelf row is 196px wide. The full reason ran off the end of it, and
+    it was written for a visitor besides — telling somebody "the owner has
+    closed this piece" about a licence in their own collection is the wrong
+    voice as well as the wrong length.
+    """
+    if item.tradeability != 'open':
+        return 'You closed this' if mine else 'Not for trade'
+    held = hold_on(item)
+    if held is None:
+        return ''
+    return 'At auction' if held.listing_type == 'auction' else 'Being bought'
 
 
 def is_open_to_trade(item):

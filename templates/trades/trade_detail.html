@@ -35,27 +35,29 @@ the only thing this page is really for is finding out whose turn it is.
         {% endif %}
 
         <section class="tb-band">
-            <p class="tb-band-who">
-                {{ trade.get_status_display }}
-                {% if trade.ship_by_deadline and trade.status == 'awaiting_shipments' %}
-                    &middot; both ship by {{ trade.ship_by_deadline|date:"j M" }}
-                {% endif %}
-            </p>
-            <p class="tb-band-terms">
-                {% if trade.status == 'completed' %}
-                    Done &mdash; both sides confirmed
-                {% elif not my_shipment.tracking_number %}
-                    Your side is waiting on you
-                {% elif not their_shipment.tracking_number %}
-                    Waiting on {{ other.profile.get_display_name|default:other.username }} to send theirs
-                {% else %}
-                    Both parcels are moving
-                {% endif %}
-            </p>
-            <p class="tb-band-small">
-                Each side ships its own, with tracking. The trade closes when both
-                parcels are confirmed received.
-            </p>
+            <div class="tb-band-said">
+                <p class="tb-band-who">
+                    {{ trade.get_status_display }}
+                    {% if trade.ship_by_deadline and trade.status == 'awaiting_shipments' %}
+                        &middot; both ship by {{ trade.ship_by_deadline|date:"D j M" }}
+                    {% endif %}
+                </p>
+                <p class="tb-band-terms">
+                    {% if trade.status == 'completed' %}
+                        Done &mdash; both sides confirmed
+                    {% elif not my_shipment.tracking_number %}
+                        Your side is waiting on you
+                    {% elif not their_shipment.tracking_number %}
+                        Waiting on {{ other.profile.get_display_name|default:other.username }} to send theirs
+                    {% else %}
+                        Both parcels are moving
+                    {% endif %}
+                </p>
+                <p class="tb-band-small">
+                    Each side ships its own, with tracking. The trade closes when both
+                    parcels are confirmed received.
+                </p>
+            </div>
         </section>
 
         <div class="tb-parcels">
@@ -133,11 +135,13 @@ the only thing this page is really for is finding out whose turn it is.
 
         {% if strikes %}
             <section class="tb-band">
-                <p class="tb-band-who">Something went wrong on this trade</p>
-                <p class="tb-band-small">
-                    A late parcel both sides agreed on is not a strike. Either of you
-                    can mark it settled and the other confirms within 72 hours.
-                </p>
+                <div class="tb-band-said">
+                    <p class="tb-band-who">Something went wrong on this trade</p>
+                    <p class="tb-band-small">
+                        A late parcel both sides agreed on is not a strike. Either of you
+                        can mark it settled and the other confirms within 72 hours.
+                    </p>
+                </div>
                 {% for strike in strikes %}
                     <div class="tb-strike">
                         <p class="tb-strike-what">
@@ -182,12 +186,16 @@ the only thing this page is really for is finding out whose turn it is.
 
         {% if trade.status == 'completed' %}
             <section class="tb-band">
-                <p class="tb-band-who">How was it?</p>
+                <div class="tb-band-said">
+                    <p class="tb-band-who">How was it?</p>
+                    {% if existing_review %}
+                        <p class="tb-band-small">
+                            You said: <strong>{{ existing_review.get_sentiment_display }}</strong>
+                            {% if existing_review.body %}&mdash; {{ existing_review.body }}{% endif %}
+                        </p>
+                    {% endif %}
+                </div>
                 {% if existing_review %}
-                    <p class="tb-band-small">
-                        You said: <strong>{{ existing_review.get_sentiment_display }}</strong>
-                        {% if existing_review.body %}&mdash; {{ existing_review.body }}{% endif %}
-                    </p>
                 {% elif can_review %}
                     <form method="post" action="{% url 'reviews:submit_trade' trade.pk %}" class="tb-review">
                         {% csrf_token %}

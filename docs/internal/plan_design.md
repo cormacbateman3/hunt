@@ -88,6 +88,24 @@ listed under **Field-level gaps** below.
    named in the pass. Do not work from this summary alone — the copy, the exact
    metrics and the designer's rationale live in the source and the voice *is* the
    deliverable.
+
+   > ### ⚠ Read the drawing, not the prose
+   >
+   > Each turn opens with a paragraph describing what changed. **That paragraph is
+   > not the specification.** Find the frame by its `data-screen-label`, walk to the
+   > matching `</div>`, and read the `style` attributes: every colour, size and
+   > padding is stated there.
+   >
+   > Turn 3a was built from its paragraph and shipped wrong. The paragraph said "one
+   > dark panel", "196px picker lists", "300px rail", "brass arrow", "Petrona 21px" —
+   > all implemented — while the frame said the licences on that panel are **cream
+   > `#f4f1e8` cards**, which is the entire point of the turn and was rendered at
+   > `rgba(255,255,255,.055)`. It also said `#22301c` body against `#1e2a19` header
+   > against `#1b2416` / `#2b3a22` cash feet: four greens where one had been used.
+   >
+   > **Then render the page and read it.** 429 tests were green over a screen whose
+   > roster rows wrapped onto three lines and whose table text broke a character at a
+   > time. Tests assert context keys and substrings; they cannot see a layout.
 2. **Update this file at the end of every pass.** Move the pass to ✅, fill in the
    "What actually shipped" block, and record any deviation or newly-discovered gap.
 3. **A pass ends at a commit boundary** with the suite green.
@@ -612,6 +630,60 @@ The three Pass 3 markers are all cleared. The collector card opens on the piece 
 theirs that **answers something on your own wanted list**, falling back to whatever
 they most recently opened; the trade board's tile opens on its own piece. Landing on a
 chooser would ask a question the card already knows the answer to.
+
+### The rebuild against the frame's own values
+
+*Second correction, 2026-08-05. The first build of 3a came from the turn's paragraph;
+this one comes from its markup. See the reading rule at the top of this document.*
+
+**The two rendering faults** — invisible to a green suite, obvious the moment the page
+was drawn:
+
+1. `.tb-piece-hit` was a **three-column grid with four in-flow children**, so the mark
+   wrapped onto a second row under every licence in both shelves.
+2. `.tb-note` was `white-space: nowrap` in an `auto` column, so "WHAT YOU CAME FOR"
+   claimed ~130px of a ~241px half and the title broke a character at a time.
+
+Both had the same cause: **the note was a column when the design has it as the second
+line inside the text**. The row is `display:flex` with three children now.
+
+**Structure**
+
+| | Was | Now (from the frame) |
+|---|---|---|
+| Outer | one 4-column grid `196 1fr 196 300` | `1fr 300px`, rail beside the **whole** left stack |
+| The band | nested in the centre column, ~484px | spans the full 900px floor |
+| Halves | `1fr 30px 1fr`, bare glyph | `1fr 1px 1fr`, **30px brass disc** on the hairline |
+| Roster | header/list/foot as three loose blocks | **one white card**, hairline-divided rows |
+
+**Colour** — six tokens added, because the frame uses distinctions one flat green
+cannot carry: `--kb-table` `#22301c` · `--kb-table-edge` `#1a2416` · `--kb-table-head`
+`#1e2a19` · `--kb-table-cash` `#1b2416` · `--kb-table-cash-on` `#2b3a22` · plus
+`--kb-on-forest-give` `#d9ab5f` / `--kb-on-forest-get` `#9fc48c` for the two half
+labels.
+
+**The licences are cream now.** `--kb-cream` cards on the dark table — *"the licenses
+on the table become the brightest objects on the page"*, which is what the turn is for.
+
+**Other corrections from the same read**
+
+- A piece on the table **stays on its shelf**, tinted and ticked, and appears as a card
+  as well. It is a clone, not a move; the shelf keeps the checkbox that submits.
+- Shelf notes are **two words** — `trade_block_label()` beside `trade_block_reason()`.
+  "The owner has closed this piece to trade" ran off a 196px row and was the wrong
+  voice for somebody's own collection. It reads "At auction" / "You closed this".
+- `shown` and `total` count **the same set**; they printed "1 of 0".
+- The cash strip's direction and figure now turn round **with the reader** — Rae asks
+  for $40, so Rae sees "to me" and Walt sees "from me" — and the figure is rendered
+  server-side rather than waiting for a script.
+- The band gives a **date**: "Both ship by Mon 10 Aug", not "within 5 days".
+- Decline is a real white button with the softest border, not a text link; accept is
+  `14px/700` at `14px 30px` against the other two at `13px/600` at `12px 20px`.
+- Trader card is **parchment** with a 38px **square** of initials, and carries "Ships
+  in N days on average" — withheld below three shipped parcels, because one fast
+  parcel is not a reputation.
+
+`TheDrawingTests` holds the eight facts the layout depends on that a suite *can* see.
 
 ### Still open, and now genuinely small
 

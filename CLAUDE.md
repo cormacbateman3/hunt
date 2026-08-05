@@ -5,6 +5,8 @@ or access it here:
 Use the claude_design MCP (https://api.anthropic.com/v1/design/mcp, auth via /design-login) to import this project:
 https://claude.ai/design/p/5353903d-008e-4c32-8ae3-7e06d53e3302?file=KeystoneBid+UX+Revamp.dc.html
 
+The design plans are not a suggestion they are what we are building.
+
 Focus on these files (the whole project is readable):
 - `KeystoneBid UX Revamp.dc.html`
 

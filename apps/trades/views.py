@@ -1,3 +1,4 @@
+from datetime import timedelta
 from decimal import Decimal
 from django.utils import timezone
 from django.contrib import messages
@@ -52,6 +53,15 @@ def _posted_ids(request, field):
     if request.method != 'POST':
         return set()
     return {int(v) for v in request.POST.getlist(field) if v.isdigit()}
+
+
+def _ship_by_date():
+    """When both parcels would be due if this were accepted today.
+
+    `%-d` is not portable, so the day is interpolated rather than formatted.
+    """
+    due = timezone.localtime() + timedelta(days=ship_by_days())
+    return f'{due:%a} {due.day} {due:%b}'
 
 
 def _open_negotiations(user, *, excluding=None):
@@ -135,6 +145,16 @@ def _trading_block(request, *, subject, other, listing=None, offer=None):
     subject_is_mine = subject.owner_id == request.user.id
     giving = len(mine | ({subject.pk} if subject_is_mine else set()))
     receiving = len(theirs | (set() if subject_is_mine else {subject.pk}))
+
+    # Cash direction is recorded from the proposer's side and never changes,
+    # because it is a record. Which strip lights, and whether the sentence
+    # says "to me" or "from me", is a question about who is reading.
+    cash_amount = offer.cash_amount if offer and offer.cash_amount else None
+    if offer and request.user.id == offer.to_user_id:
+        cash_side = ('from_proposer' if offer.cash_direction == 'to_proposer'
+                     else 'to_proposer')
+    else:
+        cash_side = offer.cash_direction if offer else 'from_proposer'
     return {
         'subject': subject,
         'listing': listing,
@@ -151,6 +171,11 @@ def _trading_block(request, *, subject, other, listing=None, offer=None):
         'anchor_is_mine': subject_is_mine,
         'allow_cash': listing.allow_cash if listing else True,
         'trader_trust': composer.trader_trust(other),
+        # A date, not a duration. "Both ship by Mon 10 Aug" is a thing you
+        # can hold against a calendar; "within five days of acceptance" asks
+        # the reader to do the arithmetic that decides whether they take a
+        # strike.
+        'ship_by_date': _ship_by_date(),
         'ship_by_days': ship_by_days(),
         'thread': thread,
         'round_number': len(thread) + 1,
@@ -158,14 +183,14 @@ def _trading_block(request, *, subject, other, listing=None, offer=None):
         # runs — and it is the sentence the buttons are answering.
         'terms_line': composer.terms_line(
             giving=giving, receiving=receiving,
-            cash_amount=offer.cash_amount if offer else None,
-            cash_direction=(offer.cash_direction if offer else 'from_proposer'),
+            cash_amount=cash_amount, cash_direction=cash_side,
         ),
         'band_terms': composer.terms_line(
             giving=giving, receiving=receiving, mine=True,
-            cash_amount=offer.cash_amount if offer else None,
-            cash_direction=(offer.cash_direction if offer else 'from_proposer'),
+            cash_amount=cash_amount, cash_direction=cash_side,
         ),
+        'cash_amount': cash_amount,
+        'cash_side': cash_side,
         'giving_count': giving,
         'receiving_count': receiving,
         'answering': answering,

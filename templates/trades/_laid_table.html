@@ -27,14 +27,16 @@ Expects `table` from trades.composer.table_for.
                 {% endfor %}
             </ul>
             {% if table.cash_amount and not table.cash_to_me %}
-                <div class="tb-cash is-live is-on">
+                <div class="tb-cash is-on">
                     <span class="tb-cash-label">Cash I add</span>
                     <span class="tb-cash-figure">${{ table.cash_amount }}</span>
                 </div>
             {% endif %}
         </div>
 
-        <div class="tb-swap" aria-hidden="true">&#8646;</div>
+        <div class="tb-divide">
+            <span class="tb-swap" aria-hidden="true">&#8646;</span>
+        </div>
 
         <div class="tb-half tb-half--get">
             <h3 class="tb-half-title">
@@ -49,7 +51,7 @@ Expects `table` from trades.composer.table_for.
                 {% endfor %}
             </ul>
             {% if table.cash_amount and table.cash_to_me %}
-                <div class="tb-cash is-live is-on">
+                <div class="tb-cash is-on">
                     <span class="tb-cash-label">Cash to me</span>
                     <span class="tb-cash-figure">${{ table.cash_amount }}</span>
                 </div>

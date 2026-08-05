@@ -10,7 +10,7 @@ back whatever the form claims.
 It is also left off the shelf it came from, so the same licence is never in
 two places at once.
 
-Expects `anchor`.
+Expects `anchor` and `anchor_is_mine`.
 {% endcomment %}
 <li class="tb-piece is-anchor">
     <span class="tb-piece-hit">
@@ -24,10 +24,14 @@ Expects `anchor`.
                 {{ anchor.license_year|default:anchor.effective_era }}
                 {{ anchor.county.name|default:anchor.state.code|default:'' }}
             </span>
-            <span class="tb-piece-meta">{{ anchor.title|truncatechars:38 }}</span>
-        </span>
-        <span class="tb-note tb-note--anchor">
-            {% if anchor_is_mine %}What they asked for{% else %}What you came for{% endif %}
+            <span class="tb-piece-note tb-piece-note--anchor">
+                {% if anchor_is_mine %}What they asked for{% else %}What you came for{% endif %}
+            </span>
+            <span class="tb-piece-meta">
+                {{ anchor.county.name|default:anchor.state.code|default:'' }}
+                {% if anchor.license_year %}&middot; {{ anchor.license_year }}{% endif %}
+                {% if anchor.condition_grade %}&middot; {{ anchor.get_condition_grade_display }}{% endif %}
+            </span>
         </span>
     </span>
 </li>

@@ -85,7 +85,10 @@ class RosterTests(ComposerBase):
 
         row = next(r for r in shelf['rows'] if r['item'] == self.mine_a)
         self.assertFalse(row['available'])
-        self.assertIn('auction lot', row['note'])
+        # Two words, not the sentence. A 196px shelf row cannot hold "This
+        # piece is on an auction lot right now" — it ran off the end, and it
+        # is the wrong voice for somebody's own collection besides.
+        self.assertEqual(row['note'], 'At auction')
 
     def test_a_piece_in_the_store_stays_pickable(self):
         self._listing(self.mine_a, kind='buy_now')
@@ -442,6 +445,84 @@ class DecisionScreenTests(ComposerBase):
         page = self.client.get(reverse('trades:offer_detail', args=[self.offer.pk]))
         self.assertTrue(page.context['settled'])
         self.assertNotContains(page, 'name="offered_items"')
+
+
+class TheDrawingTests(ComposerBase):
+    """Things the design frame states outright that no other test can see.
+
+    Both faults this class exists for were invisible to a green suite and
+    obvious in a browser: a piece row whose children wrapped onto three
+    lines, and a table whose licences were nearly the same colour as the
+    table. Tests cannot see a layout — but they can hold the handful of
+    facts the layout depends on.
+    """
+
+    def setUp(self):
+        listing = self._listing(self.theirs_a, allow_cash=True)
+        self.client.force_login(self.rae)
+        self.client.post(reverse('trades:propose', args=[listing.pk]), {
+            'offered_items': [self.mine_a.pk],
+            'cash_amount': '40.00',
+            'cash_direction': 'to_proposer',
+            'expires_days': 4,
+        })
+        self.offer = TradeOffer.objects.get()
+
+    def _page(self, who):
+        self.client.force_login(who)
+        return self.client.get(reverse('trades:offer_detail', args=[self.offer.pk]))
+
+    def test_the_note_is_a_line_inside_the_row_not_a_column(self):
+        """As a fourth grid column it left the title ~30px and broke words
+        a character at a time."""
+        html = self._page(self.rae).content.decode()
+        self.assertIn('tb-piece-note', html)
+        self.assertNotIn('tb-note tb-note--', html)   # the old column class
+
+    def test_a_piece_on_the_table_stays_on_its_shelf_and_says_so(self):
+        """The design shows it in both places — tinted and ticked on the
+        shelf, laid out on the table."""
+        page = self._page(self.rae)
+        row = next(r for r in page.context['mine']['rows'] if r['item'] == self.mine_a)
+        self.assertTrue(row['on_table'])
+        self.assertEqual(row['note'], 'On the table')
+
+    def test_the_shelf_counts_the_same_set_at_both_ends(self):
+        """`shown` came from a trimmed list while `total` came from a query,
+        which printed "1 of 0"."""
+        for shelf in (self._page(self.rae).context['mine'],
+                      self._page(self.rae).context['theirs']):
+            self.assertLessEqual(shelf['shown'], shelf['total'])
+            self.assertEqual(shelf['total'], len(shelf['rows']))
+
+    def test_the_cash_arrow_turns_round_with_the_reader(self):
+        """Rae asked for $40, so Rae receives it and Walt pays it. The
+        record does not change; the sentence does."""
+        self.assertIn('to me', self._page(self.rae).context['band_terms'])
+        self.assertEqual(self._page(self.rae).context['cash_side'], 'to_proposer')
+
+        walt = self._page(self.walt)
+        self.assertIn('from me', walt.context['band_terms'])
+        self.assertEqual(walt.context['cash_side'], 'from_proposer')
+
+    def test_the_cash_figure_is_rendered_before_any_script_runs(self):
+        self.assertContains(self._page(self.walt), '$40.00')
+
+    def test_the_band_gives_a_date_not_a_duration(self):
+        """"Both ship by Mon 10 Aug" is something you can hold against a
+        calendar; "within five days" asks the reader to do the arithmetic
+        that decides whether they take a strike."""
+        page = self._page(self.walt)
+        self.assertRegex(page.context['ship_by_date'], r'^[A-Z][a-z]{2} \d{1,2} [A-Z][a-z]{2}$')
+        self.assertContains(page, 'Both ship by ' + page.context['ship_by_date'])
+
+    def test_the_trader_card_carries_initials_for_a_blank_avatar(self):
+        """The design draws a 38px square with initials, not a blank disc."""
+        self.assertEqual(self._page(self.walt).context['trader_trust']['initials'], 'CP')
+
+    def test_ships_in_is_withheld_until_it_is_a_habit(self):
+        """One fast parcel is not a reputation."""
+        self.assertIsNone(self._page(self.walt).context['trader_trust']['ships_in'])
 
 
 class StoreActionTests(ComposerBase):

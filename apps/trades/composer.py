@@ -19,7 +19,7 @@ from django.db.models import Q
 
 from apps.collections.matching import holdings, holdings_matching
 from apps.collections.models import CollectionItem, WantedItem
-from apps.collections.tradeability import open_to_trade, trade_block_reason
+from apps.collections.tradeability import open_to_trade, trade_block_label
 
 # Past this the list stops being something you scroll and starts being
 # something you search. The count above it always tells the truth about how
@@ -28,7 +28,7 @@ ROSTER_LIMIT = 120
 
 # Notes are ranked, not just attached: a row the other person has actually
 # asked for belongs above one that merely fills a hole in your map.
-NOTE_ORDER = {'wanted': 0, 'gap': 1, 'duplicate': 2, '': 3, 'held': 4}
+NOTE_ORDER = {'laid': 0, 'wanted': 1, 'gap': 2, 'duplicate': 3, '': 4, 'held': 5}
 
 MINE_FILTERS = [
     ('wants', 'They want'),
@@ -129,17 +129,16 @@ def roster(*, owner, reader, on_table, side, pinned=None):
             .values_list('pk', flat=True)
         )
         items = [i for i in items if i.pk in allowed]
-        total = len(allowed)
-    else:
-        # "61 tradeable", not "61 items" — the shelf is what you can put on
-        # the table, so counting anything else overstates it.
-        total = open_to_trade(CollectionItem.objects.filter(owner=owner)).count()
 
     # The piece the negotiation is about is already laid out on the table and
     # cannot be taken off, so listing it again on the shelf offers a pick
     # that does nothing.
     if pinned is not None:
         items = [i for i in items if i.pk != pinned]
+
+    # "7 of 61" has to count the same set at both ends. Reading the total off
+    # a query while the rows came from a trimmed list produced "1 of 0".
+    total = len(items)
 
     if side == 'mine':
         wants = list(
@@ -158,14 +157,14 @@ def roster(*, owner, reader, on_table, side, pinned=None):
 
     rows = []
     for item in items:
-        blocked = trade_block_reason(item) if side == 'mine' else ''
+        blocked = trade_block_label(item, mine=True) if side == 'mine' else ''
         note, kind = '', ''
 
         if blocked:
             # Named rather than hidden. A collector who cannot find their own
             # licence in their own list assumes the page is broken; told it
             # is at auction, they know it comes back.
-            note, kind = blocked.rstrip('.'), 'held'
+            note, kind = blocked, 'held'
         elif side == 'mine':
             key = (item.county_id, item.license_year)
             if item.pk in wanted:
@@ -178,10 +177,15 @@ def roster(*, owner, reader, on_table, side, pinned=None):
             elif item.county_id and item.license_year in years.get(item.county_id, ()):
                 note, kind = f'You have {item.license_year}', 'wanted'
 
+        # Already laid out: say so, and say nothing else. Whatever made the
+        # row worth picking has been acted on, and repeating it competes
+        # with the rows still asking to be read.
+        if item.pk in on_table:
+            note, kind = 'On the table', 'laid'
         # A row with nothing else to say falls back to condition, which is
         # the next thing you would want to know and stops the shelf reading
         # as half-blank.
-        if not note and item.condition_grade:
+        elif not note and item.condition_grade:
             note, kind = item.get_condition_grade_display(), ''
 
         rows.append({
@@ -194,7 +198,7 @@ def roster(*, owner, reader, on_table, side, pinned=None):
 
     # On the table first — you are always allowed to take something back off
     # without hunting for it — then by how much the row has to say.
-    rows.sort(key=lambda r: (not r['on_table'], NOTE_ORDER.get(r['note_kind'], 3)))
+    rows.sort(key=lambda r: NOTE_ORDER.get(r['note_kind'], 4))
 
     return {
         'rows': rows,
@@ -335,6 +339,32 @@ def thread(offer):
     return rows
 
 
+# Below this many shipped parcels an average is one bad week, not a habit.
+SHIPPING_HABIT_MIN = 3
+
+
+def _ships_in(user):
+    """Days from a trade being struck to the parcel getting a tracking number.
+
+    Measured off parcels that actually moved. Returned as None until there
+    are enough of them to be a habit rather than an anecdote — a "ships in 1
+    day" badge earned once is worse than no badge.
+    """
+    from .models import TradeShipment
+
+    rows = (
+        TradeShipment.objects
+        .filter(sender=user, trade__created_at__isnull=False)
+        .exclude(tracking_number='')
+        .values_list('trade__created_at', 'updated_at')[:50]
+    )
+    spans = [(done - struck).total_seconds() / 86400
+             for struck, done in rows if done and struck and done >= struck]
+    if len(spans) < SHIPPING_HABIT_MIN:
+        return None
+    return max(1, round(sum(spans) / len(spans)))
+
+
 def trader_trust(user):
     """The three ticks in the rail. Counted, never rounded.
 
@@ -358,7 +388,21 @@ def trader_trust(user):
         .first()
     ) or ''
 
-    return {'trades': completed, 'strikes': strikes, 'wants': wants}
+    # Two letters, always. The design draws a 38px square with initials in
+    # it, and one letter in a square reads as an error rather than a person.
+    name = (user.profile.get_display_name()
+            if hasattr(user, 'profile') else user.username) or user.username
+    words = [part for part in name.split() if part]
+    initials = (''.join(word[0] for word in words[:2]) if len(words) > 1
+                else name[:2]).upper()
+
+    return {
+        'trades': completed,
+        'strikes': strikes,
+        'wants': wants,
+        'ships_in': _ships_in(user),
+        'initials': initials or name[:2].upper(),
+    }
 
 
 def terms_line(*, giving, receiving, cash_amount, cash_direction, mine=False):

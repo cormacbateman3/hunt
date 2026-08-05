@@ -37,6 +37,18 @@
     --kb-sage: #6d7a5f;            /* held but below grade; parish accent */
     --kb-tan: #8c7a4e;             /* "was here early" badge category */
 
+    /* The trade table (3a). Four greens, not one: the panel is lighter than
+       its own header so the header reads as a strip, and each cash foot is
+       darker still when it is out of play and lighter when it is in. One
+       flat colour loses all three distinctions. */
+    --kb-table: #22301c;           /* the table the licences are laid on */
+    --kb-table-edge: #1a2416;      /* its border */
+    --kb-table-head: #1e2a19;      /* the 42px strip across the top */
+    --kb-table-cash: #1b2416;      /* cash foot, nothing in play */
+    --kb-table-cash-on: #2b3a22;   /* cash foot, money on the table */
+    --kb-on-forest-give: #d9ab5f;  /* "I give" label — brass, lightened */
+    --kb-on-forest-get: #9fc48c;   /* "I receive" label — sage, lightened */
+
     /* --- Surfaces ------------------------------------------------------- */
     --kb-surface: #ffffff;
     --kb-page: #faf8f3;            /* the warm page behind everything */

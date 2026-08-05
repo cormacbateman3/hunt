@@ -1,27 +1,30 @@
 {% comment %}
-One licence, in a roster or on the table — the same node either way.
+One licence — a row on a shelf, or a card on the table.
 
-It has to be one node, because putting a piece on the table *moves* this
-element into the dark panel rather than cloning it. Two markups would mean
-the checkbox that actually submits lives in one of them and the thing you
-can see lives in the other, which is how a table stops matching the offer
-it sends.
+The design shows a piece in **both** places at once: the shelf keeps its row,
+tinted and ticked, and the table shows a cream card. So this renders twice
+rather than moving one node about, and the shelf is the source of truth — the
+checkbox lives there, and the card's × reaches back to it.
 
-The parent decides which parts show: rosters want a thumbnail, a truncated
-title and the note; the table wants the full title, the county·year·grade
-line and a remove control.
+**Three children, in a row.** Thumbnail, a two-line text column, and the mark.
+The note is the second line *inside* the text, never a fourth column: as a
+column it left the title about thirty pixels and broke words a character at
+a time.
 
-Expects: `row` (from trades.composer.roster) and `field` — the form field
-name this side of the table posts to.
+Expects `row` (from trades.composer.roster) and `field` — the form field this
+side posts to. Pass `laid=True` for the table card.
 {% endcomment %}
-<li class="tb-piece{% if not row.available %} is-held{% endif %}"
+<li class="tb-piece{% if row.on_table %} is-on-table{% endif %}{% if not row.available %} is-held{% endif %}"
+    data-pk="{{ row.item.pk }}"
     data-note="{{ row.note_kind }}"
     data-find="{{ row.item.title|lower }} {{ row.item.county.name|default:''|lower }} {{ row.item.license_year|default:'' }}">
-    <label class="tb-piece-hit">
-        <input type="checkbox" name="{{ field }}" value="{{ row.item.pk }}"
-               class="tb-piece-pick"
-               {% if row.on_table %}checked{% endif %}
-               {% if not row.available %}disabled{% endif %}>
+    <{% if laid %}span{% else %}label{% endif %} class="tb-piece-hit">
+        {% if not laid %}
+            <input type="checkbox" name="{{ field }}" value="{{ row.item.pk }}"
+                   class="tb-piece-pick"
+                   {% if row.on_table %}checked{% endif %}
+                   {% if not row.available %}disabled{% endif %}>
+        {% endif %}
 
         <span class="tb-piece-thumb">
             {% if row.item.images.all %}
@@ -34,22 +37,34 @@ name this side of the table posts to.
                 {{ row.item.license_year|default:row.item.effective_era }}
                 {{ row.item.county.name|default:row.item.state.code|default:'' }}
             </span>
+            {% comment %}
+            On a shelf this line is the reason the row is worth reading — what
+            they want, what closes a gap, what is at auction. On the table the
+            specimen line takes over, because by then you have decided.
+            {% endcomment %}
+            <span class="tb-piece-note tb-piece-note--{{ row.note_kind|default:'plain' }}">{{ row.note }}</span>
             <span class="tb-piece-meta">
-                {{ row.item.title|truncatechars:38 }}{% if row.item.condition_grade %}
-                    &middot; {{ row.item.get_condition_grade_display }}{% endif %}
+                {{ row.item.county.name|default:row.item.state.code|default:'' }}
+                {% if row.item.license_year %}&middot; {{ row.item.license_year }}{% endif %}
+                {% if row.item.condition_grade %}&middot; {{ row.item.get_condition_grade_display }}{% endif %}
             </span>
         </span>
 
-        {% if row.note %}
-            <span class="tb-note tb-note--{{ row.note_kind }}">{{ row.note }}</span>
-        {% endif %}
-
         {% comment %}
-        One glyph, two jobs: a + on the shelf, a × once it is on the table.
-        The label is spelled out for screen readers because a bare symbol is
-        not an instruction.
+        A bordered square with a + on the shelf, a bare tick once it is on the
+        table, a × on the card itself, and nothing at all on a piece a live
+        lot has a claim on — rendering a disabled control over nothing is the
+        16b rule.
         {% endcomment %}
-        <span class="tb-piece-mark" aria-hidden="true"></span>
-        <span class="kb-sr tb-piece-say">Put on the table</span>
-    </label>
+        {% if laid %}
+            <button type="button" class="tb-piece-mark" data-drop="{{ row.item.pk }}">
+                <span class="kb-sr">Take {{ row.item.title }} off the table</span>
+            </button>
+        {% elif row.available %}
+            <span class="tb-piece-mark" aria-hidden="true"></span>
+            <span class="kb-sr tb-piece-say">
+                {% if row.on_table %}Take off the table{% else %}Put on the table{% endif %}
+            </span>
+        {% endif %}
+    </{% if laid %}span{% else %}label{% endif %}>
 </li>
