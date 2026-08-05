@@ -1,0 +1,417 @@
+/* ==========================================================================
+   Messages
+
+   Two panes, not two pages. Reading a reply used to lose the list. The deal
+   the thread is about stays pinned, so neither person has to remember which
+   of four deals this one is.
+   ========================================================================== */
+
+.kb-messages {
+    max-width: var(--kb-page-max);
+    margin: 0 auto;
+    padding: var(--kb-5) var(--kb-gutter) var(--kb-7);
+}
+
+.ms-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: var(--kb-4);
+    align-items: start;
+    /* Both panes scroll inside themselves so the page never does. */
+    height: calc(100vh - var(--kb-topbar-h) - var(--kb-band-h) - 90px);
+    min-height: 480px;
+}
+
+/* ── Left pane ───────────────────────────────────────────────────────── */
+.ms-list {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.ms-list-head {
+    padding: 12px;
+    border-bottom: 1px solid var(--kb-rule-soft);
+}
+
+.ms-search {
+    width: 100%;
+}
+
+.ms-filters {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--kb-rule-soft);
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.ms-threads {
+    overflow-y: auto;
+    flex: 1;
+}
+
+.ms-thread {
+    display: flex;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--kb-rule-soft);
+    /* Transparent by default so an unread edge never shifts the row. */
+    border-left: 3px solid transparent;
+    text-decoration: none;
+}
+
+.ms-thread:hover {
+    background: var(--kb-page);
+}
+
+.ms-thread--unread {
+    border-left-color: var(--kb-brass);
+    background: var(--kb-tint-attention);
+}
+
+.ms-thread--open {
+    background: var(--kb-parchment);
+}
+
+.ms-thread-mark {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--kb-r-chip);
+    background: var(--kb-parchment);
+    color: var(--kb-ink-3);
+    font-size: 10.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.ms-thread-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+
+.ms-thread-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.ms-thread-who {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--kb-ink);
+}
+
+.ms-thread-when {
+    font-size: 11px;
+    color: var(--kb-ink-5);
+    flex-shrink: 0;
+}
+
+.ms-thread-deal {
+    font-size: 11.5px;
+    color: var(--kb-brass);
+}
+
+.ms-thread-snip {
+    font-size: 12px;
+    color: var(--kb-ink-4);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ms-none {
+    margin: 0;
+    padding: 20px 14px;
+    font-size: 12.5px;
+    color: var(--kb-ink-4);
+    text-align: center;
+}
+
+/* ── Right pane ──────────────────────────────────────────────────────── */
+.ms-pane {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.ms-pane--empty {
+    align-items: center;
+    justify-content: center;
+}
+
+.ms-who {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--kb-rule);
+    display: flex;
+    align-items: center;
+    gap: 11px;
+}
+
+.ms-who-mark {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--kb-r-chip);
+    background: var(--kb-forest);
+    color: var(--kb-cream);
+    font-size: 12.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.ms-who-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--kb-forest);
+    text-decoration: none;
+}
+
+.ms-who-sub {
+    font-size: 11.5px;
+    color: var(--kb-ink-3);
+}
+
+.ms-who-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.ms-quiet {
+    font-size: 11.5px;
+    color: var(--kb-ink-4);
+    text-decoration: none;
+    cursor: pointer;
+    list-style: none;
+}
+
+.ms-quiet:hover {
+    color: var(--kb-rust);
+}
+
+.ms-report {
+    position: relative;
+}
+
+.ms-report-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 20;
+    min-width: 220px;
+    background: var(--kb-surface);
+    border: 1px solid var(--kb-rule-strong);
+    border-radius: var(--kb-r-sm);
+    box-shadow: var(--kb-shadow-panel);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ms-report-panel .kb-select {
+    width: 100%;
+}
+
+/* ── The pinned deal ─────────────────────────────────────────────────── */
+.ms-deal {
+    padding: 12px 18px;
+    background: var(--kb-parchment-soft);
+    border-bottom: 1px solid var(--kb-rule);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.ms-deal--on-you {
+    background: var(--kb-note-bg);
+    border-bottom-color: var(--kb-note-border);
+}
+
+.ms-deal-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--kb-ink);
+}
+
+.ms-deal-sub {
+    font-size: 11.5px;
+    color: var(--kb-ink-3);
+}
+
+.ms-deal .kb-btn {
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.ms-catch {
+    padding: 11px 18px;
+    background: var(--kb-note-bg);
+    border-bottom: 1px solid var(--kb-note-border);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.ms-catch-copy {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--kb-note-ink);
+    flex: 1;
+}
+
+.ms-catch .kb-btn {
+    flex-shrink: 0;
+}
+
+/* ── The thread ──────────────────────────────────────────────────────── */
+.ms-thread-body-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.ms-msg {
+    display: flex;
+    gap: 11px;
+    max-width: 78%;
+}
+
+.ms-msg--mine {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
+
+.ms-msg-mark {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--kb-r-chip);
+    background: var(--kb-parchment);
+    color: var(--kb-ink-3);
+    font-size: 10.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.ms-msg--mine .ms-msg-mark {
+    background: var(--kb-forest);
+    color: var(--kb-cream);
+}
+
+.ms-msg-body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.ms-msg-text {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--kb-ink);
+}
+
+.ms-msg-when {
+    font-size: 11px;
+    color: var(--kb-ink-5);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ms-msg--mine .ms-msg-when {
+    justify-content: flex-end;
+}
+
+.ms-msg-flag {
+    color: var(--kb-ink-5);
+    text-decoration: none;
+}
+
+.ms-msg-flag:hover {
+    color: var(--kb-rust);
+}
+
+.ms-msg-report {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+/* ── Writing ─────────────────────────────────────────────────────────── */
+.ms-write {
+    border-top: 1px solid var(--kb-rule);
+    padding: 12px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.ms-write textarea {
+    width: 100%;
+    resize: vertical;
+}
+
+.ms-error {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--kb-rust);
+}
+
+.ms-shut {
+    margin: 0;
+    border-top: 1px solid var(--kb-rule);
+    padding: 16px 18px;
+    font-size: 12.5px;
+    color: var(--kb-ink-4);
+    text-align: center;
+}
+
+/* ── Narrow: one pane at a time, which is the old behaviour done on
+      purpose rather than by accident. ──────────────────────────────── */
+@media (max-width: 900px) {
+    .ms-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+
+    .ms-list,
+    .ms-pane {
+        height: auto;
+        max-height: 70vh;
+    }
+
+    .ms-pane--empty .kb-empty {
+        padding: var(--kb-6) var(--kb-4);
+    }
+}

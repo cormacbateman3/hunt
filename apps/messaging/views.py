@@ -6,31 +6,40 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
-from . import services
+from . import services, threads
 from .models import Block, Conversation, Message, MessageRead, MessageReport
 
 
 @login_required
 def inbox(request):
-    """List of all conversations for the current user, ordered by most recent message."""
+    """Messages — the same two panes as a thread, with nothing open yet."""
+    rows = _conversation_rows(request.user)
+    return render(request, 'messaging/inbox.html', {
+        'conv_rows': rows,
+        'filters': _inbox_filters(rows, request.GET.get('show', '')),
+        'which': request.GET.get('show', ''),
+    })
+
+
+def _conversation_rows(user):
+    """The left pane. Shared by the inbox and by any open thread — reading a
+    reply used to lose the list, because they were separate pages."""
     convs = (
-        Conversation.objects.filter(Q(user_a=request.user) | Q(user_b=request.user))
+        Conversation.objects.filter(Q(user_a=user) | Q(user_b=user))
         .select_related('user_a__profile', 'user_b__profile', 'listing')
         .order_by('-last_message_at', '-created_at')
     )
-
     read_map = {
         r.conversation_id: r.last_read_at
-        for r in MessageRead.objects.filter(user=request.user, conversation__in=convs)
+        for r in MessageRead.objects.filter(user=user, conversation__in=convs)
     }
 
-    conv_rows = []
+    rows = []
     for conv in convs:
-        other = conv.other_participant(request.user)
         last_read = read_map.get(conv.pk)
         unread_qs = (
             Message.objects.filter(conversation=conv, is_deleted=False)
-            .exclude(sender=request.user)
+            .exclude(sender=user)
         )
         if last_read:
             unread_qs = unread_qs.filter(created_at__gt=last_read)
@@ -40,14 +49,27 @@ def inbox(request):
             .order_by('-created_at')
             .first()
         )
-        conv_rows.append({
+        order = getattr(conv.listing, 'order', None) if conv.listing_id else None
+        rows.append({
             'conversation': conv,
-            'other': other,
+            'other': conv.other_participant(user),
             'snippet': snippet,
             'has_unread': unread_qs.exists(),
+            'open_deal': bool(order and order.status in threads.LIVE_ORDER_STATUSES),
         })
+    return rows
 
-    return render(request, 'messaging/inbox.html', {'conv_rows': conv_rows})
+
+def _inbox_filters(rows, active):
+    counts = {
+        '': len(rows),
+        'unread': sum(1 for row in rows if row['has_unread']),
+        'deals': sum(1 for row in rows if row['open_deal']),
+    }
+    return [
+        {'key': key, 'label': label, 'count': counts[key], 'active': active == key}
+        for key, label in (('', 'All'), ('unread', 'Unread'), ('deals', 'Open deals'))
+    ]
 
 
 @login_required
@@ -101,6 +123,8 @@ def conversation_detail(request, pk):
 
     return render(request, 'messaging/conversation_detail.html', {
         'conversation': conv,
+        'conv_rows': _conversation_rows(request.user),
+        'deal': threads.deal_strip(conv, request.user),
         'other': other,
         'messages': msgs,
         'is_blocked': is_blocked,

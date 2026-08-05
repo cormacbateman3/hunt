@@ -1,0 +1,52 @@
+{% comment %}
+The left pane. Unread keeps its brass edge — that part was already right.
+{% endcomment %}
+<aside class="ms-list" aria-label="Conversations">
+    <div class="ms-list-head">
+        <label class="kb-sr" for="ms-search">Search names and messages</label>
+        <input type="search" id="ms-search" class="kb-input ms-search"
+               placeholder="Search names and messages" data-thread-search>
+    </div>
+
+    {% if filters %}
+        <div class="ms-filters">
+            {% for chip in filters %}
+                <a href="?{% if chip.key %}show={{ chip.key }}{% endif %}"
+                   class="kb-chip kb-chip--sm {% if chip.active %}is-on{% endif %}">{{ chip.label }} {{ chip.count }}</a>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="ms-threads">
+        {% for row in conv_rows %}
+            {% if not which or which == 'unread' and row.has_unread or which == 'deals' and row.open_deal %}
+                <a href="{% url 'messaging:conversation_detail' row.conversation.pk %}"
+                   class="ms-thread{% if row.has_unread %} ms-thread--unread{% endif %}{% if conversation.pk == row.conversation.pk %} ms-thread--open{% endif %}"
+                   data-thread-row>
+                    <span class="ms-thread-mark">{{ row.other.username|slice:':2'|upper }}</span>
+                    <span class="ms-thread-body">
+                        <span class="ms-thread-top">
+                            <span class="ms-thread-who">{{ row.other.profile.get_display_name }}</span>
+                            <span class="ms-thread-when">{{ row.conversation.last_message_at|default:row.conversation.created_at|date:"j M" }}</span>
+                        </span>
+                        {% if row.conversation.listing %}
+                            <span class="ms-thread-deal">
+                                {% if row.open_deal %}Deal{% else %}About{% endif %}
+                                &mdash; {{ row.conversation.listing.title|truncatechars:34 }}
+                            </span>
+                        {% else %}
+                            <span class="ms-thread-deal">General</span>
+                        {% endif %}
+                        <span class="ms-thread-snip">
+                            {% if row.snippet %}
+                                {% if row.snippet.sender_id == user.id %}You: {% endif %}{{ row.snippet.body|truncatechars:52 }}
+                            {% else %}No messages yet{% endif %}
+                        </span>
+                    </span>
+                </a>
+            {% endif %}
+        {% empty %}
+            <p class="ms-none">No conversations yet.</p>
+        {% endfor %}
+    </div>
+</aside>

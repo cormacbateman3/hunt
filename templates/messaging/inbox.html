@@ -1,73 +1,42 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Inbox | KeystoneBid{% endblock %}
+{% block title %}Messages &middot; My Bench &middot; KeystoneBid{% endblock %}
+
+{% block context_band %}{% include 'components/_bench_tabs.html' %}{% endblock %}
+
+{% block main_class %}kb-messages{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/messages.css' %}">{% endblock %}
 
 {% block content %}
-<section style="max-width: 760px; margin: 0 auto; display: grid; gap: 1rem;">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h1 style="font-size: 1.4rem; margin: 0;">Inbox</h1>
+{% comment %}
+Two panes, not two pages. The list stays put while a thread is open, so you
+can work down two unread conversations without navigating away.
+{% endcomment %}
+<div class="ms-layout">
+    {% include 'messaging/_thread_list.html' %}
+
+    <div class="ms-pane ms-pane--empty">
+        <div class="kb-empty">
+            <h2>{% if conv_rows %}Pick a conversation{% else %}Nothing here yet{% endif %}</h2>
+            <p>
+                {% if conv_rows %}
+                    The deal each one is about stays pinned at the top of the thread,
+                    with the amount and whatever it is waiting on.
+                {% else %}
+                    Text only, no attachments &mdash; photographs go on the listing
+                    where everyone can see them.
+                {% endif %}
+            </p>
+            {% if not conv_rows %}
+                <div class="kb-empty-actions">
+                    <a href="{% url 'hunt' %}" class="kb-btn kb-btn--primary">Go hunting</a>
+                </div>
+            {% endif %}
+        </div>
     </div>
-
-    {% if conv_rows %}
-        <div style="display: grid; gap: 0.6rem;">
-            {% for row in conv_rows %}
-                <a href="{% url 'messaging:conversation_detail' row.conversation.pk %}"
-                   style="text-decoration: none; color: inherit;">
-                    <article class="card" style="display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.75rem;
-                                                  {% if row.has_unread %}border-left: 3px solid var(--color-aged-amber);{% endif %}">
-                        <!-- Avatar placeholder -->
-                        <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--color-parchment);
-                                    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-                                    font-weight: 700; color: var(--color-forest-green); font-size: 1rem;">
-                            {{ row.other.username|first|upper }}
-                        </div>
-
-                        <div style="flex: 1; min-width: 0;">
-                            <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem;">
-                                <span style="font-weight: {% if row.has_unread %}700{% else %}500{% endif %}; font-size: 0.95rem;">
-                                    {{ row.other.username }}
-                                    {% if row.other.profile.display_name %}
-                                        <span style="color: var(--color-muted); font-size: 0.85rem; font-weight: 400;">({{ row.other.profile.display_name }})</span>
-                                    {% endif %}
-                                </span>
-                                {% if row.conversation.last_message_at %}
-                                    <span style="font-size: 0.8rem; color: var(--color-muted); flex-shrink: 0;">
-                                        {{ row.conversation.last_message_at|date:"M j" }}
-                                    </span>
-                                {% endif %}
-                            </div>
-
-                            {% if row.conversation.listing %}
-                                <p style="font-size: 0.8rem; color: var(--color-aged-amber); margin-bottom: 0.2rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
-                                    Re: {{ row.conversation.listing.title }}
-                                </p>
-                            {% endif %}
-
-                            <p style="font-size: 0.88rem; color: var(--color-muted); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin: 0;">
-                                {% if row.snippet %}
-                                    {% if row.snippet.sender_id == request.user.pk %}You: {% endif %}
-                                    {{ row.snippet.body|truncatechars:80 }}
-                                {% else %}
-                                    No messages yet.
-                                {% endif %}
-                            </p>
-                        </div>
-
-                        {% if row.has_unread %}
-                            <span style="width: 9px; height: 9px; border-radius: 50%; background: var(--color-aged-amber);
-                                         flex-shrink: 0; margin-top: 0.35rem;" title="Unread"></span>
-                        {% endif %}
-                        {% if row.conversation.is_closed %}
-                            <span style="font-size: 0.75rem; color: var(--color-muted); flex-shrink: 0; margin-top: 0.3rem;">Closed</span>
-                        {% endif %}
-                    </article>
-                </a>
-            {% endfor %}
-        </div>
-    {% else %}
-        <div class="card">
-            <p style="color: var(--color-muted);">No conversations yet. Start one from a listing or trade offer page.</p>
-        </div>
-    {% endif %}
-</section>
+</div>
 {% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/messages.js' %}"></script>{% endblock %}
