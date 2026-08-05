@@ -336,34 +336,51 @@ fine-grained as the data honestly allows and the module says so.
 
 ---
 
-## Pass 5 — The sell flow ⬜ NEXT
+## Pass 5 — The sell flow ✅ DONE
+
+*2026-08-05 · commits `17ffc57`, `d64072b`, `42028c5` · 327 tests green (18 added)*
 
 **Design refs** — turn 6a/6b/6c (**this supersedes turn 5** — 6's opening line is
 *"You're right and 5a was wrong: the destination should be the first question"*).
 Dev plan 10.8 amendments, T13.
 
-⚠ **This pass replaces shipped code.** T13's two-page create flow is live
-(`listing_create_config.html` + `listing_create.html`). The design's three-step
-flow supersedes it — see the precedence table at the top. Keep T13's **image
-slots**, which the design reinforces; drop T13's **config page**, which it doesn't.
+**It replaced shipped code, as flagged.** `listing_create_config.html` is deleted;
+the three-step flow is live.
 
-- **Step 1 — where it's going.** Three destination cards (My collection / The
-  Auction House / The General Store), each ending with *the questions it will ask*.
-  Below: **from my collection**, duplicates first — this skips step 2 entirely.
-- **Step 2 — the item.** 400px evidence rail on the left: photographs with
-  **labelled slots** (Featured·front, Back, three optional) and the prefill
-  read-out with per-field ✓ / ? / ○ / ×. Title and Description at the top under
-  their real names. Taxonomy out of the drawer. Live buyer's-card preview.
-- **Step 3 — the terms.** One panel per destination, each carrying only its own
-  fields, each ending with the action, the cost of changing your mind, and one line
-  of local knowledge. Shared shipping strip from selling defaults.
-- **Lot listing** (9d) — quantity 2–10, one row per piece with front/back, over 10
-  routes to box-lot guidance. Rides **10.15**.
+### What shipped
 
-edit listing needs to be looked at as well
+| Piece | What landed |
+|---|---|
+| **Step 1 — where it's going** | `apps/listings/sell_flow.py` + `templates/listings/sell_start.html` at `/listings/sell/`. Three destination cards, each ending with **the questions it will ask** — the old config page asked the same thing with two radio buttons and showed no consequences. Below it, **from my collection**, duplicates first: thinning a collection is the common case for a second listing and a duplicate is the piece most likely to be parted with. Something already listed is not offered again. |
+| **The "yours or stock" radio** | **Deleted.** It was solving a problem the destination choice solves better. |
+| **Step 2 — the item** | `?to=` carries the destination; `?from_item=` carries a shelf item's details across. Reaching step 2 without a destination sends you back to step 1 rather than guessing. The destination is no longer asked twice. |
+| **`image_role`** (T13, finally) | On both `ListingImage` and `CollectionItemImage`. "Featured" and "Back" were client-side labels keyed off the array index, so **reordering the grid relabelled the photographs** — a buyer could be told they were looking at the back of a licence when they were not. A partial `UniqueConstraint` allows one front and one back; a second "back" is somebody mislabelling a detail. Roles carry across when an item is listed, so the front stays the front. |
+| **Step 3 — the terms** | One panel per destination, carrying only its own fields. The form held all three sets at once and hid two with JavaScript. Each panel ends with the same three things: the action, what it costs to change your mind, and one line of local knowledge. |
+| **`Listing.minimum_offer`** | The design's "Nothing under". Wired into `create_offer`, and the message **names the figure** — the seller set a floor to save both of them the round trip, not to hide the price. A seller's counter is not measured against their own floor. |
+| **The private block** | `CollectionItem.purchase_price` / `acquired_note` / `private_note`. Never public, never shown to a buyer, and explicitly **not price history** — price history is what listings sold for, this is what you spent. A test reads the public item page and the public profile and asserts none of it leaks. |
+| **Edit listing** | Same shape as create, because an edit is not a different decision. One difference that matters: a lot **with bids on it says so**, since it cannot be cancelled and changing terms under people who have already bid is how disputes start. Photograph roles are a visible choice here, so moving one up or down changes the order and nothing else. |
+
+### Deviations, and why
+
+- **The lot route** (*"a box of several licences goes in the other way"*) — not
+  built. Needs `ListingLotItem` / `inventory_format` (10.15 + T13's lot
+  amendment). Marker in `sell_start.html`; in the register.
+- **The collection destination's own terms panel** (public / display case /
+  trade / the private block) is **not yet a third step** — those fields live on
+  the existing collection item form. The three destination cards all route
+  correctly; only the collection panel is still the old form.
+- **"Which collection" (folder)** — omitted. Needs `CollectionSet` (Pass 13).
+- **Comparable sales** in both selling panels — the design marks them as needing
+  Price History (13.6). Omitted rather than faked; the wanted-list count that
+  sits beside them **does** work today and is on the wanted list.
+- **The prefill read-out** with per-field ✓ / ? / ○ / × is unchanged from what
+  `prefill.js` already renders; the design's exact tick vocabulary is a polish
+  item rather than new behaviour.
+
+
 ---
 
-## Pass 6 — Auth and the ten settings rooms ⬜
+## Pass 6 — Auth and the ten settings rooms ⬜ NEXT
 
 **Owes the deferred register** — `UserProfile.county` becomes an FK, after which the
 collectors rail can filter people by **where they live** as well as where they collect.
@@ -599,7 +616,9 @@ coming back for it.
 | **"Propose a trade"** as one click | a two-step walk — the button opens their trade-eligible shelf | a proposal today needs a `listing_id`; tradeability is not yet a property of the item | **7** (10.10) | point the button at a person-level propose view |
 | **"Sets going"** — the card's third figure | shows **counties held** instead | no `CollectionSet` model | **13** (10.14) | swap the annotation in `apps/collections/collectors.py`; the layout does not change |
 | **Earned badges** under the profile bio | omitted; marker in `templates/accounts/profile.html` | no `Badge` model or its thirteen awards | **14** | render the badge row where the marker sits |
-| **Display-case captions** | reuses the item `description` | no `display_caption` field on `CollectionItem` | **5** | add the field, fall back to `description` |
+| **Display-case captions** | reuses the item `description` | no `display_caption` field on `CollectionItem` | **6** | add the field, fall back to `description` |
+| **The lot route** — a box of several licences | not built; marker in `templates/listings/sell_start.html` | `ListingLotItem` / `inventory_format` (10.15, T13) | **later** | add the second entry beside the three destinations |
+| **The collection terms panel** | those fields are still on the old collection item form | nothing — it is scope left, not a blocker | **6** | give the collection destination its own step 3 |
 | **The map** (Collections tab, profile *Ground covered*) | honest placeholder + a hatched panel; the figures beside it are real | county **geometry** does not exist; `GeographicUnit.valid_from`/`valid_to` absent | **9 / 10** | draw the choropleth; the arithmetic in `apps/collections/tracker.py` is already there |
 | **Trade board** tab | leaves the zone for `/hunt/?format=trade` | the designed board is its own screen | **7** | make the tab local |
 | **Distance** — *"41 within a hundred miles"* | reads *N will trade · N selling now* | no geocoding, no geometry | **9 / 10** | add the measure to the header line |
@@ -620,7 +639,7 @@ Verified against the code on 2026-08-04.
 | Item | Status | Note |
 |---|---|---|
 | **T12 Department → Category** | ✅ **already shipped** | `ItemCategory` at `apps/core/models.py:14`; `category` FK on both `Listing` and `CollectionItem`. The plan's own 2026-08-03 audit confirms it. No action. |
-| **T13 single-item image slots** | ⬜ **genuinely outstanding** | `image_role` does not exist — grep returns zero. "Featured"/"Back" are client-side badges keyed off array index, so reordering the grid relabels them and nothing persists. Needed by **Pass 5**. |
+| **T13 single-item image slots** | ✅ **shipped in Pass 5** | `image_role` now on both `ListingImage` and `CollectionItemImage` (`listings/0019`, `collections/0010`), with a partial `UniqueConstraint` allowing one front and one back. Roles carry across when a collection item is listed. |
 | **T13 lot images** | ⬜ | `ListingLotItem` / `inventory_format` absent. Rides 10.15 → **Pass 5**. |
 | **T14 general ledger** | ⬜ | No `apps/ledger`. Rides 10.18, after the UI work. |
 | **T2 surfacing on listing detail** | ✅ **fixed in Pass 1** | `item_kind` + `addons_attached` now render in the spec tables. |
