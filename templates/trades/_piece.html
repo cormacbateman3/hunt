@@ -40,11 +40,16 @@ side posts to. Pass `laid=True` for the table card.
                 {{ row.item.county.name|default:row.item.state.code|default:'' }}
             </span>
             {% comment %}
-            On a shelf this line is the reason the row is worth reading — what
-            they want, what closes a gap, what is at auction. On the table the
-            specimen line takes over, because by then you have decided.
+            Two notes, one row. On the shelf: where the licence went, or why
+            it is worth picking. On the card: the reason it is worth having,
+            because that is what you are weighing — "on the table" would be
+            telling you what you can already see.
             {% endcomment %}
-            <span class="tb-piece-note tb-piece-note--{{ row.note_kind|default:'plain' }}">{{ row.note }}</span>
+            {% if laid %}
+                <span class="tb-piece-note tb-piece-note--{{ row.card_kind|default:'plain' }}">{{ row.card_note }}</span>
+            {% else %}
+                <span class="tb-piece-note tb-piece-note--{{ row.note_kind|default:'plain' }}">{{ row.note }}</span>
+            {% endif %}
             <span class="tb-piece-meta">
                 {{ row.item.county.name|default:row.item.state.code|default:'' }}
                 {% if row.item.license_year %}&middot; {{ row.item.license_year }}{% endif %}

@@ -236,6 +236,7 @@
 }
 
 .tb-piece-note--held { color: var(--kb-rust); }
+.tb-piece-note--came { color: var(--kb-brass); font-weight: 600; }
 
 /* The county·year·grade line belongs on the table, where the decision is
    made. On a shelf a truncated title is enough. */
@@ -422,18 +423,9 @@
 
 .tb-laid .tb-piece-meta { display: block; }
 
-/* On the table the specimen line does the work; only a note that changes
-   the decision stays. */
-.tb-laid .tb-piece-note { display: none; }
-
-.tb-laid .tb-piece-note--gap,
-.tb-laid .tb-piece-note--anchor {
-    display: block;
-    color: var(--kb-live);
-    font-weight: 600;
-}
-
-.tb-laid .tb-piece-note--anchor { color: var(--kb-brass-deep); }
+/* On the card the note is the reason the licence is worth having; where a
+   row has none, the specimen line carries it alone. */
+.tb-laid .tb-piece-note--plain { display: none; }
 
 .tb-laid .tb-piece-mark {
     border: 0;
@@ -449,15 +441,18 @@
 .tb-laid .tb-piece.is-anchor .tb-piece-hit { cursor: default; }
 
 /* Kept visible even with items on the table: it is where the next one goes,
-   and it is the only thing telling you the shelf beside it is a source. */
+   and it is the only thing telling you the shelf beside it is a source —
+   which is also why it names both ways in. */
 .tb-empty {
     margin: 0;
     border: 1px dashed rgba(244, 241, 232, 0.22);
     border-radius: var(--kb-r-chip);
     padding: 10px;
     font-size: 10.5px;
+    line-height: 1.5;
     color: rgba(244, 241, 232, 0.45);
     text-align: center;
+    list-style: none;
 }
 
 .tb-divide { background: rgba(244, 241, 232, 0.14); position: relative; }

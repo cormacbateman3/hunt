@@ -117,13 +117,15 @@ full width underneath all three columns.
                             {% for row in mine.rows %}{% if row.on_table %}
                                 {% include 'trades/_piece.html' with row=row laid=True laid_side='mine' %}
                             {% endif %}{% endfor %}
+                            {% comment %}
+                            Inside the list, so it sits directly under the last
+                            card rather than being pushed to the foot by a
+                            flex-grown gap. Kept visible with items on the
+                            table: it is where the next one goes, and the only
+                            thing saying the shelf beside it is a source.
+                            {% endcomment %}
+                            <li class="tb-empty" data-empty="mine">Drag from my collection,<br>or press +</li>
                         </ul>
-                        {% comment %}
-                        Kept visible with items on the table: it is where the
-                        next one goes, and the only thing saying the shelf
-                        beside it is a source.
-                        {% endcomment %}
-                        <p class="tb-empty" data-empty="mine">Drag from my collection, or press +</p>
                         {% comment %}
                         Lit when it is in play, dim when it isn't — and the
                         figure is rendered here rather than left to a script,
@@ -158,10 +160,10 @@ full width underneath all three columns.
                             {% for row in theirs.rows %}{% if row.on_table %}
                                 {% include 'trades/_piece.html' with row=row laid=True laid_side='theirs' %}
                             {% endif %}{% endfor %}
+                            <li class="tb-empty" data-empty="theirs">
+                                Drag from {{ other.profile.get_display_name|default:other.username }}&rsquo;s collection,<br>or press +
+                            </li>
                         </ul>
-                        <p class="tb-empty" data-empty="theirs">
-                            Drag from {{ other.profile.get_display_name|default:other.username }}&rsquo;s collection, or press +
-                        </p>
                         <div class="tb-cash{% if cash_amount and cash_side == 'to_proposer' %} is-on{% endif %}"
                              data-cash="to_proposer">
                             {% if allow_cash %}

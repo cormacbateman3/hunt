@@ -68,7 +68,7 @@
         var say = swap.querySelector('.tb-piece-say');
         if (say) { say.remove(); }
 
-        tables[sideOf(row)].appendChild(card);
+        layIn(tables[sideOf(row)], card);
     }
 
     function clear(row) {
@@ -81,6 +81,13 @@
             give: tables.mine.querySelectorAll('.tb-piece').length,
             get: tables.theirs.querySelectorAll('.tb-piece').length
         };
+    }
+
+    /* The drop hint lives inside the list, so a new card has to go in front
+     * of it rather than after. */
+    function layIn(table, card) {
+        var hint = table.querySelector('.tb-empty');
+        table.insertBefore(card, hint || null);
     }
 
     function cashPart() {

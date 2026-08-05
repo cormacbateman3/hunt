@@ -178,28 +178,31 @@ def roster(*, owner, reader, on_table, side, came_for=None):
             elif item.county_id and item.license_year in years.get(item.county_id, ()):
                 note, kind = f'You have {item.license_year}', 'wanted'
 
-        # The piece you arrived about keeps saying so wherever it ends up.
-        # It is the answer to "why am I on this page", and it stays true
-        # after you take it off the table to ask for something else.
-        if item.pk == came_for:
-            note, kind = 'What you came for', 'laid'
-        # Already laid out: say so, and say nothing else. Whatever made the
-        # row worth picking has been acted on, and repeating it competes
-        # with the rows still asking to be read.
-        elif item.pk in on_table:
-            note, kind = 'On the table', 'laid'
         # A row with nothing else to say falls back to condition, which is
         # the next thing you would want to know and stops the shelf reading
         # as half-blank.
-        elif not note and item.condition_grade:
+        if not note and item.condition_grade:
             note, kind = item.get_condition_grade_display(), ''
+
+        # **Two notes, one row.** The card on the table keeps the reason the
+        # licence is worth having — "closes a county gap" — because that is
+        # what you are weighing. The row on the shelf says "on the table"
+        # instead, because there the useful fact is where it went. Saying
+        # "on the table" on the card would be telling you what you can see.
+        shelf_note, shelf_kind = note, kind
+        if item.pk == came_for:
+            shelf_note, shelf_kind = 'What you came for', 'came'
+        elif item.pk in on_table:
+            shelf_note, shelf_kind = 'On the table', 'laid'
 
         rows.append({
             'item': item,
             'on_table': item.pk in on_table,
             'available': not blocked,
-            'note': note,
-            'note_kind': kind,
+            'note': shelf_note,
+            'note_kind': shelf_kind,
+            'card_note': note,
+            'card_kind': kind,
         })
 
     # On the table first — you are always allowed to take something back off
