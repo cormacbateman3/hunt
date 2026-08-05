@@ -1,46 +1,102 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}My Orders | KeystoneBid{% endblock %}
+{% block title %}Orders &middot; My Bench &middot; KeystoneBid{% endblock %}
+
+{% block context_band %}{% include 'components/_bench_tabs.html' %}{% endblock %}
+
+{% block main_class %}kb-desk{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/desk.css' %}">{% endblock %}
 
 {% block content %}
-<section style="display: grid; gap: 1rem;">
-    <article class="card">
-        <h1 style="margin-bottom: 0.6rem;">My Orders</h1>
-        <p style="color: var(--color-muted);">Order is the canonical sales lifecycle for The Auction House and The General Store.</p>
-    </article>
+{% comment %}
+One column, not a Purchases card and a Sales card — split that way, the two
+orders on a clock are never next to each other. Every row says who is being
+waited on and what happens if nothing changes.
+{% endcomment %}
 
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Purchases</h2>
-        {% for order in purchases %}
-            <p style="margin-bottom: 0.45rem;">
-                <a href="{% url 'orders:detail' order.pk %}">{{ order.listing.title }}</a> -
-                ${{ order.total_amount }} -
-                {{ order.get_status_display }}
-                {% if order.status == 'pending_payment' %}
-                    &middot;
-                    {% if order.order_type == 'auction' %}
-                        <a href="{% url 'listings:auction_win_review' order.listing_id %}">Review &amp; pay &rarr;</a>
+<header class="kb-between desk-head">
+    <div>
+        <h1 class="kb-page-title">Orders</h1>
+        <p class="desk-lede">
+            Everything you&rsquo;ve bought and sold, in one column.
+            {% if on_a_clock %}
+                {{ on_a_clock }} of them {{ on_a_clock|pluralize:"is,are" }} on a clock.
+            {% else %}
+                Nothing is on a clock.
+            {% endif %}
+        </p>
+    </div>
+    <div class="kb-inline">
+        {% for chip in filters %}
+            <a href="{% if chip.key %}?show={{ chip.key }}{% else %}?{% endif %}"
+               class="kb-chip {% if chip.active %}is-on{% endif %}">{{ chip.label }} {{ chip.count }}</a>
+        {% endfor %}
+    </div>
+</header>
+
+{% if rows %}
+    <div class="desk-table">
+        <div class="desk-thead ord-grid">
+            <span class="kb-eyebrow">Item</span>
+            <span class="kb-eyebrow">With</span>
+            <span class="kb-eyebrow desk-right">Total</span>
+            <span class="kb-eyebrow">Where it stands</span>
+            <span class="kb-eyebrow"><span class="kb-sr">Action</span></span>
+        </div>
+
+        {% for row in rows %}
+            <div class="desk-row ord-grid{% if row.tone == 'rust' %} desk-row--now{% elif row.tone == 'brass' %} desk-row--waiting{% elif row.tone == 'live' %} desk-row--ahead{% endif %}{% if row.finished %} desk-row--done{% endif %}">
+                <div class="desk-item">
+                    {% if row.order.listing.featured_image %}
+                        <img src="{{ row.order.listing.featured_image.url }}" alt="" class="desk-thumb" loading="lazy">
                     {% else %}
-                        <a href="{% url 'listings:buy_now_review' order.listing_id %}">Review &amp; pay &rarr;</a>
+                        <span class="desk-thumb desk-thumb--blank" aria-hidden="true"></span>
                     {% endif %}
-                {% endif %}
-            </p>
-        {% empty %}
-            <p>No purchases yet.</p>
-        {% endfor %}
-    </article>
+                    <span class="kb-stack desk-item-text">
+                        <a href="{% url 'orders:detail' row.order.pk %}" class="desk-title">{{ row.order.listing.title }}</a>
+                        <span class="desk-sub">{{ row.origin }}</span>
+                    </span>
+                </div>
 
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Sales</h2>
-        {% for order in sales %}
-            <p style="margin-bottom: 0.45rem;">
-                <a href="{% url 'orders:detail' order.pk %}">{{ order.listing.title }}</a> -
-                ${{ order.total_amount }} -
-                {{ order.get_status_display }}
-            </p>
-        {% empty %}
-            <p>No sales yet.</p>
+                <span class="ord-with">{{ row.with }}</span>
+
+                <span class="desk-price ord-total">${{ row.order.total_amount|floatformat:2 }}</span>
+
+                <div class="kb-stack desk-stands">
+                    <span class="desk-headline desk-headline--{{ row.tone }}">{{ row.headline }}</span>
+                    {% if row.note %}<span class="desk-note">{{ row.note }}</span>{% endif %}
+                </div>
+
+                <div class="desk-action">
+                    {% if row.action.style == 'text' %}
+                        <a href="{{ row.action.url }}" class="desk-quiet">{{ row.action.label }}</a>
+                    {% else %}
+                        <a href="{{ row.action.url }}"
+                           class="kb-btn kb-btn--{{ row.action.style }} kb-btn--sm">{{ row.action.label }}</a>
+                    {% endif %}
+                </div>
+            </div>
         {% endfor %}
-    </article>
-</section>
+    </div>
+{% else %}
+    <div class="kb-empty">
+        <h2>{% if which %}Nothing in that group{% else %}Nothing bought or sold yet{% endif %}</h2>
+        <p>
+            {% if which %}
+                Try another filter above.
+            {% else %}
+                Orders appear here the moment a lot closes or a Store item is bought,
+                with the deadline that comes with it.
+            {% endif %}
+        </p>
+        <div class="kb-empty-actions">
+            {% if which %}
+                <a href="{% url 'orders:my_orders' %}" class="kb-btn kb-btn--secondary">All orders</a>
+            {% endif %}
+            <a href="{% url 'hunt' %}" class="kb-btn kb-btn--primary">Go hunting</a>
+        </div>
+    </div>
+{% endif %}
 {% endblock %}

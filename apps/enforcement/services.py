@@ -2,6 +2,7 @@ from datetime import timedelta
 from django.db.models import Count, Q
 from django.utils import timezone
 from apps.notifications.services import create_notification
+from .handshakes import order_has_handshake
 from .models import AccountRestriction, Strike
 
 
@@ -235,6 +236,11 @@ def enforce_deterministic_policies(*, now=None):
     ship_due = current - timedelta(days=ORDER_SHIP_GRACE_DAYS)
     overdue_paid_orders = Order.objects.filter(status='paid', updated_at__lte=ship_due).select_related('seller')
     for order in overdue_paid_orders:
+        # A handshake the buyer confirmed is the two of them agreeing this
+        # deadline no longer applies. Striking through it would make the
+        # agreement worthless and the rule unfair.
+        if order_has_handshake(order.pk, 'shipping'):
+            continue
         _, was_created = issue_strike(
             user=order.seller,
             reason='non_shipment',

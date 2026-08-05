@@ -41,6 +41,7 @@ class Notification(models.Model):
         ('strike_issued', 'Strike Issued'),
         ('strike_excused', 'Strike Excused'),
         ('handshake_requested', 'Handshake Requested'),
+        ('handshake_confirmed', 'Handshake Confirmed'),
         ('account_restricted', 'Account Restricted'),
         # Messaging
         ('new_message', 'New Message'),

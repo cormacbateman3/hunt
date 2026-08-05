@@ -260,6 +260,16 @@ class MarketplaceSettings(models.Model):
         validators=[MinValueValidator(0)],
         help_text='Flat fee charged per trader when using in-app trade label purchase.',
     )
+    ship_by_days = models.PositiveSmallIntegerField(
+        default=5,
+        validators=[MinValueValidator(1), MaxValueValidator(30)],
+        help_text=(
+            'Days a seller has to dispatch after payment clears. Quoted to '
+            'buyers on the listing page and printed as a date on the order. '
+            'No background job enforces it yet, so it is a promise rather '
+            'than a constraint — do not shorten it without one.'
+        ),
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

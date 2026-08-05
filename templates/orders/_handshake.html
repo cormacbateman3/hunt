@@ -1,0 +1,83 @@
+{% comment %}
+The handshake, offered beside the deadline instead of only after a strike.
+
+Three states, and only three: nothing offered, one waiting on an answer, one
+agreed. A proposal you made yourself is never presented as if it settled
+anything — it takes two people, which is the whole point of the word.
+{% endcomment %}
+
+{% if handshake_active %}
+    <div class="ord-handshake ord-handshake--agreed">
+        <span class="kb-eyebrow kb-eyebrow--live">Settled between you</span>
+        <p class="ord-handshake-copy">
+            {{ handshake_active.get_covers_display }} no longer applies &mdash;
+            {{ handshake_active.get_reason_display|lower }}, agreed by
+            {{ handshake_active.confirmed_by.profile.get_display_name }} on
+            {{ handshake_active.confirmed_at|date:"j F" }}.
+            {% if handshake_active.note %}<br>&ldquo;{{ handshake_active.note }}&rdquo;{% endif %}
+        </p>
+    </div>
+
+{% elif handshake_open %}
+    {% if handshake_open.proposed_by_id == user.id %}
+        <div class="ord-handshake">
+            <span class="kb-eyebrow kb-eyebrow--brass">Waiting on them</span>
+            <p class="ord-handshake-copy">
+                You offered a handshake &mdash; {{ handshake_open.get_reason_display|lower }}.
+                Nothing changes until they agree. It lapses
+                {{ handshake_open.expires_at|timeuntil }} from now.
+            </p>
+            <form method="post" action="{% url 'orders:withdraw_handshake' order.pk handshake_open.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="kb-btn kb-btn--text kb-btn--sm">Take it back</button>
+            </form>
+        </div>
+    {% else %}
+        <div class="ord-handshake ord-handshake--asked">
+            <span class="kb-eyebrow kb-eyebrow--brass">They&rsquo;ve offered a handshake</span>
+            <p class="ord-handshake-copy">
+                {{ handshake_open.proposed_by.profile.get_display_name }} asks to settle
+                {{ handshake_open.get_covers_display|lower }} between you &mdash;
+                {{ handshake_open.get_reason_display|lower }}.
+                {% if handshake_open.note %}<br>&ldquo;{{ handshake_open.note }}&rdquo;{% endif %}
+            </p>
+            <p class="ord-handshake-fine">
+                Agree and that deadline stops applying to this order. Nobody gets a strike
+                for it. You can still say no by doing nothing &mdash; it lapses
+                {{ handshake_open.expires_at|timeuntil }} from now.
+            </p>
+            <form method="post" action="{% url 'orders:confirm_handshake' order.pk handshake_open.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="kb-btn kb-btn--primary kb-btn--sm">Agree to it</button>
+            </form>
+        </div>
+    {% endif %}
+
+{% elif order.status in 'paid,label_created,in_transit,delivered' %}
+    <details class="ord-handshake ord-handshake--offer">
+        <summary>
+            <span class="ord-handshake-copy">
+                Meeting at a show instead, or something&rsquo;s come up? Agree it between
+                you and the deadline stops mattering.
+            </span>
+            <span class="kb-btn kb-btn--secondary kb-btn--sm">Offer a handshake</span>
+        </summary>
+        <form method="post" action="{% url 'orders:offer_handshake' order.pk %}" class="ord-handshake-form">
+            {% csrf_token %}
+            <input type="hidden" name="covers" value="{{ handshake_covers }}">
+            <label class="kb-label" for="hs-reason">What have you agreed?</label>
+            <select name="reason" id="hs-reason" class="kb-select" required>
+                {% for value, label in handshake_reasons %}
+                    <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+            <label class="kb-label" for="hs-note">Anything they should see (optional)</label>
+            <input type="text" name="note" id="hs-note" class="kb-input" maxlength="250"
+                   placeholder="Picking it up at the Bloomsburg show on the 14th">
+            <button type="submit" class="kb-btn kb-btn--primary kb-btn--sm">Send it to them</button>
+            <p class="ord-handshake-fine">
+                Nothing changes until they agree. Until then the deadline stands.
+            </p>
+        </form>
+    </details>
+{% endif %}

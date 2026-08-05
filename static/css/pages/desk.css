@@ -41,6 +41,27 @@
     align-items: center;
 }
 
+/* Orders carries a "with" column instead of Interest — who the other party
+   is matters more than how a settled thing is doing. */
+.ord-grid {
+    display: grid;
+    grid-template-columns: 1fr 150px 110px 250px 150px;
+    gap: 16px;
+    align-items: center;
+}
+
+.ord-with {
+    font-size: 12.5px;
+    color: var(--kb-ink-2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ord-total {
+    text-align: right;
+}
+
 .desk-thead {
     background: var(--kb-parchment);
     border-bottom: 1px solid var(--kb-rule);
@@ -327,11 +348,34 @@
     }
 }
 
+@media (max-width: 1000px) {
+    .ord-grid {
+        grid-template-columns: 1fr 110px 150px;
+        grid-template-areas:
+            "item total action"
+            "stands stands stands"
+            "with with with";
+        row-gap: 8px;
+    }
+
+    .ord-with   { grid-area: with; }
+    .ord-total  { grid-area: total; }
+}
+
 @media (max-width: 620px) {
     .desk-head {
         flex-direction: column;
         align-items: flex-start;
         gap: var(--kb-3);
+    }
+
+    .ord-grid {
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+            "item total"
+            "stands stands"
+            "with with"
+            "action action";
     }
 
     .desk-grid {

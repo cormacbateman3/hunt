@@ -1,0 +1,644 @@
+/* ==========================================================================
+   The order page
+
+   The only screen where somebody can earn a strike, so it has to answer
+   three questions at a glance: where is this, what do I do now, and by when.
+   A header, a five-stop rail, one brass box. Everything else is reference
+   material and sits right.
+   ========================================================================== */
+
+.kb-order {
+    padding-bottom: var(--kb-8);
+}
+
+.ord-ref {
+    font-family: var(--kb-font-mono);
+    font-size: 11px;
+    color: var(--kb-ink-5);
+    margin-left: auto;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────── */
+.ord-head {
+    background: var(--kb-parchment);
+    border-bottom: 1px solid var(--kb-rule-panel);
+    padding: var(--kb-5) var(--kb-gutter);
+    display: flex;
+    align-items: center;
+    gap: var(--kb-5);
+    max-width: var(--kb-page-max);
+    margin: 0 auto;
+}
+
+.ord-head-thumb {
+    width: 70px;
+    height: 54px;
+    border-radius: var(--kb-r-chip);
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.ord-head-thumb--blank {
+    background: var(--kb-hatch-dark);
+    display: block;
+}
+
+.ord-head-text {
+    gap: 3px;
+    min-width: 0;
+}
+
+.ord-title {
+    font: var(--kb-text-h1);
+    color: var(--kb-forest);
+    margin: 0;
+}
+
+.ord-head-sub {
+    font-size: 12.5px;
+    color: var(--kb-ink-3);
+}
+
+.ord-head-money {
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.ord-head-figure {
+    font-family: var(--kb-font-display);
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1.05;
+    color: var(--kb-forest);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── The five-stop rail ──────────────────────────────────────────────── */
+.ord-rail {
+    list-style: none;
+    margin: 0 auto;
+    padding: 18px var(--kb-gutter);
+    max-width: var(--kb-page-max);
+    background: var(--kb-surface);
+    border-bottom: 1px solid var(--kb-rule);
+    display: flex;
+    align-items: flex-start;
+}
+
+.ord-stop {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+    text-align: center;
+}
+
+/* The connector is drawn from each stop rather than as separate elements,
+   so a stop can never be orphaned from its line. */
+.ord-stop::before {
+    content: "";
+    position: absolute;
+    top: 6px;
+    right: 50%;
+    width: 100%;
+    height: 2px;
+    background: var(--kb-rule);
+}
+
+.ord-stop:first-child::before {
+    display: none;
+}
+
+.ord-stop--done::before,
+.ord-stop--here::before {
+    background: var(--kb-live-border);
+}
+
+.ord-dot {
+    width: 13px;
+    height: 13px;
+    border-radius: var(--kb-r-pill);
+    background: var(--kb-rule);
+    position: relative;
+    z-index: 1;
+}
+
+.ord-stop--done .ord-dot {
+    background: var(--kb-live);
+}
+
+.ord-stop--here .ord-dot {
+    width: 15px;
+    height: 15px;
+    background: var(--kb-brass);
+    box-shadow: 0 0 0 4px rgba(160, 122, 38, 0.2);
+}
+
+.ord-stop-label {
+    font-size: 11.5px;
+    color: var(--kb-ink-4);
+}
+
+.ord-stop--done .ord-stop-label {
+    font-weight: 600;
+    color: var(--kb-ink);
+}
+
+.ord-stop--here .ord-stop-label {
+    font-weight: 700;
+    color: var(--kb-brass);
+}
+
+.ord-stop-when {
+    font-size: 10.5px;
+    color: var(--kb-ink-5);
+}
+
+.ord-stop--here .ord-stop-when {
+    color: var(--kb-brass);
+}
+
+/* ── Body ────────────────────────────────────────────────────────────── */
+.ord-body {
+    max-width: var(--kb-page-max);
+    margin: 0 auto;
+    padding: var(--kb-6) var(--kb-gutter) 0;
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 26px;
+    align-items: start;
+}
+
+.ord-main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--kb-5);
+    min-width: 0;
+}
+
+/* ── The one brass box ───────────────────────────────────────────────── */
+.ord-turn {
+    border: 1px solid var(--kb-brass);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    overflow: hidden;
+}
+
+.ord-turn-head {
+    background: var(--kb-note-bg);
+    border-bottom: 1px solid var(--kb-note-border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.ord-turn-title {
+    font: var(--kb-text-h2);
+    color: var(--kb-forest);
+    margin: 0;
+}
+
+.ord-turn-clock {
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+}
+
+.ord-turn-left {
+    font-family: var(--kb-font-display);
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1.05;
+    color: var(--kb-brass);
+    font-variant-numeric: tabular-nums;
+}
+
+.ord-turn-by {
+    font-size: 11px;
+    color: var(--kb-ink-4);
+}
+
+.ord-turn-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--kb-4);
+}
+
+.ord-turn-note {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--kb-ink-2);
+}
+
+/* ── Two ways to ship, side by side ──────────────────────────────────── */
+.ord-ways {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--kb-4);
+}
+
+.ord-way {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-sm);
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.ord-way-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--kb-forest);
+    margin: 0;
+}
+
+.ord-way-copy {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--kb-ink-2);
+}
+
+.ord-way-price {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.ord-way-figure {
+    font-family: var(--kb-font-display);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--kb-forest);
+    font-variant-numeric: tabular-nums;
+}
+
+.ord-way-note,
+.ord-way-fine {
+    font-size: 11px;
+    color: var(--kb-ink-4);
+    margin: 0;
+}
+
+.ord-way-fine {
+    text-align: center;
+}
+
+.ord-way form,
+.ord-way-form {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.ord-way-form .kb-input,
+.ord-way-form .kb-select {
+    width: 100%;
+}
+
+/* ── The handshake ───────────────────────────────────────────────────── */
+.ord-handshake {
+    border-top: 1px solid var(--kb-rule-soft);
+    padding-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ord-standalone-handshake .ord-handshake {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    padding: 16px 20px;
+}
+
+.ord-handshake--agreed {
+    background: var(--kb-tile-live);
+    border: 1px solid var(--kb-live-border);
+    border-radius: var(--kb-r-lg);
+    padding: 14px 16px;
+}
+
+.ord-handshake--asked {
+    background: var(--kb-note-bg);
+    border: 1px solid var(--kb-note-border);
+    border-radius: var(--kb-r-lg);
+    padding: 14px 16px;
+}
+
+.ord-handshake-copy {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--kb-ink-2);
+}
+
+.ord-handshake-fine {
+    margin: 0;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--kb-ink-4);
+}
+
+.ord-handshake--offer summary {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.ord-handshake--offer summary::-webkit-details-marker {
+    display: none;
+}
+
+.ord-handshake--offer summary .kb-btn {
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.ord-handshake-form {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    max-width: 460px;
+}
+
+.ord-handshake-form .kb-input,
+.ord-handshake-form .kb-select {
+    width: 100%;
+}
+
+/* ── Sections ────────────────────────────────────────────────────────── */
+.ord-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ord-rule {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.ord-rule-title {
+    font: var(--kb-text-section);
+    color: var(--kb-forest);
+    margin: 0;
+    white-space: nowrap;
+}
+
+.ord-rule-line {
+    flex: 1;
+    height: 1px;
+    background: var(--kb-rule-panel);
+}
+
+.ord-rule-note {
+    font-size: 11.5px;
+    color: var(--kb-ink-4);
+    white-space: nowrap;
+}
+
+/* The record reads as a ledger: hour in the margin, sentence beside it. */
+.ord-record {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    overflow: hidden;
+}
+
+.ord-record-line {
+    padding: 11px 18px;
+    border-bottom: 1px solid var(--kb-rule-soft);
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+}
+
+.ord-record-line:last-child {
+    border-bottom: 0;
+}
+
+.ord-record-when {
+    font-family: var(--kb-font-mono);
+    font-size: 11px;
+    color: var(--kb-brass);
+    width: 100px;
+    flex-shrink: 0;
+}
+
+.ord-record-text {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--kb-ink);
+}
+
+.ord-strike {
+    border: 1px solid var(--kb-alert-border);
+    background: var(--kb-alert-bg);
+    border-radius: var(--kb-r-lg);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.ord-strike-note,
+.ord-strike-excused {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--kb-ink-2);
+}
+
+.ord-strike-excused {
+    color: var(--kb-live);
+    font-weight: 600;
+}
+
+.ord-quiet {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--kb-ink-3);
+}
+
+.ord-review {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    padding: 16px 18px;
+}
+
+/* ── Right rail ──────────────────────────────────────────────────────── */
+.ord-rail-right {
+    display: flex;
+    flex-direction: column;
+    gap: var(--kb-4);
+    position: sticky;
+    top: calc(var(--kb-topbar-h) + var(--kb-3));
+}
+
+.ord-money,
+.ord-address,
+.ord-party,
+.ord-help {
+    padding: 15px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ord-money-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--kb-ink-3);
+}
+
+.ord-money-row--rule,
+.ord-money-row--total {
+    border-top: 1px solid var(--kb-rule-soft);
+    padding-top: 8px;
+}
+
+.ord-money-figure {
+    font-weight: 600;
+    color: var(--kb-ink);
+    font-variant-numeric: tabular-nums;
+}
+
+.ord-money-figure--out {
+    color: var(--kb-rust);
+}
+
+.ord-money-row--total {
+    align-items: baseline;
+}
+
+.ord-money-row--total > span:first-child {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--kb-ink);
+}
+
+.ord-money-total {
+    font-family: var(--kb-font-display);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--kb-forest);
+    font-variant-numeric: tabular-nums;
+}
+
+.ord-money-fine {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--kb-ink-4);
+    border-top: 1px solid var(--kb-rule-soft);
+    padding-top: 9px;
+}
+
+.ord-address-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--kb-ink);
+}
+
+.ord-address-lines {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--kb-ink-2);
+}
+
+.ord-party {
+    flex-direction: row;
+    align-items: center;
+    gap: 11px;
+}
+
+.ord-party-mark {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--kb-r-chip);
+    background: var(--kb-forest);
+    color: var(--kb-cream);
+    font-size: 12.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.ord-party-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--kb-forest);
+    text-decoration: none;
+}
+
+.ord-party-sub {
+    font-size: 11.5px;
+    color: var(--kb-ink-3);
+}
+
+/* ── Narrow ──────────────────────────────────────────────────────────── */
+@media (max-width: 1040px) {
+    .ord-body {
+        grid-template-columns: 1fr;
+    }
+
+    .ord-rail-right {
+        position: static;
+    }
+}
+
+@media (max-width: 760px) {
+    .ord-head {
+        flex-wrap: wrap;
+    }
+
+    .ord-head-money {
+        margin-left: 0;
+        align-items: flex-start;
+    }
+
+    .ord-rail {
+        overflow-x: auto;
+    }
+
+    .ord-stop {
+        min-width: 110px;
+    }
+
+    .ord-ways {
+        grid-template-columns: 1fr;
+    }
+
+    .ord-record-line {
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .ord-record-when {
+        width: auto;
+    }
+}

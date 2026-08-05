@@ -41,6 +41,7 @@ def transition_order(order, target_status, *, actor=None):
 def auto_complete_delivered_orders(grace_days=3, limit=200):
     threshold = timezone.now() - timedelta(days=grace_days)
     # Keep queryset simple and explicit for command-level control.
+    from apps.enforcement.handshakes import order_has_handshake
     from .models import Order
     queryset = (
         Order.objects.filter(status='delivered', updated_at__lte=threshold)
@@ -48,6 +49,11 @@ def auto_complete_delivered_orders(grace_days=3, limit=200):
     )
     completed_count = 0
     for order in queryset:
+        # If the two of them agreed to hold this one open — a parcel gone
+        # astray, a buyer away from home — assuming receipt would decide it
+        # against the buyer on their behalf.
+        if order_has_handshake(order.pk, 'receipt'):
+            continue
         ok, _ = transition_order(order, 'completed')
         if ok:
             completed_count += 1

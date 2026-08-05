@@ -28,10 +28,20 @@ AUCTION_PAY_GRACE_HOURS = 24        # release_unpaid_auction_wins
 BUY_NOW_PAY_GRACE_MINUTES = 30      # release_stale_pending_buy_now_orders
 RECEIPT_GRACE_DAYS = 3              # auto_complete_delivered_orders
 
-# The handling window quoted to buyers on the listing page. Unlike the three
-# above there is no job enforcing it yet, so it is a promise rather than a
-# constraint — worth moving to MarketplaceSettings when one is written.
-SHIP_BY_DAYS = 5
+
+
+def ship_by_days():
+    """The handling window quoted to buyers, from MarketplaceSettings.
+
+    Unlike the three constants above there is no job enforcing this one, so
+    it is a promise rather than a constraint. It is admin-tunable because the
+    promise is a business decision; do not shorten it without writing the job
+    that acts on it.
+    """
+    from apps.core.models import MarketplaceSettings
+
+    row = MarketplaceSettings.objects.order_by('id').first()
+    return row.ship_by_days if row else 5
 
 
 def _urgency(due_at, now):
@@ -124,7 +134,7 @@ def needs_you(user):
         .select_related('listing', 'buyer', 'ship_to_snapshot')
     )
     for order in to_ship:
-        due = order.updated_at + timedelta(days=SHIP_BY_DAYS)
+        due = order.updated_at + timedelta(days=ship_by_days())
         destination = ''
         if order.ship_to_snapshot:
             snap = order.ship_to_snapshot

@@ -1,241 +1,300 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Order #{{ order.pk }} | KeystoneBid{% endblock %}
+{% block title %}{{ order.listing.title }} &middot; Order &middot; KeystoneBid{% endblock %}
+
+{% block context_band %}
+<nav class="kb-crumbs" aria-label="Breadcrumb">
+    <div class="kb-band-inner">
+        <a href="{% url 'bench' %}">My Bench</a>
+        <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
+        <a href="{% url 'orders:my_orders' %}">Orders</a>
+        <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
+        <span class="kb-crumb-current">
+            {% if is_seller %}Sale to{% else %}Bought from{% endif %} {{ other_party.profile.get_display_name }}
+        </span>
+        <span class="ord-ref">No. {{ order.pk }} &middot; opened {{ order.created_at|date:"j M" }}</span>
+    </div>
+</nav>
+{% endblock %}
+
+{% block main_class %}kb-order{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/order.css' %}">{% endblock %}
 
 {% block content %}
-<section style="display: grid; gap: 1rem;">
-    <article class="card">
-        <h1 style="margin-bottom: 0.5rem;">Order #{{ order.pk }}</h1>
-        <p style="margin-bottom: 0.45rem;">
-            Listing: <a href="{% url 'listings:detail' order.listing.pk %}">{{ order.listing.title }}</a>
-        </p>
-        <p style="color: var(--color-muted);">
-            Type: {{ order.get_order_type_display }} | Status: {{ order.get_status_display }}
-        </p>
-    </article>
+{% comment %}
+Eight stacked cards became three things: a header that says what this is, a
+five-stop rail that says where it is, and one brass box that says what to do.
+Money, addresses and the other party are reference material and sit right.
 
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Status Timeline</h2>
-        <div style="display: grid; gap: 0.45rem;">
-            {% for step in timeline %}
-                <p>
-                    {% if step.is_current %}<strong>{% endif %}
-                    {% if step.is_done %}[x]{% elif step.is_current %}[>]{% else %}[ ]{% endif %}
-                    {{ step.label }}
-                    {% if step.is_current %}</strong>{% endif %}
-                </p>
-            {% endfor %}
-        </div>
-    </article>
+The Stripe session id is gone — nobody ever needed it — and so are the
+package inputs, which were captured on the listing.
+{% endcomment %}
 
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Totals</h2>
-        <p>Item amount: ${{ order.item_amount }}</p>
-        <p>Shipping amount: ${{ order.shipping_amount }}</p>
-        <p>Platform fee: ${{ order.platform_fee_amount }}</p>
-        <p><strong>Total: ${{ order.total_amount }}</strong></p>
-    </article>
+<header class="ord-head">
+    {% if order.listing.featured_image %}
+        <img src="{{ order.listing.featured_image.url }}" alt="" class="ord-head-thumb">
+    {% else %}
+        <span class="ord-head-thumb ord-head-thumb--blank" aria-hidden="true"></span>
+    {% endif %}
+    <div class="kb-stack ord-head-text">
+        <span class="kb-eyebrow kb-eyebrow--brass">
+            {% if is_seller %}You sold this{% else %}You bought this{% endif %}
+            &middot; {% if order.order_type == 'auction' %}The Auction House{% else %}The General Store{% endif %}
+        </span>
+        <h1 class="ord-title">{{ order.listing.title }}</h1>
+        <span class="ord-head-sub">
+            {% if is_seller %}To{% else %}From{% endif %} {{ other_party.profile.get_display_name }}
+            {% if order.status != 'pending_payment' %} &middot; paid {{ order.updated_at|date:"j F" }}{% endif %}
+        </span>
+    </div>
+    <div class="ord-head-money">
+        <span class="kb-eyebrow">{{ money.total_label }}</span>
+        <span class="ord-head-figure">${{ money.total|floatformat:2 }}</span>
+    </div>
+</header>
 
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Payment</h2>
-        {% if payment %}
-            <p>Status: {{ payment.get_status_display }}</p>
-            {% if payment.stripe_checkout_session_id %}
-                <p style="color: var(--color-muted);">Checkout Session: {{ payment.stripe_checkout_session_id }}</p>
-            {% endif %}
-        {% else %}
-            <p>No payment record yet.</p>
-        {% endif %}
-        {% if is_buyer and order.status == 'pending_payment' %}
-            <p style="margin-top: 0.6rem;">
-                <a class="btn-primary" href="{% url 'payments:checkout' order.pk %}">Pay now</a>
-            </p>
-            <p style="margin-top: 0.45rem; color: var(--color-muted);">
-                Shipping quote is included in checkout totals.
-            </p>
-        {% endif %}
-    </article>
+{% comment %}Where it is. Done, here, or not yet — nothing else.{% endcomment %}
+<ol class="ord-rail">
+    {% for stop in stops %}
+        <li class="ord-stop ord-stop--{{ stop.state }}">
+            <span class="ord-dot" aria-hidden="true"></span>
+            <span class="ord-stop-label">{{ stop.label }}</span>
+            <span class="ord-stop-when">
+                {% if stop.due_at %}by {{ stop.due_at|date:"D j M" }}
+                {% elif stop.at %}{{ stop.at|date:"j M" }}
+                {% else %}&mdash;{% endif %}
+            </span>
+        </li>
+    {% endfor %}
+</ol>
 
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Shipping</h2>
-        {% if shipment %}
-            <p>Shipment status: {{ shipment.get_status_display }}</p>
-            <p>Tracking number: {{ shipment.tracking_number|default:'Not provided' }}</p>
-            <p>Carrier: {{ shipment.carrier|default:'Not provided' }}</p>
-            <p>Service: {{ shipment.service_level|default:'Not provided' }}</p>
-            <p>Rate: ${{ shipment.rate_amount }}</p>
-            {% if shipment.label_url %}
-                <p><a href="{{ shipment.label_url }}" target="_blank" rel="noopener">View shipping label</a></p>
-            {% endif %}
-        {% else %}
-            <p>No shipment attached yet.</p>
-        {% endif %}
+<div class="ord-body">
+    <div class="ord-main">
 
-        {% if shipment_events %}
-            <h3 style="font-size: 1.05rem; margin: 0.8rem 0 0.4rem;">Tracking history</h3>
-            <div style="display: grid; gap: 0.35rem;">
-                {% for event in shipment_events %}
-                    <p>
-                        {{ event.event_time|date:"M j, Y g:i a" }} - {{ event.status }}{% if event.description %}: {{ event.description }}{% endif %}
-                    </p>
-                {% endfor %}
-            </div>
-        {% endif %}
-    </article>
-
-    {% if is_seller %}
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Seller Shipping Actions</h2>
-        {% if order.status == 'pending_payment' %}
-            <p style="margin-bottom: 0.45rem; color: var(--color-muted);">
-                Enter package specs to quote shipping before buyer checkout.
-            </p>
-            <form method="post" action="{% url 'shipping:quote_order_shipping' order.pk %}" style="display: grid; gap: 0.5rem;">
-                {% csrf_token %}
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;">
-                    <input class="form-input" name="weight_oz" placeholder="Weight (oz)" value="{% if shipment and shipment.package_weight_oz %}{{ shipment.package_weight_oz }}{% endif %}" required>
-                    <input class="form-input" name="length_in" placeholder="Length (in)" value="{% if shipment and shipment.package_length_in %}{{ shipment.package_length_in }}{% endif %}" required>
-                    <input class="form-input" name="width_in" placeholder="Width (in)" value="{% if shipment and shipment.package_width_in %}{{ shipment.package_width_in }}{% endif %}" required>
-                    <input class="form-input" name="height_in" placeholder="Height (in)" value="{% if shipment and shipment.package_height_in %}{{ shipment.package_height_in }}{% endif %}" required>
-                </div>
-                <div>
-                    <button class="btn-secondary" type="submit">Quote shipping</button>
-                </div>
-            </form>
-        {% endif %}
-
-        {% if order.status == 'paid' or order.status == 'label_created' or order.status == 'in_transit' %}
-            <div style="display: grid; gap: 0.6rem; margin-top: 0.8rem;">
-                <form method="post" action="{% url 'shipping:buy_label' order.pk %}">
-                    {% csrf_token %}
-                    <button class="btn-secondary" type="submit">Buy label via Shippo</button>
-                </form>
-                <form method="post" action="{% url 'shipping:manual_tracking' order.pk %}" style="display: grid; gap: 0.45rem;">
-                    {% csrf_token %}
-                    <input class="form-input" name="carrier" placeholder="Carrier (e.g., USPS)" required>
-                    <input class="form-input" name="tracking_number" placeholder="Tracking number" required>
-                    <div>
-                        <button class="btn-secondary" type="submit">Enter tracking manually</button>
+        {% if turn %}
+            {% comment %}The one thing to do, and the clock it runs against.{% endcomment %}
+            <section class="ord-turn">
+                <div class="ord-turn-head">
+                    <div class="kb-stack">
+                        <span class="kb-eyebrow kb-eyebrow--brass">Your turn</span>
+                        <h2 class="ord-turn-title">{{ turn.headline }}</h2>
                     </div>
-                </form>
-            </div>
-        {% endif %}
-    </article>
-    {% endif %}
-
-    {% if is_buyer %}
-    {% if order.status == 'completed' %}
-    <article style="background: linear-gradient(135deg, var(--color-forest-green) 0%, #2c5a1e 100%); color: #fff; border-radius: 10px; padding: 1rem 1.2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
-        <div>
-            <p style="font-weight: 700; font-size: 1.05rem; margin-bottom: 0.2rem; color: #fff;">Order complete — add to your collection</p>
-            <p style="opacity: 0.85; font-size: 0.88rem;">Preserve this purchase in your collection with pre-filled details.</p>
-        </div>
-        <a href="{% url 'collections:add_from_order' order.pk %}"
-           class="btn-primary"
-           style="background: #fff; color: var(--color-forest-green); font-weight: 700; white-space: nowrap;">
-            Add to collection &rarr;
-        </a>
-    </article>
-    {% endif %}
-
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Buyer Action</h2>
-        {% if order.status == 'paid' or order.status == 'label_created' or order.status == 'in_transit' or order.status == 'delivered' %}
-            <form method="post" action="{% url 'orders:confirm_receipt' order.pk %}">
-                {% csrf_token %}
-                <button class="btn-primary" type="submit">Confirm receipt</button>
-            </form>
-        {% else %}
-            <p style="color: var(--color-muted);">No receipt action required for current order status.</p>
-        {% endif %}
-    </article>
-    {% endif %}
-
-    {% if strikes %}
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Handshake For Exceptions</h2>
-        <p style="color: var(--color-muted); margin-bottom: 0.6rem;">
-            Use a handshake when both sides agree a strike event is a valid exception. Confirmation window: 72 hours.
-        </p>
-        <div style="display: grid; gap: 0.8rem;">
-            {% for strike in strikes %}
-                <div style="padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px;">
-                    <p><strong>Strike #{{ strike.pk }}</strong> - {{ strike.get_reason_display }} (applies to {{ strike.user.username }})</p>
-                    <p style="color: var(--color-muted);">Issued {{ strike.created_at|date:"M j, Y g:i a" }}{% if strike.expires_at %}, expires {{ strike.expires_at|date:"M j, Y g:i a" }}{% endif %}</p>
-                    {% if strike.notes %}<p>Notes: {{ strike.notes }}</p>{% endif %}
-                    {% if strike.is_excused %}
-                        <p style="color: #2c4a1e;"><strong>Excused</strong> by {{ strike.excuse_confirmed_by.username }}{% if strike.excuse_reason %} ({{ strike.get_excuse_reason_display }}){% endif %}.</p>
-                    {% else %}
-                        {% if strike.excuse_initiated_by %}
-                            <p>Handshake initiated by {{ strike.excuse_initiated_by.username }}{% if strike.excuse_reason %} ({{ strike.get_excuse_reason_display }}){% endif %}.</p>
-                            {% if strike.excuse_note %}<p>Note: {{ strike.excuse_note }}</p>{% endif %}
-                            {% if strike.excuse_expires_at %}<p>Confirm by: {{ strike.excuse_expires_at|date:"M j, Y g:i a" }}</p>{% endif %}
-                            {% if user.id != strike.excuse_initiated_by_id %}
-                                <form method="post" action="{% url 'orders:confirm_excuse' order.pk strike.pk %}">
-                                    {% csrf_token %}
-                                    <button class="btn-secondary" type="submit">Confirm Handshake</button>
-                                </form>
-                            {% endif %}
-                        {% else %}
-                            <form method="post" action="{% url 'orders:initiate_excuse' order.pk strike.pk %}" style="display: grid; gap: 0.45rem; margin-top: 0.5rem;">
-                                {% csrf_token %}
-                                <select class="form-input" name="excuse_reason" required>
-                                    <option value="">Select reason</option>
-                                    {% for value, label in excuse_reason_choices %}
-                                        <option value="{{ value }}">{{ label }}</option>
-                                    {% endfor %}
-                                </select>
-                                <input class="form-input" name="excuse_note" placeholder="Optional note (max 250 chars)">
-                                <div><button class="btn-secondary" type="submit">Initiate Handshake</button></div>
-                            </form>
-                        {% endif %}
+                    {% if turn.left %}
+                        <div class="ord-turn-clock">
+                            <span class="ord-turn-left">{{ turn.left }}</span>
+                            <span class="ord-turn-by">{{ turn.due_on }}</span>
+                        </div>
                     {% endif %}
                 </div>
-            {% endfor %}
-        </div>
-    </article>
-    {% endif %}
 
-    <!-- Review section -->
-    {% if order.status == 'completed' %}
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Review</h2>
-        {% if existing_review %}
-            <p style="margin-bottom: 0.3rem;">
-                <strong>Your review:</strong>
-                <span class="badge {% if existing_review.sentiment == 'positive' %}badge-active{% elif existing_review.sentiment == 'negative' %}badge-expired{% else %}{% endif %}">
-                    {{ existing_review.get_sentiment_display }}
-                </span>
-            </p>
-            {% if existing_review.body %}
-                <p style="color: var(--color-muted);">{{ existing_review.body }}</p>
-            {% endif %}
-        {% elif can_review %}
-            <p style="color: var(--color-muted); margin-bottom: 0.65rem;">
-                {% if is_buyer %}Rate your experience with the seller.{% else %}Rate your experience with the buyer.{% endif %}
-            </p>
-            <form method="post" action="{% url 'reviews:submit_order' order.pk %}" style="display: grid; gap: 0.55rem;">
-                {% csrf_token %}
-                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                    {% for value, label in review_form.fields.sentiment.choices %}
-                        <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
-                            <input type="radio" name="sentiment" value="{{ value }}" required> {{ label }}
-                        </label>
+                <div class="ord-turn-body">
+                    {% if turn.is_ship %}
+                        {% comment %}
+                        Two ways to ship, side by side. Stacked in one card with
+                        no explanation, the difference between them was invisible.
+                        {% endcomment %}
+                        <div class="ord-ways">
+                            <div class="ord-way">
+                                <h3 class="ord-way-title">Buy the label here</h3>
+                                <p class="ord-way-copy">
+                                    Posted to {{ order.ship_to_snapshot.city }},
+                                    {{ order.ship_to_snapshot.state }}. The buyer has already
+                                    paid the ${{ order.shipping_amount|floatformat:2 }}.
+                                </p>
+                                <div class="ord-way-price">
+                                    <span class="ord-way-figure">${{ order.shipping_amount|floatformat:2 }}</span>
+                                    <span class="ord-way-note">nothing more to pay</span>
+                                </div>
+                                <form method="post" action="{% url 'shipping:buy_label' order.pk %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="kb-btn kb-btn--primary kb-btn--block">Buy it and print</button>
+                                </form>
+                                <p class="ord-way-fine">Tracking starts on its own. Nothing else to enter.</p>
+                            </div>
+
+                            <div class="ord-way">
+                                <h3 class="ord-way-title">Or use your own postage</h3>
+                                <p class="ord-way-copy">Put the tracking number in and we&rsquo;ll follow it from there.</p>
+                                <form method="post" action="{% url 'shipping:manual_tracking' order.pk %}" class="ord-way-form">
+                                    {% csrf_token %}
+                                    <label class="kb-sr" for="ord-carrier">Carrier</label>
+                                    <select name="carrier" id="ord-carrier" class="kb-select">
+                                        <option value="USPS">USPS</option>
+                                        <option value="UPS">UPS</option>
+                                        <option value="FedEx">FedEx</option>
+                                    </select>
+                                    <label class="kb-sr" for="ord-tracking">Tracking number</label>
+                                    <input type="text" name="tracking_number" id="ord-tracking"
+                                           class="kb-input" placeholder="Tracking number" required>
+                                    <button type="submit" class="kb-btn kb-btn--secondary kb-btn--block">Save the tracking</button>
+                                </form>
+                            </div>
+                        </div>
+                    {% else %}
+                        <p class="ord-turn-note">{{ turn.note }}</p>
+                        {% if turn.is_receipt %}
+                            <form method="post" action="{% url 'orders:confirm_receipt' order.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="kb-btn kb-btn--primary">It arrived</button>
+                            </form>
+                        {% elif turn.is_pay %}
+                            <a href="{{ turn.action.url }}" class="kb-btn kb-btn--primary">{{ turn.action.label }}</a>
+                        {% endif %}
+                    {% endif %}
+
+                    {% include 'orders/_handshake.html' %}
+                </div>
+            </section>
+        {% else %}
+            <div class="ord-standalone-handshake">{% include 'orders/_handshake.html' %}</div>
+        {% endif %}
+
+        <section class="ord-section">
+            <div class="ord-rule">
+                <h2 class="ord-rule-title">The record</h2>
+                <span class="ord-rule-line" aria-hidden="true"></span>
+            </div>
+            <div class="ord-record">
+                {% for line in record %}
+                    <div class="ord-record-line">
+                        <span class="ord-record-when">{{ line.at|date:"j M, g:i a" }}</span>
+                        <span class="ord-record-text">{{ line.text }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        {% if shipment_events %}
+            <section class="ord-section">
+                <div class="ord-rule">
+                    <h2 class="ord-rule-title">The parcel</h2>
+                    <span class="ord-rule-line" aria-hidden="true"></span>
+                    <span class="ord-rule-note">
+                        {{ shipment.carrier|default:"Carrier" }} {{ shipment.tracking_number }}
+                    </span>
+                </div>
+                <div class="ord-record">
+                    {% for event in shipment_events %}
+                        <div class="ord-record-line">
+                            <span class="ord-record-when">{{ event.event_time|date:"j M, g:i a" }}</span>
+                            <span class="ord-record-text">{{ event.description|default:event.status }}</span>
+                        </div>
                     {% endfor %}
                 </div>
-                {{ review_form.body.errors }}
-                <div>
-                    <label class="form-label" for="{{ review_form.body.id_for_label }}">Comments (optional)</label>
-                    {{ review_form.body }}
-                </div>
-                <div>
-                    <button type="submit" class="btn-primary">Submit review</button>
-                </div>
-            </form>
-        {% else %}
-            <p style="color: var(--color-muted);">Reviews are available once an order is completed.</p>
+            </section>
         {% endif %}
-    </article>
-    {% endif %}
-</section>
+
+        {% if strikes %}
+            <section class="ord-section">
+                <div class="ord-rule">
+                    <h2 class="ord-rule-title">Strikes on this order</h2>
+                    <span class="ord-rule-line" aria-hidden="true"></span>
+                </div>
+                {% for strike in strikes %}
+                    <div class="ord-strike">
+                        <span class="kb-eyebrow kb-eyebrow--rust">{{ strike.get_reason_display }}</span>
+                        <p class="ord-strike-note">{{ strike.notes }}</p>
+                        {% if strike.is_excused %}
+                            <p class="ord-strike-excused">
+                                Excused &mdash; {{ strike.get_excuse_reason_display }}, agreed by
+                                {{ strike.excuse_confirmed_by.profile.get_display_name }}.
+                            </p>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </section>
+        {% endif %}
+
+        {% if can_review %}
+            <section class="ord-section">
+                <div class="ord-rule">
+                    <h2 class="ord-rule-title">Say how it went</h2>
+                    <span class="ord-rule-line" aria-hidden="true"></span>
+                </div>
+                <form method="post" action="{% url 'reviews:submit_order' order.pk %}" class="ord-review">
+                    {% csrf_token %}
+                    {{ review_form.as_p }}
+                    <button type="submit" class="kb-btn kb-btn--primary">Leave a review</button>
+                </form>
+            </section>
+        {% elif existing_review %}
+            <p class="ord-quiet">You left a review on {{ existing_review.created_at|date:"j F" }}.</p>
+        {% endif %}
+    </div>
+
+    <aside class="ord-rail-right">
+        <section class="kb-panel">
+            <div class="kb-panel-head"><span class="kb-eyebrow kb-eyebrow--brass">The money</span></div>
+            <div class="ord-money">
+                {% for row in money.rows %}
+                    <div class="ord-money-row">
+                        <span>{{ row.label }}</span>
+                        <span class="ord-money-figure">${{ row.amount|floatformat:2 }}</span>
+                    </div>
+                {% endfor %}
+                {% if money.paid %}
+                    <div class="ord-money-row ord-money-row--rule">
+                        <span>{{ money.paid_label }}</span>
+                        <span class="ord-money-figure">${{ money.paid|floatformat:2 }}</span>
+                    </div>
+                {% endif %}
+                {% for row in money.deductions %}
+                    <div class="ord-money-row">
+                        <span>{{ row.label }}</span>
+                        <span class="ord-money-figure ord-money-figure--out">&minus; ${{ row.amount|floatformat:2 }}</span>
+                    </div>
+                {% endfor %}
+                <div class="ord-money-row ord-money-row--total">
+                    <span>{{ money.total_label }}</span>
+                    <span class="ord-money-total">${{ money.total|floatformat:2 }}</span>
+                </div>
+                <p class="ord-money-fine">{{ money.footnote }}</p>
+            </div>
+        </section>
+
+        {% if order.ship_to_snapshot %}
+            <section class="kb-panel">
+                <div class="kb-panel-head"><span class="kb-eyebrow kb-eyebrow--brass">
+                    {% if is_seller %}Send it to{% else %}Coming to{% endif %}</span></div>
+                <div class="ord-address">
+                    <span class="ord-address-name">{{ order.ship_to_snapshot.full_name }}</span>
+                    <span class="ord-address-lines">
+                        {{ order.ship_to_snapshot.line1 }}{% if order.ship_to_snapshot.line2 %}<br>{{ order.ship_to_snapshot.line2 }}{% endif %}<br>
+                        {{ order.ship_to_snapshot.city }}, {{ order.ship_to_snapshot.state }} {{ order.ship_to_snapshot.postal_code }}
+                    </span>
+                    <p class="ord-money-fine">Copied at the moment of sale. Changing your address book won&rsquo;t touch this.</p>
+                </div>
+            </section>
+        {% endif %}
+
+        <section class="kb-panel kb-panel--parchment">
+            <div class="ord-party">
+                <span class="ord-party-mark">{{ other_party.username|slice:':2'|upper }}</span>
+                <span class="kb-stack">
+                    <a href="{% url 'accounts:profile' other_party.username %}" class="ord-party-name">{{ other_party.profile.get_display_name }}</a>
+                    <span class="ord-party-sub">{% if is_seller %}Buyer{% else %}Seller{% endif %} &middot; here since {{ other_party.date_joined|date:"Y" }}</span>
+                </span>
+            </div>
+        </section>
+
+        <section class="kb-panel">
+            <div class="ord-help">
+                <span class="kb-eyebrow">If something is wrong</span>
+                <p class="ord-quiet">
+                    Talk to them first &mdash; nearly everything is a misunderstanding
+                    about timing. A handshake settles a late shipment between you with
+                    no strike. Only after that does anything reach us.
+                </p>
+                <form method="post" action="{% url 'messaging:start' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="recipient_id" value="{{ other_party.pk }}">
+                    <input type="hidden" name="conversation_type" value="general">
+                    <button type="submit" class="kb-btn kb-btn--secondary kb-btn--sm">Write to them</button>
+                </form>
+            </div>
+        </section>
+    </aside>
+</div>
 {% endblock %}
