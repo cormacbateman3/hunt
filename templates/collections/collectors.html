@@ -216,9 +216,13 @@ select reaches back into it with the `form` attribute instead.
 
                             {% comment %}
                             DEFERRED — "Propose a trade" is still a two-step walk:
-                            it opens their trade shelf, where you pick the piece.
-                            Blocked on: TradeOffer requires a listing_id, so an
-                            offer cannot yet start from a person.
+                            it opens their trade shelf, where you pick a piece
+                            that is listed. An offer against an unlisted piece
+                            has nowhere to hang.
+                            Blocked on: TradeOffer.trade_listing is a non-null FK
+                            and Trade.listing is a OneToOne doing double duty as
+                            the uniqueness anchor. Both have to become nullable
+                            together, with something else holding uniqueness.
                             Register: docs/internal/plan_design.md
                             {% endcomment %}
                             <div class="co-card-foot">

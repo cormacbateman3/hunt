@@ -1,0 +1,55 @@
+{% comment %}
+One licence, in a roster or on the table — the same node either way.
+
+It has to be one node, because putting a piece on the table *moves* this
+element into the dark panel rather than cloning it. Two markups would mean
+the checkbox that actually submits lives in one of them and the thing you
+can see lives in the other, which is how a table stops matching the offer
+it sends.
+
+The parent decides which parts show: rosters want a thumbnail, a truncated
+title and the note; the table wants the full title, the county·year·grade
+line and a remove control.
+
+Expects: `row` (from trades.composer.roster) and `field` — the form field
+name this side of the table posts to.
+{% endcomment %}
+<li class="tb-piece{% if not row.available %} is-held{% endif %}"
+    data-note="{{ row.note_kind }}"
+    data-find="{{ row.item.title|lower }} {{ row.item.county.name|default:''|lower }} {{ row.item.license_year|default:'' }}">
+    <label class="tb-piece-hit">
+        <input type="checkbox" name="{{ field }}" value="{{ row.item.pk }}"
+               class="tb-piece-pick"
+               {% if row.on_table %}checked{% endif %}
+               {% if not row.available %}disabled{% endif %}>
+
+        <span class="tb-piece-thumb">
+            {% if row.item.images.all %}
+                <img src="{{ row.item.images.all.0.image.url }}" alt="" loading="lazy">
+            {% endif %}
+        </span>
+
+        <span class="tb-piece-text">
+            <span class="tb-piece-title">
+                {{ row.item.license_year|default:row.item.effective_era }}
+                {{ row.item.county.name|default:row.item.state.code|default:'' }}
+            </span>
+            <span class="tb-piece-meta">
+                {{ row.item.title|truncatechars:38 }}{% if row.item.condition_grade %}
+                    &middot; {{ row.item.get_condition_grade_display }}{% endif %}
+            </span>
+        </span>
+
+        {% if row.note %}
+            <span class="tb-note tb-note--{{ row.note_kind }}">{{ row.note }}</span>
+        {% endif %}
+
+        {% comment %}
+        One glyph, two jobs: a + on the shelf, a × once it is on the table.
+        The label is spelled out for screen readers because a bare symbol is
+        not an instruction.
+        {% endcomment %}
+        <span class="tb-piece-mark" aria-hidden="true"></span>
+        <span class="kb-sr tb-piece-say">Put on the table</span>
+    </label>
+</li>

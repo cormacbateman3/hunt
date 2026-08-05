@@ -399,6 +399,17 @@ Header. Format and state read first, then the title, then the object line.
                                 <a class="kb-btn kb-btn--secondary kb-btn--block" href="{% url 'offers:make' listing.pk %}">Make an offer</a>
                                 <span class="kb-hint">Offers are binding &mdash; if the seller accepts, you buy at that price.</span>
                             {% endif %}
+                            {% comment %}
+                            The third way of asking for the same licence. A
+                            shelf in the General Store carries no promise to
+                            sell to the highest bidder, so a trade offer takes
+                            nothing out from under anybody — unlike an auction,
+                            where it would.
+                            {% endcomment %}
+                            {% if can_offer_trade %}
+                                <a class="kb-btn kb-btn--secondary kb-btn--block" href="{% url 'trades:propose' listing_id=listing.id %}">Offer a licence instead</a>
+                                <span class="kb-hint">Put one of yours on the table &mdash; they can counter, and cash can even it up either way.</span>
+                            {% endif %}
                         {% elif can_resume_buy_now %}
                             <p class="kb-muted lst-note">You already started checkout for this listing.</p>
                             <a class="kb-btn kb-btn--primary kb-btn--block" href="{% url 'payments:checkout' buy_now_order.pk %}">Resume checkout</a>

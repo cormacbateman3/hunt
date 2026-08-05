@@ -1,0 +1,20 @@
+{% comment %}One licence on a read-only table. Expects `piece`.{% endcomment %}
+<li class="tb-piece">
+    <span class="tb-piece-hit">
+        <span class="tb-piece-thumb">
+            {% if piece.images.all %}
+                <img src="{{ piece.images.all.0.image.url }}" alt="" loading="lazy">
+            {% endif %}
+        </span>
+        <span class="tb-piece-text">
+            <a href="{% url 'collections:item_detail' piece.pk %}" class="tb-piece-title">
+                {{ piece.license_year|default:piece.effective_era }}
+                {{ piece.county.name|default:piece.state.code|default:'' }}
+            </a>
+            <span class="tb-piece-meta">
+                {{ piece.title|truncatechars:38 }}{% if piece.condition_grade %}
+                    &middot; {{ piece.get_condition_grade_display }}{% endif %}
+            </span>
+        </span>
+    </span>
+</li>

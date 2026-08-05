@@ -1,0 +1,926 @@
+/* ==========================================================================
+   The Trading Block — the table the licences are laid on (turn 3a)
+
+   The old board was four equal columns with rust and green borders doing the
+   labelling job on their own, which is both weak and slightly alarming on a
+   page about giving your property away. Inverting the middle two does three
+   things at once: the licences become the brightest objects on the page,
+   direction is carried by position and one brass arrow, and the two halves
+   read as ONE DEAL rather than two lists that happen to sit together.
+
+   The shelves either side are picker lists at 196px — a thumbnail and a
+   truncated title is enough to recognise your own licence, and shelves are
+   for finding, not admiring. The width they gave up went to the rail.
+   ========================================================================== */
+
+.kb-composer {
+    max-width: var(--kb-page-max);
+    margin: 0 auto;
+    padding: var(--kb-5) var(--kb-gutter) var(--kb-8);
+}
+
+.tb-composer {
+    display: grid;
+    grid-template-columns: 196px minmax(0, 1fr) 196px 300px;
+    gap: var(--kb-4);
+    align-items: start;
+}
+
+/* ── The shelves ───────────────────────────────────────────────────── */
+.tb-roster {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: sticky;
+    top: var(--kb-topbar-h);
+}
+
+.tb-roster-head {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.tb-roster-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--kb-ink-2);
+    margin: 0;
+    line-height: 1.3;
+}
+
+.tb-roster-count {
+    font-variant-numeric: tabular-nums;
+    color: var(--kb-ink-4);
+    font-weight: 600;
+}
+
+.tb-find-input {
+    width: 100%;
+    font-size: 12px;
+    padding: 5px 8px;
+    border: 1px solid var(--kb-rule-strong);
+    border-radius: var(--kb-r-chip);
+    background: var(--kb-surface);
+    color: var(--kb-ink);
+}
+
+.tb-find-input:focus {
+    outline: 2px solid var(--kb-brass);
+    outline-offset: 1px;
+}
+
+.tb-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.tb-chip {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--kb-ink-3);
+    background: var(--kb-surface);
+    border: 1px solid var(--kb-rule-strong);
+    border-radius: var(--kb-r-chip);
+    padding: 3px 7px;
+    cursor: pointer;
+}
+
+.tb-chip:hover {
+    border-color: var(--kb-forest);
+    color: var(--kb-forest);
+}
+
+.tb-chip.is-on {
+    background: var(--kb-forest);
+    border-color: var(--kb-forest);
+    color: var(--kb-cream);
+}
+
+.tb-shelf {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 62vh;
+    overflow-y: auto;
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    padding: 4px;
+}
+
+.tb-roster-foot {
+    margin: 0;
+    font-size: 11px;
+    color: var(--kb-ink-4);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── One licence, wherever it is standing ──────────────────────────── */
+.tb-piece {
+    border-radius: var(--kb-r-sm);
+}
+
+.tb-piece-hit {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 6px;
+    cursor: pointer;
+    border-radius: var(--kb-r-sm);
+}
+
+.tb-piece-pick {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+}
+
+.tb-piece-thumb {
+    width: 30px;
+    height: 23px;
+    background: var(--kb-chip);
+    border: 1px solid var(--kb-rule-strong);
+    border-radius: var(--kb-r-micro);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.tb-piece-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.tb-piece-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.tb-piece-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--kb-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* The second line is the table's business. On a shelf a truncated title is
+   enough, and two lines at 196px is a wall. */
+.tb-piece-meta {
+    display: none;
+    font-size: 11px;
+    color: var(--kb-ink-3);
+}
+
+.tb-note {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--kb-ink-4);
+    white-space: nowrap;
+}
+
+.tb-note--wanted { color: var(--kb-rust); }
+.tb-note--gap    { color: var(--kb-live-green); }
+.tb-note--duplicate,
+.tb-note--held   { color: var(--kb-ink-4); }
+
+.tb-piece-mark {
+    width: 15px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--kb-ink-4);
+    flex-shrink: 0;
+}
+
+.tb-piece-mark::before { content: '+'; }
+
+.tb-shelf .tb-piece-hit:hover {
+    background: var(--kb-chip);
+}
+
+.tb-shelf .tb-piece-hit:hover .tb-piece-mark {
+    color: var(--kb-forest);
+}
+
+.tb-piece-hit:focus-within {
+    outline: 2px solid var(--kb-brass);
+    outline-offset: -1px;
+}
+
+/* Held by a live lot: still listed, still named, not pickable. Hiding it
+   makes a collector think their own list is broken. */
+.tb-piece.is-held .tb-piece-hit {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.tb-piece.is-held .tb-piece-mark { display: none; }
+
+.tb-piece.is-hidden { display: none; }
+
+/* ── The table ─────────────────────────────────────────────────────── */
+.tb-centre {
+    display: flex;
+    flex-direction: column;
+    gap: var(--kb-3);
+    min-width: 0;
+}
+
+.tb-table {
+    background: var(--kb-forest-deep);
+    border-radius: var(--kb-r-lg);
+    padding: 15px 16px 16px;
+    color: var(--kb-cream);
+}
+
+.tb-table-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 11px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.tb-table-eyebrow {
+    font: 700 var(--kb-eyebrow-size)/1.2 var(--kb-font-body);
+    letter-spacing: var(--kb-eyebrow-tracking);
+    text-transform: uppercase;
+    color: var(--kb-brass);
+}
+
+.tb-table-terms {
+    font-family: var(--kb-font-display);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--kb-cream);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+.tb-halves {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 30px minmax(0, 1fr);
+    align-items: stretch;
+    padding-top: 13px;
+}
+
+.tb-half {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+}
+
+.tb-half-title {
+    font: 700 var(--kb-label-size)/1.2 var(--kb-font-body);
+    letter-spacing: var(--kb-label-tracking);
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.62);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.tb-half-count {
+    font-family: var(--kb-font-display);
+    font-size: 15px;
+    color: var(--kb-cream);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Direction is read from position and one brass arrow. Nothing here is
+   labelled by colour alone. */
+.tb-swap {
+    align-self: center;
+    text-align: center;
+    font-size: 19px;
+    color: var(--kb-brass);
+}
+
+.tb-laid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.tb-laid .tb-piece {
+    background: rgba(255, 255, 255, 0.055);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--kb-r-sm);
+}
+
+.tb-laid .tb-piece-hit {
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    padding: 7px 8px;
+}
+
+.tb-laid .tb-piece-thumb {
+    width: 34px;
+    height: 26px;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.tb-laid .tb-piece-title {
+    color: var(--kb-cream);
+    font-size: 12.5px;
+    white-space: normal;
+}
+
+.tb-laid .tb-piece-meta {
+    display: block;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.tb-laid .tb-note {
+    display: none;
+}
+
+.tb-laid .tb-note--gap,
+.tb-laid .tb-note--anchor {
+    display: inline;
+    color: var(--kb-brass);
+}
+
+.tb-laid .tb-piece-mark::before { content: '\00d7'; }
+.tb-laid .tb-piece-mark { color: rgba(255, 255, 255, 0.55); }
+
+.tb-laid .tb-piece-hit:hover .tb-piece-mark { color: var(--kb-cream); }
+
+.tb-laid .tb-piece.is-anchor .tb-piece-hit { cursor: default; }
+
+.tb-empty {
+    margin: 0;
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, 0.42);
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    border-radius: var(--kb-r-sm);
+    padding: 12px 10px;
+    text-align: center;
+}
+
+.tb-empty.is-hidden { display: none; }
+
+/* Cash sits in a recessed strip at the foot of each side — lit when it is
+   in play, dim when it isn't. */
+.tb-cash {
+    margin-top: auto;
+    background: rgba(0, 0, 0, 0.22);
+    border-radius: var(--kb-r-sm);
+    padding: 7px 9px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.tb-cash.is-live { color: rgba(255, 255, 255, 0.72); }
+
+.tb-cash.is-on {
+    color: var(--kb-cream);
+    box-shadow: inset 0 0 0 1px var(--kb-brass);
+}
+
+.tb-cash-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.tb-cash-figure {
+    font-family: var(--kb-font-display);
+    font-variant-numeric: tabular-nums;
+}
+
+.tb-cash-entry {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    padding-top: 11px;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.tb-cash-entry .kb-input {
+    width: 110px;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.22);
+    color: var(--kb-cream);
+}
+
+.tb-cash-hint { color: rgba(255, 255, 255, 0.45); }
+
+/* ── The band ──────────────────────────────────────────────────────── */
+.tb-band {
+    background: var(--kb-parchment);
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    padding: 14px 16px 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.tb-band-who {
+    margin: 0;
+    font: 700 var(--kb-eyebrow-size)/1.2 var(--kb-font-body);
+    letter-spacing: var(--kb-eyebrow-tracking);
+    text-transform: uppercase;
+    color: var(--kb-ink-3);
+}
+
+/* The terms restated before the buttons, because the one thing nobody
+   should do here is agree to something they stopped reading. */
+.tb-band-terms {
+    margin: 0;
+    font-family: var(--kb-font-display);
+    font-size: 21px;
+    font-weight: 600;
+    color: var(--kb-forest);
+    font-variant-numeric: tabular-nums;
+}
+
+.tb-band-small {
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--kb-ink-3);
+}
+
+.tb-band-fields {
+    display: flex;
+    gap: var(--kb-4);
+    align-items: flex-start;
+    margin-top: 6px;
+}
+
+.tb-band-fields label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    color: var(--kb-ink-3);
+}
+
+.tb-band-fields .kb-input { width: 62px; }
+
+.tb-band-note {
+    flex: 1;
+    align-items: flex-start !important;
+    flex-direction: column;
+    gap: 3px !important;
+}
+
+.tb-band-note textarea {
+    width: 100%;
+    font-size: 12.5px;
+}
+
+/* Three decisions, weighted. Go is brass with a raised edge; the quiet one
+   is the quietest thing on the band. */
+.tb-decisions {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 9px;
+}
+
+.tb-decide {
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: var(--kb-r-sm);
+    padding: 9px 17px;
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+
+.tb-decide--go {
+    background: var(--kb-brass);
+    border-color: var(--kb-brass-deep);
+    color: #fff;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    margin-left: auto;
+}
+
+.tb-decide--go:hover:not(:disabled) { background: var(--kb-brass-deep); }
+
+.tb-decide--go:disabled {
+    background: var(--kb-chip);
+    border-color: var(--kb-rule-strong);
+    color: var(--kb-ink-4);
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+.tb-decide--counter {
+    background: transparent;
+    border-color: var(--kb-forest);
+    color: var(--kb-forest);
+}
+
+.tb-decide--counter:hover { background: var(--kb-forest); color: var(--kb-cream); }
+
+.tb-decide--quiet {
+    background: transparent;
+    color: var(--kb-ink-4);
+    padding-left: 0;
+}
+
+.tb-decide--quiet:hover { color: var(--kb-rust); }
+
+.tb-decide-hint {
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--kb-ink-4);
+    text-align: right;
+}
+
+.tb-decide-hint.is-hidden { display: none; }
+
+/* ── The rail ──────────────────────────────────────────────────────── */
+.tb-rail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--kb-3);
+    position: sticky;
+    top: var(--kb-topbar-h);
+}
+
+.tb-rail-card {
+    background: var(--kb-surface);
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    padding: 13px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.tb-rail-title {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--kb-ink-2);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.tb-rail-count {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--kb-ink-4);
+}
+
+/* A vertical timeline: each round is a rung, most recent at the top. */
+.tb-thread {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 13px;
+    border-left: 1px solid var(--kb-rule);
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+
+.tb-thread-row {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    position: relative;
+}
+
+.tb-thread-row::before {
+    content: '';
+    position: absolute;
+    left: -17px;
+    top: 5px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--kb-brass);
+}
+
+.tb-thread-who {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--kb-ink);
+}
+
+.tb-thread-what { font-size: 11.5px; color: var(--kb-ink-2); }
+.tb-thread-when { font-size: 11px; color: var(--kb-ink-4); font-variant-numeric: tabular-nums; }
+
+.tb-quote {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--kb-ink-2);
+    font-style: italic;
+    border-left: 2px solid var(--kb-rule-strong);
+    padding-left: 10px;
+}
+
+/* ── The other trader ──────────────────────────────────────────────── */
+.tb-trader-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.tb-trader-face {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--kb-rule-strong);
+    flex-shrink: 0;
+}
+
+.tb-trader-face--blank { background: var(--kb-chip); }
+
+.tb-trader-name {
+    display: block;
+    font-family: var(--kb-font-display);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--kb-forest);
+    text-decoration: none;
+}
+
+.tb-trader-name:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+.tb-trader-where { font-size: 11.5px; color: var(--kb-ink-3); }
+
+.tb-trust {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+}
+
+.tb-trust li { display: flex; gap: 6px; color: var(--kb-ink-2); }
+
+.tb-trust-yes::before { content: '\2713'; color: var(--kb-live-green); font-weight: 700; }
+.tb-trust-no::before  { content: '\0021'; color: var(--kb-rust); font-weight: 700; }
+
+.tb-trader-wants p {
+    margin: 3px 0 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--kb-ink);
+}
+
+.tb-trader-link {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--kb-brass);
+    text-decoration: none;
+}
+
+/* ── The read-only screens: table + rail, no shelves ───────────────── */
+.tb-read {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: var(--kb-4);
+    align-items: start;
+}
+
+.tb-read .tb-piece-hit { cursor: default; }
+
+.tb-read .tb-piece-title {
+    text-decoration: none;
+}
+
+.tb-read .tb-piece-title:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/* A button that is really a link — the rail's "write to them" posts a form
+   because starting a conversation is a write. */
+.tb-trader-link {
+    background: none;
+    border: 0;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+/* ── Parcels, on a struck trade ────────────────────────────────────── */
+.tb-parcels {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--kb-3);
+}
+
+.tb-parcel {
+    background: var(--kb-surface);
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    padding: 13px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+/* Yours first and edged, because the only question this page answers is
+   whose turn it is. */
+.tb-parcel--mine { border-left: 3px solid var(--kb-brass); order: -1; }
+
+.tb-parcel-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.tb-parcel-state { font-size: 11.5px; color: var(--kb-ink-3); }
+
+.tb-parcel-facts {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 3px 12px;
+    margin: 0;
+    font-size: 12.5px;
+}
+
+.tb-parcel-facts dt { color: var(--kb-ink-3); }
+.tb-parcel-facts dd { margin: 0; color: var(--kb-ink); font-variant-numeric: tabular-nums; }
+
+.tb-ship {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--kb-3);
+    border-top: 1px solid var(--kb-rule-soft);
+    padding-top: 11px;
+}
+
+.tb-ship-way {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.tb-ship-way h3 {
+    margin: 0;
+    font: 700 var(--kb-label-size)/1.2 var(--kb-font-body);
+    letter-spacing: var(--kb-label-tracking);
+    text-transform: uppercase;
+    color: var(--kb-ink-3);
+}
+
+.tb-ship-way .kb-input { width: 100%; font-size: 12.5px; }
+
+.tb-ship-dims {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+}
+
+.tb-strike {
+    border-top: 1px solid var(--kb-rule-soft);
+    padding-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.tb-strike-what { margin: 0; font-size: 12.5px; font-weight: 600; color: var(--kb-rust); }
+.tb-strike-ok { margin: 0; font-size: 12.5px; color: var(--kb-ink-2); }
+
+.tb-strike-form { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+.tb-review { display: flex; flex-direction: column; gap: 8px; }
+.tb-review-picks { display: flex; gap: var(--kb-4); flex-wrap: wrap; font-size: 13px; }
+.tb-review textarea { width: 100%; }
+
+/* ── The accept confirmation ───────────────────────────────────────── */
+.tb-confirm {
+    position: fixed;
+    inset: 0;
+    background: rgba(28, 31, 24, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--kb-4);
+    z-index: 60;
+}
+
+.tb-confirm[hidden] { display: none; }
+
+.tb-confirm-box {
+    background: var(--kb-surface);
+    border-radius: var(--kb-r-lg);
+    border: 1px solid var(--kb-rule-strong);
+    padding: 20px 22px;
+    max-width: 520px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+
+.tb-confirm-box h2 {
+    margin: 0;
+    font-family: var(--kb-font-display);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--kb-forest);
+}
+
+.tb-confirm-terms {
+    margin: 0;
+    font-family: var(--kb-font-display);
+    font-size: 18px;
+    color: var(--kb-brass-deep);
+    font-variant-numeric: tabular-nums;
+}
+
+.tb-confirm-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--kb-4);
+    border-top: 1px solid var(--kb-rule);
+    border-bottom: 1px solid var(--kb-rule);
+    padding: 12px 0;
+}
+
+.tb-confirm-cols ul {
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 12.5px;
+    color: var(--kb-ink);
+}
+
+.tb-confirm-small {
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--kb-ink-3);
+}
+
+.tb-confirm-actions {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 3px;
+}
+
+.tb-confirm-actions form { margin-left: auto; }
+
+/* ── Narrow ────────────────────────────────────────────────────────── */
+@media (max-width: 1200px) {
+    .tb-composer { grid-template-columns: 176px minmax(0, 1fr) 176px; }
+    .tb-rail { grid-column: 1 / -1; flex-direction: row; position: static; }
+    .tb-rail-card { flex: 1; }
+    .tb-read { grid-template-columns: minmax(0, 1fr); }
+    .tb-read .tb-rail { flex-direction: row; }
+}
+
+@media (max-width: 860px) {
+    /* Dual rosters do not survive a phone. 15b sends the desk work to a
+       computer rather than pretending; here the shelves stack instead, which
+       is workable because they are picker lists to begin with. */
+    .tb-composer { grid-template-columns: minmax(0, 1fr); }
+    .tb-roster { position: static; }
+    .tb-shelf { max-height: 40vh; }
+    .tb-halves { grid-template-columns: minmax(0, 1fr); }
+    .tb-swap { transform: rotate(90deg); padding: 8px 0; }
+    .tb-rail { flex-direction: column; }
+    .tb-parcels,
+    .tb-ship { grid-template-columns: minmax(0, 1fr); }
+    .tb-decisions { flex-wrap: wrap; }
+    .tb-decide--go { margin-left: 0; width: 100%; text-align: center; }
+}

@@ -786,4 +786,8 @@ on user sign in, should go to the home page - right now it directs to My Bench.
 
 If an auction listing is expired and didn't sell and is not being renewed or a user takes down listing then it goes back to their collection - should probably actually add this option (in case like they got rid of it off site or something because wouldn't want to put it back in their collection if they don't have it anymore).
 
-why was the google autocomplete/lookup taken out of the address entry.
+the listing form/add new item looks nothing like docs\internal\design\ui-ux-redesign-model is this in the plan to get updated in a future pass/task and we just haven't gotten to it yet?
+
+user blocking doesn't work. you can't unblock a user - when you select unblock it just takes you to your messages and also there isn't really an entry point to even block anyone in the first place. it was working previous to the ui/ux updates so not sure what changed.
+
+why was the google autocomplete/lookup taken out of the address entry. i had it in there before.

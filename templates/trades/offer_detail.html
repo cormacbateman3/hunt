@@ -1,94 +1,172 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Trade Offer #{{ offer.pk }} | KeystoneBid{% endblock %}
+{% block title %}Trade offer &middot; {{ other.profile.get_display_name|default:other.username }} &middot; KeystoneBid{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/trade-board.css' %}">{% endblock %}
+
+{% block main_class %}kb-composer{% endblock %}
+
+{% block context_band %}
+<nav class="kb-crumbs" aria-label="Breadcrumb">
+    <div class="kb-band-inner">
+        <a href="{% url 'bench' %}">My Bench</a>
+        <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
+        <a href="{% url 'listings:detail' offer.trade_listing.pk %}">The Trading Block</a>
+        <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
+        <span class="kb-crumb-current">
+            {{ other.profile.get_display_name|default:other.username }}{% if round_number > 1 %}, counter #{{ round_number }}{% endif %}
+        </span>
+    </div>
+</nav>
+{% endblock %}
 
 {% block content %}
-<section style="display: grid; gap: 1rem;">
-    <article class="card">
-        <h1 style="margin-bottom: 0.45rem;">Trade Offer #{{ offer.pk }}</h1>
-        <p>
-            Listing: <a href="{% url 'listings:detail' offer.trade_listing.pk %}">{{ offer.trade_listing.title }}</a>
-        </p>
-        <p style="color: var(--color-muted);">
-            {{ offer.from_user.username }} -> {{ offer.to_user.username }} | {{ offer.get_status_display }} | Expires {{ offer.expires_at|date:"M j, Y g:i a" }}
-        </p>
-        {% if offer.message %}
-            <p style="margin-top: 0.6rem;">{{ offer.message }}</p>
-        {% endif %}
-        {% if offer.cash_amount %}
-            <p style="margin-top: 0.4rem;"><strong>Cash add-on:</strong> ${{ offer.cash_amount }}</p>
-        {% endif %}
-    </article>
+{% comment %}
+The decision screen. Same dark table as the composer, because a member who
+agreed to something on one screen should recognise it on the next without
+re-reading — then a light band that restates the terms in Petrona before it
+offers three buttons of deliberately unequal weight.
 
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.55rem;">Offer Terms</h2>
-        <div style="display: grid; gap: 0.45rem;">
-            {% for item in offer.items.all %}
-                <p>
-                    {% if item.direction == 'offered' %}<strong>You give:</strong>{% else %}<strong>You receive:</strong>{% endif %}
-                    {{ item.collection_item.title }}
-                </p>
-            {% empty %}
-                <p>No offer items attached.</p>
-            {% endfor %}
-        </div>
-    </article>
+Accept goes to a confirmation, never straight through: this is the only
+button on the site that gives away property in two directions at once.
+{% endcomment %}
 
-    {% if trade %}
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.55rem;">Accepted Trade</h2>
-        <p>Trade #{{ trade.pk }} created. <a href="{% url 'trades:trade_detail' trade.pk %}">View trade detail</a></p>
-    </article>
-    {% endif %}
+<div class="tb-read">
+    <div class="tb-centre">
+        {% include 'trades/_laid_table.html' %}
 
-    {% if offer.status == 'pending' and user.is_authenticated %}
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.55rem;">Actions</h2>
-        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-            {% if user.id == offer.to_user_id %}
-                <form method="post" action="{% url 'trades:offer_action' offer.pk 'accept' %}">
-                    {% csrf_token %}
-                    <button class="btn-primary" type="submit">Accept</button>
-                </form>
-                <form method="post" action="{% url 'trades:offer_action' offer.pk 'decline' %}">
-                    {% csrf_token %}
-                    <button class="btn-secondary" type="submit">Decline</button>
-                </form>
-                <a class="btn-secondary" href="{% url 'trades:counter_offer' offer.pk %}">Counter</a>
+        <section class="tb-band">
+            <p class="tb-band-who">
+                {% if round_number > 1 %}Counter #{{ round_number }}{% else %}Offer{% endif %}
+                from {{ offer.from_user.profile.get_display_name|default:offer.from_user.username }}
+                &middot; {{ offer.get_status_display|lower }}
+                {% if offer.status == 'pending' and offer.expires_at %}
+                    &middot; expires {{ offer.expires_at|timeuntil }} from now
+                {% endif %}
+            </p>
+            <p class="tb-band-terms">{{ table.terms }}</p>
+            <p class="tb-band-small">
+                Both ship within {{ ship_by_days }} days of acceptance &middot; tracking required
+                &middot; each pays their own outbound
+            </p>
+
+            {% if offer.status == 'pending' %}
+                <div class="tb-decisions">
+                    {% if is_mine_to_answer %}
+                        {% comment %}
+                        Weighted, not equal. Decline is the quietest thing on
+                        the band; counter is outlined; accept is brass with a
+                        raised edge, because it is the one that ends the
+                        negotiation.
+                        {% endcomment %}
+                        <form method="post" action="{% url 'trades:offer_action' offer.pk 'decline' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="tb-decide tb-decide--quiet">Decline</button>
+                        </form>
+                        <a href="{% url 'trades:counter_offer' offer.pk %}"
+                           class="tb-decide tb-decide--counter">Send counter #{{ round_number|add:"1" }}</a>
+                        <button type="button" class="tb-decide tb-decide--go" id="tb-accept-open">
+                            Review &amp; accept
+                        </button>
+                    {% else %}
+                        <form method="post" action="{% url 'trades:offer_action' offer.pk 'withdraw' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="tb-decide tb-decide--quiet">Withdraw this offer</button>
+                        </form>
+                        <span class="tb-decide-hint">
+                            Waiting on {{ offer.to_user.profile.get_display_name|default:offer.to_user.username }}.
+                        </span>
+                    {% endif %}
+                </div>
+            {% elif trade %}
+                <div class="tb-decisions">
+                    <a href="{% url 'trades:trade_detail' trade.pk %}" class="tb-decide tb-decide--go">
+                        Open the trade
+                    </a>
+                </div>
             {% endif %}
-            {% if user.id == offer.from_user_id %}
-                <form method="post" action="{% url 'trades:offer_action' offer.pk 'withdraw' %}">
-                    {% csrf_token %}
-                    <button class="btn-secondary" type="submit">Withdraw</button>
-                </form>
+        </section>
+    </div>
+
+    <aside class="tb-rail">
+        <section class="tb-rail-card">
+            <h2 class="tb-rail-title">
+                Negotiation
+                <span class="tb-rail-count">{{ thread|length }} round{{ thread|length|pluralize }}</span>
+            </h2>
+            <ol class="tb-thread">
+                {% for row in thread %}
+                    <li class="tb-thread-row">
+                        <span class="tb-thread-who">{{ row.who }} {{ row.verb }}</span>
+                        <span class="tb-thread-what">
+                            {% if row.is_this_one %}<strong>This one &mdash; </strong>{% endif %}
+                            {{ row.pieces }} piece{{ row.pieces|pluralize }} on the table
+                            {% if row.offer.cash_amount %} &middot; ${{ row.offer.cash_amount }}{% endif %}
+                        </span>
+                        <span class="tb-thread-when">
+                            {% if not row.is_this_one %}
+                                <a href="{% url 'trades:offer_detail' row.offer.pk %}">{{ row.offer.created_at|date:"j M, g:i a" }}</a>
+                            {% else %}{{ row.offer.created_at|date:"j M, g:i a" }}{% endif %}
+                        </span>
+                    </li>
+                {% endfor %}
+            </ol>
+
+            {% if offer.message %}
+                <blockquote class="tb-quote">{{ offer.message }}</blockquote>
             {% endif %}
+
             <form method="post" action="{% url 'messaging:start' %}">
                 {% csrf_token %}
-                {% if user.id == offer.from_user_id %}
-                    <input type="hidden" name="recipient_id" value="{{ offer.to_user.pk }}">
-                {% else %}
-                    <input type="hidden" name="recipient_id" value="{{ offer.from_user.pk }}">
-                {% endif %}
+                <input type="hidden" name="recipient_id" value="{{ other.pk }}">
                 <input type="hidden" name="trade_offer_id" value="{{ offer.pk }}">
                 <input type="hidden" name="conversation_type" value="trade">
-                <button type="submit" class="btn-secondary">Message counterparty</button>
+                <button type="submit" class="tb-trader-link">
+                    Write to {{ other.profile.get_display_name|default:other.username }} &rarr;
+                </button>
             </form>
-        </div>
-    </article>
-    {% endif %}
+        </section>
 
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.55rem;">Offer History</h2>
-        <div style="display: grid; gap: 0.45rem;">
-            {% for h in history %}
-                <p>
-                    <a href="{% url 'trades:offer_detail' h.pk %}">#{{ h.pk }}</a> -
-                    {{ h.from_user.username }} to {{ h.to_user.username }} -
-                    {{ h.get_status_display }} -
-                    {{ h.created_at|date:"M j, Y g:i a" }}
-                </p>
-            {% endfor %}
+        {% include 'trades/_trader_card.html' with trader=other %}
+    </aside>
+</div>
+
+{% if offer.status == 'pending' and is_mine_to_answer %}
+    {% comment %}
+    The confirmation. Accepting a trade commits property in both directions
+    at once, and there is no undo — so it says out loud what leaves and what
+    arrives before the last button.
+    {% endcomment %}
+    <div class="tb-confirm" id="tb-accept" hidden>
+        <div class="tb-confirm-box" role="dialog" aria-modal="true" aria-labelledby="tb-confirm-title">
+            <h2 id="tb-confirm-title">Accept this trade?</h2>
+            <p class="tb-confirm-terms">{{ table.terms }}</p>
+            <div class="tb-confirm-cols">
+                <div>
+                    <span class="kb-eyebrow">Leaving you</span>
+                    <ul>{% for piece in table.giving %}<li>{{ piece.title }}</li>{% endfor %}</ul>
+                </div>
+                <div>
+                    <span class="kb-eyebrow">Coming to you</span>
+                    <ul>{% for piece in table.receiving %}<li>{{ piece.title }}</li>{% endfor %}</ul>
+                </div>
+            </div>
+            <p class="tb-confirm-small">
+                Both sides ship within {{ ship_by_days }} days with tracking. Once
+                accepted, the other offers on this lot are declined and this cannot
+                be taken back.
+            </p>
+            <div class="tb-confirm-actions">
+                <button type="button" class="tb-decide tb-decide--quiet" id="tb-accept-close">Go back</button>
+                <form method="post" action="{% url 'trades:offer_action' offer.pk 'accept' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="tb-decide tb-decide--go">Accept the trade</button>
+                </form>
+            </div>
         </div>
-    </article>
-</section>
+    </div>
+{% endif %}
 {% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/trade-confirm.js' %}"></script>{% endblock %}

@@ -2,8 +2,10 @@ from decimal import Decimal
 from django.utils import timezone
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
+from apps.accounts.bench import ship_by_days
 from apps.enforcement.models import Strike
 from apps.enforcement.services import confirm_excuse_handshake, enforce_capability, initiate_excuse_handshake
 from apps.reviews.forms import ReviewForm
@@ -12,9 +14,11 @@ from apps.shipping.services import ShippoError
 from apps.collections.models import CollectionItem
 from apps.collections.tradeability import open_to_trade
 from apps.listings.models import Listing
+from . import composer
 from .forms import TradeOfferForm
 from .models import Trade, TradeOffer, TradeShipment
 from .services import (
+    TRADEABLE_LISTING_TYPES,
     accept_trade_offer,
     add_trade_manual_tracking,
     buy_trade_label,
@@ -27,11 +31,60 @@ from .services import (
 
 
 def _get_trade_listing(pk):
+    """The lot a trade can be proposed against.
+
+    A Trading Block lot or a General Store shelf. Not an auction — see
+    ``TRADEABLE_LISTING_TYPES``.
+    """
     return get_object_or_404(
         Listing.objects.select_related('seller', 'source_collection_item'),
         pk=pk,
-        listing_type='trade',
+        listing_type__in=TRADEABLE_LISTING_TYPES,
     )
+
+
+def _composer_context(request, *, listing, other, form, on_table_mine,
+                      on_table_theirs):
+    """Everything the dark table and its two rosters need.
+
+    Shared by propose and counter because they are the same screen with the
+    pronouns swapped — the counter is not a different decision, it is the
+    same one taken from the other chair.
+    """
+    anchor = listing.source_collection_item
+    receiving = len(on_table_theirs | ({anchor.pk} if anchor else set()))
+    return {
+        'listing': listing,
+        'form': form,
+        'other': other,
+        'mine': composer.roster(
+            owner=request.user, reader=request.user, side='mine',
+            on_table=on_table_mine),
+        'theirs': composer.roster(
+            owner=other, reader=request.user, side='theirs',
+            on_table=on_table_theirs),
+        'anchor': anchor,
+        'allow_cash': listing.allow_cash,
+        'trader_trust': composer.trader_trust(other),
+        'ship_by_days': ship_by_days(),
+        # Rendered server-side so the sentence is right before any script
+        # runs, and on the counter screen where the table opens full.
+        'terms_line': composer.terms_line(
+            giving=len(on_table_mine),
+            receiving=receiving,
+            cash_amount=None,
+            cash_direction='from_proposer',
+        ),
+    }
+
+
+def _open_negotiations(user, *, excluding=None):
+    """'← Back to my 3 open negotiations' — the breadcrumb's third line."""
+    qs = TradeOffer.objects.filter(
+        Q(from_user=user) | Q(to_user=user), status='pending')
+    if excluding:
+        qs = qs.exclude(pk=excluding)
+    return qs.count()
 
 
 @login_required
@@ -46,12 +99,16 @@ def propose_offer(request, listing_id):
         messages.error(request, reason)
         return redirect('listings:detail', pk=listing.pk)
 
-    offered_queryset = open_to_trade(CollectionItem.objects.filter(owner=request.user)).order_by('-created_at')
+    offered_queryset = open_to_trade(
+        CollectionItem.objects.filter(owner=request.user)).order_by('-created_at')
+    requested_queryset = open_to_trade(
+        CollectionItem.objects.filter(owner=listing.seller, is_public=True))
     if not request.user.profile.phone_verified:
         messages.info(request, 'Phone verification is recommended for smoother trade trust.')
     form = TradeOfferForm(
         request.POST or None,
         offered_queryset=offered_queryset,
+        requested_queryset=requested_queryset,
         allow_cash=listing.allow_cash,
     )
     if request.method == 'POST' and form.is_valid():
@@ -60,8 +117,10 @@ def propose_offer(request, listing_id):
             from_user=request.user,
             to_user=listing.seller,
             offered_items=form.cleaned_data['offered_items'],
+            requested_items=form.cleaned_data.get('requested_items'),
             message=form.cleaned_data.get('message', ''),
             cash_amount=form.cleaned_data.get('cash_amount') or Decimal('0.00'),
+            cash_direction=form.cleaned_data.get('cash_direction') or 'from_proposer',
             expires_days=form.cleaned_data.get('expires_days') or 4,
         )
         if offer:
@@ -69,30 +128,34 @@ def propose_offer(request, listing_id):
             return redirect('trades:offer_detail', offer_id=offer.pk)
         messages.error(request, error)
 
-    my_collection = CollectionItem.objects.filter(
-        owner=request.user, tradeability='open'
-    ).prefetch_related('images').order_by('-created_at')
-    exclude_pk = listing.source_collection_item_id
-    their_qs = CollectionItem.objects.filter(
-        owner=listing.seller, is_public=True, tradeability='open'
-    ).prefetch_related('images').order_by('-created_at')
-    if exclude_pk:
-        their_qs = their_qs.exclude(pk=exclude_pk)
-    their_collection = their_qs
-
-    return render(request, 'trades/propose_offer.html', {
-        'listing': listing,
-        'form': form,
+    context = _composer_context(
+        request, listing=listing, other=listing.seller, form=form,
+        on_table_mine=_posted_ids(request, 'offered_items'),
+        on_table_theirs=_posted_ids(request, 'requested_items'),
+    )
+    context.update({
         'mode': 'propose',
-        'my_collection': my_collection,
-        'their_collection': their_collection,
+        'open_negotiations': _open_negotiations(request.user),
     })
+    return render(request, 'trades/propose_offer.html', context)
+
+
+def _posted_ids(request, field):
+    """Which pieces were on the table when the form came back with errors.
+
+    A rejected offer must not empty the table — rebuilding a five-piece
+    trade because the cash field was wrong is how somebody stops proposing.
+    """
+    if request.method != 'POST':
+        return set()
+    return {int(v) for v in request.POST.getlist(field) if v.isdigit()}
 
 
 @login_required
 def counter_offer(request, offer_id):
     parent_offer = get_object_or_404(
-        TradeOffer.objects.select_related('trade_listing', 'trade_listing__seller', 'from_user', 'to_user'),
+        TradeOffer.objects.select_related('trade_listing', 'trade_listing__seller', 'from_user', 'to_user')
+        .prefetch_related('items__collection_item'),
         pk=offer_id,
     )
     if request.user.id != parent_offer.to_user_id:
@@ -107,22 +170,29 @@ def counter_offer(request, offer_id):
         return redirect('trades:offer_detail', offer_id=parent_offer.pk)
 
     listing = parent_offer.trade_listing
-    offered_queryset = open_to_trade(CollectionItem.objects.filter(owner=request.user)).order_by('-created_at')
+    other = parent_offer.from_user
+    offered_queryset = open_to_trade(
+        CollectionItem.objects.filter(owner=request.user)).order_by('-created_at')
+    requested_queryset = open_to_trade(
+        CollectionItem.objects.filter(owner=other, is_public=True))
     if not request.user.profile.phone_verified:
         messages.info(request, 'Phone verification is recommended for smoother trade trust.')
     form = TradeOfferForm(
         request.POST or None,
         offered_queryset=offered_queryset,
+        requested_queryset=requested_queryset,
         allow_cash=listing.allow_cash,
     )
     if request.method == 'POST' and form.is_valid():
         offer, error = create_trade_offer(
             listing=listing,
             from_user=request.user,
-            to_user=parent_offer.from_user,
+            to_user=other,
             offered_items=form.cleaned_data['offered_items'],
+            requested_items=form.cleaned_data.get('requested_items'),
             message=form.cleaned_data.get('message', ''),
             cash_amount=form.cleaned_data.get('cash_amount') or Decimal('0.00'),
+            cash_direction=form.cleaned_data.get('cash_direction') or 'from_proposer',
             expires_days=form.cleaned_data.get('expires_days') or 4,
             counter_to=parent_offer,
         )
@@ -131,25 +201,40 @@ def counter_offer(request, offer_id):
             return redirect('trades:offer_detail', offer_id=offer.pk)
         messages.error(request, error)
 
-    my_collection = CollectionItem.objects.filter(
-        owner=request.user, tradeability='open'
-    ).prefetch_related('images').order_by('-created_at')
-    exclude_pk = listing.source_collection_item_id
-    their_qs = CollectionItem.objects.filter(
-        owner=listing.seller, is_public=True, tradeability='open'
-    ).prefetch_related('images').order_by('-created_at')
-    if exclude_pk:
-        their_qs = their_qs.exclude(pk=exclude_pk)
-    their_collection = their_qs
+    # A counter opens on the deal as it stands, with the sides swapped: what
+    # they asked of me is now mine to give. Starting from an empty table
+    # would make every counter a fresh proposal.
+    if request.method == 'POST':
+        mine = _posted_ids(request, 'offered_items')
+        theirs = _posted_ids(request, 'requested_items')
+    else:
+        mine = {i.collection_item_id for i in parent_offer.items.all()
+                if i.direction == 'requested'}
+        theirs = {i.collection_item_id for i in parent_offer.items.all()
+                  if i.direction == 'offered'}
 
-    return render(request, 'trades/propose_offer.html', {
-        'listing': listing,
-        'form': form,
+    context = _composer_context(
+        request, listing=listing, other=other, form=form,
+        on_table_mine=mine, on_table_theirs=theirs,
+    )
+    context.update({
         'mode': 'counter',
         'parent_offer': parent_offer,
-        'my_collection': my_collection,
-        'their_collection': their_collection,
+        'round_number': _round_number(parent_offer) + 1,
+        'open_negotiations': _open_negotiations(request.user, excluding=parent_offer.pk),
     })
+    return render(request, 'trades/propose_offer.html', context)
+
+
+def _round_number(offer):
+    """How many offers deep this negotiation is — 'counter #2' in the trail."""
+    depth, seen = 1, set()
+    current = offer
+    while current.counter_to_id and current.counter_to_id not in seen:
+        seen.add(current.counter_to_id)
+        depth += 1
+        current = current.counter_to
+    return depth
 
 
 @login_required
@@ -165,21 +250,22 @@ def offer_detail(request, offer_id):
     if offer.status == 'pending' and offer.expires_at and offer.expires_at <= timezone.now():
         offer.status = 'expired'
         offer.save(update_fields=['status', 'updated_at'])
-    # Only the negotiation these two people are having. Filtering by listing
-    # alone showed every rival proposer's offers to every other proposer —
-    # what somebody was willing to give up is theirs, not the room's.
-    parties = {offer.from_user_id, offer.to_user_id}
-    history = (
-        TradeOffer.objects
-        .filter(trade_listing=offer.trade_listing,
-                from_user_id__in=parties, to_user_id__in=parties)
-        .select_related('from_user', 'to_user')
-        .order_by('-created_at')
-    )
+
+    other = (offer.to_user if request.user.id == offer.from_user_id
+             else offer.from_user)
+    thread = composer.thread(offer)
     trade = Trade.objects.filter(listing=offer.trade_listing).first()
     return render(request, 'trades/offer_detail.html', {
         'offer': offer,
-        'history': history,
+        'other': other,
+        'table': composer.table_for(offer, request.user),
+        'thread': thread,
+        'round_number': len(thread) - next(
+            (i for i, row in enumerate(thread) if row['is_this_one']), 0),
+        'history': [row['offer'] for row in thread],
+        'trader_trust': composer.trader_trust(other),
+        'ship_by_days': ship_by_days(),
+        'is_mine_to_answer': request.user.id == offer.to_user_id,
         'trade': trade,
     })
 
@@ -228,7 +314,9 @@ def trade_detail(request, trade_id):
     ).first()
     sync_trade_status(trade, notify=False)
     shipments_by_sender = {shipment.sender_id: shipment for shipment in trade.shipments.all()}
-    history = TradeOffer.objects.filter(trade_listing=trade.listing).select_related('from_user', 'to_user').order_by('-created_at')
+    other = (trade.counterparty if request.user.id == trade.initiator_id
+             else trade.initiator)
+    thread = composer.thread(accepted_offer) if accepted_offer else []
     strikes = Strike.objects.filter(related_trade=trade).select_related(
         'user', 'excuse_initiated_by', 'excuse_confirmed_by'
     )
@@ -243,7 +331,12 @@ def trade_detail(request, trade_id):
     return render(request, 'trades/trade_detail.html', {
         'trade': trade,
         'accepted_offer': accepted_offer,
-        'history': history,
+        'other': other,
+        'table': composer.table_for(accepted_offer, request.user) if accepted_offer else None,
+        'thread': thread,
+        'trader_trust': composer.trader_trust(other),
+        'my_shipment': shipments_by_sender.get(request.user.id),
+        'their_shipment': shipments_by_sender.get(other.id),
         'shipment_from_initiator': shipments_by_sender.get(trade.initiator_id),
         'shipment_from_counterparty': shipments_by_sender.get(trade.counterparty_id),
         'strikes': strikes,

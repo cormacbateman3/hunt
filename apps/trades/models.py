@@ -26,9 +26,22 @@ class TradeOffer(models.Model):
     )
     expires_at = models.DateTimeField(null=True, blank=True)
     message = models.TextField(blank=True)
+    # Cash evens a trade up, and which way it runs is half the negotiation —
+    # "three for two and forty to me" is a different deal from "three for two
+    # and forty from me". The amount stays unsigned and the direction carries
+    # the sign, so no arithmetic anywhere has to remember whose side it is on.
+    CASH_DIRECTION_CHOICES = [
+        ('from_proposer', 'The proposer adds cash'),
+        ('to_proposer', 'The proposer asks for cash'),
+    ]
+
     cash_amount = models.DecimalField(
         max_digits=10, decimal_places=2, default=0,
         help_text="Cash component of the trade offer"
+    )
+    cash_direction = models.CharField(
+        max_length=20, choices=CASH_DIRECTION_CHOICES, default='from_proposer',
+        help_text="Which way the cash runs. Meaningless while the amount is zero.",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -42,6 +55,22 @@ class TradeOffer(models.Model):
             models.Index(fields=['to_user', '-created_at']),
             models.Index(fields=['status']),
         ]
+        constraints = [
+            # The direction carries the sign, so the amount never needs to.
+            # A negative here would flip a deal without anybody editing it.
+            models.CheckConstraint(
+                check=models.Q(cash_amount__gte=0),
+                name='trade_cash_is_never_negative',
+            ),
+        ]
+
+    @property
+    def cash_to_recipient(self):
+        """True when accepting this offer means money coming *to* the reader.
+
+        Named from the recipient's side because that is who is deciding.
+        """
+        return bool(self.cash_amount) and self.cash_direction == 'from_proposer'
 
     def __str__(self):
         return f"Trade offer from {self.from_user.username} to {self.to_user.username}"

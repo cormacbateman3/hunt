@@ -1,0 +1,59 @@
+{% comment %}
+Who you are dealing with, in the rail beside the table.
+
+Trading is the one thing on this site where both sides post first and hope.
+The three ticks are the only reason a stranger sends a licence to another
+stranger, so they are counted, never rounded, and a line is left off rather
+than shown at zero — "0 trades completed" is a fact, but printing it as a
+credential is not.
+
+Expects: `trader` (a User) and `trader_trust` (from trades.composer or the
+view) with `trades`, `strikes`, `wants`.
+{% endcomment %}
+<section class="tb-rail-card tb-trader">
+    <header class="tb-trader-head">
+        {% if trader.profile.avatar %}
+            <img src="{{ trader.profile.avatar.url }}" alt="" class="tb-trader-face">
+        {% else %}
+            <span class="tb-trader-face tb-trader-face--blank" aria-hidden="true"></span>
+        {% endif %}
+        <div>
+            <a href="{% url 'accounts:profile' trader.username %}" class="tb-trader-name">
+                {{ trader.profile.get_display_name|default:trader.username }}
+            </a>
+            <span class="tb-trader-where">
+                {{ trader.profile.place|default:'Whereabouts not given' }}
+                &middot; member since {{ trader.date_joined|date:"Y" }}
+            </span>
+        </div>
+    </header>
+
+    <ul class="tb-trust">
+        {% if trader.profile.email_verified and trader.profile.phone_verified %}
+            <li class="tb-trust-yes">Email and phone confirmed</li>
+        {% elif trader.profile.email_verified %}
+            <li class="tb-trust-yes">Email confirmed</li>
+        {% endif %}
+        {% if trader_trust.trades %}
+            <li class="tb-trust-yes">
+                {{ trader_trust.trades }} trade{{ trader_trust.trades|pluralize }} completed{% if not trader_trust.strikes %}, no strikes{% endif %}
+            </li>
+        {% endif %}
+        {% if trader_trust.strikes %}
+            <li class="tb-trust-no">
+                {{ trader_trust.strikes }} strike{{ trader_trust.strikes|pluralize }} on the record
+            </li>
+        {% endif %}
+    </ul>
+
+    {% if trader_trust.wants %}
+        <div class="tb-trader-wants">
+            <span class="kb-eyebrow">Wants, in their words</span>
+            <p>{{ trader_trust.wants }}</p>
+        </div>
+    {% endif %}
+
+    <a href="{% url 'accounts:profile' trader.username %}" class="tb-trader-link">
+        See their collection &amp; profile &rarr;
+    </a>
+</section>

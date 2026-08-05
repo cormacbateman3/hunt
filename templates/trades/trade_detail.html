@@ -1,209 +1,235 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Trade #{{ trade.pk }} | KeystoneBid{% endblock %}
+{% block title %}Trade with {{ other.profile.get_display_name|default:other.username }} &middot; KeystoneBid{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/trade-board.css' %}">{% endblock %}
+
+{% block main_class %}kb-composer{% endblock %}
+
+{% block context_band %}
+<nav class="kb-crumbs" aria-label="Breadcrumb">
+    <div class="kb-band-inner">
+        <a href="{% url 'bench' %}">My Bench</a>
+        <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
+        <a href="{% url 'listings:detail' trade.listing.pk %}">The Trading Block</a>
+        <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
+        <span class="kb-crumb-current">
+            Trade with {{ other.profile.get_display_name|default:other.username }}
+        </span>
+    </div>
+</nav>
+{% endblock %}
 
 {% block content %}
-<section style="display: grid; gap: 1rem;">
-    <article class="card">
-        <h1 style="margin-bottom: 0.5rem;">Trade #{{ trade.pk }}</h1>
-        <p>Listing: <a href="{% url 'listings:detail' trade.listing.pk %}">{{ trade.listing.title }}</a></p>
-        <p style="color: var(--color-muted);">
-            {{ trade.initiator.username }} <-> {{ trade.counterparty.username }} |
-            {{ trade.get_status_display }} |
-            Ship by {{ trade.ship_by_deadline|date:"M j, Y g:i a" }}
-        </p>
-    </article>
+{% comment %}
+The struck deal. The same dark table as the offer screen, because it is the
+same agreement — then two shipping panels side by side, mine first, because
+the only thing this page is really for is finding out whose turn it is.
+{% endcomment %}
 
-    {% if accepted_offer %}
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Accepted Offer Terms</h2>
-        <div style="display: grid; gap: 0.45rem;">
-            {% for item in accepted_offer.items.all %}
-                <p>
-                    {% if item.direction == 'offered' %}<strong>Offered:</strong>{% else %}<strong>Requested:</strong>{% endif %}
-                    {{ item.collection_item.title }}
-                </p>
-            {% endfor %}
-            {% if accepted_offer.cash_amount %}
-                <p><strong>Cash add-on:</strong> ${{ accepted_offer.cash_amount }}</p>
-            {% endif %}
-        </div>
-    </article>
-    {% endif %}
+<div class="tb-read">
+    <div class="tb-centre">
+        {% if table %}
+            {% include 'trades/_laid_table.html' with table_eyebrow="What was agreed" give_label="I send" get_label="I receive" %}
+        {% endif %}
 
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Trade Shipping</h2>
-        <p style="color: var(--color-muted); margin-bottom: 0.75rem;">
-            Both sides must provide tracking and confirm receipt to complete the trade.
-        </p>
-        <div style="display: grid; gap: 1rem;">
+        <section class="tb-band">
+            <p class="tb-band-who">
+                {{ trade.get_status_display }}
+                {% if trade.ship_by_deadline and trade.status == 'awaiting_shipments' %}
+                    &middot; both ship by {{ trade.ship_by_deadline|date:"j M" }}
+                {% endif %}
+            </p>
+            <p class="tb-band-terms">
+                {% if trade.status == 'completed' %}
+                    Done &mdash; both sides confirmed
+                {% elif not my_shipment.tracking_number %}
+                    Your side is waiting on you
+                {% elif not their_shipment.tracking_number %}
+                    Waiting on {{ other.profile.get_display_name|default:other.username }} to send theirs
+                {% else %}
+                    Both parcels are moving
+                {% endif %}
+            </p>
+            <p class="tb-band-small">
+                Each side ships its own, with tracking. The trade closes when both
+                parcels are confirmed received.
+            </p>
+        </section>
+
+        <div class="tb-parcels">
             {% for shipment in trade.shipments.all %}
-                <div style="padding: 0.75rem; border: 1px solid #ddd; border-radius: 10px; background: #fff;">
-                    <p style="margin-bottom: 0.35rem;">
-                        <strong>{{ shipment.sender.username }}</strong> -> <strong>{{ shipment.recipient.username }}</strong>
-                    </p>
-                    <p style="margin-bottom: 0.25rem;">Status: {{ shipment.get_status_display }}</p>
-                    <p style="margin-bottom: 0.25rem;">Carrier: {{ shipment.carrier|default:'Not set' }}</p>
-                    <p style="margin-bottom: 0.25rem;">Tracking: {{ shipment.tracking_number|default:'Not set' }}</p>
+                <section class="tb-parcel {% if shipment.sender_id == user.id %}tb-parcel--mine{% endif %}">
+                    <header class="tb-parcel-head">
+                        <span class="kb-eyebrow">
+                            {% if shipment.sender_id == user.id %}You send{% else %}They send{% endif %}
+                        </span>
+                        <span class="tb-parcel-state">{{ shipment.get_status_display }}</span>
+                    </header>
+
+                    <dl class="tb-parcel-facts">
+                        <dt>Carrier</dt><dd>{{ shipment.carrier|default:"Not set" }}</dd>
+                        <dt>Tracking</dt><dd>{{ shipment.tracking_number|default:"Not set" }}</dd>
+                        {% if shipment.delivered_at %}
+                            <dt>Delivered</dt><dd>{{ shipment.delivered_at|date:"j M, g:i a" }}</dd>
+                        {% endif %}
+                        {% if shipment.recipient_confirmed_at %}
+                            <dt>Confirmed</dt><dd>{{ shipment.recipient_confirmed_at|date:"j M, g:i a" }}</dd>
+                        {% endif %}
+                    </dl>
+
                     {% if shipment.label_url %}
-                        <p style="margin-bottom: 0.25rem;">
-                            <a href="{{ shipment.label_url }}" target="_blank" rel="noopener">View label</a>
-                        </p>
-                    {% endif %}
-                    {% if shipment.delivered_at %}
-                        <p style="margin-bottom: 0.25rem;">Delivered: {{ shipment.delivered_at|date:"M j, Y g:i a" }}</p>
-                    {% endif %}
-                    {% if shipment.recipient_confirmed_at %}
-                        <p style="margin-bottom: 0.25rem;">Recipient confirmed: {{ shipment.recipient_confirmed_at|date:"M j, Y g:i a" }}</p>
+                        <a href="{{ shipment.label_url }}" target="_blank" rel="noopener" class="tb-trader-link">
+                            The label &rarr;
+                        </a>
                     {% endif %}
 
-                    {% if user.id == shipment.sender_id %}
-                        <div style="display: grid; gap: 0.5rem; margin-top: 0.5rem;">
-                            <form method="post" action="{% url 'trades:trade_shipment_manual_tracking' trade.pk shipment.pk %}" style="display: grid; gap: 0.45rem;">
+                    {% if user.id == shipment.sender_id and not shipment.tracking_number %}
+                        {% comment %}
+                        Two ways to ship, side by side — the same pair the
+                        order page offers. Somebody with a label already
+                        printed should not have to buy another one.
+                        {% endcomment %}
+                        <div class="tb-ship">
+                            <form method="post" action="{% url 'trades:trade_shipment_manual_tracking' trade.pk shipment.pk %}" class="tb-ship-way">
                                 {% csrf_token %}
-                                <div style="display: grid; gap: 0.45rem; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
-                                    <input class="form-input" name="carrier" placeholder="Carrier (USPS, UPS, FedEx)" required>
-                                    <input class="form-input" name="tracking_number" placeholder="Tracking number" required>
-                                </div>
-                                <button type="submit" class="btn btn-secondary">Save Tracking</button>
+                                <h3>I have posted it</h3>
+                                <input class="kb-input" name="carrier" placeholder="Carrier" required>
+                                <input class="kb-input" name="tracking_number" placeholder="Tracking number" required>
+                                <button type="submit" class="tb-decide tb-decide--counter">Save tracking</button>
                             </form>
-                            <form method="post" action="{% url 'trades:trade_shipment_buy_label' trade.pk shipment.pk %}" style="display: grid; gap: 0.45rem;">
+                            <form method="post" action="{% url 'trades:trade_shipment_buy_label' trade.pk shipment.pk %}" class="tb-ship-way">
                                 {% csrf_token %}
-                                <div style="display: grid; gap: 0.45rem; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));">
-                                    <input class="form-input" name="weight_oz" placeholder="Weight oz" required>
-                                    <input class="form-input" name="length_in" placeholder="Length in" required>
-                                    <input class="form-input" name="width_in" placeholder="Width in" required>
-                                    <input class="form-input" name="height_in" placeholder="Height in" required>
+                                <h3>Buy a label here</h3>
+                                <div class="tb-ship-dims">
+                                    <input class="kb-input" name="weight_oz" placeholder="oz" required>
+                                    <input class="kb-input" name="length_in" placeholder="L" required>
+                                    <input class="kb-input" name="width_in" placeholder="W" required>
+                                    <input class="kb-input" name="height_in" placeholder="H" required>
                                 </div>
-                                <button type="submit" class="btn btn-primary">Buy Shippo Label</button>
+                                <button type="submit" class="tb-decide tb-decide--go">Buy the label</button>
                             </form>
                         </div>
                     {% endif %}
 
                     {% if user.id == shipment.recipient_id and shipment.status == 'delivered' %}
-                        <form method="post" action="{% url 'trades:trade_confirm_receipt' trade.pk shipment.pk %}" style="margin-top: 0.5rem;">
+                        <form method="post" action="{% url 'trades:trade_confirm_receipt' trade.pk shipment.pk %}">
                             {% csrf_token %}
-                            <button type="submit" class="btn btn-primary">Confirm Receipt</button>
+                            <button type="submit" class="tb-decide tb-decide--go">It arrived</button>
                         </form>
                     {% endif %}
-                </div>
+                </section>
             {% empty %}
-                <p>No shipment placeholders found.</p>
+                <p class="kb-hint">No parcels recorded for this trade yet.</p>
             {% endfor %}
         </div>
-    </article>
 
-    {% if user.is_authenticated and trade.status not in 'completed,cancelled,dispute' %}
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.55rem;">Actions</h2>
-        <form method="post" action="{% url 'messaging:start' %}">
-            {% csrf_token %}
-            {% if user.id == trade.initiator_id %}
-                <input type="hidden" name="recipient_id" value="{{ trade.counterparty.pk }}">
-            {% else %}
-                <input type="hidden" name="recipient_id" value="{{ trade.initiator.pk }}">
-            {% endif %}
-            <input type="hidden" name="conversation_type" value="trade">
-            <button type="submit" class="btn-secondary">Message counterparty</button>
-        </form>
-    </article>
-    {% endif %}
-
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.55rem;">Offer History</h2>
-        <div style="display: grid; gap: 0.45rem;">
-            {% for h in history %}
-                <p>
-                    <a href="{% url 'trades:offer_detail' h.pk %}">#{{ h.pk }}</a> -
-                    {{ h.from_user.username }} to {{ h.to_user.username }} -
-                    {{ h.get_status_display }} -
-                    {{ h.created_at|date:"M j, Y g:i a" }}
+        {% if strikes %}
+            <section class="tb-band">
+                <p class="tb-band-who">Something went wrong on this trade</p>
+                <p class="tb-band-small">
+                    A late parcel both sides agreed on is not a strike. Either of you
+                    can mark it settled and the other confirms within 72 hours.
                 </p>
-            {% endfor %}
-        </div>
-    </article>
-
-    {% if strikes %}
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Handshake For Exceptions</h2>
-        <p style="color: var(--color-muted); margin-bottom: 0.6rem;">
-            For legitimate exceptions, either side can initiate a handshake and the other side confirms within 72 hours.
-        </p>
-        <div style="display: grid; gap: 0.8rem;">
-            {% for strike in strikes %}
-                <div style="padding: 0.7rem; border: 1px solid #ddd; border-radius: 8px;">
-                    <p><strong>Strike #{{ strike.pk }}</strong> - {{ strike.get_reason_display }} (applies to {{ strike.user.username }})</p>
-                    <p style="color: var(--color-muted);">Issued {{ strike.created_at|date:"M j, Y g:i a" }}{% if strike.expires_at %}, expires {{ strike.expires_at|date:"M j, Y g:i a" }}{% endif %}</p>
-                    {% if strike.notes %}<p>Notes: {{ strike.notes }}</p>{% endif %}
-                    {% if strike.is_excused %}
-                        <p style="color: #2c4a1e;"><strong>Excused</strong> by {{ strike.excuse_confirmed_by.username }}{% if strike.excuse_reason %} ({{ strike.get_excuse_reason_display }}){% endif %}.</p>
-                    {% else %}
-                        {% if strike.excuse_initiated_by %}
-                            <p>Handshake initiated by {{ strike.excuse_initiated_by.username }}{% if strike.excuse_reason %} ({{ strike.get_excuse_reason_display }}){% endif %}.</p>
-                            {% if strike.excuse_note %}<p>Note: {{ strike.excuse_note }}</p>{% endif %}
-                            {% if strike.excuse_expires_at %}<p>Confirm by: {{ strike.excuse_expires_at|date:"M j, Y g:i a" }}</p>{% endif %}
+                {% for strike in strikes %}
+                    <div class="tb-strike">
+                        <p class="tb-strike-what">
+                            {{ strike.get_reason_display }} &middot; {{ strike.user.username }}
+                            &middot; {{ strike.created_at|date:"j M Y" }}
+                        </p>
+                        {% if strike.is_excused %}
+                            <p class="tb-strike-ok">
+                                Settled, confirmed by {{ strike.excuse_confirmed_by.username }}.
+                            </p>
+                        {% elif strike.excuse_initiated_by %}
+                            <p class="tb-strike-ok">
+                                {{ strike.excuse_initiated_by.username }} says
+                                {{ strike.get_excuse_reason_display|lower }}.
+                                {% if strike.excuse_expires_at %}
+                                    Confirm by {{ strike.excuse_expires_at|date:"j M, g:i a" }}.
+                                {% endif %}
+                            </p>
                             {% if user.id != strike.excuse_initiated_by_id %}
                                 <form method="post" action="{% url 'trades:trade_confirm_excuse' trade.pk strike.pk %}">
                                     {% csrf_token %}
-                                    <button class="btn-secondary" type="submit">Confirm Handshake</button>
+                                    <button type="submit" class="tb-decide tb-decide--counter">That&rsquo;s right &mdash; settle it</button>
                                 </form>
                             {% endif %}
                         {% else %}
-                            <form method="post" action="{% url 'trades:trade_initiate_excuse' trade.pk strike.pk %}" style="display: grid; gap: 0.45rem; margin-top: 0.5rem;">
+                            <form method="post" action="{% url 'trades:trade_initiate_excuse' trade.pk strike.pk %}" class="tb-strike-form">
                                 {% csrf_token %}
-                                <select class="form-input" name="excuse_reason" required>
-                                    <option value="">Select reason</option>
+                                <select class="kb-select" name="excuse_reason" required>
+                                    <option value="">What happened?</option>
                                     {% for value, label in excuse_reason_choices %}
                                         <option value="{{ value }}">{{ label }}</option>
                                     {% endfor %}
                                 </select>
-                                <input class="form-input" name="excuse_note" placeholder="Optional note (max 250 chars)">
-                                <div><button class="btn-secondary" type="submit">Initiate Handshake</button></div>
+                                <input class="kb-input" name="excuse_note" placeholder="Anything to add (optional)">
+                                <button type="submit" class="tb-decide tb-decide--counter">Mark it settled</button>
                             </form>
                         {% endif %}
-                    {% endif %}
-                </div>
-            {% endfor %}
-        </div>
-    </article>
-    {% endif %}
+                    </div>
+                {% endfor %}
+            </section>
+        {% endif %}
 
-    <!-- Review section -->
-    {% if trade.status == 'completed' %}
-    <article class="card">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.6rem;">Review</h2>
-        {% if existing_review %}
-            <p style="margin-bottom: 0.3rem;">
-                <strong>Your review:</strong>
-                <span class="badge {% if existing_review.sentiment == 'positive' %}badge-active{% elif existing_review.sentiment == 'negative' %}badge-expired{% else %}{% endif %}">
-                    {{ existing_review.get_sentiment_display }}
-                </span>
-            </p>
-            {% if existing_review.body %}
-                <p style="color: var(--color-muted);">{{ existing_review.body }}</p>
-            {% endif %}
-        {% elif can_review %}
-            <p style="color: var(--color-muted); margin-bottom: 0.65rem;">Rate your experience with your trade partner.</p>
-            <form method="post" action="{% url 'reviews:submit_trade' trade.pk %}" style="display: grid; gap: 0.55rem;">
-                {% csrf_token %}
-                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                    {% for value, label in review_form.fields.sentiment.choices %}
-                        <label style="display: flex; align-items: center; gap: 0.3rem; cursor: pointer;">
-                            <input type="radio" name="sentiment" value="{{ value }}" required> {{ label }}
-                        </label>
+        {% if trade.status == 'completed' %}
+            <section class="tb-band">
+                <p class="tb-band-who">How was it?</p>
+                {% if existing_review %}
+                    <p class="tb-band-small">
+                        You said: <strong>{{ existing_review.get_sentiment_display }}</strong>
+                        {% if existing_review.body %}&mdash; {{ existing_review.body }}{% endif %}
+                    </p>
+                {% elif can_review %}
+                    <form method="post" action="{% url 'reviews:submit_trade' trade.pk %}" class="tb-review">
+                        {% csrf_token %}
+                        <div class="tb-review-picks">
+                            {% for value, label in review_form.fields.sentiment.choices %}
+                                <label><input type="radio" name="sentiment" value="{{ value }}" required> {{ label }}</label>
+                            {% endfor %}
+                        </div>
+                        {{ review_form.body.errors }}
+                        {{ review_form.body }}
+                        <button type="submit" class="tb-decide tb-decide--go">Leave the review</button>
+                    </form>
+                {% endif %}
+            </section>
+        {% endif %}
+    </div>
+
+    <aside class="tb-rail">
+        {% if thread %}
+            <section class="tb-rail-card">
+                <h2 class="tb-rail-title">
+                    How you got here
+                    <span class="tb-rail-count">{{ thread|length }} round{{ thread|length|pluralize }}</span>
+                </h2>
+                <ol class="tb-thread">
+                    {% for row in thread %}
+                        <li class="tb-thread-row">
+                            <span class="tb-thread-who">{{ row.who }} {{ row.verb }}</span>
+                            <span class="tb-thread-what">{{ row.pieces }} piece{{ row.pieces|pluralize }} on the table</span>
+                            <span class="tb-thread-when">{{ row.offer.created_at|date:"j M, g:i a" }}</span>
+                        </li>
                     {% endfor %}
-                </div>
-                {{ review_form.body.errors }}
-                <div>
-                    <label class="form-label" for="{{ review_form.body.id_for_label }}">Comments (optional)</label>
-                    {{ review_form.body }}
-                </div>
-                <div>
-                    <button type="submit" class="btn-primary">Submit review</button>
-                </div>
+                </ol>
+            </section>
+        {% endif %}
+
+        {% include 'trades/_trader_card.html' with trader=other %}
+
+        {% if trade.status not in 'completed,cancelled,dispute' %}
+            <form method="post" action="{% url 'messaging:start' %}" class="tb-rail-card">
+                {% csrf_token %}
+                <input type="hidden" name="recipient_id" value="{{ other.pk }}">
+                <input type="hidden" name="conversation_type" value="trade">
+                <button type="submit" class="tb-trader-link">
+                    Write to {{ other.profile.get_display_name|default:other.username }} &rarr;
+                </button>
             </form>
         {% endif %}
-    </article>
-    {% endif %}
-</section>
+    </aside>
+</div>
 {% endblock %}

@@ -1,5 +1,7 @@
 # KeystoneBid
 
+review docs\internal\design\ui-ux-redesign-model in detail.
+
 ## What this project is
 
 KeystoneBid is a Django marketplace for **antique/vintage hunting licenses**

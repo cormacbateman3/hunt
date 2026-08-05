@@ -16,6 +16,7 @@ from .forms import ListingForm, ListingImageFormSet
 from apps.bids.forms import BidForm
 from apps.bids.services import get_user_bid_on_listing, get_winning_bid, minimum_bid_for
 from apps.collections.models import CollectionItem
+from apps.collections.tradeability import is_open_to_trade
 from apps.core.models import GeographicUnit, LicenseType, State
 from apps.core.constants import FORM_LICENSE_TYPE_CATEGORIES, LICENSE_TYPE_CATEGORY_CHOICES
 from apps.core.forms import ReferenceDataSuggestionForm
@@ -853,6 +854,18 @@ def listing_detail(request, pk):
             'held_offer': held_offer,
             'viewer_holds_offer': viewer_holds_offer,
             'offer_reserved_by_other': bool(held_offer and not viewer_holds_offer),
+            # The third buyer action (10.10). A Store shelf carries no
+            # promise to sell to the highest bidder, so a trade offer takes
+            # nothing out from under anybody — the piece has to still be
+            # open, and a checkout in progress closes it.
+            'can_offer_trade': bool(
+                request.user.is_authenticated
+                and request.user.id != listing.seller_id
+                and listing.status == 'active'
+                and listing.source_collection_item
+                and is_open_to_trade(listing.source_collection_item)
+                and enforce_capability(request.user, 'trade')[0]
+            ),
             'my_pending_offer': (
                 listing.offers.filter(from_user=request.user, status='pending').first()
                 if request.user.is_authenticated

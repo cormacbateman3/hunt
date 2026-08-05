@@ -355,23 +355,32 @@ def auto_complete_delivered_trades(*, grace_days=3, limit=200):
     return completed, threshold
 
 
+# A trade can be proposed against a Trading Block lot or a General Store
+# shelf. It cannot be proposed against an auction: an auction is a binding
+# commitment to sell to the highest bidder, and a trade struck mid-lot takes
+# the goods out from under them.
+TRADEABLE_LISTING_TYPES = ('trade', 'buy_now')
+
+
 def create_trade_offer(
     *,
     listing,
     from_user,
     to_user,
     offered_items,
+    requested_items=None,
     message='',
     cash_amount=Decimal('0.00'),
+    cash_direction='from_proposer',
     expires_days=4,
     counter_to=None,
 ):
-    if listing.listing_type != 'trade':
-        return None, 'This listing is not a trade listing.'
+    if listing.listing_type not in TRADEABLE_LISTING_TYPES:
+        return None, 'This listing cannot take trade offers.'
     if listing.status != 'active':
-        return None, 'Trade listing is not currently active.'
+        return None, 'This listing is not currently active.'
     if Trade.objects.filter(listing=listing).exists():
-        return None, 'This trade listing already has an accepted trade.'
+        return None, 'This listing already has an accepted trade.'
     if from_user.id == to_user.id:
         return None, 'Cannot create a trade offer to yourself.'
 
@@ -388,8 +397,32 @@ def create_trade_offer(
         blocked = trade_block_reason(item)
         if blocked:
             return None, f'"{item.title}" cannot be traded: {blocked}'
+
+    # The design's right-hand roster is a real control: you pick what you
+    # want off their shelf, not just what their listing happens to be. The
+    # listing's own piece is always on the table — it is what you came for.
+    requested = list(requested_items or [])
+    for item in requested:
+        if item.owner_id != to_user.id:
+            return None, 'All requested items must belong to the other trader.'
+        if not item.is_public:
+            return None, f'"{item.title}" is not on public show.'
+        blocked = trade_block_reason(item)
+        if blocked:
+            return None, f'"{item.title}" cannot be traded: {blocked}'
+
+    anchor = listing.source_collection_item
+    if anchor and anchor.pk not in {item.pk for item in requested}:
+        requested.insert(0, anchor)
+    if not requested:
+        return None, 'At least one requested item is required.'
+
     if cash_amount and not listing.allow_cash:
         return None, 'This listing does not allow cash add-ons.'
+    if cash_amount and cash_amount < 0:
+        return None, 'Cash cannot be negative — pick a direction instead.'
+    if cash_direction not in dict(TradeOffer.CASH_DIRECTION_CHOICES):
+        return None, 'Unknown cash direction.'
 
     expires_at = timezone.now() + timedelta(days=expires_days or 4)
     with transaction.atomic():
@@ -401,6 +434,7 @@ def create_trade_offer(
             expires_at=expires_at,
             message=message,
             cash_amount=cash_amount or Decimal('0.00'),
+            cash_direction=cash_direction,
             counter_to=counter_to,
         )
 
@@ -411,11 +445,10 @@ def create_trade_offer(
                 direction='offered',
             )
 
-        requested_item = listing.source_collection_item
-        if requested_item:
+        for item in requested:
             TradeOfferItem.objects.create(
                 offer=offer,
-                collection_item=requested_item,
+                collection_item=item,
                 direction='requested',
             )
 
