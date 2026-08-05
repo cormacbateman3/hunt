@@ -308,10 +308,13 @@
     height: 1px;
 }
 
+/* Hatched, not grey: a licence with no photograph should read as "nobody
+   has scanned this one" rather than as a broken image. Finer than the
+   standard hatch because 36×28 is too small for the 7px step. */
 .tb-piece-thumb {
     width: 36px;
     height: 28px;
-    background: var(--kb-fill-placeholder);
+    background: repeating-linear-gradient(45deg, #ece7db 0 5px, var(--kb-rule) 5px 10px);
     border-radius: var(--kb-r-micro);
     overflow: hidden;
     flex-shrink: 0;
@@ -433,7 +436,7 @@
     width: 100%;
     aspect-ratio: 4 / 3;
     object-fit: cover;
-    background: var(--kb-fill-placeholder);
+    background: var(--kb-hatch);
     border-bottom: 1px solid var(--kb-rule);
 }
 
