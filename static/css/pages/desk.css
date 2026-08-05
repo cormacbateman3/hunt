@@ -1,0 +1,306 @@
+/* ==========================================================================
+   The bench tables — My listings, Bids & offers
+
+   One shape for every workspace table: a filter row, a header, and rows that
+   answer "what needs me" first. Anything waiting on you takes the left edge
+   marker and the only filled button; everything else settles for a quiet
+   text action.
+   ========================================================================== */
+
+.kb-desk {
+    max-width: var(--kb-page-max);
+    margin: 0 auto;
+    padding: var(--kb-6) var(--kb-gutter) var(--kb-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--kb-4);
+}
+
+.desk-head {
+    align-items: flex-end;
+}
+
+.desk-lede {
+    margin: 4px 0 0;
+    font-size: 13.5px;
+    color: var(--kb-ink-3);
+}
+
+/* ── Table ───────────────────────────────────────────────────────────── */
+.desk-table {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    overflow: hidden;
+}
+
+.desk-grid {
+    display: grid;
+    grid-template-columns: 1fr 130px 200px 200px 132px;
+    gap: 16px;
+    align-items: center;
+}
+
+.desk-thead {
+    background: var(--kb-parchment);
+    border-bottom: 1px solid var(--kb-rule);
+    padding: 9px 18px;
+}
+
+.desk-right {
+    text-align: right;
+}
+
+.desk-row {
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--kb-rule-soft);
+    /* The waiting rows get a 3px edge; every other row keeps a transparent
+       one so nothing shifts sideways as a listing changes state. */
+    border-left: 3px solid transparent;
+}
+
+.desk-row:last-child {
+    border-bottom: 0;
+}
+
+.desk-row--waiting {
+    border-left-color: var(--kb-brass);
+    background: var(--kb-tint-attention);
+}
+
+.desk-row--done {
+    opacity: 0.75;
+}
+
+/* ── Item ────────────────────────────────────────────────────────────── */
+.desk-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-width: 0;
+}
+
+.desk-thumb {
+    width: 44px;
+    height: 34px;
+    border-radius: var(--kb-r-chip);
+    flex-shrink: 0;
+    object-fit: cover;
+}
+
+.desk-thumb--blank {
+    background: var(--kb-hatch);
+    display: block;
+}
+
+.desk-item-text {
+    min-width: 0;
+}
+
+.desk-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--kb-ink);
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+
+.desk-title:hover {
+    color: var(--kb-forest);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.desk-sub {
+    font-size: 11.5px;
+    color: var(--kb-ink-4);
+}
+
+/* ── Money ───────────────────────────────────────────────────────────── */
+.desk-at {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.desk-price {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--kb-ink);
+    font-variant-numeric: tabular-nums;
+}
+
+.desk-from {
+    font-size: 11px;
+    color: var(--kb-ink-4);
+}
+
+/* ── Interest ────────────────────────────────────────────────────────── */
+.desk-interest {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.desk-flag {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: var(--kb-r-chip);
+    border: 1px solid;
+    white-space: nowrap;
+}
+
+.desk-flag--urgent {
+    background: var(--kb-alert-bg);
+    color: var(--kb-rust);
+    border-color: var(--kb-alert-border);
+}
+
+.desk-flag--live {
+    background: var(--kb-live-bg);
+    color: var(--kb-live);
+    border-color: var(--kb-live-border);
+}
+
+.desk-watchers {
+    font-size: 11.5px;
+    color: var(--kb-ink-4);
+}
+
+/* ── Where it stands ─────────────────────────────────────────────────── */
+.desk-stands {
+    gap: 2px;
+}
+
+.desk-headline {
+    font-size: 12.5px;
+    color: var(--kb-ink);
+}
+
+.desk-headline--rust {
+    font-weight: 600;
+    color: var(--kb-rust);
+}
+
+.desk-headline--brass {
+    font-weight: 600;
+    color: var(--kb-brass);
+}
+
+.desk-headline--live {
+    font-weight: 600;
+    color: var(--kb-live);
+}
+
+.desk-note {
+    font-size: 11.5px;
+    color: var(--kb-ink-4);
+}
+
+/* ── Action ──────────────────────────────────────────────────────────── */
+.desk-action {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.desk-action .kb-btn {
+    width: 100%;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.desk-quiet {
+    font: 700 var(--kb-label-size)/1.2 var(--kb-font-body);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--kb-brass);
+    text-decoration: none;
+}
+
+.desk-quiet:hover {
+    color: var(--kb-brass-deep);
+}
+
+/* ── Sections, for the two-direction tables ──────────────────────────── */
+.desk-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.desk-rule {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.desk-rule-title {
+    font: var(--kb-text-h2);
+    color: var(--kb-forest);
+    margin: 0;
+    white-space: nowrap;
+}
+
+.desk-rule-line {
+    flex: 1;
+    height: 1px;
+    background: var(--kb-rule-panel);
+}
+
+.desk-rule-note {
+    font-size: 11.5px;
+    color: var(--kb-ink-4);
+    white-space: nowrap;
+}
+
+/* ── Narrow ──────────────────────────────────────────────────────────── */
+@media (max-width: 1000px) {
+    .desk-grid {
+        grid-template-columns: 1fr 110px 150px;
+        grid-template-areas:
+            "item at action"
+            "stands stands stands"
+            "interest interest interest";
+        row-gap: 8px;
+    }
+
+    .desk-thead {
+        display: none;
+    }
+
+    .desk-item     { grid-area: item; }
+    .desk-at       { grid-area: at; }
+    .desk-action   { grid-area: action; }
+    .desk-stands   { grid-area: stands; }
+    .desk-interest { grid-area: interest; }
+}
+
+@media (max-width: 620px) {
+    .desk-head {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--kb-3);
+    }
+
+    .desk-grid {
+        grid-template-columns: 1fr auto;
+        grid-template-areas:
+            "item at"
+            "stands stands"
+            "interest interest"
+            "action action";
+    }
+
+    .desk-action {
+        justify-content: flex-start;
+    }
+
+    .desk-action .kb-btn {
+        width: auto;
+    }
+}

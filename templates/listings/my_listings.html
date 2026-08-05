@@ -1,45 +1,122 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}My Listings | KeystoneBid{% endblock %}
+{% block title %}My listings &middot; My Bench &middot; KeystoneBid{% endblock %}
+
+{% block context_band %}{% include 'components/_bench_tabs.html' %}{% endblock %}
+
+{% block main_class %}kb-desk{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/desk.css' %}">{% endblock %}
 
 {% block content %}
-<section>
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-        <h1>My Listings</h1>
-        <a class="btn-primary" href="{% url 'listings:create' %}">Create listing</a>
-    </div>
+{% comment %}
+A stack of cards with a pipe-separated line of metadata became a table with
+the one column that was missing: Interest. Bids, watchers, offers and
+unanswered questions were all in the models already; together they answer
+"how is it doing", which is the question a seller opens this page with.
+{% endcomment %}
 
-    <div style="display: grid; gap: 0.8rem;">
-        {% for listing in listings %}
-            <article class="card">
-                <h2 style="font-size: 1.15rem; margin-bottom: 0.35rem;">
-                    <a href="{% url 'listings:detail' listing.pk %}">{{ listing.title }}</a>
-                </h2>
-                <p style="color: var(--color-muted); margin-bottom: 0.45rem;">
-                    {{ listing.get_listing_type_display }} |
-                    {% if listing.county_ref %}{{ listing.county_ref.name }}{% else %}{{ listing.county }}{% endif %} |
-                    {{ listing.license_year }}
-                    {% if listing.listing_type == 'auction' %}
-                        | Ends {{ listing.auction_end|date:"M j, Y" }}
-                    {% endif %}
-                    | <strong>{{ listing.get_status_display }}</strong>
-                    {% if listing.status == 'scheduled' %}
-                        &mdash; goes live {{ listing.scheduled_at|date:"M j, Y g:i A" }}
-                    {% endif %}
-                    {% if listing.relist_count > 0 %}
-                        &mdash; relist {{ listing.relist_count }}/3
-                    {% endif %}
-                    {% if listing.local_pickup_available %}
-                        | Local pickup: {{ listing.local_pickup_location }}
-                    {% endif %}
-                </p>
-                <a class="btn-secondary" href="{% url 'listings:edit' listing.pk %}">Edit</a>
-            </article>
-        {% empty %}
-            <article class="card">
-                <p>You have not created any listings yet.</p>
-            </article>
+<header class="kb-between desk-head">
+    <div>
+        <h1 class="kb-page-title">My listings</h1>
+        <p class="desk-lede">
+            {% if total_live %}
+                {{ total_live }} live.
+            {% else %}
+                Nothing live at the moment.
+            {% endif %}
+            {% if closing_tonight %}{{ closing_tonight }} close{{ closing_tonight|pluralize:'s,' }} tonight.{% endif %}
+            {% if needs_count %}
+                {{ needs_count }} {% if needs_count == 1 %}is{% else %}are{% endif %} waiting on an answer from you.
+            {% endif %}
+        </p>
+    </div>
+    <div class="kb-inline">
+        {% for chip in filters %}
+            <a href="{% if chip.active %}?{% else %}?show={{ chip.key }}{% endif %}"
+               class="kb-chip {% if chip.active %}is-on{% endif %}">{{ chip.label }} {{ chip.count }}</a>
         {% endfor %}
     </div>
-</section>
+</header>
+
+{% if rows %}
+    <div class="desk-table">
+        <div class="desk-thead desk-grid">
+            <span class="kb-eyebrow">Item</span>
+            <span class="kb-eyebrow desk-right">At</span>
+            <span class="kb-eyebrow">Interest</span>
+            <span class="kb-eyebrow">Where it stands</span>
+            <span class="kb-eyebrow"><span class="kb-sr">Action</span></span>
+        </div>
+
+        {% for row in rows %}
+            <div class="desk-row desk-grid{% if row.needs_you %} desk-row--waiting{% endif %}{% if row.faded %} desk-row--done{% endif %}">
+                <div class="desk-item">
+                    {% if row.listing.featured_image %}
+                        <img src="{{ row.listing.featured_image.url }}" alt="" class="desk-thumb" loading="lazy">
+                    {% else %}
+                        <span class="desk-thumb desk-thumb--blank" aria-hidden="true"></span>
+                    {% endif %}
+                    <span class="kb-stack desk-item-text">
+                        <a href="{{ row.listing.get_absolute_url }}" class="desk-title">{{ row.listing.title }}</a>
+                        <span class="desk-sub">{{ row.marketplace }}{% if row.listing.relist_count %} &middot; relisted {{ row.listing.relist_count }}&times;{% endif %}</span>
+                    </span>
+                </div>
+
+                <div class="desk-at">
+                    <span class="desk-price">${{ row.listing.current_price|floatformat:2 }}</span>
+                    {% if row.listing.listing_type == 'auction' and row.listing.starting_price %}
+                        <span class="desk-from">from ${{ row.listing.starting_price|floatformat:0 }}</span>
+                    {% endif %}
+                </div>
+
+                {% comment %}
+                Anything waiting on the seller is rust; a healthy signal is
+                green. A listing nobody has touched says so rather than
+                showing an empty cell.
+                {% endcomment %}
+                <div class="desk-interest">
+                    {% for chip in row.interest %}
+                        <span class="desk-flag desk-flag--{{ chip.tone }}">{{ chip.label }}</span>
+                    {% endfor %}
+                    {% if row.watchers %}<span class="desk-watchers">{{ row.watchers }}</span>{% endif %}
+                    {% if not row.interest and not row.watchers %}<span class="desk-watchers">Not started</span>{% endif %}
+                </div>
+
+                <div class="kb-stack desk-stands">
+                    <span class="desk-headline desk-headline--{{ row.tone }}">{{ row.headline }}</span>
+                    {% if row.note %}<span class="desk-note">{{ row.note }}</span>{% endif %}
+                </div>
+
+                <div class="desk-action">
+                    {% if row.action.style == 'text' %}
+                        <a href="{{ row.action.url }}" class="desk-quiet">{{ row.action.label }}</a>
+                    {% else %}
+                        <a href="{{ row.action.url }}"
+                           class="kb-btn kb-btn--{{ row.action.style }} kb-btn--sm">{{ row.action.label }}</a>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="kb-empty">
+        <h2>{% if status_key %}Nothing in that group{% else %}You haven&rsquo;t listed anything yet{% endif %}</h2>
+        <p>
+            {% if status_key %}
+                Try another filter above.
+            {% else %}
+                A licence you already own can go up in a few minutes &mdash; the details
+                you recorded for your collection carry straight over.
+            {% endif %}
+        </p>
+        <div class="kb-empty-actions">
+            {% if status_key %}
+                <a href="{% url 'listings:my_listings' %}" class="kb-btn kb-btn--secondary">All listings</a>
+            {% endif %}
+            <a href="{% url 'listings:create' %}" class="kb-btn kb-btn--primary">List an item</a>
+        </div>
+    </div>
+{% endif %}
 {% endblock %}

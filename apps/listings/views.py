@@ -9,6 +9,7 @@ from django.db.models import Count, Q
 from django.urls import reverse
 from django.views.generic import ListView
 from django.utils import timezone
+from . import seller_desk
 from .models import ERA_LABEL_CHOICES, Listing, ListingQuestion
 from .forms import ListingForm, ListingImageFormSet
 from apps.bids.forms import BidForm
@@ -1043,14 +1044,13 @@ def listing_edit(request, pk):
 
 @login_required
 def my_listings(request):
-    """View user's own listings"""
-    listings = Listing.objects.filter(seller=request.user).order_by('-created_at')
+    """My listings — what's live, what it's doing, and what people are asking.
 
-    context = {
-        'listings': listings,
-    }
-
-    return render(request, 'listings/my_listings.html', context)
+    The arithmetic is in :mod:`apps.listings.seller_desk`; this chooses the
+    template and passes the status filter through.
+    """
+    return render(request, 'listings/my_listings.html',
+                  seller_desk.rows(request.user, request.GET.get('show', '')))
 
 
 @login_required
