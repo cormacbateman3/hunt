@@ -265,11 +265,15 @@ class CollectionItemForm(forms.ModelForm):
 
 
 class CollectionItemImageForm(forms.ModelForm):
+    """One photograph and what it is of — same slots as a listing, so the
+    front stays the front when an item goes up for sale."""
+
     class Meta:
         model = CollectionItemImage
-        fields = ['image', 'sort_order']
+        fields = ['image', 'image_role', 'sort_order']
         widgets = {
             'sort_order': forms.NumberInput(attrs={'class': 'form-input', 'min': 0}),
+            'image_role': forms.HiddenInput(),
         }
 
 

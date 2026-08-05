@@ -153,6 +153,7 @@ class ListingForm(forms.ModelForm):
             'reserve_price',
             'buy_now_price',
             'allow_offers',
+            'minimum_offer',
             'bid_increment',
             'trade_notes',
             'allow_cash',
@@ -186,6 +187,7 @@ class ListingForm(forms.ModelForm):
             'trade_notes': forms.Textarea(attrs={'class': 'form-input', 'rows': 4, 'placeholder': 'What are you looking for in return?'}),
             'allow_cash': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
             'allow_offers': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+            'minimum_offer': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01', 'min': '1', 'placeholder': 'Leave empty and every offer reaches you'}),
             'package_weight_oz': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '8.0', 'step': '0.5', 'min': '0.5'}),
             'package_length_in': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '10', 'step': '0.5', 'min': '1'}),
             'package_width_in': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '7', 'step': '0.5', 'min': '1'}),
@@ -492,11 +494,18 @@ class ListingForm(forms.ModelForm):
 
 
 class ListingImageForm(forms.ModelForm):
+    """One photograph and what it is of.
+
+    ``image_role`` travels with the file rather than being read off the grid
+    position, so reordering the slots cannot relabel a back as a front.
+    """
+
     class Meta:
         model = ListingImage
-        fields = ['image', 'sort_order']
+        fields = ['image', 'image_role', 'sort_order']
         widgets = {
             'sort_order': forms.HiddenInput(),
+            'image_role': forms.HiddenInput(),
         }
 
 

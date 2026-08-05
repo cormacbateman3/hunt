@@ -252,3 +252,69 @@
     .sl-steps { gap: var(--kb-3); }
     .sl-shelf-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Step 3, inside the item form ────────────────────────────────────── */
+.sl-terms {
+    margin-top: var(--kb-5);
+    display: grid;
+    gap: 12px;
+}
+
+.sl-terms-rule {
+    margin: 0;
+    border: 0;
+    border-top: 1px solid var(--kb-rule);
+}
+
+.sl-terms-title {
+    font: var(--kb-text-h2);
+    color: var(--kb-forest);
+    margin: 0;
+}
+
+.sl-terms-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.sl-hint {
+    display: block;
+    margin-top: 4px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--kb-ink-4);
+}
+
+.sl-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    font-size: 13px;
+    color: var(--kb-ink);
+    cursor: pointer;
+}
+
+.sl-check strong {
+    display: block;
+    font-weight: 600;
+}
+
+/* One line of local knowledge, and the cost of changing your mind. Both are
+   the panel's closing note, so both are quiet. */
+.sl-local {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--kb-brass);
+}
+
+.sl-cost {
+    margin: 0;
+    font-size: 12px;
+    color: var(--kb-ink-4);
+}
+
+@media (max-width: 640px) {
+    .sl-terms-grid { grid-template-columns: 1fr; }
+}

@@ -91,13 +91,22 @@ def _copy_collection_images_to_listing(listing, uploaded_any=False):
     source_images = list(source.images.order_by('sort_order', 'uploaded_at'))
     if not source_images:
         return
+    # The front of the licence stays the front. Falling back to whatever is
+    # first only matters for items recorded before the slots existed.
+    front = next((i for i in source_images if i.image_role == 'front'), source_images[0])
     if not listing.featured_image:
-        listing.featured_image = source_images[0].image
+        listing.featured_image = front.image
         listing.save(update_fields=['featured_image', 'updated_at'])
     if listing.additional_images.exists():
         return
-    for idx, image in enumerate(source_images[1:], start=1):
-        listing.additional_images.create(image=image.image, sort_order=idx)
+    for idx, image in enumerate(
+        [i for i in source_images if i.pk != front.pk], start=1
+    ):
+        listing.additional_images.create(
+            image=image.image,
+            image_role='back' if image.image_role == 'back' else 'detail',
+            sort_order=idx,
+        )
 
 
 def _normalize_listing_image_sort_order(listing):
@@ -1023,6 +1032,8 @@ def listing_create(request):
         'image_formset': image_formset,
         'config_listing_type': config_listing_type,
         'config_listing_type_label': dict(Listing.LISTING_TYPE_CHOICES).get(config_listing_type, ''),
+        'destination': sell_flow.BY_KEY.get(config_listing_type),
+        'step': 2,
         'taxonomy_fields': TAXONOMY_FIELDS,
         'taxonomy_has_errors': _taxonomy_has_errors(form),
         'taxonomy_field_names_json': json.dumps([item[0] for item in TAXONOMY_FIELDS]),

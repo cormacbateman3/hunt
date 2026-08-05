@@ -4,6 +4,7 @@
 {% block title %}Create Listing | KeystoneBid{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/sell.css' %}">
 <link rel="stylesheet" href="{% static 'css/pages/listing.css' %}">
 <style>
 /* ── Image upload zone ── */
@@ -110,6 +111,7 @@
 {% endblock %}
 
 {% block content %}
+{% include 'listings/_sell_steps.html' with step=2 destination=destination %}
 <section class="card" style="max-width: 960px; margin: 0 auto;">
     <h1 style="margin-bottom: 0.75rem;">Create listing</h1>
     <p style="margin-bottom: 1rem; color: var(--color-muted);">
@@ -158,21 +160,18 @@
                 {{ form.item_kind.errors }}
             </div>
 
-            <!-- 2. Marketplace (chosen on the config page; the hidden select keeps the panel JS working) -->
-            <div>
-                <span class="form-label" style="display: block;">Selling in</span>
-                <p style="margin: 0;">
-                    <strong>{{ config_listing_type_label|default:'The General Store' }}</strong>
-                    <a href="{% url 'listings:sell_start' %}" style="margin-left: 0.6rem; font-size: 0.85rem; color: var(--color-aged-amber);">change</a>
-                </p>
-                <div style="display: none;">{{ form.listing_type }}</div>
-                {{ form.listing_type.errors }}
-            </div>
+            {% comment %}
+            The destination was settled in step 1 and the steps strip above
+            already names it. The select stays in the DOM because the panel
+            JS reads it, but nobody has to answer it twice.
+            {% endcomment %}
+            <div style="display: none;">{{ form.listing_type }}</div>
+            {{ form.listing_type.errors }}
 
             <!-- 3. Image upload zone -->
             <div>
                 <label class="form-label" style="margin-bottom: 0.35rem; display: block;">
-                    Images <span style="font-weight: 400; color: var(--color-muted);">(up to 5 — first is the Featured/front photo, second the back)</span>
+                    Photographs <span style="font-weight: 400; color: var(--color-muted);">— the first is what buyers see, the second is the back (serial, pin, printing), and up to three more for a flaw, a maker mark or the pin</span>
                 </label>
                 {% if retained_uploads %}
                     {# A file input cannot be repopulated after a failed POST; the server holds the upload and shows it here. #}
@@ -203,6 +202,7 @@
                         {{ image_formset.management_form }}
                         {% for img_form in image_formset %}
                             {{ img_form.image }}
+                            {{ img_form.image_role }}
                             {{ img_form.sort_order }}
                             {{ img_form.id }}
                             {% if img_form.DELETE %}{{ img_form.DELETE }}{% endif %}
@@ -338,63 +338,77 @@
             </div>
         </details>
 
-        <!-- Listing details (pricing / settings) -->
-        <div style="margin-top: 1.25rem; display: grid; gap: 0.85rem;">
-            <hr style="margin: 0; border: 0; border-top: 1px solid var(--color-border);">
-            <h2 style="font-size: 1.1rem; margin: 0;">Listing details</h2>
+        {% comment %}
+        Step 3 — the terms. One panel per destination, carrying only its own
+        fields. The old form held all three sets at once and hid two with
+        JavaScript, which is why it read as long and unfocused.
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
-                <div data-listing-panel="auction">
-                    <label class="form-label" for="{{ form.starting_price.id_for_label }}">Starting price ($)</label>
-                    {{ form.starting_price }}
-                    {{ form.starting_price.errors }}
+        Each panel ends with the same three things: the action, what it costs
+        to change your mind, and one line of local knowledge.
+        {% endcomment %}
+        <div class="sl-terms">
+            <hr class="sl-terms-rule">
+            <h2 class="sl-terms-title">
+                {% if config_listing_type == 'auction' %}The terms &mdash; The Auction House
+                {% else %}The terms &mdash; The General Store{% endif %}
+            </h2>
+
+            {% if config_listing_type == 'auction' %}
+                <div class="sl-terms-grid">
+                    <div>
+                        <label class="form-label" for="{{ form.starting_price.id_for_label }}">Starting price</label>
+                        {{ form.starting_price }}
+                        {{ form.starting_price.errors }}
+                    </div>
+                    <div>
+                        <label class="form-label" for="{{ form.reserve_price.id_for_label }}">Reserve</label>
+                        {{ form.reserve_price }}
+                        <small class="sl-hint">A floor you won&rsquo;t go under. Bidders see that there is one, never the figure.</small>
+                        {{ form.reserve_price.errors }}
+                    </div>
+                    <div>
+                        <label class="form-label" for="{{ form.duration_days.id_for_label }}">Runs for</label>
+                        {{ form.duration_days }}
+                        {{ form.duration_days.errors }}
+                    </div>
+                    <div>
+                        <label class="form-label" for="{{ form.bid_increment.id_for_label }}">Smallest raise</label>
+                        {{ form.bid_increment }}
+                        <small class="sl-hint">Each new bid must beat the current one by at least this much.</small>
+                        {{ form.bid_increment.errors }}
+                    </div>
                 </div>
-                <div data-listing-panel="auction">
-                    <label class="form-label" for="{{ form.reserve_price.id_for_label }}">Reserve price ($)</label>
-                    {{ form.reserve_price }}
-                    {{ form.reserve_price.errors }}
+                <p class="sl-local">Sunday evenings draw the most bidders on here.</p>
+                <p class="sl-cost">You can cancel a lot until the first bid is in.</p>
+
+            {% else %}
+                <div class="sl-terms-grid">
+                    <div>
+                        <label class="form-label" for="{{ form.buy_now_price.id_for_label }}">Your price</label>
+                        {{ form.buy_now_price }}
+                        {{ form.buy_now_price.errors }}
+                    </div>
+                    <div>
+                        <label class="form-label" for="{{ form.minimum_offer.id_for_label }}">Nothing under</label>
+                        {{ form.minimum_offer }}
+                        <small class="sl-hint">Offers below this are turned away for you, and the buyer is
+                            told the figure so they can try again. Leave it empty and every offer reaches you.</small>
+                        {{ form.minimum_offer.errors }}
+                    </div>
                 </div>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
-                <div data-listing-panel="auction">
-                    <label class="form-label" for="{{ form.duration_days.id_for_label }}">Auction duration</label>
-                    {{ form.duration_days }}
-                    {{ form.duration_days.errors }}
-                </div>
-                <div data-listing-panel="auction">
-                    <label class="form-label" for="{{ form.bid_increment.id_for_label }}">Bid increment ($)</label>
-                    {{ form.bid_increment }}
-                    <small style="color: var(--color-muted);">Each new bid must beat the current bid by at least this much.</small>
-                    {{ form.bid_increment.errors }}
-                </div>
-                <div data-listing-panel="buy_now">
-                    <label class="form-label" for="{{ form.buy_now_price.id_for_label }}">Buy now price ($)</label>
-                    {{ form.buy_now_price }}
-                    {{ form.buy_now_price.errors }}
-                </div>
-                <div data-listing-panel="buy_now">
-                    <label class="form-label" for="{{ form.allow_offers.id_for_label }}">
-                        {{ form.allow_offers }} Allow offers
-                    </label>
-                    <small style="color: var(--color-muted);">
-                        Buyers can propose a lower price. Offers are binding &mdash; accepting one
-                        sells the item at that price.
-                    </small>
-                    {{ form.allow_offers.errors }}
-                </div>
-            </div>
-            <div data-listing-panel="trade">
-                <label class="form-label" for="{{ form.trade_notes.id_for_label }}">Trade preferences</label>
-                {{ form.trade_notes }}
-                {{ form.trade_notes.errors }}
-            </div>
-            <div data-listing-panel="trade">
-                <label class="form-label" for="{{ form.allow_cash.id_for_label }}">
-                    {{ form.allow_cash }} Allow cash add-on in trade offers
+                <label class="sl-check">
+                    {{ form.allow_offers }}
+                    <span>
+                        <strong>I&rsquo;ll consider offers</strong>
+                        <small class="sl-hint">Binding if you accept. Buyers open, you counter.</small>
+                    </span>
                 </label>
-                {{ form.allow_cash.errors }}
-            </div>
+                {{ form.allow_offers.errors }}
+                <p class="sl-cost">Change the price or take it down whenever.</p>
+            {% endif %}
+        </div>
 
+        <div style="margin-top: 1.25rem; display: grid; gap: 0.85rem;">
             <details style="margin-top: 0.25rem;" {% if form.scheduled_at.errors or form.local_pickup_location.errors %}open{% endif %}>
                 <summary style="cursor: pointer; font-size: 1.05rem; font-weight: 600;">Listing options</summary>
                 <div style="display: grid; gap: 0.85rem; margin-top: 0.75rem;">
@@ -729,6 +743,10 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = 0; i < 4; i++) {
             const sortInput = document.getElementById(`id_images-${i}-sort_order`);
             if (sortInput) sortInput.value = i;
+            // Formset slot 0 is the back of the licence; the rest are details.
+            // The featured image is the front and is its own field.
+            const roleInput = document.getElementById(`id_images-${i}-image_role`);
+            if (roleInput) roleInput.value = i === 0 ? 'back' : 'detail';
         }
         // Programmatic .files assignment fires no event — tell prefill about the featured image.
         const featured = document.getElementById('id_featured_image');
@@ -750,17 +768,21 @@ document.addEventListener('DOMContentLoaded', () => {
             img.alt = `Image ${idx + 1}`;
             thumb.appendChild(img);
 
+            // Two named slots and three details. The label is what the
+            // photograph IS, and it now persists as image_role rather than
+            // being inferred from where the thumbnail happens to sit.
+            const badge = document.createElement('span');
             if (idx === 0) {
-                const badge = document.createElement('span');
                 badge.className = 'img-featured-badge';
-                badge.textContent = 'Featured';
-                thumb.appendChild(badge);
+                badge.textContent = 'Featured · front';
             } else if (idx === 1) {
-                const badge = document.createElement('span');
                 badge.className = 'img-featured-badge img-back-badge';
                 badge.textContent = 'Back';
-                thumb.appendChild(badge);
+            } else {
+                badge.className = 'img-featured-badge img-detail-badge';
+                badge.textContent = 'Detail';
             }
+            thumb.appendChild(badge);
 
             const rmBtn = document.createElement('button');
             rmBtn.type = 'button';
