@@ -10,6 +10,7 @@ from django.template.loader import render_to_string
 from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
+from . import settings_rooms
 from .bench import needs_you
 from .follows import follower_count, following_ids
 from .forms import UserRegistrationForm, UserProfileForm, AddressForm
@@ -118,29 +119,67 @@ def user_logout(request):
 
 @login_required
 def profile_edit(request):
-    """Edit user profile"""
-    profile = request.user.profile
+    """Settings — ten named rooms rather than six stacked cards.
 
-    if request.method == 'POST':
+    Which room is open comes from `?room=`; an unknown one falls back to the
+    first rather than 404ing, because a bookmark to a renamed room should
+    land somewhere useful.
+    """
+    from apps.core.models import TermsAcceptance, TermsVersion
+    from apps.enforcement.services import active_strikes_for_user
+    from apps.messaging.models import Block
+    from .forms import ListingDefaultsForm
+
+    profile = request.user.profile
+    room, room_label, room_blurb = settings_rooms.resolve(
+        request.GET.get('room', settings_rooms.DEFAULT_ROOM))
+
+    form = UserProfileForm(instance=profile)
+    if request.method == 'POST' and room == 'profile':
         form = UserProfileForm(request.POST, request.FILES, instance=profile)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Profile updated successfully!')
-            return redirect('accounts:profile', username=request.user.username)
-    else:
-        form = UserProfileForm(instance=profile)
+            messages.success(request, 'Saved.')
+            return redirect(f"{reverse('accounts:profile_edit')}?room=profile")
 
-    from apps.messaging.models import Block
-    from .forms import ListingDefaultsForm
-    addresses = request.user.addresses.all()
-    blocked_users = Block.objects.filter(blocker=request.user).select_related('blocked')
-    return render(request, 'accounts/profile_edit.html', {
+    context = {
         'form': form,
-        'addresses': addresses,
-        'readiness': profile.account_readiness,
-        'blocked_users': blocked_users,
-        'listing_defaults_form': ListingDefaultsForm(initial=profile.listing_defaults or {}),
-    })
+        'profile': profile,
+        'rail': settings_rooms.rail(room),
+        'room': room,
+        'room_label': room_label,
+        'room_blurb': room_blurb,
+    }
+
+    # Each room loads only what it needs. Building all ten every time is how
+    # a settings page ends up doing thirty queries to show one text field.
+    if room == 'verification':
+        context['readiness'] = profile.account_readiness
+    elif room == 'addresses':
+        context['addresses'] = request.user.addresses.all()
+    elif room == 'alerts':
+        context['wanted_count'] = request.user.wanted_items.count()
+    elif room == 'defaults':
+        context['listing_defaults_form'] = ListingDefaultsForm(
+            initial=profile.listing_defaults or {})
+    elif room == 'privacy':
+        context['blocked_users'] = (
+            Block.objects.filter(blocker=request.user).select_related('blocked'))
+    elif room == 'records':
+        context['counts'] = {
+            'collection': request.user.collection_items.count(),
+            'listings': request.user.listings.count(),
+            'orders': (request.user.orders_as_buyer.count()
+                       + request.user.orders_as_seller.count()),
+        }
+    elif room == 'policies':
+        context['accepted'] = (
+            TermsAcceptance.objects.filter(user=request.user)
+            .select_related('terms').first())
+        context['current_terms'] = TermsVersion.current()
+        context['strikes'] = active_strikes_for_user(request.user)
+
+    return render(request, 'accounts/profile_edit.html', context)
 
 
 @login_required

@@ -134,3 +134,77 @@ class AuthPageTests(TermsBase):
         stats = resp.context['stats']
         self.assertEqual(stats['listings'], 0)
         self.assertEqual(stats['collectors'], User.objects.filter(is_active=True).count())
+
+
+class SettingsRoomTests(TestCase):
+    """Six stacked cards became ten named rooms. What matters is that each
+    one is reachable, names itself, and loads only its own work."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.member = User.objects.create_user('st_member', password='pw')
+
+    def setUp(self):
+        self.client.force_login(self.member)
+
+    def test_every_room_renders(self):
+        from apps.accounts.settings_rooms import ROOMS
+        for key, (label, _blurb) in ROOMS.items():
+            with self.subTest(room=key):
+                resp = self.client.get(reverse('accounts:profile_edit'), {'room': key})
+                self.assertEqual(resp.status_code, 200)
+                # Labels carry an ampersand and the template escapes it.
+                self.assertContains(resp, label.replace('&', '&amp;'))
+
+    def test_an_unknown_room_lands_somewhere_useful(self):
+        """A bookmark to a renamed room should not be an error page."""
+        resp = self.client.get(reverse('accounts:profile_edit'), {'room': 'nonsense'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['room'], 'profile')
+
+    def test_the_four_groups_are_all_in_the_rail(self):
+        html = self.client.get(reverse('accounts:profile_edit')).content.decode()
+        for group in ('Me', 'Hunting', 'Selling', 'Account'):
+            self.assertIn(f'>{group}</h2>', html)
+
+    def test_a_room_loads_only_its_own_work(self):
+        """Building all ten every time is how a settings page ends up doing
+        thirty queries to show one text field."""
+        profile = self.client.get(reverse('accounts:profile_edit'), {'room': 'profile'})
+        self.assertNotIn('blocked_users', profile.context)
+        self.assertNotIn('addresses', profile.context)
+
+        privacy = self.client.get(reverse('accounts:profile_edit'), {'room': 'privacy'})
+        self.assertIn('blocked_users', privacy.context)
+
+    def test_the_county_is_picked_not_typed(self):
+        from apps.core.models import GeographicUnit, State
+        pa, _ = State.objects.get_or_create(
+            code='PA', defaults={'name': 'Pennsylvania', 'slug': 'pa',
+                                 'is_primary_default': True})
+        lycoming = GeographicUnit.objects.create(state=pa, name='Lycoming', slug='st-lyc')
+
+        resp = self.client.post(reverse('accounts:profile_edit'), {
+            'display_name': 'Ray Miller', 'bio': '', 'showcase_layout': 'case',
+            'home_state': pa.pk, 'home_county': lycoming.pk,
+        })
+        self.assertEqual(resp.status_code, 302)
+        self.member.profile.refresh_from_db()
+        self.assertEqual(self.member.profile.home_county, lycoming)
+
+    def test_a_county_from_the_wrong_state_is_refused(self):
+        from apps.core.models import GeographicUnit, State
+        pa, _ = State.objects.get_or_create(
+            code='PA', defaults={'name': 'Pennsylvania', 'slug': 'pa2',
+                                 'is_primary_default': True})
+        md, _ = State.objects.get_or_create(
+            code='MD', defaults={'name': 'Maryland', 'slug': 'md'})
+        baltimore = GeographicUnit.objects.create(state=md, name='Baltimore', slug='st-balt')
+
+        resp = self.client.post(reverse('accounts:profile_edit'), {
+            'display_name': '', 'bio': '', 'showcase_layout': 'case',
+            'home_state': pa.pk, 'home_county': baltimore.pk,
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.member.profile.refresh_from_db()
+        self.assertIsNone(self.member.profile.home_county)

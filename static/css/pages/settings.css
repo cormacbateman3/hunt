@@ -1,0 +1,288 @@
+/* ==========================================================================
+   Settings — ten named rooms
+
+   A settings page nobody can find their way around is a settings page people
+   stop opening. Four groups down the left, one subject per room, and the room
+   you are in named in the trail.
+   ========================================================================== */
+
+.kb-settings {
+    max-width: var(--kb-page-max);
+    margin: 0 auto;
+    padding: var(--kb-6) var(--kb-gutter) var(--kb-8);
+}
+
+.st-layout {
+    display: grid;
+    grid-template-columns: 232px 1fr;
+    gap: var(--kb-6);
+    align-items: start;
+}
+
+/* ── The rail ────────────────────────────────────────────────────────── */
+.st-rail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--kb-4);
+    position: sticky;
+    top: calc(var(--kb-topbar-h) + var(--kb-3));
+}
+
+.st-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.st-group-name {
+    font: 700 var(--kb-label-size)/1.2 var(--kb-font-body);
+    letter-spacing: var(--kb-label-tracking);
+    text-transform: uppercase;
+    color: var(--kb-ink-4);
+    margin: 0 0 5px;
+}
+
+.st-room {
+    font-size: 13.5px;
+    color: var(--kb-ink-2);
+    text-decoration: none;
+    padding: 7px 10px;
+    border-radius: var(--kb-r-sm);
+    /* Transparent by default so the current room's marker never shifts the
+       rest of the list sideways. */
+    border-left: 2px solid transparent;
+}
+
+.st-room:hover {
+    background: var(--kb-page);
+}
+
+.st-room--here {
+    font-weight: 600;
+    color: var(--kb-forest);
+    background: var(--kb-parchment);
+    border-left-color: var(--kb-forest);
+}
+
+/* ── The pane ────────────────────────────────────────────────────────── */
+.st-pane {
+    background: var(--kb-surface);
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    overflow: hidden;
+    min-width: 0;
+}
+
+.st-pane-head {
+    border-bottom: 1px solid var(--kb-rule);
+    background: var(--kb-parchment-soft);
+    padding: 16px 22px;
+}
+
+.st-pane-title {
+    font: var(--kb-text-h2);
+    color: var(--kb-forest);
+    margin: 0;
+}
+
+.st-pane-blurb {
+    margin: 3px 0 0;
+    font-size: 12.5px;
+    color: var(--kb-ink-3);
+}
+
+.st-form,
+.st-pane > *:not(.st-pane-head) {
+    padding: 0 22px;
+}
+
+.st-pane > *:not(.st-pane-head):first-of-type {
+    padding-top: 20px;
+}
+
+.st-pane > *:last-child {
+    padding-bottom: 22px;
+}
+
+.st-form {
+    padding: 20px 22px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--kb-4);
+}
+
+.st-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.st-field input[type="text"],
+.st-field input[type="email"],
+.st-field input[type="number"],
+.st-field textarea,
+.st-field select {
+    width: 100%;
+    padding: 8px 11px;
+    font-size: 14px;
+    border: 1px solid var(--kb-rule-strong);
+    border-radius: var(--kb-r-md);
+    background: var(--kb-field);
+    color: var(--kb-ink);
+}
+
+.st-help {
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--kb-ink-4);
+}
+
+.st-note {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--kb-ink-2);
+}
+
+.st-note--warn {
+    color: var(--kb-brass);
+}
+
+.st-sub {
+    font: var(--kb-text-section);
+    color: var(--kb-forest);
+    margin: var(--kb-4) 0 0;
+}
+
+.st-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--kb-3);
+}
+
+.st-quiet {
+    font-size: 12px;
+    color: var(--kb-brass);
+    text-decoration: none;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+}
+
+/* ── The showcase picker ─────────────────────────────────────────────── */
+.st-layouts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.st-layout-choice {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12.5px;
+    color: var(--kb-ink-2);
+    border: 1px solid var(--kb-rule-strong);
+    border-radius: var(--kb-r-chip);
+    padding: 7px 11px;
+    cursor: pointer;
+}
+
+.st-layout-choice input {
+    accent-color: var(--kb-forest);
+}
+
+/* ── Lists ───────────────────────────────────────────────────────────── */
+.st-checks {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.st-checks li {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--kb-ink);
+    padding-left: 20px;
+    position: relative;
+}
+
+.st-checks li::before {
+    position: absolute;
+    left: 0;
+    font-weight: 700;
+}
+
+.st-checks .is-yes::before {
+    content: "\2713";
+    color: var(--kb-live);
+}
+
+.st-checks .is-no::before {
+    content: "\2013";
+    color: var(--kb-ink-4);
+}
+
+.st-rows {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-sm);
+    overflow: hidden;
+}
+
+.st-row {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--kb-rule-soft);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--kb-3);
+}
+
+.st-row:last-child {
+    border-bottom: 0;
+}
+
+.st-row-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--kb-ink);
+}
+
+.st-row-sub {
+    font-size: 12px;
+    color: var(--kb-ink-3);
+}
+
+.st-row-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--kb-3);
+    flex-shrink: 0;
+}
+
+.st-tag {
+    font: 700 var(--kb-badge-size)/1.2 var(--kb-font-body);
+    letter-spacing: var(--kb-badge-tracking);
+    text-transform: uppercase;
+    color: var(--kb-brass);
+    margin-left: 7px;
+}
+
+@media (max-width: 900px) {
+    .st-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .st-rail {
+        position: static;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: var(--kb-5);
+    }
+}

@@ -1,203 +1,295 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Edit Profile | KeystoneBid{% endblock %}
+{% block title %}{{ room_label }} &middot; Settings &middot; KeystoneBid{% endblock %}
+
+{% block context_band %}
+<nav class="kb-crumbs" aria-label="Breadcrumb">
+    <div class="kb-band-inner">
+        <a href="{% url 'bench' %}">My Bench</a>
+        <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
+        <a href="{% url 'accounts:profile_edit' %}">Settings</a>
+        <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
+        <span class="kb-crumb-current">{{ room_label }}</span>
+    </div>
+</nav>
+{% endblock %}
+
+{% block main_class %}kb-settings{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/settings.css' %}">{% endblock %}
 
 {% block content %}
-<section style="display: grid; gap: 1.5rem; max-width: 720px; margin: 0 auto;">
+{% comment %}
+Six stacked cards on one page become ten named rooms in four groups. The
+grouping is by whose problem it is: Me is how you appear, Hunting is what
+reaches you, Selling is what you promise buyers, Account is the paperwork.
+Nothing is in two groups.
+{% endcomment %}
 
-    {# ── Account Readiness Checklist ── #}
-    <article class="card">
-        <h2 style="font-size: 1.1rem; margin-bottom: 0.75rem;">Account readiness</h2>
-        <ul style="list-style: none; padding: 0; margin: 0; display: grid; gap: 0.5rem;">
-            {% for item in readiness %}
-            <li style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
-                <span>
-                    {% if item.complete %}
-                        <span style="color: var(--color-forest-green);">&#10003;</span>
-                    {% else %}
-                        <span style="color: var(--color-muted);">&#9675;</span>
-                    {% endif %}
-                    {{ item.label }}
-                </span>
-                {% if not item.complete and item.fix_url %}
-                    <a href="{{ item.fix_url }}" class="btn-secondary" style="font-size: 0.8rem; padding: 0.2rem 0.6rem;">
-                        {{ item.fix_label }} &rarr;
-                    </a>
-                {% endif %}
-            </li>
-            {% endfor %}
-        </ul>
-    </article>
-
-    {# ── Profile Details ── #}
-    <article class="card">
-        <h2 style="font-size: 1.1rem; margin-bottom: 0.75rem;">Profile details</h2>
-        <form method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            <div style="display: grid; gap: 0.85rem;">
-                <div>
-                    <label class="form-label" for="{{ form.display_name.id_for_label }}">Display name</label>
-                    {{ form.display_name }}
-                    {{ form.display_name.errors }}
-                </div>
-                <div>
-                    <label class="form-label" for="{{ form.county.id_for_label }}">County</label>
-                    {{ form.county }}
-                    {{ form.county.errors }}
-                </div>
-                <div>
-                    <label class="form-label" for="{{ form.bio.id_for_label }}">Bio</label>
-                    {{ form.bio }}
-                    {{ form.bio.errors }}
-                </div>
-                <div>
-                    <label class="form-label" for="{{ form.avatar.id_for_label }}">Avatar</label>
-                    {{ form.avatar }}
-                    {{ form.avatar.errors }}
-                </div>
-            </div>
-            <div style="margin-top: 1.2rem;">
-                <button type="submit" class="btn-primary">Save changes</button>
-                <a href="{% url 'accounts:profile' user.username %}" style="margin-left: 0.75rem; color: var(--color-aged-amber);">
-                    Cancel
-                </a>
-            </div>
-        </form>
-    </article>
-
-    {# ── Email Verification ── #}
-    <article class="card">
-        <h2 style="font-size: 1.1rem; margin-bottom: 0.5rem;">Email verification</h2>
-        <p style="margin-bottom: 0.75rem;">
-            <strong>{{ user.email }}</strong> &mdash;
-            {% if user.profile.email_verified %}
-                <span class="badge badge-active">Verified</span>
-            {% else %}
-                <span class="badge badge-expired">Not verified</span>
-            {% endif %}
-        </p>
-        {% if not user.profile.email_verified %}
-        <form method="post" action="{% url 'accounts:resend_verification' %}">
-            {% csrf_token %}
-            <button type="submit" class="btn-secondary">Resend verification email</button>
-        </form>
-        {% endif %}
-    </article>
-
-    {# ── Shipping Addresses ── #}
-    <article class="card">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-            <h2 style="font-size: 1.1rem; margin: 0;">Shipping addresses</h2>
-            <a href="{% url 'accounts:address_add' %}" class="btn-secondary" style="font-size: 0.85rem;">+ Add address</a>
-        </div>
-
-        {% if addresses %}
-            {% for address in addresses %}
-            <div style="border: 1px solid var(--color-border); border-radius: 4px; padding: 0.75rem; margin-bottom: 0.6rem; display: grid; gap: 0.3rem;">
-                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem;">
-                    <div>
-                        <strong>{{ address.full_name }}</strong>
-                        {% if user.profile.shipping_address_id == address.pk %}
-                            <span class="badge badge-active" style="margin-left: 0.4rem; font-size: 0.75rem;">Default</span>
-                        {% endif %}
-                        <br>
-                        {{ address.line1 }}{% if address.line2 %}, {{ address.line2 }}{% endif %}<br>
-                        {{ address.city }}, {{ address.state }} {{ address.postal_code }}
-                        {% if address.phone %}<br><span style="color: var(--color-muted); font-size: 0.85rem;">{{ address.phone }}</span>{% endif %}
-                    </div>
-                    <div style="display: flex; gap: 0.4rem; flex-shrink: 0;">
-                        <a href="{% url 'accounts:address_edit' address.pk %}" class="btn-secondary" style="font-size: 0.8rem; padding: 0.2rem 0.5rem;">Edit</a>
-                        {% if user.profile.shipping_address_id != address.pk %}
-                        <form method="post" action="{% url 'accounts:address_set_default' address.pk %}" style="display: inline;">
-                            {% csrf_token %}
-                            <button type="submit" class="btn-secondary" style="font-size: 0.8rem; padding: 0.2rem 0.5rem;">Set default</button>
-                        </form>
-                        {% endif %}
-                        <a href="{% url 'accounts:address_delete' address.pk %}" class="btn-secondary" style="font-size: 0.8rem; padding: 0.2rem 0.5rem; color: var(--color-error, #c0392b);">Delete</a>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        {% else %}
-            <p style="color: var(--color-muted);">
-                No addresses saved.
-                <a href="{% url 'accounts:address_add' %}" style="color: var(--color-aged-amber);">Add your first address &rarr;</a>
-            </p>
-        {% endif %}
-    </article>
-
-    {# ── Listing defaults ── #}
-    <article class="card">
-        <h2 style="font-size: 1.1rem; margin-bottom: 0.35rem;">Listing defaults</h2>
-        <p style="color: var(--color-muted); font-size: 0.88rem; margin-bottom: 0.75rem;">
-            New listings start with these values — you can still change them per listing.
-        </p>
-        <form method="post" action="{% url 'accounts:listing_defaults' %}" style="display: grid; gap: 0.85rem;">
-            {% csrf_token %}
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
-                <div>
-                    <label class="form-label" for="{{ listing_defaults_form.shipping_service.id_for_label }}">Carrier / service</label>
-                    {{ listing_defaults_form.shipping_service }}
-                </div>
-                <div>
-                    <label class="form-label" for="{{ listing_defaults_form.shipping_payer.id_for_label }}">Who pays shipping</label>
-                    {{ listing_defaults_form.shipping_payer }}
-                </div>
-            </div>
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.85rem;">
-                <div>
-                    <label class="form-label" for="{{ listing_defaults_form.package_weight_oz.id_for_label }}">Weight (oz)</label>
-                    {{ listing_defaults_form.package_weight_oz }}
-                </div>
-                <div>
-                    <label class="form-label" for="{{ listing_defaults_form.package_length_in.id_for_label }}">Length (in)</label>
-                    {{ listing_defaults_form.package_length_in }}
-                </div>
-                <div>
-                    <label class="form-label" for="{{ listing_defaults_form.package_width_in.id_for_label }}">Width (in)</label>
-                    {{ listing_defaults_form.package_width_in }}
-                </div>
-                <div>
-                    <label class="form-label" for="{{ listing_defaults_form.package_height_in.id_for_label }}">Height (in)</label>
-                    {{ listing_defaults_form.package_height_in }}
-                </div>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; align-items: end;">
-                <div>
-                    <label class="form-label" for="{{ listing_defaults_form.bid_increment.id_for_label }}">Bid increment ($)</label>
-                    {{ listing_defaults_form.bid_increment }}
-                </div>
-                <div>
-                    <label class="form-label">
-                        {{ listing_defaults_form.auto_relist }} Auto-relist unsold auctions
-                    </label>
-                </div>
-            </div>
-            <div>
-                <button type="submit" class="btn-secondary">Save listing defaults</button>
-            </div>
-        </form>
-    </article>
-
-    {# ── Blocked Users ── #}
-    <article class="card">
-        <h2 style="font-size: 1.1rem; margin-bottom: 0.75rem;">Blocked users</h2>
-        {% if blocked_users %}
-            <div style="display: grid; gap: 0.5rem;">
-                {% for block in blocked_users %}
-                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; border: 1px solid var(--color-border); border-radius: 4px; padding: 0.5rem 0.75rem;">
-                        <span>{{ block.blocked.username }}</span>
-                        <form method="post" action="{% url 'messaging:unblock_user' block.blocked.pk %}" style="display: inline;">
-                            {% csrf_token %}
-                            <button type="submit" class="btn-secondary" style="font-size: 0.82rem; padding: 0.2rem 0.5rem;">Unblock</button>
-                        </form>
-                    </div>
+<div class="st-layout">
+    <nav class="st-rail" aria-label="Settings">
+        {% for group in rail %}
+            <div class="st-group">
+                <h2 class="st-group-name">{{ group.name }}</h2>
+                {% for entry in group.rooms %}
+                    <a href="?room={{ entry.key }}" class="st-room{% if entry.active %} st-room--here{% endif %}"
+                       {% if entry.active %}aria-current="page"{% endif %}>{{ entry.label }}</a>
                 {% endfor %}
             </div>
-        {% else %}
-            <p style="color: var(--color-muted);">You have not blocked any users.</p>
-        {% endif %}
-    </article>
+        {% endfor %}
+    </nav>
 
-</section>
+    <div class="st-pane">
+        <header class="st-pane-head">
+            <h1 class="st-pane-title">{{ room_label }}</h1>
+            <p class="st-pane-blurb">{{ room_blurb }}</p>
+        </header>
+
+        {% if room == 'profile' %}
+            <form method="post" enctype="multipart/form-data" class="st-form">
+                {% csrf_token %}
+                <p class="st-note">
+                    None of this is required, but a name and a county make people
+                    far likelier to deal with you.
+                </p>
+
+                {% for field in form %}
+                    {% if field.name != 'showcase_layout' %}
+                        <div class="st-field">
+                            <label class="kb-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}<span class="st-help">{{ field.help_text }}</span>{% endif %}
+                            {{ field.errors }}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+
+                <div class="st-field">
+                    <span class="kb-label">{{ form.showcase_layout.label }}</span>
+                    <span class="st-help">Pick the order visitors see. You can change it whenever.</span>
+                    <div class="st-layouts">
+                        {% for choice in form.showcase_layout %}
+                            <label class="st-layout-choice">{{ choice.tag }} {{ choice.choice_label }}</label>
+                        {% endfor %}
+                    </div>
+                    {{ form.showcase_layout.errors }}
+                </div>
+
+                <div class="st-actions">
+                    <button type="submit" class="kb-btn kb-btn--primary">Save</button>
+                    <a href="{% url 'accounts:profile' user.username %}" class="st-quiet">See how it looks</a>
+                </div>
+            </form>
+
+            {% comment %}
+            DEFERRED — the earned badge row belongs under the bio here too.
+            Blocked on: the Badge model (Pass 14).
+            Register: docs/internal/plan_design.md
+            {% endcomment %}
+
+        {% elif room == 'verification' %}
+            <ul class="st-checks">
+                {% for item in readiness %}
+                    <li class="{% if item.complete %}is-yes{% else %}is-no{% endif %}">
+                        <span>{{ item.label }}</span>
+                        {% if not item.complete and item.fix_url %}
+                            <a href="{{ item.fix_url }}" class="st-quiet">{{ item.fix_label }}</a>
+                        {% elif not item.complete %}
+                            <span class="st-help">Not available yet.</span>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+            <p class="st-note">
+                A verified email lets you bid. An address lets you sell, and a phone
+                number lets you trade &mdash; each one only when you need it.
+            </p>
+
+        {% elif room == 'addresses' %}
+            {% if addresses %}
+                <div class="st-rows">
+                    {% for address in addresses %}
+                        <div class="st-row">
+                            <span class="kb-stack">
+                                <span class="st-row-title">
+                                    {{ address.full_name }}
+                                    {% if address.is_default %}<span class="st-tag">Default</span>{% endif %}
+                                </span>
+                                <span class="st-row-sub">
+                                    {{ address.line1 }}{% if address.line2 %}, {{ address.line2 }}{% endif %},
+                                    {{ address.city }}, {{ address.state }} {{ address.postal_code }}
+                                </span>
+                            </span>
+                            <span class="st-row-actions">
+                                <a href="{% url 'accounts:address_edit' address.pk %}" class="st-quiet">Edit</a>
+                                {% if not address.is_default %}
+                                    <form method="post" action="{% url 'accounts:address_set_default' address.pk %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="st-quiet">Make default</button>
+                                    </form>
+                                {% endif %}
+                            </span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="st-note">No address saved. You need one before you can sell.</p>
+            {% endif %}
+            <div class="st-actions">
+                <a href="{% url 'accounts:address_add' %}" class="kb-btn kb-btn--primary">Add an address</a>
+            </div>
+            <p class="st-help">
+                Orders copy the address at the moment of sale, so changing one here
+                never rewrites a past record.
+            </p>
+
+        {% elif room == 'alerts' %}
+            <p class="st-note">
+                A want is a standing search: you get a letter the day one is listed,
+                and collectors who own one can offer you a trade.
+            </p>
+            <div class="st-actions">
+                <a href="{% url 'collections:my_collection' %}?view=wants" class="kb-btn kb-btn--primary">
+                    Your wanted list{% if wanted_count %} ({{ wanted_count }}){% endif %}
+                </a>
+            </div>
+            {% comment %}
+            DEFERRED — saved hunts, the searches that go looking for you.
+            Blocked on: a SavedHunt model.
+            Register: docs/internal/plan_design.md
+            {% endcomment %}
+            <p class="st-help">
+                Saving a whole search &mdash; not just one item &mdash; is coming.
+                Until then a want does the same job for anything you can name.
+            </p>
+
+        {% elif room == 'mail' %}
+            <p class="st-note">
+                Everything reaches you in the notification centre, and anything on a
+                clock is emailed as well.
+            </p>
+            <div class="st-actions">
+                <a href="{% url 'notifications:center' %}" class="kb-btn kb-btn--secondary">Open the centre</a>
+            </div>
+            {% comment %}
+            DEFERRED — per-type mail preferences (which of the twenty-odd
+            notification types are emailed).
+            Blocked on: a NotificationPreference model. Showing switches that
+            saved nowhere would be worse than saying it plainly.
+            Register: docs/internal/plan_design.md
+            {% endcomment %}
+            <p class="st-help">
+                Choosing which of these arrive by email is coming. Today everything
+                on a deadline is sent, and nothing else is.
+            </p>
+
+        {% elif room == 'defaults' %}
+            <form method="post" action="{% url 'accounts:listing_defaults' %}" class="st-form">
+                {% csrf_token %}
+                <p class="st-note">
+                    What a new listing starts with. You can change any of it on the
+                    listing itself &mdash; this only saves you setting it every time.
+                </p>
+                {% for field in listing_defaults_form %}
+                    <div class="st-field">
+                        <label class="kb-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}<span class="st-help">{{ field.help_text }}</span>{% endif %}
+                        {{ field.errors }}
+                    </div>
+                {% endfor %}
+                <div class="st-actions">
+                    <button type="submit" class="kb-btn kb-btn--primary">Save defaults</button>
+                </div>
+            </form>
+
+        {% elif room == 'payouts' %}
+            <p class="st-note">
+                Buyers pay through Stripe and payouts follow Stripe&rsquo;s normal
+                schedule. KeystoneBid never holds your money &mdash; there is no escrow
+                here, which is why the handshake and the strike ladder exist.
+            </p>
+            <ul class="st-checks">
+                <li class="is-yes"><span>No fee to join, browse, or trade</span></li>
+                <li class="is-yes"><span>Commission is charged only when something sells</span></li>
+                <li class="is-yes"><span>Shipping goes straight to the carrier when you buy a label</span></li>
+            </ul>
+
+        {% elif room == 'privacy' %}
+            {% if blocked_users %}
+                <div class="st-rows">
+                    {% for block in blocked_users %}
+                        <div class="st-row">
+                            <span class="st-row-title">{{ block.blocked.profile.get_display_name }}</span>
+                            <form method="post" action="{% url 'accounts:profile_edit' %}">
+                                {% csrf_token %}
+                                <a href="{% url 'messaging:unblock_user' block.blocked.pk %}" class="st-quiet">Unblock</a>
+                            </form>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="st-note">You haven&rsquo;t blocked anybody.</p>
+            {% endif %}
+            <p class="st-help">
+                Blocking stops messages both ways. It does not hide your collection
+                &mdash; anything you have marked public stays public.
+            </p>
+
+        {% elif room == 'records' %}
+            <p class="st-note">
+                What is on your account: {{ counts.collection }} collection item{{ counts.collection|pluralize }},
+                {{ counts.listings }} listing{{ counts.listings|pluralize }},
+                {{ counts.orders }} order{{ counts.orders|pluralize }}.
+            </p>
+            {% comment %}
+            DEFERRED — the export itself (a CSV of your collection, with the
+            private purchase block, for insurance).
+            Blocked on: nothing but the work; it is a Pass 10 item.
+            Register: docs/internal/plan_design.md
+            {% endcomment %}
+            <p class="st-help">
+                A downloadable copy &mdash; including what you paid, which nobody else
+                ever sees &mdash; is coming. Ask us and we will send you one in the
+                meantime: <a href="mailto:help@keystonebid.com">help@keystonebid.com</a>.
+            </p>
+
+        {% elif room == 'policies' %}
+            {% if accepted %}
+                <p class="st-note">
+                    You accepted the Marketplace Rules and Terms, version
+                    <strong>{{ accepted.terms.version }}</strong>, on
+                    {{ accepted.accepted_at|date:"j F Y" }}.
+                </p>
+                <p class="st-help">{{ accepted.terms.summary }}</p>
+                {% if current_terms and current_terms.pk != accepted.terms.pk %}
+                    <p class="st-note st-note--warn">
+                        Version {{ current_terms.version }} is now in force. We record
+                        which version you accepted, so nothing you did under
+                        {{ accepted.terms.version }} is judged by the new one.
+                    </p>
+                {% endif %}
+            {% else %}
+                <p class="st-note">No terms acceptance recorded on this account.</p>
+            {% endif %}
+
+            <h2 class="st-sub">Where you stand</h2>
+            {% if strikes %}
+                <div class="st-rows">
+                    {% for strike in strikes %}
+                        <div class="st-row">
+                            <span class="kb-stack">
+                                <span class="st-row-title">{{ strike.get_reason_display }}</span>
+                                <span class="st-row-sub">{{ strike.created_at|date:"j F Y" }}{% if strike.notes %} &middot; {{ strike.notes }}{% endif %}</span>
+                            </span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="st-note">No strikes. Nothing restricted.</p>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
 {% endblock %}
