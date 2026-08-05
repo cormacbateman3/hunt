@@ -1,0 +1,107 @@
+{% comment %}
+Below the work: how you got here, and who you are dealing with.
+
+Both are things you *consult* — you read them once, decide, and go back to
+the table. Putting them in a side rail would take a quarter of the page away
+from the licences permanently to serve a glance. So they run across the foot
+instead, and the four columns keep the full width.
+
+Each round says **what moved** rather than a piece count: "3 pieces" makes
+you open two rounds to compare them; "Added $40, dropped the 1951 Elk" is
+the reason the history is worth having.
+
+Expects `thread`, `other`, `trader_trust`, and optionally `offer`.
+{% endcomment %}
+<div class="tb-below">
+    <section class="tb-story">
+        {% for row in thread|slice:":3" %}
+            <div class="tb-story-cell{% if forloop.first %} is-latest{% endif %}">
+                <span class="tb-story-when">
+                    {% if row.offer.counter_to_id %}Counter #{{ row.round }}{% else %}Opened{% endif %}
+                    &middot; {{ row.who }} &middot; {{ row.offer.created_at|date:"j M" }}
+                </span>
+                <span class="tb-story-what">
+                    {% if row.changed %}{{ row.changed }}
+                    {% else %}{{ row.pieces }} piece{{ row.pieces|pluralize }} on the table{% endif %}
+                </span>
+                {% if not row.is_this_one %}
+                    <a href="{% url 'trades:offer_detail' row.offer.pk %}" class="tb-story-link">See it</a>
+                {% endif %}
+            </div>
+        {% empty %}
+            <div class="tb-story-cell is-latest">
+                <span class="tb-story-when">Nothing said yet</span>
+                <span class="tb-story-what">
+                    This is the first offer. Whatever you send starts the record.
+                </span>
+            </div>
+        {% endfor %}
+
+        <div class="tb-story-cell tb-story-talk">
+            {% if offer.message %}
+                <blockquote class="tb-quote">&ldquo;{{ offer.message }}&rdquo;</blockquote>
+            {% endif %}
+            {% comment %}
+            Messages are their own thread with their own rules — read
+            receipts, blocking, the deal pinned at the top — so this opens
+            that rather than growing a second, weaker one here.
+            {% endcomment %}
+            <a href="{% url 'messaging:inbox' %}?with={{ other.pk }}" class="tb-reply">
+                Reply to {{ other.profile.get_display_name|default:other.username }}&hellip;
+            </a>
+        </div>
+    </section>
+
+    <section class="tb-trader">
+        <header class="tb-trader-head">
+            {% if other.profile.avatar %}
+                <img src="{{ other.profile.avatar.url }}" alt="" class="tb-trader-face">
+            {% else %}
+                <span class="tb-trader-face" aria-hidden="true">{{ trader_trust.initials }}</span>
+            {% endif %}
+            <span class="tb-trader-who">
+                <a href="{% url 'accounts:profile' other.username %}" class="tb-trader-name">
+                    {{ other.profile.get_display_name|default:other.username }}
+                </a>
+                <span class="tb-trader-where">
+                    {{ other.profile.place|default:'Whereabouts not given' }}
+                    &middot; member since {{ other.date_joined|date:"Y" }}
+                </span>
+            </span>
+        </header>
+
+        <ul class="tb-trust">
+            {% if other.profile.email_verified and other.profile.phone_verified %}
+                <li class="tb-trust-yes">Email and phone verified</li>
+            {% elif other.profile.email_verified %}
+                <li class="tb-trust-yes">Email verified</li>
+            {% endif %}
+            {% if trader_trust.trades %}
+                <li class="tb-trust-yes">
+                    {{ trader_trust.trades }} trade{{ trader_trust.trades|pluralize }} completed{% if not trader_trust.strikes %}, 0 strikes{% endif %}
+                </li>
+            {% endif %}
+            {% if trader_trust.strikes %}
+                <li class="tb-trust-no">{{ trader_trust.strikes }} strike{{ trader_trust.strikes|pluralize }} on the record</li>
+            {% endif %}
+            {% comment %}
+            Measured from parcels that actually moved, and withheld until
+            there are enough of them to be a habit rather than an anecdote.
+            {% endcomment %}
+            {% if trader_trust.ships_in %}
+                <li class="tb-trust-yes">Ships in {{ trader_trust.ships_in }} day{{ trader_trust.ships_in|pluralize }} on average</li>
+            {% endif %}
+        </ul>
+
+        {% if trader_trust.wants %}
+            <div class="tb-trader-wants">
+                <span>Wants, in their words</span>
+                <p>{{ trader_trust.wants }}</p>
+            </div>
+        {% endif %}
+
+        <a href="{% url 'accounts:profile' other.username %}" class="tb-trader-link">
+            See their collection &amp; profile &rarr;
+        </a>
+    </section>
+</div>

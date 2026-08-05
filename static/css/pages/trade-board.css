@@ -1,86 +1,138 @@
 /* ==========================================================================
-   The Trading Block — the table the licences are laid on (turn 3a)
+   The Trading Block — four columns, full width
 
-   Values here are taken from the design frame's own markup, not from the
-   paragraph describing it. The paragraph says "one dark panel"; the frame
-   says #22301c with a #1e2a19 header strip and cream #f4f1e8 item cards —
-   and the cream is the entire point:
+   Values taken from the design frame's own markup. Your shelf, what you
+   give, what you receive, their shelf: each a quarter of the page, so the
+   licences get the room to be read. The two middle columns are edged and
+   tinted by direction — rust for what leaves you, green for what arrives.
 
-       "the licenses on the table become the brightest objects on the page"
-
-   Inverting the middle two columns does three things at once: the licences
-   become the brightest objects, direction is carried by position and one
-   brass disc instead of red-versus-green, and the two halves read as ONE
-   DEAL rather than two lists that happen to sit together.
-
-   The shelves either side are 196px picker lists — a 30×23 thumbnail and a
-   truncated title is enough to recognise your own licence, and shelves are
-   for finding, not admiring. The width they gave up went to the rail.
+   Under them one dark bar states the deal and carries the three decisions.
+   Under *that* the negotiation and the other trader: things you consult
+   rather than act on, so they run across the foot instead of taking a
+   quarter of the width away from the licences permanently.
    ========================================================================== */
 
 .kb-composer {
     max-width: var(--kb-page-max);
     margin: 0 auto;
-    padding: 22px var(--kb-gutter) 28px;
+    padding: 0 var(--kb-gutter) 26px;
 }
 
-/* The rail is a sibling of the WHOLE left stack, so the action band spans
-   the full width under all three columns rather than hiding under the table.
-   1224px well = 900 + 24 + 300, exactly as the frame has it. */
-.tb-composer,
-.tb-read {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 300px;
-    gap: 24px;
-    align-items: start;
+/* ── Who is across the table ───────────────────────────────────────── */
+.tb-heads {
+    background: var(--kb-parchment);
+    border-bottom: 1px solid var(--kb-rule-strong);
+    margin: 0 calc(var(--kb-gutter) * -1) 20px;
+    padding: 14px var(--kb-gutter);
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
 }
 
-.tb-centre {
+.tb-head-who {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.tb-head-face {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--kb-r-chip);
+    background: var(--kb-forest);
+    color: var(--kb-cream);
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.tb-head-name {
+    font-family: var(--kb-font-display);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--kb-forest);
+}
+
+.tb-head-swap { font-size: 15px; color: var(--kb-brass); }
+
+.tb-head-tags {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+}
+
+.tb-tag {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    padding: 4px 9px;
+    border-radius: var(--kb-r-chip);
+    font-variant-numeric: tabular-nums;
+}
+
+.tb-tag--good { background: #eef3ea; color: var(--kb-live); border: 1px solid #cfdcc9; }
+.tb-tag--clock { background: #fdf1e7; color: var(--kb-rust); border: 1px solid #f0d4bf; }
+
+/* ── The floor ─────────────────────────────────────────────────────── */
+.tb-stack {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    min-width: 0;
 }
 
 .tb-floor {
     display: grid;
-    grid-template-columns: 196px minmax(0, 1fr) 196px;
-    gap: 12px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
     align-items: stretch;
 }
 
-/* ── The shelves ───────────────────────────────────────────────────── */
-.tb-roster {
+.tb-col {
     border: 1px solid var(--kb-rule);
     border-radius: var(--kb-r-lg);
     background: var(--kb-surface);
     display: flex;
     flex-direction: column;
+    overflow: hidden;
     min-width: 0;
 }
 
-.tb-roster-head {
-    padding: 10px 11px;
+.tb-col-head {
+    padding: 11px 13px;
     border-bottom: 1px solid var(--kb-rule-soft);
     display: flex;
     flex-direction: column;
-    gap: 7px;
+    gap: 8px;
 }
 
-.tb-roster-title {
-    margin: 0;
+.tb-col-title {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: 6px;
-    font: 700 10px/1.3 var(--kb-font-body);
-    letter-spacing: 0.11em;
+    gap: 8px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--kb-ink-3);
 }
 
-.tb-roster-count {
-    font-size: 10.5px;
+.tb-col-title > span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tb-col-count {
+    font-size: 11px;
     font-weight: 400;
     letter-spacing: 0;
     text-transform: none;
@@ -89,39 +141,31 @@
     flex-shrink: 0;
 }
 
-.tb-find-input {
+.tb-find {
     width: 100%;
     border: 1px solid var(--kb-rule-strong);
     border-radius: var(--kb-r-chip);
-    padding: 5px 8px;
-    font-size: 11.5px;
+    padding: 6px 9px;
+    font-size: 12px;
+    font-family: var(--kb-font-body);
     background: var(--kb-surface);
     color: var(--kb-ink);
 }
 
-.tb-find-input::placeholder { color: var(--kb-ink-4); }
+.tb-find::placeholder { color: var(--kb-ink-4); }
+.tb-find:focus { outline: 2px solid var(--kb-brass); outline-offset: 1px; }
 
-.tb-find-input:focus {
-    outline: 2px solid var(--kb-brass);
-    outline-offset: 1px;
-}
-
-.tb-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 3px;
-}
+.tb-chips { display: flex; flex-wrap: wrap; gap: 4px; }
 
 .tb-chip {
-    font-size: 10px;
-    font-weight: 400;
+    font-family: var(--kb-font-body);
+    font-size: 10.5px;
     color: var(--kb-ink-2);
     background: var(--kb-surface);
     border: 1px solid var(--kb-rule-strong);
     border-radius: var(--kb-r-chip);
-    padding: 3px 7px;
+    padding: 3px 8px;
     cursor: pointer;
-    font-family: var(--kb-font-body);
 }
 
 .tb-chip:hover { border-color: var(--kb-forest); }
@@ -140,43 +184,122 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    max-height: 54vh;
+    max-height: 46vh;
     overflow-y: auto;
     overflow-x: hidden;
 }
 
-.tb-roster-foot {
+.tb-col-foot {
     margin: 0;
-    padding: 7px 11px;
+    padding: 9px 13px;
     border-top: 1px solid var(--kb-rule-soft);
     background: var(--kb-page);
-    border-radius: 0 0 var(--kb-r-lg) var(--kb-r-lg);
-    font-size: 10px;
+    font-size: 11px;
     color: var(--kb-ink-4);
     font-variant-numeric: tabular-nums;
 }
 
-/* ── One licence, wherever it is standing ──────────────────────────── */
-/* Three children in a row, never a grid: the note is a LINE inside the text
-   column. As a fourth column it left the title about thirty pixels and broke
-   words a character at a time. */
-.tb-piece-hit {
+/* ── The two middle columns ────────────────────────────────────────── */
+/* Direction is carried by the edge and the header tint, and repeated in the
+   words — never by colour alone. */
+.tb-side--give { border-color: var(--kb-rust); }
+.tb-side--get { border-color: var(--kb-live); }
+
+.tb-side-head {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.tb-side--give .tb-side-head { background: #fdf1e7; color: var(--kb-rust); }
+.tb-side--get .tb-side-head { background: #eef3ea; color: var(--kb-live); }
+
+.tb-side--give .tb-col-count { color: var(--kb-rust); }
+.tb-side--get .tb-col-count { color: var(--kb-live); }
+
+.tb-laid {
+    list-style: none;
+    margin: 0;
+    padding: 11px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.tb-drop {
+    border: 1px dashed var(--kb-rule-strong);
+    border-radius: var(--kb-r-chip);
+    padding: 12px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--kb-ink-4);
+    text-align: center;
+}
+
+/* Cash sits at the foot of the side it lands on, so nobody has to hold a
+   direction in their head while typing a figure. */
+.tb-cash {
+    padding: 10px 13px;
+    border-top: 1px solid var(--kb-rule-soft);
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 7px 11px;
+}
+
+.tb-cash label {
+    font-size: 11px;
+    color: var(--kb-ink-3);
+}
+
+.tb-side--get .tb-cash { background: #eef3ea; }
+.tb-side--get .tb-cash label { color: var(--kb-live); }
+
+.tb-cash-input {
+    margin-left: auto;
+    width: 82px;
+    border: 1px solid var(--kb-rule-strong);
+    border-radius: var(--kb-r-chip);
+    padding: 5px 9px;
+    font-family: var(--kb-font-body);
+    font-size: 12.5px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    background: var(--kb-surface);
+    color: var(--kb-ink);
+}
+
+.tb-side--get .tb-cash-input { border-color: var(--kb-live); }
+.tb-cash-input:focus { outline: 2px solid var(--kb-brass); outline-offset: 1px; }
+
+/* ── One licence ───────────────────────────────────────────────────── */
+.tb-piece-hit {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 13px;
     cursor: pointer;
+    /* A drag used to leave the row's text selected and inverted behind it. */
+    user-select: none;
+    -webkit-user-select: none;
 }
 
-.tb-shelf .tb-piece {
-    border-bottom: 1px solid var(--kb-parchment-soft);
-}
-
+.tb-shelf .tb-piece { border-bottom: 1px solid var(--kb-parchment-soft); }
 .tb-shelf .tb-piece:last-child { border-bottom: 0; }
-
-.tb-shelf .tb-piece.is-on-table { background: var(--kb-parchment-soft); }
-
+.tb-shelf .tb-piece.is-on-table { background: var(--kb-page); }
 .tb-shelf .tb-piece-hit:hover { background: var(--kb-chip); }
+
+.tb-laid .tb-piece {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-chip);
+    background: var(--kb-page);
+}
+
+.tb-laid .tb-piece-hit { padding: 8px 9px; }
 
 .tb-piece-pick {
     position: absolute;
@@ -186,8 +309,8 @@
 }
 
 .tb-piece-thumb {
-    width: 30px;
-    height: 23px;
+    width: 36px;
+    height: 28px;
     background: var(--kb-fill-placeholder);
     border-radius: var(--kb-r-micro);
     overflow: hidden;
@@ -209,7 +332,7 @@
 }
 
 .tb-piece-title {
-    font-size: 11.5px;
+    font-size: 12.5px;
     font-weight: 600;
     color: var(--kb-ink);
     white-space: nowrap;
@@ -218,7 +341,7 @@
 }
 
 .tb-piece-note {
-    font-size: 10px;
+    font-size: 10.5px;
     color: var(--kb-ink-4);
     white-space: nowrap;
     overflow: hidden;
@@ -227,62 +350,56 @@
 
 .tb-piece-note:empty { display: none; }
 
-/* Green is the row worth acting on, rust is the row you cannot. Nothing
+/* Green is the row worth acting on, rust the row you cannot use. Nothing
    else is coloured — a shelf where every line shouts says nothing. */
 .tb-piece-note--wanted,
-.tb-piece-note--gap {
-    color: var(--kb-live);
-    font-weight: 600;
-}
-
-.tb-piece-note--held { color: var(--kb-rust); }
+.tb-piece-note--gap { color: var(--kb-live); font-weight: 600; }
 .tb-piece-note--came { color: var(--kb-brass); font-weight: 600; }
-
-/* The county·year·grade line belongs on the table, where the decision is
-   made. On a shelf a truncated title is enough. */
-.tb-piece-meta {
-    display: none;
-    font-size: 10px;
-    color: var(--kb-ink-3);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+.tb-piece-note--held { color: var(--kb-rust); }
 
 .tb-piece-mark {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     flex-shrink: 0;
     border: 1px solid var(--kb-rule-strong);
     border-radius: var(--kb-r-chip);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 14px;
     color: var(--kb-forest);
     background: var(--kb-surface);
+    padding: 0;
+    cursor: pointer;
 }
 
 .tb-piece-mark::before { content: '+'; }
 
-/* On the table it becomes a bare tick in the shelf, and a bare × on the
-   table itself. Neither wants a box round it. */
 .tb-shelf .is-on-table .tb-piece-mark {
-    border: 0;
-    background: none;
-    color: var(--kb-brass);
-    width: auto;
+    border-color: transparent;
+    background: var(--kb-parchment);
+    color: var(--kb-ink-4);
 }
 
 .tb-shelf .is-on-table .tb-piece-mark::before { content: '\2713'; }
 
+.tb-piece-mark--drop {
+    border: 0;
+    background: none;
+    width: auto;
+    height: auto;
+    color: var(--kb-ink-4);
+}
+
+.tb-piece-mark--drop::before { content: '\00d7'; }
+.tb-piece-mark--drop:hover { color: var(--kb-rust); }
+
 .tb-piece-hit:focus-within { outline: 2px solid var(--kb-brass); outline-offset: -2px; }
 
 /* Held by a live lot: still listed, still named, no control. A collector who
-   cannot find their own licence assumes the page is broken; told it is at
-   auction, they know it comes back. */
+   cannot find their own licence assumes the page is broken. */
+.tb-piece.is-held { opacity: 0.5; }
 .tb-piece.is-held .tb-piece-hit { cursor: default; }
-.tb-piece.is-held .tb-piece-title { color: var(--kb-ink-3); }
 .tb-piece.is-hidden { display: none; }
 
 /* ── Dragging ──────────────────────────────────────────────────────── */
@@ -291,539 +408,243 @@
 
 /* Only the half a licence could legitimately cross to lights up, so an
    impossible drop never looks like an available one. */
-.tb-laid.is-drop-target {
-    outline: 1px dashed var(--kb-brass);
-    outline-offset: -4px;
-}
-
+.tb-laid.is-drop-target { outline: 2px dashed var(--kb-brass); outline-offset: -6px; }
 .tb-shelf.is-drop-target { background: var(--kb-parchment-soft); }
 
-/* ── The table ─────────────────────────────────────────────────────── */
-.tb-table {
-    background: var(--kb-table);
-    border: 1px solid var(--kb-table-edge);
+/* ── A closer look ─────────────────────────────────────────────────── */
+/* Hovering a row opens the licence properly — the shelf rows are 36×28, and
+   at that size you can tell a licence from a tag but not much else. */
+.tb-look {
+    position: fixed;
+    z-index: 70;
+    width: 250px;
+    background: var(--kb-surface);
+    border: 1px solid var(--kb-rule-strong);
     border-radius: var(--kb-r-lg);
-    display: flex;
-    flex-direction: column;
-    color: var(--kb-cream);
-    min-width: 0;
+    box-shadow: 0 6px 22px rgba(28, 31, 24, 0.16);
+    overflow: hidden;
+    pointer-events: none;
 }
 
-.tb-table-head {
-    height: 42px;
-    padding: 0 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    border-bottom: 1px solid rgba(244, 241, 232, 0.14);
-    background: var(--kb-table-head);
-    border-radius: var(--kb-r-lg) var(--kb-r-lg) 0 0;
-    flex-shrink: 0;
-}
+.tb-look[hidden] { display: none; }
 
-.tb-table-eyebrow {
-    font: 700 10px/1.2 var(--kb-font-body);
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: rgba(244, 241, 232, 0.6);
-}
-
-/* Quiet. The band underneath is where the deal is restated at size — saying
-   it twice in Petrona would make the header compete with the licences. */
-.tb-table-terms {
-    margin-left: auto;
-    font-size: 10.5px;
-    font-weight: 400;
-    color: rgba(244, 241, 232, 0.5);
-    font-variant-numeric: tabular-nums;
-}
-
-/* A hairline between the halves, with the arrow sitting on it — not a gap. */
-.tb-halves {
-    flex: 1;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
-}
-
-.tb-half {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-
-.tb-half-title {
-    margin: 0;
-    padding: 12px 14px 9px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font: 700 10.5px/1.2 var(--kb-font-body);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--kb-on-forest-give);
-}
-
-.tb-half--get .tb-half-title { color: var(--kb-on-forest-get); }
-
-/* The rule flexes between the label and the count, so the header reads as
-   one ruled line rather than two floating words. */
-.tb-half-title::after {
-    content: '';
-    height: 1px;
-    flex: 1;
-    background: rgba(217, 171, 95, 0.3);
-    order: 1;
-}
-
-.tb-half--get .tb-half-title::after { background: rgba(159, 196, 140, 0.3); }
-
-.tb-half-count {
-    order: 2;
-    font-size: 10.5px;
-    font-weight: 400;
-    letter-spacing: 0;
-    color: rgba(244, 241, 232, 0.45);
-    font-variant-numeric: tabular-nums;
-}
-
-.tb-laid {
-    list-style: none;
-    margin: 0;
-    padding: 0 14px 12px;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-}
-
-/* THE POINT OF THE WHOLE TURN: cream on dark, so the licences are the
-   brightest objects on the page. */
-.tb-laid .tb-piece {
-    background: var(--kb-cream);
-    border: 0;
-    border-radius: var(--kb-r-chip);
-}
-
-.tb-laid .tb-piece-hit {
-    gap: 9px;
-    padding: 8px 9px;
-}
-
-.tb-laid .tb-piece-thumb {
-    width: 32px;
-    height: 25px;
+.tb-look-media {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
     background: var(--kb-fill-placeholder);
+    border-bottom: 1px solid var(--kb-rule);
 }
 
-.tb-laid .tb-piece-title {
-    font-size: 12px;
-    color: var(--kb-forest);
-    white-space: normal;
-}
-
-.tb-laid .tb-piece-meta { display: block; }
-
-/* On the card the note is the reason the licence is worth having; where a
-   row has none, the specimen line carries it alone. */
-.tb-laid .tb-piece-note--plain { display: none; }
-
-.tb-laid .tb-piece-mark {
-    border: 0;
-    background: none;
-    width: auto;
-    height: auto;
-    font-size: 13px;
-    color: var(--kb-ink-3);
-}
-
-.tb-laid .tb-piece-mark::before { content: '\00d7'; }
-
-.tb-laid .tb-piece.is-anchor .tb-piece-hit { cursor: default; }
-
-/* Kept visible even with items on the table: it is where the next one goes,
-   and it is the only thing telling you the shelf beside it is a source —
-   which is also why it names both ways in. */
-.tb-empty {
-    margin: 0;
-    border: 1px dashed rgba(244, 241, 232, 0.22);
-    border-radius: var(--kb-r-chip);
-    padding: 10px;
-    font-size: 10.5px;
-    line-height: 1.5;
-    color: rgba(244, 241, 232, 0.45);
-    text-align: center;
-    list-style: none;
-}
-
-.tb-divide { background: rgba(244, 241, 232, 0.14); position: relative; }
-
-/* Direction is read from position and one brass disc. Nothing on this page
-   is labelled by colour alone. */
-.tb-swap {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 30px;
-    height: 30px;
-    border-radius: 999px;
-    background: var(--kb-brass);
-    color: var(--kb-forest-ink);
+.tb-look-body {
+    padding: 10px 12px;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
+    flex-direction: column;
+    gap: 3px;
 }
 
-/* Cash sits in a recessed strip at the foot of each side — lit when it is
-   in play, dim when it isn't. */
-.tb-cash {
-    margin-top: auto;
-    padding: 9px 14px;
-    background: var(--kb-table-cash);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.tb-cash-label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font: 700 10px/1.2 var(--kb-font-body);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: rgba(244, 241, 232, 0.45);
-    cursor: pointer;
-}
-
-.tb-cash-figure {
-    margin-left: auto;
+.tb-look-title {
     font-family: var(--kb-font-display);
     font-size: 15px;
     font-weight: 600;
-    color: rgba(244, 241, 232, 0.5);
-    font-variant-numeric: tabular-nums;
+    color: var(--kb-forest);
+    line-height: 1.25;
 }
 
-.tb-cash.is-on {
-    background: var(--kb-table-cash-on);
-    border-top: 1px solid rgba(159, 196, 140, 0.25);
-}
-
-.tb-cash.is-on .tb-cash-label { color: var(--kb-on-forest-get); }
-.tb-cash.is-on .tb-cash-figure { color: var(--kb-cream); }
-
-.tb-cash input[type="radio"] { accent-color: var(--kb-brass); }
-
-/* The amount itself. The frame shows figures because it is a still; a live
-   page has to let somebody type one, so it sits quietly under the table
-   rather than competing with it. */
-.tb-cash-entry {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    flex-wrap: wrap;
-    padding: 10px 16px;
-    border-top: 1px solid rgba(244, 241, 232, 0.14);
-    font-size: 10.5px;
-    color: rgba(244, 241, 232, 0.45);
-}
-
-.tb-cash-entry label {
-    font: 700 10px/1.2 var(--kb-font-body);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-}
-
-.tb-cash-entry .kb-input {
-    width: 96px;
-    padding: 4px 8px;
-    font-size: 12px;
-    background: rgba(255, 255, 255, 0.07);
-    border: 1px solid rgba(244, 241, 232, 0.22);
-    border-radius: var(--kb-r-chip);
-    color: var(--kb-cream);
-    font-variant-numeric: tabular-nums;
-}
+.tb-look-meta { font-size: 11.5px; color: var(--kb-ink-3); }
+.tb-look-note { font-size: 11.5px; font-weight: 600; color: var(--kb-live); }
+.tb-look-note:empty { display: none; }
 
 /* ── The band ──────────────────────────────────────────────────────── */
-/* One horizontal bar the full width of the floor: what it is on the left,
-   three weighted decisions on the right. */
 .tb-band {
-    background: var(--kb-parchment);
-    border: 1px solid var(--kb-rule);
+    background: var(--kb-forest);
     border-radius: var(--kb-r-lg);
-    padding: 18px 22px;
+    padding: 15px 20px;
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 18px;
     flex-wrap: wrap;
 }
 
 .tb-band-said {
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 2px;
     min-width: 0;
 }
 
+.tb-band-spacer { flex: 1; }
+
 .tb-band-who {
-    margin: 0;
-    font: 700 10px/1.3 var(--kb-font-body);
-    letter-spacing: 0.14em;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.13em;
     text-transform: uppercase;
-    color: var(--kb-brass);
+    color: rgba(244, 241, 232, 0.6);
 }
 
-/* The terms restated before the buttons, because the one thing nobody
-   should do here is agree to something they stopped reading. */
 .tb-band-terms {
-    margin: 0;
-    font-family: var(--kb-font-display);
-    font-size: 21px;
+    font-size: 14.5px;
     font-weight: 600;
-    color: var(--kb-forest);
+    color: var(--kb-cream);
     font-variant-numeric: tabular-nums;
 }
 
-.tb-band-small {
-    margin: 0;
-    font-size: 12px;
-    color: var(--kb-ink-3);
-}
+.tb-band-small { font-size: 11.5px; color: rgba(244, 241, 232, 0.55); }
 
-.tb-band-fields {
-    display: flex;
-    gap: 14px;
-    align-items: center;
-    flex-wrap: wrap;
-}
-
-.tb-band-fields label {
+.tb-band-field {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 11.5px;
-    color: var(--kb-ink-3);
+    font-size: 11px;
+    color: rgba(244, 241, 232, 0.6);
+    flex-shrink: 0;
 }
 
-.tb-band-fields .kb-input { width: 56px; }
+.tb-band-field .kb-input,
+.tb-band-field input,
+.tb-band-field textarea {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(244, 241, 232, 0.22);
+    border-radius: var(--kb-r-chip);
+    color: var(--kb-cream);
+    font-family: var(--kb-font-body);
+    font-size: 12px;
+    padding: 5px 8px;
+}
 
-.tb-band-note { flex: 1; min-width: 180px; }
-.tb-band-note textarea { width: 100%; font-size: 12.5px; min-height: 38px; }
+.tb-band-field input[type="number"] { width: 52px; text-align: right; }
 
-/* Three decisions, weighted. Accept is bigger, brasser and heavier than the
-   other two; decline is a real button with the softest border, not a link
-   pretending the choice is not there. */
+.tb-band-field--note { flex: 1; min-width: 150px; max-width: 260px; }
+.tb-band-field--note textarea { width: 100%; height: 34px; resize: vertical; }
+
+/* Three decisions, weighted: two outlined on the dark bar, and accept the
+   only filled thing on the page. */
 .tb-decisions {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-left: auto;
+    gap: 8px;
     flex-shrink: 0;
 }
 
 .tb-decide {
     font-family: var(--kb-font-body);
-    font-size: 13px;
-    font-weight: 600;
-    padding: 12px 20px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 9px 15px;
     border-radius: var(--kb-r-chip);
-    border: 1px solid var(--kb-rule-strong);
-    background: var(--kb-surface);
-    color: var(--kb-ink-2);
+    border: 1px solid rgba(244, 241, 232, 0.3);
+    background: transparent;
+    color: var(--kb-cream);
     text-decoration: none;
     cursor: pointer;
     white-space: nowrap;
 }
 
-.tb-decide--quiet:hover { border-color: var(--kb-rust); color: var(--kb-rust); }
-
-.tb-decide--counter {
-    border-color: var(--kb-forest);
-    color: var(--kb-forest);
-}
-
-.tb-decide--counter:hover { background: var(--kb-forest); color: var(--kb-cream); }
+.tb-decide--quiet:hover { border-color: var(--kb-rust); color: #f0b49a; }
+.tb-decide--counter:hover { border-color: var(--kb-cream); }
 
 .tb-decide--go {
     background: var(--kb-brass);
     border-color: var(--kb-brass);
     color: var(--kb-forest-ink);
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 0.03em;
-    padding: 14px 30px;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    font-size: 11px;
+    padding: 10px 20px;
 }
 
-.tb-decide--go:hover:not(:disabled) { background: var(--kb-brass-deep); color: var(--kb-cream); }
+.tb-decide--go:hover:not(:disabled) { background: var(--kb-brass-bright); }
 
 .tb-decide--go:disabled {
-    background: var(--kb-chip);
-    border-color: var(--kb-rule-strong);
-    color: var(--kb-ink-4);
-    box-shadow: none;
+    background: rgba(255, 255, 255, 0.09);
+    border-color: rgba(244, 241, 232, 0.2);
+    color: rgba(244, 241, 232, 0.4);
     cursor: not-allowed;
 }
 
-.tb-decide-hint {
-    margin: 0;
-    width: 100%;
-    font-size: 11.5px;
-    color: var(--kb-ink-4);
-    text-align: right;
-}
-
-.tb-decide-hint.is-hidden { display: none; }
-
-/* ── The rail ──────────────────────────────────────────────────────── */
-.tb-rail {
-    display: flex;
-    flex-direction: column;
+/* ── Below: how you got here, and who you are dealing with ─────────── */
+.tb-below {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
     gap: 14px;
-    position: sticky;
-    top: var(--kb-topbar-h);
+    align-items: start;
 }
 
-.tb-rail-card {
-    background: var(--kb-surface);
+.tb-story {
     border: 1px solid var(--kb-rule);
     border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) 1.3fr;
 }
 
-.tb-rail-title {
-    margin: 0;
-    padding: 13px 16px 11px;
-    border-bottom: 1px solid var(--kb-rule-soft);
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 8px;
-    font: 700 10px/1.3 var(--kb-font-body);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--kb-ink-3);
-}
-
-.tb-rail-count {
-    font-size: 11px;
-    font-weight: 400;
-    letter-spacing: 0;
-    text-transform: none;
-    color: var(--kb-ink-4);
-}
-
-/* A vertical timeline: each round carries its own dot and its own length of
-   rule, so the last one simply has none rather than trailing into nothing. */
-.tb-thread {
-    list-style: none;
-    margin: 0;
-    padding: 14px 16px 4px;
+.tb-story-cell {
+    padding: 12px 15px;
+    border-right: 1px solid var(--kb-rule-soft);
     display: flex;
     flex-direction: column;
-}
-
-.tb-thread-row {
-    display: flex;
-    gap: 12px;
-}
-
-.tb-thread-rung {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 9px;
-    flex-shrink: 0;
-    padding-top: 4px;
-}
-
-.tb-thread-dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 999px;
-    background: var(--kb-rule-strong);
-    flex-shrink: 0;
-}
-
-.is-here .tb-thread-dot { background: var(--kb-brass); }
-
-.tb-thread-line {
-    width: 1px;
-    flex: 1;
-    background: var(--kb-rule);
-    margin-top: 3px;
-}
-
-.tb-thread-said {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    padding-bottom: 14px;
+    gap: 2px;
     min-width: 0;
 }
 
-.tb-thread-row:last-child .tb-thread-said { padding-bottom: 12px; }
+.tb-story-cell:last-child { border-right: 0; }
 
-.tb-thread-who { font-size: 13px; font-weight: 600; color: var(--kb-ink); }
-.tb-thread-what { font-size: 12px; color: var(--kb-ink-2); }
-.tb-thread-when { font-size: 11px; color: var(--kb-ink-4); font-variant-numeric: tabular-nums; }
-.tb-thread-when a { color: inherit; }
-
-.tb-thread-foot {
-    padding: 12px 16px 16px;
-    border-top: 1px solid var(--kb-rule-soft);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+.tb-story-when {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--kb-ink-4);
 }
+
+.is-latest .tb-story-when { color: var(--kb-brass); }
+
+.tb-story-what { font-size: 12.5px; line-height: 1.45; color: var(--kb-ink-2); }
+.is-latest .tb-story-what { color: var(--kb-ink); }
+
+.tb-story-link {
+    font-size: 11px;
+    color: var(--kb-brass);
+    text-decoration: none;
+    margin-top: 2px;
+}
+
+.tb-story-talk { gap: 5px; }
 
 .tb-quote {
     margin: 0;
-    background: var(--kb-parchment-soft);
-    border-left: 2px solid var(--kb-brass);
-    border-radius: 0 var(--kb-r-chip) var(--kb-r-chip) 0;
-    padding: 10px 12px;
     font-size: 12.5px;
-    line-height: 1.5;
+    line-height: 1.45;
     color: var(--kb-ink-2);
 }
 
-/* Shaped like the design's reply field, because that is what it does — it
-   just opens the real conversation rather than growing a weaker one here. */
 .tb-reply {
-    width: 100%;
+    display: block;
     border: 1px solid var(--kb-rule-strong);
     border-radius: var(--kb-r-chip);
-    background: var(--kb-surface);
-    padding: 8px 11px;
-    font-family: var(--kb-font-body);
-    font-size: 12.5px;
+    padding: 6px 9px;
+    font-size: 12px;
     color: var(--kb-ink-4);
-    text-align: left;
-    cursor: pointer;
+    text-decoration: none;
+    margin-top: auto;
 }
 
 .tb-reply:hover { border-color: var(--kb-brass); color: var(--kb-ink-2); }
 
 /* ── The other trader ──────────────────────────────────────────────── */
-/* Parchment, not white: it is the one panel here that is about a person
-   rather than a decision, and the tone says so. */
 .tb-trader {
+    border: 1px solid var(--kb-rule-strong);
+    border-radius: var(--kb-r-lg);
     background: var(--kb-parchment);
-    border-color: var(--kb-rule-strong);
     padding: 16px;
     display: flex;
     flex-direction: column;
     gap: 12px;
 }
 
-.tb-trader-head {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-}
+.tb-trader-head { display: flex; align-items: center; gap: 11px; }
 
 .tb-trader-face {
     width: 38px;
@@ -838,11 +659,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    letter-spacing: 0.02em;
 }
 
+.tb-trader-who { display: flex; flex-direction: column; min-width: 0; }
+
 .tb-trader-name {
-    display: block;
     font-family: var(--kb-font-display);
     font-size: 17px;
     font-weight: 600;
@@ -851,7 +672,6 @@
 }
 
 .tb-trader-name:hover { text-decoration: underline; text-underline-offset: 2px; }
-
 .tb-trader-where { font-size: 11.5px; color: var(--kb-ink-3); }
 
 .tb-trust {
@@ -864,13 +684,7 @@
     gap: 6px;
 }
 
-.tb-trust li {
-    display: flex;
-    gap: 8px;
-    font-size: 12.5px;
-    color: var(--kb-ink);
-}
-
+.tb-trust li { display: flex; gap: 8px; font-size: 12.5px; color: var(--kb-ink); }
 .tb-trust-yes::before { content: '\2713'; color: var(--kb-live); font-weight: 700; }
 .tb-trust-no::before { content: '\0021'; color: var(--kb-rust); font-weight: 700; }
 
@@ -880,37 +694,28 @@
     display: flex;
     flex-direction: column;
     gap: 5px;
+    font-size: 12px;
+    color: var(--kb-ink-3);
 }
 
-.tb-trader-wants .kb-eyebrow { font-size: 12px; color: var(--kb-ink-3); letter-spacing: 0; text-transform: none; font-weight: 400; }
 .tb-trader-wants p { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--kb-ink); }
 
 .tb-trader-link {
-    font: 700 11px/1.2 var(--kb-font-body);
+    font-size: 11px;
+    font-weight: 700;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--kb-brass);
     text-decoration: none;
-    background: none;
-    border: 0;
-    padding: 0;
-    text-align: left;
-    cursor: pointer;
 }
 
 .tb-trader-link:hover { color: var(--kb-brass-deep); }
 
-/* ── Read-only screens: a settled negotiation, and a struck trade ──── */
+/* ── Read-only screens: a struck trade ─────────────────────────────── */
+.tb-read { display: flex; flex-direction: column; gap: 16px; }
 .tb-read .tb-piece-hit { cursor: default; }
-.tb-read .tb-piece-title { text-decoration: none; }
-.tb-read .tb-piece-title:hover { text-decoration: underline; text-underline-offset: 2px; }
 
-/* ── Parcels, on a struck trade ────────────────────────────────────── */
-.tb-parcels {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-}
+.tb-parcels { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
 .tb-parcel {
     background: var(--kb-surface);
@@ -965,7 +770,6 @@
 }
 
 .tb-ship-way .kb-input { width: 100%; font-size: 12.5px; }
-
 .tb-ship-dims { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
 
 .tb-strike {
@@ -985,6 +789,10 @@
 .tb-review-picks { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; }
 .tb-review textarea { width: 100%; }
 
+/* The struck-trade table reuses the two side columns. */
+.tb-table { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.tb-table-head { display: none; }
+
 /* ── The accept confirmation ───────────────────────────────────────── */
 .tb-confirm {
     position: fixed;
@@ -994,7 +802,7 @@
     align-items: center;
     justify-content: center;
     padding: var(--kb-4);
-    z-index: 60;
+    z-index: 80;
 }
 
 .tb-confirm[hidden] { display: none; }
@@ -1058,25 +866,33 @@
 
 .tb-confirm-actions form { margin-left: auto; }
 
-/* ── Narrow ────────────────────────────────────────────────────────── */
-@media (max-width: 1180px) {
-    .tb-composer,
-    .tb-read { grid-template-columns: minmax(0, 1fr); }
-    .tb-rail { position: static; flex-direction: row; flex-wrap: wrap; }
-    .tb-rail-card { flex: 1; min-width: 260px; }
+.tb-confirm-actions .tb-decide {
+    border-color: var(--kb-rule-strong);
+    color: var(--kb-ink-2);
 }
 
-@media (max-width: 900px) {
-    /* Dual rosters do not survive a phone. 15b sends the desk work to a
-       computer rather than pretending; here the shelves stack instead,
-       which is workable because they are picker lists to begin with. */
-    .tb-floor { grid-template-columns: minmax(0, 1fr); }
-    .tb-shelf { max-height: 38vh; }
-    .tb-halves { grid-template-columns: minmax(0, 1fr); }
-    .tb-divide { height: 1px; }
-    .tb-swap { top: 0; }
-    .tb-rail { flex-direction: column; }
-    .tb-parcels, .tb-ship { grid-template-columns: minmax(0, 1fr); }
-    .tb-decisions { margin-left: 0; width: 100%; flex-wrap: wrap; }
+.tb-confirm-actions .tb-decide--go { border-color: var(--kb-brass); color: var(--kb-forest-ink); }
+
+/* ── Narrow ────────────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+    /* Shelves under the sides they feed, so a licence and its destination
+       stay next to each other. */
+    .tb-floor { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .tb-below { grid-template-columns: minmax(0, 1fr); }
+    .tb-story { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .tb-story-cell { border-bottom: 1px solid var(--kb-rule-soft); }
+}
+
+@media (max-width: 720px) {
+    /* 15b sends the desk work to a computer rather than pretending; here the
+       columns stack, which is workable because they are picker lists. */
+    .tb-floor,
+    .tb-story,
+    .tb-parcels,
+    .tb-ship,
+    .tb-table { grid-template-columns: minmax(0, 1fr); }
+    .tb-band { align-items: stretch; }
+    .tb-decisions { flex-wrap: wrap; }
     .tb-decide { flex: 1; text-align: center; }
+    .tb-look { display: none; }
 }

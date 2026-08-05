@@ -500,12 +500,16 @@ def create_trade_offer(
         if counter_to and counter_to.status == 'pending':
             counter_to.status = 'countered'
             counter_to.save(update_fields=['status', 'updated_at'])
-            create_notification(
-                user=counter_to.from_user,
-                notification_type='trade_offer_countered',
-                message=f'Your trade offer #{counter_to.pk} received a counteroffer.',
-                link_url=f'/trades/offers/{offer.pk}/',
-            )
+            # Only when it came from the other chair. Revising your own offer
+            # supersedes it just the same, but telling somebody their offer
+            # was countered by themselves is noise.
+            if counter_to.from_user_id != from_user.id:
+                create_notification(
+                    user=counter_to.from_user,
+                    notification_type='trade_offer_countered',
+                    message=f'Your trade offer on "{subject_item.title}" was countered.',
+                    link_url=f'/trades/offers/{offer.pk}/',
+                )
 
         create_notification(
             user=to_user,

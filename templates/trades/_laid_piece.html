@@ -7,13 +7,11 @@
             {% endif %}
         </span>
         <span class="tb-piece-text">
-            <a href="{% url 'collections:item_detail' piece.pk %}" class="tb-piece-title">
-                {{ piece.license_year|default:piece.effective_era }}
+            <a href="{% url 'collections:item_detail' piece.pk %}" class="tb-piece-title">{{ piece.title }}</a>
+            <span class="tb-piece-note tb-piece-note--plain">
                 {{ piece.county.name|default:piece.state.code|default:'' }}
-            </a>
-            <span class="tb-piece-meta">
-                {{ piece.title|truncatechars:38 }}{% if piece.condition_grade %}
-                    &middot; {{ piece.get_condition_grade_display }}{% endif %}
+                {% if piece.license_year %}&middot; {{ piece.license_year }}{% endif %}
+                {% if piece.condition_grade %}&middot; {{ piece.get_condition_grade_display }}{% endif %}
             </span>
         </span>
     </span>

@@ -29,9 +29,8 @@ the only thing this page is really for is finding out whose turn it is.
 {% endcomment %}
 
 <div class="tb-read">
-    <div class="tb-centre">
         {% if table %}
-            {% include 'trades/_laid_table.html' with table_eyebrow="What was agreed" give_label="I send" get_label="I receive" %}
+            {% include 'trades/_laid_table.html' with give_label="I send" get_label="I receive" %}
         {% endif %}
 
         <section class="tb-band">
@@ -211,39 +210,6 @@ the only thing this page is really for is finding out whose turn it is.
                 {% endif %}
             </section>
         {% endif %}
-    </div>
-
-    <aside class="tb-rail">
-        {% if thread %}
-            <section class="tb-rail-card">
-                <h2 class="tb-rail-title">
-                    How you got here
-                    <span class="tb-rail-count">{{ thread|length }} round{{ thread|length|pluralize }}</span>
-                </h2>
-                <ol class="tb-thread">
-                    {% for row in thread %}
-                        <li class="tb-thread-row">
-                            <span class="tb-thread-who">{{ row.who }} {{ row.verb }}</span>
-                            <span class="tb-thread-what">{{ row.pieces }} piece{{ row.pieces|pluralize }} on the table</span>
-                            <span class="tb-thread-when">{{ row.offer.created_at|date:"j M, g:i a" }}</span>
-                        </li>
-                    {% endfor %}
-                </ol>
-            </section>
-        {% endif %}
-
-        {% include 'trades/_trader_card.html' with trader=other %}
-
-        {% if trade.status not in 'completed,cancelled,dispute' %}
-            <form method="post" action="{% url 'messaging:start' %}" class="tb-rail-card">
-                {% csrf_token %}
-                <input type="hidden" name="recipient_id" value="{{ other.pk }}">
-                <input type="hidden" name="conversation_type" value="trade">
-                <button type="submit" class="tb-trader-link">
-                    Write to {{ other.profile.get_display_name|default:other.username }} &rarr;
-                </button>
-            </form>
-        {% endif %}
-    </aside>
+    {% include 'trades/_story.html' %}
 </div>
 {% endblock %}

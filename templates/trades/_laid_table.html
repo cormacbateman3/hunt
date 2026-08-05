@@ -1,61 +1,49 @@
 {% comment %}
-The deal, on the dark table — read-only.
-
-Same panel as the composer, without the picking. It is the same object seen
-at a different moment, so it is the same panel: a member who agreed to
-something on one screen should recognise it on the next without re-reading.
+The deal, read-only — the same two columns as the composer, without the
+picking. It is the same agreement seen at a different moment, so it is the
+same shape: a member who agreed to something on one screen should recognise
+it on the next without re-reading.
 
 Expects `table` from trades.composer.table_for.
 {% endcomment %}
-<section class="tb-table" aria-label="On the table">
-    <header class="tb-table-head">
-        <span class="tb-table-eyebrow">{{ table_eyebrow|default:"On the table" }}</span>
-        <strong class="tb-table-terms">{{ table.terms }}</strong>
-    </header>
+<div class="tb-table">
+    <section class="tb-col tb-side tb-side--give">
+        <header class="tb-col-head tb-side-head">
+            <span>{{ give_label|default:"I give" }}</span>
+            <span class="tb-col-count">{{ table.giving|length }} item{{ table.giving|length|pluralize }}</span>
+        </header>
+        <ul class="tb-laid">
+            {% for piece in table.giving %}
+                {% include 'trades/_laid_piece.html' with piece=piece %}
+            {% empty %}
+                <li class="tb-drop">Nothing this way</li>
+            {% endfor %}
+        </ul>
+        {% if table.cash_amount and not table.cash_to_me %}
+            <div class="tb-cash">
+                <label>Cash I add</label>
+                <span class="tb-cash-figure">${{ table.cash_amount|floatformat:2 }}</span>
+            </div>
+        {% endif %}
+    </section>
 
-    <div class="tb-halves">
-        <div class="tb-half tb-half--give">
-            <h3 class="tb-half-title">
-                {{ give_label|default:"I give" }}
-                <span class="tb-half-count">{{ table.giving|length }}</span>
-            </h3>
-            <ul class="tb-laid">
-                {% for piece in table.giving %}
-                    {% include 'trades/_laid_piece.html' with piece=piece %}
-                {% empty %}
-                    <li class="tb-empty">Nothing this way</li>
-                {% endfor %}
-            </ul>
-            {% if table.cash_amount and not table.cash_to_me %}
-                <div class="tb-cash is-on">
-                    <span class="tb-cash-label">Cash I add</span>
-                    <span class="tb-cash-figure">${{ table.cash_amount }}</span>
-                </div>
-            {% endif %}
-        </div>
-
-        <div class="tb-divide">
-            <span class="tb-swap" aria-hidden="true">&#8646;</span>
-        </div>
-
-        <div class="tb-half tb-half--get">
-            <h3 class="tb-half-title">
-                {{ get_label|default:"I receive" }}
-                <span class="tb-half-count">{{ table.receiving|length }}</span>
-            </h3>
-            <ul class="tb-laid">
-                {% for piece in table.receiving %}
-                    {% include 'trades/_laid_piece.html' with piece=piece %}
-                {% empty %}
-                    <li class="tb-empty">Nothing this way</li>
-                {% endfor %}
-            </ul>
-            {% if table.cash_amount and table.cash_to_me %}
-                <div class="tb-cash is-on">
-                    <span class="tb-cash-label">Cash to me</span>
-                    <span class="tb-cash-figure">${{ table.cash_amount }}</span>
-                </div>
-            {% endif %}
-        </div>
-    </div>
-</section>
+    <section class="tb-col tb-side tb-side--get">
+        <header class="tb-col-head tb-side-head">
+            <span>{{ get_label|default:"I receive" }}</span>
+            <span class="tb-col-count">{{ table.receiving|length }} item{{ table.receiving|length|pluralize }}</span>
+        </header>
+        <ul class="tb-laid">
+            {% for piece in table.receiving %}
+                {% include 'trades/_laid_piece.html' with piece=piece %}
+            {% empty %}
+                <li class="tb-drop">Nothing this way</li>
+            {% endfor %}
+        </ul>
+        {% if table.cash_amount and table.cash_to_me %}
+            <div class="tb-cash">
+                <label>Cash to me</label>
+                <span class="tb-cash-figure">${{ table.cash_amount|floatformat:2 }}</span>
+            </div>
+        {% endif %}
+    </section>
+</div>

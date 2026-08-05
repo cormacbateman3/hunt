@@ -1,24 +1,26 @@
 {% comment %}
-One licence — a row on a shelf, or a card on the table.
+One licence — a row on a shelf, or a card in a give/receive column.
 
-The design shows a piece in **both** places at once: the shelf keeps its row,
-tinted and ticked, and the table shows a cream card. So this renders twice
-rather than moving one node about, and the shelf is the source of truth — the
-checkbox lives there, and the card's × reaches back to it.
+A piece sits in both at once: the shelf keeps its row, tinted with a filled
+tick, and the column shows a card. So this renders twice rather than moving a
+node about, and the shelf is the source of truth — the checkbox lives there
+and the card's × reaches back to it.
 
-**Three children, in a row.** Thumbnail, a two-line text column, and the mark.
-The note is the second line *inside* the text, never a fourth column: as a
-column it left the title about thirty pixels and broke words a character at
-a time.
+Three children in a row: thumbnail, a two-line text column, and the mark.
+The note is a LINE inside the text, never a column.
 
 Expects `row` (from trades.composer.roster) and `field` — the form field this
-side posts to. Pass `laid=True` for the table card.
+side posts to. Pass `laid=True` and `laid_side` for the column card.
 {% endcomment %}
 <li class="tb-piece{% if row.on_table %} is-on-table{% endif %}{% if not row.available %} is-held{% endif %}"
     data-pk="{{ row.item.pk }}"
     data-side="{% if field == 'requested_items' or laid_side == 'theirs' %}theirs{% else %}mine{% endif %}"
     {% if row.available %}draggable="true"{% endif %}
     data-note="{{ row.note_kind }}"
+    data-title="{{ row.item.title }}"
+    data-meta="{{ row.item.county.name|default:row.item.state.code|default:'' }}{% if row.item.license_year %} &middot; {{ row.item.license_year }}{% endif %}{% if row.item.condition_grade %} &middot; {{ row.item.get_condition_grade_display }}{% endif %}"
+    data-note-text="{{ row.note }}"
+    data-image="{% if row.item.images.all %}{{ row.item.images.all.0.image.url }}{% endif %}"
     data-find="{{ row.item.title|lower }} {{ row.item.county.name|default:''|lower }} {{ row.item.license_year|default:'' }}">
     <{% if laid %}span{% else %}label{% endif %} class="tb-piece-hit">
         {% if not laid %}
@@ -35,36 +37,20 @@ side posts to. Pass `laid=True` for the table card.
         </span>
 
         <span class="tb-piece-text">
-            <span class="tb-piece-title">
-                {{ row.item.license_year|default:row.item.effective_era }}
-                {{ row.item.county.name|default:row.item.state.code|default:'' }}
-            </span>
-            {% comment %}
-            Two notes, one row. On the shelf: where the licence went, or why
-            it is worth picking. On the card: the reason it is worth having,
-            because that is what you are weighing — "on the table" would be
-            telling you what you can already see.
-            {% endcomment %}
-            {% if laid %}
-                <span class="tb-piece-note tb-piece-note--{{ row.card_kind|default:'plain' }}">{{ row.card_note }}</span>
-            {% else %}
-                <span class="tb-piece-note tb-piece-note--{{ row.note_kind|default:'plain' }}">{{ row.note }}</span>
-            {% endif %}
-            <span class="tb-piece-meta">
-                {{ row.item.county.name|default:row.item.state.code|default:'' }}
-                {% if row.item.license_year %}&middot; {{ row.item.license_year }}{% endif %}
-                {% if row.item.condition_grade %}&middot; {{ row.item.get_condition_grade_display }}{% endif %}
+            <span class="tb-piece-title">{{ row.item.title }}</span>
+            <span class="tb-piece-note tb-piece-note--{% if laid %}plain{% else %}{{ row.note_kind|default:'plain' }}{% endif %}">
+                {% if laid %}{{ row.card_note }}{% else %}{{ row.note }}{% endif %}
             </span>
         </span>
 
         {% comment %}
-        A bordered square with a + on the shelf, a bare tick once it is on the
-        table, a × on the card itself, and nothing at all on a piece a live
-        lot has a claim on — rendering a disabled control over nothing is the
-        16b rule.
+        A × on the card, a bordered + on a shelf row that can be picked, a
+        filled tick on one already on the table, and nothing at all on a
+        piece a live lot has a claim on — rendering a disabled control over
+        nothing is the 16b rule.
         {% endcomment %}
         {% if laid %}
-            <button type="button" class="tb-piece-mark" data-drop="{{ row.item.pk }}">
+            <button type="button" class="tb-piece-mark tb-piece-mark--drop" data-drop="{{ row.item.pk }}">
                 <span class="kb-sr">Take {{ row.item.title }} off the table</span>
             </button>
         {% elif row.available %}

@@ -1,18 +1,15 @@
-"""The two rosters either side of the table, and the terms they add up to.
+"""The four columns of the Trading Block, and the terms they add up to.
 
-Turn 3a puts the licences being traded on one dark panel and shrinks the
-shelves to 196px picker lists on the outside: *"a 30×23 thumbnail and a
-truncated title is enough to recognise your own licence, and the shelves are
-for finding, not admiring."*
+Your shelf, what you give, what you receive, their shelf. The shelves are
+picker lists — a thumbnail and a truncated title is enough to recognise your
+own licence — so they only work if the rows carry a reason. A list of forty
+titles is worse than a grid; a list where four rows say **matches their
+wants** and two say **closes a county gap** is the negotiation, sorted. So
+every row arrives with a note, and the notes are what the sort reads.
 
-That only works if the rows carry a reason. A picker list of forty titles is
-worse than a grid; a picker list where four rows say **they want this** and
-two say **closes a gap** is the whole negotiation, sorted. So every row here
-arrives with a note, and the notes are what the sort reads.
-
-Both rosters are built from the same function with the pronouns swapped,
-because a trade is symmetrical and two near-identical roster builders is how
-the two halves quietly stop agreeing.
+Both shelves are built from the same function with the pronouns swapped,
+because a trade is symmetrical and two near-identical builders is how the
+two halves quietly stop agreeing.
 """
 
 from django.db.models import Q
@@ -169,31 +166,39 @@ def roster(*, owner, reader, on_table, side, came_for=None):
         elif side == 'mine':
             key = (item.county_id, item.license_year)
             if item.pk in wanted:
-                note, kind = 'They want this', 'wanted'
+                note, kind = 'Matches their wants', 'wanted'
             elif key in dupe_keys:
                 note, kind = f'Duplicate ×{dupe_counts.get(key, 2)}', 'duplicate'
+        elif item.county_id and item.county_id not in counties:
+            note, kind = 'Closes a county gap', 'gap'
+        elif item.county_id and item.license_year in years.get(item.county_id, ()):
+            note, kind = f'you have {item.license_year}', 'plain'
+
+        # **Two notes, one row.** The shelf reads "Very good · on the table" —
+        # condition first, because that is what you are scanning for, then
+        # where the licence went. A green reason stands alone: it is the
+        # thing worth acting on and a grade beside it only dilutes it.
+        #
+        # The card on the table takes county and year instead. By then you
+        # have decided; what you want is to recognise the licence.
+        if kind in ('wanted', 'gap', 'came'):
+            shelf_note, shelf_kind = note, kind
         else:
-            if item.county_id and item.county_id not in counties:
-                note, kind = 'Closes a gap', 'gap'
-            elif item.county_id and item.license_year in years.get(item.county_id, ()):
-                note, kind = f'You have {item.license_year}', 'wanted'
+            parts = []
+            if item.condition_grade:
+                parts.append(item.get_condition_grade_display())
+            if note:
+                parts.append(note)
+            if item.pk in on_table:
+                parts.append('on the table')
+            shelf_note, shelf_kind = ' · '.join(parts), kind or 'plain'
 
-        # A row with nothing else to say falls back to condition, which is
-        # the next thing you would want to know and stops the shelf reading
-        # as half-blank.
-        if not note and item.condition_grade:
-            note, kind = item.get_condition_grade_display(), ''
-
-        # **Two notes, one row.** The card on the table keeps the reason the
-        # licence is worth having — "closes a county gap" — because that is
-        # what you are weighing. The row on the shelf says "on the table"
-        # instead, because there the useful fact is where it went. Saying
-        # "on the table" on the card would be telling you what you can see.
-        shelf_note, shelf_kind = note, kind
         if item.pk == came_for:
             shelf_note, shelf_kind = 'What you came for', 'came'
-        elif item.pk in on_table:
-            shelf_note, shelf_kind = 'On the table', 'laid'
+
+        card_bits = [item.county.name] if item.county_id else []
+        if item.license_year:
+            card_bits.append(str(item.license_year))
 
         rows.append({
             'item': item,
@@ -201,13 +206,14 @@ def roster(*, owner, reader, on_table, side, came_for=None):
             'available': not blocked,
             'note': shelf_note,
             'note_kind': shelf_kind,
-            'card_note': note,
-            'card_kind': kind,
+            'card_note': ' · '.join(card_bits),
+            'card_kind': 'plain',
         })
 
     # On the table first — you are always allowed to take something back off
-    # without hunting for it — then by how much the row has to say.
-    rows.sort(key=lambda r: NOTE_ORDER.get(r['note_kind'], 4))
+    # without hunting for it — then by how much the row has to say, and
+    # anything a live lot has a claim on last.
+    rows.sort(key=lambda r: (not r['on_table'], NOTE_ORDER.get(r['note_kind'], 4)))
 
     return {
         'rows': rows,
@@ -328,18 +334,23 @@ def _what_changed(this, previous):
     return sentence[0].upper() + sentence[1:]
 
 
-def thread(offer):
-    """The rail's timeline — each round with what actually moved."""
+def thread(offer, viewer=None):
+    """The story strip — each round with what actually moved."""
     rounds = list(thread_offers(offer))
+    total = len(rounds)
     rows = []
     for index, round_ in enumerate(rounds):
         # `rounds` is newest-first, so the round before this one is the next
-        # item along.
+        # item along, and the round number counts up from the bottom.
         previous = rounds[index + 1] if index + 1 < len(rounds) else None
+        who = (round_.from_user.profile.get_display_name()
+               if hasattr(round_.from_user, 'profile') else round_.from_user.username)
+        if viewer is not None and round_.from_user_id == getattr(viewer, 'id', None):
+            who = 'me'
         rows.append({
             'offer': round_,
-            'who': (round_.from_user.profile.get_display_name()
-                    if hasattr(round_.from_user, 'profile') else round_.from_user.username),
+            'who': who,
+            'round': total - index - 1,
             'verb': 'countered' if round_.counter_to_id else 'opened',
             'pieces': len(round_.items.all()),
             'changed': _what_changed(round_, previous),
@@ -397,21 +408,28 @@ def trader_trust(user):
         .first()
     ) or ''
 
-    # Two letters, always. The design draws a 38px square with initials in
-    # it, and one letter in a square reads as an error rather than a person.
-    name = (user.profile.get_display_name()
-            if hasattr(user, 'profile') else user.username) or user.username
-    words = [part for part in name.split() if part]
-    initials = (''.join(word[0] for word in words[:2]) if len(words) > 1
-                else name[:2]).upper()
-
+    initials = initials_for(user)
+    profile = getattr(user, 'profile', None)
     return {
         'trades': completed,
         'strikes': strikes,
         'wants': wants,
         'ships_in': _ships_in(user),
-        'initials': initials or name[:2].upper(),
+        'initials': initials,
+        # The badge beside their name only claims what has actually been
+        # confirmed; an unverified trader gets no badge rather than a
+        # reassuring one with nothing behind it.
+        'verified': bool(profile and profile.email_verified),
     }
+
+
+def initials_for(user):
+    """Two letters for an avatar square."""
+    name = (user.profile.get_display_name()
+            if hasattr(user, 'profile') else user.username) or user.username
+    words = [part for part in name.split() if part]
+    return (''.join(word[0] for word in words[:2]) if len(words) > 1
+            else name[:2]).upper()
 
 
 def terms_line(*, giving, receiving, cash_amount, cash_direction, mine=False):

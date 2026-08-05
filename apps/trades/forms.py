@@ -29,19 +29,21 @@ class TradeOfferForm(forms.Form):
         widget=forms.MultipleHiddenInput,
         help_text='Pieces of theirs you are asking for.',
     )
-    cash_amount = forms.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        min_value=Decimal('0.00'),
+    # **A box on each side, not one box and a switch.** Cash is part of what
+    # sits on that half of the table, so it is typed where it lands. The
+    # direction falls out of which box has a figure in it, which is one less
+    # thing to get wrong than a radio somewhere else on the page.
+    cash_i_add = forms.DecimalField(
+        max_digits=10, decimal_places=2, min_value=Decimal('0.00'),
         required=False,
-        initial=Decimal('0.00'),
-        widget=forms.NumberInput(attrs={'class': 'kb-input', 'step': '0.01', 'min': '0'}),
+        widget=forms.NumberInput(attrs={'class': 'tb-cash-input', 'step': '0.01',
+                                        'min': '0', 'placeholder': '0.00'}),
     )
-    cash_direction = forms.ChoiceField(
-        choices=TradeOffer.CASH_DIRECTION_CHOICES,
+    cash_to_me = forms.DecimalField(
+        max_digits=10, decimal_places=2, min_value=Decimal('0.00'),
         required=False,
-        initial='from_proposer',
-        widget=forms.RadioSelect,
+        widget=forms.NumberInput(attrs={'class': 'tb-cash-input', 'step': '0.01',
+                                        'min': '0', 'placeholder': '0.00'}),
     )
     expires_days = forms.IntegerField(
         min_value=1,
@@ -64,20 +66,28 @@ class TradeOfferForm(forms.Form):
         self.fields['offered_items'].queryset = offered_queryset
         self.fields['requested_items'].queryset = requested_queryset
         if not allow_cash:
-            self.fields['cash_amount'].widget = forms.HiddenInput()
-            self.fields['cash_amount'].required = False
-            self.fields['cash_amount'].initial = Decimal('0.00')
-
-    def clean_cash_direction(self):
-        return self.cleaned_data.get('cash_direction') or 'from_proposer'
+            for name in ('cash_i_add', 'cash_to_me'):
+                self.fields[name].widget = forms.HiddenInput()
 
     def clean(self):
         cleaned = super().clean()
-        if not self.allow_cash and cleaned.get('cash_amount'):
+        mine = cleaned.get('cash_i_add') or Decimal('0.00')
+        theirs = cleaned.get('cash_to_me') or Decimal('0.00')
+
+        if mine and theirs:
+            # Money cannot run both ways at once, and quietly netting it off
+            # would answer a question the proposer did not mean to ask.
+            raise forms.ValidationError(
+                'Cash runs one way. Put a figure in one box and leave the '
+                'other empty.')
+        if not self.allow_cash and (mine or theirs):
             # Not a field error: the seller turned cash off, so there is no
             # control on the page for the proposer to have got wrong.
             raise forms.ValidationError(
                 'This listing does not allow cash on top of the licences.')
+
+        cleaned['cash_amount'] = mine or theirs
+        cleaned['cash_direction'] = 'to_proposer' if theirs else 'from_proposer'
         return cleaned
 
 

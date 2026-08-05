@@ -85,10 +85,10 @@ class RosterTests(ComposerBase):
 
         row = next(r for r in shelf['rows'] if r['item'] == self.mine_a)
         self.assertFalse(row['available'])
-        # Two words, not the sentence. A 196px shelf row cannot hold "This
-        # piece is on an auction lot right now" — it ran off the end, and it
-        # is the wrong voice for somebody's own collection besides.
-        self.assertEqual(row['note'], 'At auction')
+        # A label, not the sentence. "This piece is on an auction lot right
+        # now" ran off the end of a column and is the wrong voice for
+        # somebody's own collection besides.
+        self.assertIn('Listed in the Auction House', row['note'])
 
     def test_a_piece_in_the_store_stays_pickable(self):
         self._listing(self.mine_a, kind='buy_now')
@@ -105,7 +105,7 @@ class RosterTests(ComposerBase):
                                 on_table=set(), side='mine')
 
         row = next(r for r in shelf['rows'] if r['item'] == self.mine_a)
-        self.assertEqual(row['note'], 'They want this')
+        self.assertEqual(row['note'], 'Matches their wants')
         # The row with something to say leads.
         self.assertEqual(shelf['rows'][0]['item'], self.mine_a)
 
@@ -122,7 +122,7 @@ class RosterTests(ComposerBase):
                                 on_table=set(), side='theirs')
 
         row = next(r for r in shelf['rows'] if r['item'] == self.theirs_a)
-        self.assertEqual(row['note'], 'Closes a gap')
+        self.assertEqual(row['note'], 'Closes a county gap')
 
     def test_their_shelf_reads_tradeability_and_not_visibility(self):
         """Two separate answers. `is_public` decides whether a piece shows
@@ -222,8 +222,7 @@ class ComposerScreenTests(ComposerBase):
         self.client.post(reverse('trades:propose', args=[listing.pk]), {
             'offered_items': [self.mine_a.pk],
             'requested_items': [self.theirs_a.pk],
-            'cash_amount': '40.00',
-            'cash_direction': 'to_proposer',
+            'cash_to_me': '40.00',
             'expires_days': 4,
         })
 
@@ -260,7 +259,7 @@ class ComposerScreenTests(ComposerBase):
         listing = self._listing(self.theirs_a)   # cash not allowed
         page = self.client.post(reverse('trades:propose', args=[listing.pk]), {
             'offered_items': [self.mine_a.pk, self.mine_b.pk],
-            'cash_amount': '25.00',
+            'cash_i_add': '25.00',
             'expires_days': 4,
         })
 
@@ -360,8 +359,7 @@ class DecisionScreenTests(ComposerBase):
         self.client.post(reverse('trades:propose', args=[listing.pk]), {
             'offered_items': [self.mine_a.pk],
             'requested_items': [self.theirs_b.pk],
-            'cash_amount': '40.00',
-            'cash_direction': 'to_proposer',
+            'cash_to_me': '40.00',
             'expires_days': 4,
         })
         self.offer = TradeOffer.objects.get()
@@ -376,7 +374,8 @@ class DecisionScreenTests(ComposerBase):
     def test_arriving_at_an_offer_gets_the_table_and_both_shelves(self):
         self.client.force_login(self.walt)
         page = self.client.get(reverse('trades:offer_detail', args=[self.offer.pk]))
-        self.assertContains(page, 'On the table')
+        self.assertContains(page, 'I give')
+        self.assertContains(page, 'I receive')
         self.assertContains(page, 'name="offered_items"')
         self.assertContains(page, 'name="requested_items"')
 
@@ -395,6 +394,7 @@ class DecisionScreenTests(ComposerBase):
 
     def test_the_cash_arrow_turns_round_with_the_reader(self):
         """Rae asked for $40. Rae receives it; Walt pays it."""
+        self.assertEqual(self.offer.cash_amount, Decimal('40.00'))
         self.assertTrue(composer.table_for(self.offer, self.rae)['cash_to_me'])
         self.assertFalse(composer.table_for(self.offer, self.walt)['cash_to_me'])
 
@@ -408,7 +408,7 @@ class DecisionScreenTests(ComposerBase):
         self.client.force_login(self.rae)
         mine = self.client.get(reverse('trades:offer_detail', args=[self.offer.pk]))
         self.assertNotContains(mine, 'Review &amp; accept')
-        self.assertContains(mine, 'Withdraw this offer')
+        self.assertContains(mine, 'Withdraw')
 
     def test_countering_happens_in_place(self):
         """No second screen: move a licence, post the same form."""
@@ -446,7 +446,7 @@ class DecisionScreenTests(ComposerBase):
         trade = self.offer.struck_trade
         page = self.client.get(reverse('trades:trade_detail', args=[trade.pk]))
         self.assertEqual(page.status_code, 200)
-        self.assertContains(page, 'What was agreed')
+        self.assertContains(page, 'I send')
         self.assertEqual(set(page.context['table']['giving']), {self.theirs_b})
 
     def test_the_recipient_can_counter_one_for_one(self):
@@ -488,8 +488,7 @@ class TheDrawingTests(ComposerBase):
         self.client.post(reverse('trades:propose', args=[listing.pk]), {
             'offered_items': [self.mine_a.pk],
             'requested_items': [self.theirs_a.pk],
-            'cash_amount': '40.00',
-            'cash_direction': 'to_proposer',
+            'cash_to_me': '40.00',
             'expires_days': 4,
         })
         self.offer = TradeOffer.objects.get()
@@ -511,7 +510,7 @@ class TheDrawingTests(ComposerBase):
         page = self._page(self.rae)
         row = next(r for r in page.context['mine']['rows'] if r['item'] == self.mine_a)
         self.assertTrue(row['on_table'])
-        self.assertEqual(row['note'], 'On the table')
+        self.assertIn('on the table', row['note'])
 
     def test_the_shelf_counts_the_same_set_at_both_ends(self):
         """`shown` came from a trimmed list while `total` came from a query,
@@ -531,8 +530,15 @@ class TheDrawingTests(ComposerBase):
         self.assertIn('from me', walt.context['band_terms'])
         self.assertEqual(walt.context['cash_side'], 'from_proposer')
 
-    def test_the_cash_figure_is_rendered_before_any_script_runs(self):
-        self.assertContains(self._page(self.walt), '$40.00')
+    def test_the_cash_figure_is_in_its_box_before_any_script_runs(self):
+        """And in the box it means for whoever is reading: Rae asked for it,
+        so Rae sees "cash to me" and Walt sees "cash I add"."""
+        walt = self._page(self.walt)
+        self.assertContains(walt, 'name="cash_i_add" value="40.00"')
+        self.assertContains(walt, 'Cash I add')
+
+        rae = self._page(self.rae)
+        self.assertContains(rae, 'name="cash_to_me" value="40.00"')
 
     def test_the_band_gives_a_date_not_a_duration(self):
         """"Both ship by Mon 10 Aug" is something you can hold against a

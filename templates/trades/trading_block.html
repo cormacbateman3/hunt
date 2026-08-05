@@ -28,278 +28,217 @@
 
 {% block content %}
 {% comment %}
-Turn 3a — "The Trading Block: both rosters, the table, the rail, and three
-decisions you can't miss." One screen, and there is only one of it: opening a
-negotiation and answering one are the same page, because the answer to an
-offer is usually *move one licence and send it back*, not *start again*.
+The Trading Block, four columns wide.
 
-The two middle columns are one dark panel — the table the licences are laid
-on — and the pieces on it are cream cards, so they are the brightest objects
-here. Direction is read from position and one brass disc, never from a rust
-border against a green one.
+Your shelf, what you give, what you receive, their shelf — each a quarter of
+the page, so the licences get the room to be read. The two middle columns are
+edged and tinted by direction: rust for what leaves you, green for what
+arrives.
 
-The rail is a sibling of the whole left stack, so the action band runs the
-full width underneath all three columns.
+Under them a dark bar states the deal and offers the three decisions, and
+under that the negotiation and the other trader — both things you consult
+rather than act on, so they sit below the work instead of stealing width
+from it.
 {% endcomment %}
 
-{% if form.non_field_errors or form.offered_items.errors %}
-    <div class="kb-alert kb-alert--error">{{ form.non_field_errors }}{{ form.offered_items.errors }}</div>
+{% if form.non_field_errors %}
+    <div class="kb-alert kb-alert--error">{{ form.non_field_errors }}</div>
 {% endif %}
 
+{# ── Who is across the table ─────────────────────────────────────────── #}
+<header class="tb-heads">
+    <span class="tb-head-who">
+        <span class="tb-head-face">{{ me_initials }}</span>
+        <span class="tb-head-name">{{ user.profile.get_display_name|default:user.username }}</span>
+        <span class="tb-head-swap" aria-hidden="true">&harr;</span>
+        <span class="tb-head-name">{{ other.profile.get_display_name|default:other.username }}</span>
+        <span class="tb-head-face">{{ trader_trust.initials }}</span>
+    </span>
+    <span class="tb-head-tags">
+        {% if trader_trust.verified %}
+            <span class="tb-tag tb-tag--good">
+                Verified{% if trader_trust.trades %} &middot; {{ trader_trust.trades }} trade{{ trader_trust.trades|pluralize }}{% endif %}
+                &middot; {{ trader_trust.strikes }} strike{{ trader_trust.strikes|pluralize }}
+            </span>
+        {% endif %}
+        {% if offer.expires_at and not settled %}
+            <span class="tb-tag tb-tag--clock">Expires in {{ offer.expires_at|timeuntil }}</span>
+        {% endif %}
+    </span>
+</header>
+
 {% if settled %}
-    {# A closed negotiation is a record, not a workbench. #}
-    <div class="tb-read">
-        <div class="tb-centre">
-            {% include 'trades/_laid_table.html' with table_eyebrow="What was on the table" %}
-            <section class="tb-band">
-                <div class="tb-band-said">
-                    <p class="tb-band-who">{{ offer.get_status_display }} &middot; {{ offer.created_at|date:"j M Y" }}</p>
-                    <p class="tb-band-terms">{{ table.terms }}</p>
+    <div class="tb-stack">
+        <section class="tb-band">
+            <div class="tb-band-said">
+                <span class="tb-band-who">{{ offer.get_status_display }} &middot; {{ offer.created_at|date:"j M Y" }}</span>
+                <span class="tb-band-terms">{{ table.terms }}</span>
+            </div>
+            <div class="tb-band-spacer"></div>
+            {% if trade %}
+                <div class="tb-decisions">
+                    <a href="{% url 'trades:trade_detail' trade.pk %}" class="tb-decide tb-decide--go">Open the trade</a>
                 </div>
-                {% if trade %}
-                    <div class="tb-decisions">
-                        <a href="{% url 'trades:trade_detail' trade.pk %}" class="tb-decide tb-decide--go">Open the trade</a>
-                    </div>
-                {% endif %}
-            </section>
-        </div>
-        <aside class="tb-rail">
-            {% include 'trades/_thread.html' %}
-            {% include 'trades/_trader_card.html' with trader=other %}
-        </aside>
+            {% endif %}
+        </section>
+        {% include 'trades/_story.html' %}
     </div>
 {% else %}
 
-<form method="post" class="tb-composer" id="tb-composer">
+<form method="post" class="tb-stack" id="tb-composer">
     {% csrf_token %}
 
-    <div class="tb-centre">
-        <div class="tb-floor">
+    <div class="tb-floor">
 
-            {# ── Left: my shelf ─────────────────────────────────────── #}
-            <aside class="tb-roster" data-roster="mine">
-                <header class="tb-roster-head">
-                    <h2 class="tb-roster-title">
-                        My collection
-                        <span class="tb-roster-count">{{ mine.total }}</span>
-                    </h2>
-                    <label>
-                        <span class="kb-sr">Search my collection</span>
-                        <input type="search" class="tb-find-input" placeholder="Search county, year&hellip;" data-find-for="mine">
-                    </label>
-                    <div class="tb-chips">
-                        {% for chip in mine.filters %}
-                            <button type="button" class="tb-chip" data-filter="{{ chip.key }}" data-for="mine">{{ chip.label }}</button>
-                        {% endfor %}
-                    </div>
-                </header>
-                <ul class="tb-shelf" data-shelf="mine">
-                    {% for row in mine.rows %}
-                        {% include 'trades/_piece.html' with row=row field='offered_items' %}
-                    {% endfor %}
-                </ul>
-                <p class="tb-roster-foot" data-foot="mine">{{ mine.shown }} of {{ mine.total }} &middot; scroll</p>
-            </aside>
-
-            {# ── Centre: the table ──────────────────────────────────── #}
-            <section class="tb-table" aria-label="On the table">
-                <header class="tb-table-head">
-                    <span class="tb-table-eyebrow">On the table</span>
-                    <span class="tb-table-terms" id="tb-terms">{{ terms_line }}</span>
-                </header>
-
-                <div class="tb-halves">
-                    <div class="tb-half tb-half--give">
-                        <h3 class="tb-half-title">
-                            I give <span class="tb-half-count" data-count="give">{{ giving_count }}</span>
-                        </h3>
-                        <ul class="tb-laid" data-table="mine">
-                            {% for row in mine.rows %}{% if row.on_table %}
-                                {% include 'trades/_piece.html' with row=row laid=True laid_side='mine' %}
-                            {% endif %}{% endfor %}
-                            {% comment %}
-                            Inside the list, so it sits directly under the last
-                            card rather than being pushed to the foot by a
-                            flex-grown gap. Kept visible with items on the
-                            table: it is where the next one goes, and the only
-                            thing saying the shelf beside it is a source.
-                            {% endcomment %}
-                            <li class="tb-empty" data-empty="mine">Drag from my collection,<br>or press +</li>
-                        </ul>
-                        {% comment %}
-                        Lit when it is in play, dim when it isn't — and the
-                        figure is rendered here rather than left to a script,
-                        so the deal is right before anything runs.
-                        {% endcomment %}
-                        <div class="tb-cash{% if cash_amount and cash_side == 'from_proposer' %} is-on{% endif %}"
-                             data-cash="from_proposer">
-                            {% if allow_cash %}
-                                <label class="tb-cash-label">
-                                    <input type="radio" name="cash_direction" value="from_proposer"
-                                           {% if cash_side != 'to_proposer' %}checked{% endif %}>
-                                    Cash I add
-                                </label>
-                            {% else %}
-                                <span class="tb-cash-label">Cash I add</span>
-                            {% endif %}
-                            <span class="tb-cash-figure">
-                                {% if cash_amount and cash_side == 'from_proposer' %}${{ cash_amount|floatformat:2 }}{% else %}$0{% endif %}
-                            </span>
-                        </div>
-                    </div>
-
-                    <div class="tb-divide">
-                        <span class="tb-swap" aria-hidden="true">&#8646;</span>
-                    </div>
-
-                    <div class="tb-half tb-half--get">
-                        <h3 class="tb-half-title">
-                            I receive <span class="tb-half-count" data-count="get">{{ receiving_count }}</span>
-                        </h3>
-                        <ul class="tb-laid" data-table="theirs">
-                            {% for row in theirs.rows %}{% if row.on_table %}
-                                {% include 'trades/_piece.html' with row=row laid=True laid_side='theirs' %}
-                            {% endif %}{% endfor %}
-                            <li class="tb-empty" data-empty="theirs">
-                                Drag from {{ other.profile.get_display_name|default:other.username }}&rsquo;s collection,<br>or press +
-                            </li>
-                        </ul>
-                        <div class="tb-cash{% if cash_amount and cash_side == 'to_proposer' %} is-on{% endif %}"
-                             data-cash="to_proposer">
-                            {% if allow_cash %}
-                                <label class="tb-cash-label">
-                                    <input type="radio" name="cash_direction" value="to_proposer"
-                                           {% if cash_side == 'to_proposer' %}checked{% endif %}>
-                                    Cash to me
-                                </label>
-                            {% else %}
-                                <span class="tb-cash-label">Cash to me</span>
-                            {% endif %}
-                            <span class="tb-cash-figure">
-                                {% if cash_amount and cash_side == 'to_proposer' %}${{ cash_amount|floatformat:2 }}{% else %}$0{% endif %}
-                            </span>
-                        </div>
-                    </div>
+        {# ── 1 · my shelf ────────────────────────────────────────────── #}
+        <aside class="tb-col tb-roster" data-roster="mine">
+            <header class="tb-col-head">
+                <div class="tb-col-title">
+                    <span>My collection</span>
+                    <span class="tb-col-count">{{ mine.total }} tradeable</span>
                 </div>
-
-                {% if allow_cash %}
-                    <div class="tb-cash-entry">
-                        <label for="{{ form.cash_amount.id_for_label }}">Cash either way</label>
-                        {{ form.cash_amount }}
-                        <span>Pick a side above. Zero is a straight swap.</span>
-                        {{ form.cash_amount.errors }}
-                    </div>
-                {% endif %}
-            </section>
-
-            {# ── Right: their shelf ─────────────────────────────────── #}
-            <aside class="tb-roster" data-roster="theirs">
-                <header class="tb-roster-head">
-                    <h2 class="tb-roster-title">
-                        {{ other.profile.get_display_name|default:other.username }}&rsquo;s collection
-                        <span class="tb-roster-count">{{ theirs.total }}</span>
-                    </h2>
-                    <label>
-                        <span class="kb-sr">Search their collection</span>
-                        <input type="search" class="tb-find-input" placeholder="Search county, year&hellip;" data-find-for="theirs">
-                    </label>
-                    <div class="tb-chips">
-                        {% for chip in theirs.filters %}
-                            <button type="button" class="tb-chip" data-filter="{{ chip.key }}" data-for="theirs">{{ chip.label }}</button>
-                        {% endfor %}
-                    </div>
-                </header>
-                <ul class="tb-shelf" data-shelf="theirs">
-                    {% for row in theirs.rows %}
-                        {% include 'trades/_piece.html' with row=row field='requested_items' %}
+                <label>
+                    <span class="kb-sr">Search my collection</span>
+                    <input type="search" class="tb-find" placeholder="Search county, year&hellip;" data-find-for="mine">
+                </label>
+                <div class="tb-chips">
+                    {% for chip in mine.filters %}
+                        <button type="button" class="tb-chip" data-filter="{{ chip.key }}" data-for="mine">{{ chip.label }}</button>
                     {% endfor %}
-                </ul>
-                <p class="tb-roster-foot" data-foot="theirs">{{ theirs.shown }} of {{ theirs.total }} &middot; scroll</p>
-            </aside>
-        </div>
-
-        {# The band, the full width of the floor. #}
-        <section class="tb-band">
-            <div class="tb-band-said">
-                <p class="tb-band-who">
-                    {% if answering %}
-                        {% if offer.counter_to_id %}Counter #{{ round_number|add:"-1" }}{% else %}Offer{% endif %},
-                        from {{ other.profile.get_display_name|default:other.username }}
-                        {% if offer.expires_at %}&middot; expires in {{ offer.expires_at|timeuntil }}{% endif %}
-                    {% elif waiting_on_them %}
-                        Sent {{ offer.created_at|timesince }} ago &middot;
-                        waiting on {{ other.profile.get_display_name|default:other.username }}
-                    {% else %}
-                        A first offer to {{ other.profile.get_display_name|default:other.username }}
-                    {% endif %}
-                </p>
-                <p class="tb-band-terms" id="tb-band-terms">{{ band_terms }}</p>
-                <p class="tb-band-small">
-                    Both ship by {{ ship_by_date }} &middot; tracking required
-                    &middot; each pays their own outbound
-                </p>
-            </div>
-
-            {% if not waiting_on_them %}
-                <div class="tb-band-fields">
-                    <label>
-                        <span>They have</span>
-                        {{ form.expires_days }}
-                        <span>days</span>
-                    </label>
-                    <label class="tb-band-note">
-                        <span class="kb-sr">A word with it</span>
-                        {{ form.message }}
-                    </label>
                 </div>
-            {% endif %}
+            </header>
+            <ul class="tb-shelf" data-shelf="mine">
+                {% for row in mine.rows %}
+                    {% include 'trades/_piece.html' with row=row field='offered_items' %}
+                {% endfor %}
+            </ul>
+            <p class="tb-col-foot" data-foot="mine">Showing {{ mine.shown }} of {{ mine.total }} &middot; scroll for more</p>
+        </aside>
 
+        {# ── 2 · what leaves me ──────────────────────────────────────── #}
+        <section class="tb-col tb-side tb-side--give">
+            <header class="tb-col-head tb-side-head">
+                <span>I give</span>
+                <span class="tb-col-count" data-count="give">{{ giving_count }} item{{ giving_count|pluralize }}</span>
+            </header>
+            <ul class="tb-laid" data-table="mine">
+                {% for row in mine.rows %}{% if row.on_table %}
+                    {% include 'trades/_piece.html' with row=row laid=True laid_side='mine' %}
+                {% endif %}{% endfor %}
+                <li class="tb-drop" data-empty="mine">Drag from my collection,<br>or press +</li>
+            </ul>
             {% comment %}
-            Three decisions, weighted. Accept is bigger, brasser and heavier
-            than the other two; decline is a real button with the softest
-            border, not a link pretending the choice is not there. Accept
-            never goes straight through.
+            A box on each side, not one box and a switch: cash is part of what
+            sits on that half, so it is typed where it lands.
             {% endcomment %}
-            <div class="tb-decisions">
-                {% if answering %}
-                    <form method="post" action="{% url 'trades:offer_action' offer.pk 'decline' %}">
-                        {% csrf_token %}
-                        <button type="submit" class="tb-decide tb-decide--quiet">Decline</button>
-                    </form>
-                    <button type="submit" class="tb-decide tb-decide--counter" id="tb-send">
-                        Send counter #{{ round_number }}
-                    </button>
-                    <button type="button" class="tb-decide tb-decide--go" id="tb-accept-open">
-                        Review &amp; accept
-                    </button>
-                {% elif waiting_on_them %}
-                    {% comment %}
-                    A bid cannot be taken back; a trade offer can, right up
-                    until it is answered. The markup has to say which.
-                    {% endcomment %}
-                    <form method="post" action="{% url 'trades:offer_action' offer.pk 'withdraw' %}">
-                        {% csrf_token %}
-                        <button type="submit" class="tb-decide tb-decide--quiet">Withdraw this offer</button>
-                    </form>
-                    <button type="submit" class="tb-decide tb-decide--go" id="tb-send">Revise and resend</button>
-                {% else %}
-                    <a href="{% if listing %}{% url 'listings:detail' listing.pk %}{% else %}{% url 'collections:item_detail' subject.pk %}{% endif %}"
-                       class="tb-decide tb-decide--quiet">Cancel</a>
-                    <button type="submit" class="tb-decide tb-decide--go" id="tb-send"
-                            {% if not giving_count %}disabled{% endif %}>Send this offer</button>
-                {% endif %}
+            <div class="tb-cash">
+                <label for="{{ form.cash_i_add.id_for_label }}">Cash I add</label>
+                {{ form.cash_i_add }}
             </div>
-            <p class="tb-decide-hint{% if giving_count %} is-hidden{% endif %}" id="tb-hint">
-                Put at least one of your licences on the table.
-            </p>
         </section>
+
+        {# ── 3 · what comes to me ────────────────────────────────────── #}
+        <section class="tb-col tb-side tb-side--get">
+            <header class="tb-col-head tb-side-head">
+                <span>I receive</span>
+                <span class="tb-col-count" data-count="get">{{ receiving_count }} item{{ receiving_count|pluralize }}</span>
+            </header>
+            <ul class="tb-laid" data-table="theirs">
+                {% for row in theirs.rows %}{% if row.on_table %}
+                    {% include 'trades/_piece.html' with row=row laid=True laid_side='theirs' %}
+                {% endif %}{% endfor %}
+                <li class="tb-drop" data-empty="theirs">
+                    Drag from {{ other.profile.get_display_name|default:other.username }}&rsquo;s collection,<br>or press +
+                </li>
+            </ul>
+            <div class="tb-cash">
+                <label for="{{ form.cash_to_me.id_for_label }}">Cash to me</label>
+                {{ form.cash_to_me }}
+            </div>
+        </section>
+
+        {# ── 4 · their shelf ─────────────────────────────────────────── #}
+        <aside class="tb-col tb-roster" data-roster="theirs">
+            <header class="tb-col-head">
+                <div class="tb-col-title">
+                    <span>{{ other.profile.get_display_name|default:other.username }}&rsquo;s collection</span>
+                    <span class="tb-col-count">{{ theirs.total }} tradeable</span>
+                </div>
+                <label>
+                    <span class="kb-sr">Search their collection</span>
+                    <input type="search" class="tb-find" placeholder="Search county, year&hellip;" data-find-for="theirs">
+                </label>
+                <div class="tb-chips">
+                    {% for chip in theirs.filters %}
+                        <button type="button" class="tb-chip" data-filter="{{ chip.key }}" data-for="theirs">{{ chip.label }}</button>
+                    {% endfor %}
+                </div>
+            </header>
+            <ul class="tb-shelf" data-shelf="theirs">
+                {% for row in theirs.rows %}
+                    {% include 'trades/_piece.html' with row=row field='requested_items' %}
+                {% endfor %}
+            </ul>
+            <p class="tb-col-foot" data-foot="theirs">Showing {{ theirs.shown }} of {{ theirs.total }} &middot; scroll for more</p>
+        </aside>
     </div>
 
-    {# ── The rail: the negotiation, then who you are dealing with ───── #}
-    <aside class="tb-rail">
-        {% if thread %}{% include 'trades/_thread.html' %}{% endif %}
-        {% include 'trades/_trader_card.html' with trader=other %}
-    </aside>
+    {# ── The deal, and the three decisions ───────────────────────────── #}
+    <section class="tb-band">
+        <div class="tb-band-said">
+            <span class="tb-band-who">
+                {% if answering %}
+                    {% if offer.counter_to_id %}Counter #{{ round_number|add:"-1" }}{% else %}Their offer{% endif %}
+                {% elif waiting_on_them %}Sent {{ offer.created_at|timesince }} ago
+                {% else %}On the table{% endif %}
+            </span>
+            <span class="tb-band-terms" id="tb-band-terms">{{ band_terms }}</span>
+            <span class="tb-band-small">
+                Both ship by {{ ship_by_date }} &middot; tracking required &middot; each pays their own outbound
+            </span>
+        </div>
+
+        <div class="tb-band-spacer"></div>
+
+        {% if not waiting_on_them %}
+            <label class="tb-band-field">
+                <span>They have</span>
+                {{ form.expires_days }}
+                <span>days</span>
+            </label>
+            <label class="tb-band-field tb-band-field--note">
+                <span class="kb-sr">A word with it</span>
+                {{ form.message }}
+            </label>
+        {% endif %}
+
+        {% comment %}
+        Three decisions, weighted. Decline and counter are outlined on the
+        dark bar; accept is the only filled thing on the page. Accept never
+        goes straight through.
+        {% endcomment %}
+        <div class="tb-decisions">
+            {% if answering %}
+                <button type="submit" formaction="{% url 'trades:offer_action' offer.pk 'decline' %}"
+                        class="tb-decide tb-decide--quiet">Decline</button>
+                <button type="submit" class="tb-decide tb-decide--counter" id="tb-send">
+                    Send counter #{{ round_number }}
+                </button>
+                <button type="button" class="tb-decide tb-decide--go" id="tb-accept-open">Review &amp; accept</button>
+            {% elif waiting_on_them %}
+                <button type="submit" formaction="{% url 'trades:offer_action' offer.pk 'withdraw' %}"
+                        class="tb-decide tb-decide--quiet">Withdraw</button>
+                <button type="submit" class="tb-decide tb-decide--go" id="tb-send">Revise and resend</button>
+            {% else %}
+                <a href="{% if listing %}{% url 'listings:detail' listing.pk %}{% else %}{% url 'collections:item_detail' subject.pk %}{% endif %}"
+                   class="tb-decide tb-decide--quiet">Cancel</a>
+                <button type="submit" class="tb-decide tb-decide--go" id="tb-send"
+                        {% if not giving_count %}disabled{% endif %}>Send this offer</button>
+            {% endif %}
+        </div>
+    </section>
+
+    {% include 'trades/_story.html' %}
 </form>
 
 {% if answering %}
@@ -317,22 +256,18 @@ full width underneath all three columns.
             <div class="tb-confirm-cols">
                 <div>
                     <span class="kb-eyebrow">Leaving you</span>
-                    <ul>
-                        {% for row in mine.rows %}{% if row.on_table %}<li>{{ row.item.title }}</li>{% endif %}{% endfor %}
-                    </ul>
+                    <ul>{% for row in mine.rows %}{% if row.on_table %}<li>{{ row.item.title }}</li>{% endif %}{% endfor %}</ul>
                 </div>
                 <div>
                     <span class="kb-eyebrow">Coming to you</span>
-                    <ul>
-                        {% for row in theirs.rows %}{% if row.on_table %}<li>{{ row.item.title }}</li>{% endif %}{% endfor %}
-                    </ul>
+                    <ul>{% for row in theirs.rows %}{% if row.on_table %}<li>{{ row.item.title }}</li>{% endif %}{% endfor %}</ul>
                 </div>
             </div>
             <p class="tb-confirm-small">
                 Both sides ship by {{ ship_by_date }} with tracking. Accepting declines
                 every other offer on this piece, and cannot be taken back. Anything you
-                moved on the table above is <strong>not</strong> part of this &mdash;
-                accept takes the offer as they sent it.
+                moved above is <strong>not</strong> part of this &mdash; accept takes the
+                offer as they sent it.
             </p>
             <div class="tb-confirm-actions">
                 <button type="button" class="tb-decide tb-decide--quiet" id="tb-accept-close">Go back</button>

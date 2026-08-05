@@ -1159,3 +1159,6 @@ is listed there as well. **Pass 8b**, unless the category name should be somethi
 which is a call worth making before the seed data exists.
 
 ---
+
+
+In the trading block module everything says closes a gap even when it doesn't. Same with What you Came For it just makes one up if you came not through an item link (like just from a collectors page it will just randomlly say one is what you came for).

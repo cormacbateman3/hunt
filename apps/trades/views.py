@@ -92,8 +92,22 @@ def _trading_block(request, *, subject, other, listing=None, offer=None):
         CollectionItem.objects.filter(owner=request.user)).order_by('-created_at')
     requested_queryset = open_to_trade(
         CollectionItem.objects.filter(owner=other, is_public=True))
+
+    # An offer opens with its own terms already in the boxes, including the
+    # cash — the same way the table opens with its licences already on it.
+    # Cash lands in whichever box it means for whoever is reading: they asked
+    # for forty, so on their screen it is "cash to me" and on mine it is
+    # "cash I add".
+    initial = {}
+    if offer:
+        theirs = (offer.cash_direction == 'to_proposer') == (
+            request.user.id == offer.from_user_id)
+        field = 'cash_to_me' if theirs else 'cash_i_add'
+        initial = {field: offer.cash_amount or None}
+
     form = TradeOfferForm(
         request.POST or None,
+        initial=initial,
         offered_queryset=offered_queryset,
         requested_queryset=requested_queryset,
         allow_cash=listing.allow_cash if listing else True,
@@ -109,9 +123,13 @@ def _trading_block(request, *, subject, other, listing=None, offer=None):
             requested_items=form.cleaned_data.get('requested_items'),
             message=form.cleaned_data.get('message', ''),
             cash_amount=form.cleaned_data.get('cash_amount') or Decimal('0.00'),
-            cash_direction=form.cleaned_data.get('cash_direction') or 'from_proposer',
+            cash_direction=form.cleaned_data.get('cash_direction', 'from_proposer'),
             expires_days=form.cleaned_data.get('expires_days') or 4,
-            counter_to=offer if answering else None,
+            # **Any resend supersedes the last one**, not just a counter from
+            # the other chair. Revising your own offer used to leave the
+            # original pending, so the bench showed two live negotiations
+            # about one licence and either could be accepted.
+            counter_to=offer,
         )
         if new_offer:
             # `%-d` is not portable, so the day is interpolated rather than
@@ -142,7 +160,7 @@ def _trading_block(request, *, subject, other, listing=None, offer=None):
         # 1944 Fulton instead".
         mine, theirs = set(), {subject.pk}
 
-    thread = composer.thread(offer) if offer else []
+    thread = composer.thread(offer, viewer=request.user) if offer else []
     subject_is_mine = subject.owner_id == request.user.id
     giving, receiving = len(mine), len(theirs)
 
@@ -169,6 +187,7 @@ def _trading_block(request, *, subject, other, listing=None, offer=None):
             on_table=theirs, came_for=None if subject_is_mine else subject.pk),
         'allow_cash': listing.allow_cash if listing else True,
         'trader_trust': composer.trader_trust(other),
+        'me_initials': composer.initials_for(request.user),
         # A date, not a duration. "Both ship by Mon 10 Aug" is a thing you
         # can hold against a calendar; "within five days of acceptance" asks
         # the reader to do the arithmetic that decides whether they take a

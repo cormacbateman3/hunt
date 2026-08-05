@@ -94,7 +94,9 @@ def trade_block_label(item, *, mine=False):
     held = hold_on(item)
     if held is None:
         return ''
-    return 'At auction' if held.listing_type == 'auction' else 'Being bought'
+    if held.listing_type == 'auction':
+        return 'Listed in the Auction House'
+    return 'Being bought right now'
 
 
 def is_open_to_trade(item):
