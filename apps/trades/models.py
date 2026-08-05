@@ -15,8 +15,21 @@ class TradeOffer(models.Model):
         ('expired', 'Expired'),
     ]
 
+    # **The piece being asked for.** This is the anchor of a negotiation, and
+    # it is a collection item rather than a listing because 10.10 makes
+    # tradeability a property of the item: you can ask about something
+    # sitting in somebody's collection that was never for sale.
+    subject_item = models.ForeignKey(
+        'collections.CollectionItem', on_delete=models.PROTECT,
+        null=True, blank=True, related_name='trade_offers_about',
+        help_text='The piece this negotiation is about.',
+    )
+    # Only set when the negotiation started from a lot. Nullable since 10.10 —
+    # an offer no longer needs one, and the pre-10.10 records keep theirs so
+    # their history still reads.
     trade_listing = models.ForeignKey(
-        'listings.Listing', on_delete=models.CASCADE, related_name='trade_offers'
+        'listings.Listing', on_delete=models.CASCADE, null=True, blank=True,
+        related_name='trade_offers'
     )
     from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='trade_offers_sent')
     to_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='trade_offers_received')
@@ -113,8 +126,18 @@ class Trade(models.Model):
         ('expired', 'Expired'),
     ]
 
-    listing = models.OneToOneField(
-        'listings.Listing', on_delete=models.CASCADE, related_name='trade'
+    # The accepted offer **is** the trade's identity. `listing` used to be a
+    # OneToOne doing double duty as the uniqueness anchor ("this lot already
+    # has a trade"), which is why nothing could be traded without being
+    # listed. Uniqueness lives here now, where it is actually true: one
+    # accepted offer, one trade.
+    offer = models.OneToOneField(
+        'trades.TradeOffer', on_delete=models.PROTECT,
+        null=True, blank=True, related_name='struck_trade',
+    )
+    listing = models.ForeignKey(
+        'listings.Listing', on_delete=models.CASCADE,
+        null=True, blank=True, related_name='trades',
     )
     initiator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='trades_initiated')
     counterparty = models.ForeignKey(User, on_delete=models.CASCADE, related_name='trades_received')
@@ -134,8 +157,22 @@ class Trade(models.Model):
             models.Index(fields=['status']),
         ]
 
+    OPEN_STATUSES = (
+        'accepted', 'awaiting_shipments', 'shipped_one', 'shipped_both',
+        'delivered_one', 'delivered_both',
+    )
+
     def __str__(self):
-        return f"Trade #{self.pk} - {self.listing.title}"
+        return f"Trade #{self.pk} - {self.subject_title}"
+
+    @property
+    def subject_title(self):
+        """What the trade is about, whether or not a lot was involved."""
+        if self.offer_id and self.offer.subject_item_id:
+            return self.offer.subject_item.title
+        if self.listing_id:
+            return self.listing.title
+        return f'trade #{self.pk}'
 
 
 class TradeShipment(models.Model):

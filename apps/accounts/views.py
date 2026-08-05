@@ -315,25 +315,15 @@ def profile_view(request, username):
 
     # Review summary
     review_summary = Review.summary_for_user(user)
-    completed_transaction_count = (
-        Listing.objects.filter(
-            seller=user,
-            order__status='completed',
-        ).count() +
-        Listing.objects.filter(
-            trade__status='completed',
-        ).filter(
-            trade__initiator=user,
-        ).count() +
-        Listing.objects.filter(
-            trade__status='completed',
-        ).filter(
-            trade__counterparty=user,
-        ).count()
-    )
-
+    # Counted off the trades themselves rather than through their listings.
+    # Since 10.10 a trade need not have one, and reaching for it through a
+    # lot silently dropped every trade struck straight from a collection.
     trade_count = Trade.objects.filter(
         Q(initiator=user) | Q(counterparty=user), status='completed').count()
+    completed_transaction_count = (
+        Listing.objects.filter(seller=user, order__status='completed').count()
+        + trade_count
+    )
     sale_count = Order.objects.filter(seller=user, status='completed').count()
     strike_count = Strike.objects.filter(user=user, is_excused=False).count()
 

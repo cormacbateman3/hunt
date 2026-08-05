@@ -235,41 +235,88 @@ class ComposerScreenTests(ComposerBase):
         self.assertEqual(still_on, {self.mine_a, self.mine_b})
 
 
-class CounterScreenTests(ComposerBase):
-    def _offer(self):
-        listing = self._listing(self.theirs_a)
+class PersonLevelProposeTests(ComposerBase):
+    """10.10's whole point: a trade about a piece nobody put up for sale.
+
+    Until `TradeOffer.trade_listing` became nullable this could not exist, so
+    "Propose a trade" on a collector card had to walk you to their shelf and
+    hope something on it was listed.
+    """
+
+    def setUp(self):
         self.client.force_login(self.rae)
-        self.client.post(reverse('trades:propose', args=[listing.pk]), {
+
+    def test_a_piece_that_was_never_listed_can_take_an_offer(self):
+        self.assertFalse(self.theirs_a.listings.exists())
+        page = self.client.get(
+            reverse('trades:propose_on_item', args=[self.theirs_a.pk]))
+        self.assertEqual(page.status_code, 200)
+        self.assertEqual(page.context['anchor'], self.theirs_a)
+        self.assertIsNone(page.context['listing'])
+
+    def test_the_offer_records_the_piece_and_no_lot(self):
+        self.client.post(reverse('trades:propose_on_item', args=[self.theirs_a.pk]), {
             'offered_items': [self.mine_a.pk],
-            'requested_items': [self.theirs_b.pk],
             'expires_days': 4,
         })
-        return TradeOffer.objects.get()
+        offer = TradeOffer.objects.get()
+        self.assertEqual(offer.subject_item, self.theirs_a)
+        self.assertIsNone(offer.trade_listing_id)
 
-    def test_a_counter_opens_on_the_deal_with_the_sides_swapped(self):
-        """A counter is not a fresh proposal — it is the same deal seen from
-        the other chair, so what they asked of me is now mine to give."""
-        offer = self._offer()
+    def test_a_closed_piece_refuses_before_the_screen_is_drawn(self):
+        self.theirs_a.tradeability = 'closed'
+        self.theirs_a.save(update_fields=['tradeability'])
+        response = self.client.get(
+            reverse('trades:propose_on_item', args=[self.theirs_a.pk]))
+        self.assertRedirects(
+            response, reverse('collections:item_detail', args=[self.theirs_a.pk]))
+
+    def test_a_piece_at_auction_refuses_too(self):
+        self._listing(self.theirs_a, kind='auction')
+        response = self.client.get(
+            reverse('trades:propose_on_item', args=[self.theirs_a.pk]))
+        self.assertEqual(response.status_code, 302)
+
+    def test_a_store_shelf_carries_its_own_cash_terms_across(self):
+        """The seller said no cash on the lot; that still holds if you come
+        at the piece from the collection instead."""
+        self._listing(self.theirs_a, kind='buy_now', allow_cash=False)
+        page = self.client.get(
+            reverse('trades:propose_on_item', args=[self.theirs_a.pk]))
+        self.assertFalse(page.context['allow_cash'])
+
+    def test_a_piece_already_committed_cannot_be_asked_for_twice(self):
+        self.client.post(reverse('trades:propose_on_item', args=[self.theirs_a.pk]), {
+            'offered_items': [self.mine_a.pk], 'expires_days': 4})
+        offer = TradeOffer.objects.get()
         self.client.force_login(self.walt)
-        page = self.client.get(reverse('trades:counter_offer', args=[offer.pk]))
+        self.client.post(reverse('trades:offer_action', args=[offer.pk, 'accept']))
 
-        mine_on = {r['item'] for r in page.context['mine']['rows'] if r['on_table']}
-        theirs_on = {r['item'] for r in page.context['theirs']['rows'] if r['on_table']}
-        self.assertEqual(mine_on, {self.theirs_a, self.theirs_b})
-        self.assertEqual(theirs_on, {self.mine_a})
+        third = User.objects.create_user('cp_third', password='pw')
+        address = Address.objects.create(
+            user=third, full_name='third', line1='1 Main', city='W',
+            state='PA', postal_code='17701')
+        third.profile.email_verified = True
+        third.profile.shipping_address = address
+        third.profile.save(update_fields=['email_verified', 'shipping_address'])
+        mine = self._piece(third, self.potter, 1955)
 
-    def test_the_trail_counts_the_round(self):
-        offer = self._offer()
-        self.client.force_login(self.walt)
-        page = self.client.get(reverse('trades:counter_offer', args=[offer.pk]))
-        self.assertEqual(page.context['round_number'], 2)
-        self.assertContains(page, 'counter #2')
+        from apps.trades.services import create_trade_offer
+        offer, error = create_trade_offer(
+            subject_item=self.theirs_a, from_user=third, to_user=self.walt,
+            offered_items=[mine])
+        self.assertIsNone(offer)
+        self.assertIn('already committed', error)
 
 
 class DecisionScreenTests(ComposerBase):
-    """`direction` is recorded from the proposer's side and never changes,
-    because it is a record of what was agreed. Which half of the table a
-    piece sits on is a question about who is reading."""
+    """Turn 3a puts the shelves and the three decisions on one page.
+
+    Answering an offer is *move a licence and send*, not *go to a second
+    screen and start from nothing* — so arriving at a pending offer gets the
+    same composer, with the table already laid and the sides swapped for
+    whoever is reading.
+    """
 
     def setUp(self):
         listing = self._listing(self.theirs_a, allow_cash=True)
@@ -283,39 +330,74 @@ class DecisionScreenTests(ComposerBase):
         })
         self.offer = TradeOffer.objects.get()
 
+    def _laid(self, context):
+        """What is on each half of the table, from the reader's side.
+
+        The subject piece sits with its owner, which flips when the reader
+        does — that is the thing worth asserting.
+        """
+        give = {r['item'] for r in context['mine']['rows'] if r['on_table']}
+        get = {r['item'] for r in context['theirs']['rows'] if r['on_table']}
+        (give if context['anchor_is_mine'] else get).add(context['anchor'])
+        return give, get
+
+    def test_arriving_at_an_offer_gets_the_table_and_both_shelves(self):
+        self.client.force_login(self.walt)
+        page = self.client.get(reverse('trades:offer_detail', args=[self.offer.pk]))
+        self.assertContains(page, 'On the table')
+        self.assertContains(page, 'name="offered_items"')
+        self.assertContains(page, 'name="requested_items"')
+
     def test_each_side_sees_their_own_half_as_theirs(self):
         self.client.force_login(self.rae)
-        proposer = self.client.get(
-            reverse('trades:offer_detail', args=[self.offer.pk])).context['table']
-        self.assertEqual(proposer['giving'], [self.mine_a])
-        self.assertEqual(set(proposer['receiving']), {self.theirs_a, self.theirs_b})
+        giving, receiving = self._laid(self.client.get(
+            reverse('trades:offer_detail', args=[self.offer.pk])).context)
+        self.assertEqual(giving, {self.mine_a})
+        self.assertEqual(receiving, {self.theirs_a, self.theirs_b})
 
         self.client.force_login(self.walt)
-        recipient = self.client.get(
-            reverse('trades:offer_detail', args=[self.offer.pk])).context['table']
-        self.assertEqual(set(recipient['giving']), {self.theirs_a, self.theirs_b})
-        self.assertEqual(recipient['receiving'], [self.mine_a])
+        giving, receiving = self._laid(self.client.get(
+            reverse('trades:offer_detail', args=[self.offer.pk])).context)
+        self.assertEqual(giving, {self.theirs_a, self.theirs_b})
+        self.assertEqual(receiving, {self.mine_a})
 
     def test_the_cash_arrow_turns_round_with_the_reader(self):
         """Rae asked for $40. Rae receives it; Walt pays it."""
-        self.client.force_login(self.rae)
-        self.assertTrue(self.client.get(
-            reverse('trades:offer_detail', args=[self.offer.pk])).context['table']['cash_to_me'])
-
-        self.client.force_login(self.walt)
-        self.assertFalse(self.client.get(
-            reverse('trades:offer_detail', args=[self.offer.pk])).context['table']['cash_to_me'])
+        self.assertTrue(composer.table_for(self.offer, self.rae)['cash_to_me'])
+        self.assertFalse(composer.table_for(self.offer, self.walt)['cash_to_me'])
 
     def test_only_the_recipient_is_offered_the_three_decisions(self):
         self.client.force_login(self.walt)
         theirs = self.client.get(reverse('trades:offer_detail', args=[self.offer.pk]))
         self.assertContains(theirs, 'Review &amp; accept')
         self.assertContains(theirs, 'Decline')
+        self.assertContains(theirs, 'Send counter #2')
 
         self.client.force_login(self.rae)
         mine = self.client.get(reverse('trades:offer_detail', args=[self.offer.pk]))
         self.assertNotContains(mine, 'Review &amp; accept')
         self.assertContains(mine, 'Withdraw this offer')
+
+    def test_countering_happens_in_place(self):
+        """No second screen: move a licence, post the same form."""
+        self.client.force_login(self.walt)
+        self.client.post(reverse('trades:offer_detail', args=[self.offer.pk]), {
+            'offered_items': [self.theirs_a.pk],   # drop theirs_b
+            'requested_items': [self.mine_b.pk],
+            'expires_days': 4,
+        })
+
+        counter = TradeOffer.objects.exclude(pk=self.offer.pk).get()
+        self.assertEqual(counter.counter_to_id, self.offer.pk)
+        self.assertEqual(counter.subject_item, self.offer.subject_item)
+        self.offer.refresh_from_db()
+        self.assertEqual(self.offer.status, 'countered')
+
+    def test_the_old_counter_url_still_lands(self):
+        self.client.force_login(self.walt)
+        response = self.client.get(reverse('trades:counter_offer', args=[self.offer.pk]))
+        self.assertRedirects(
+            response, reverse('trades:offer_detail', args=[self.offer.pk]))
 
     def test_accepting_asks_once_before_it_commits(self):
         """Property moves in both directions at once and cannot be undone."""
@@ -329,12 +411,20 @@ class DecisionScreenTests(ComposerBase):
         self.client.force_login(self.walt)
         self.client.post(reverse('trades:offer_action', args=[self.offer.pk, 'accept']))
 
-        trade = self.offer.trade_listing.trade
+        trade = self.offer.struck_trade
         page = self.client.get(reverse('trades:trade_detail', args=[trade.pk]))
         self.assertEqual(page.status_code, 200)
         self.assertContains(page, 'What was agreed')
         self.assertEqual(set(page.context['table']['giving']),
                          {self.theirs_a, self.theirs_b})
+
+    def test_a_settled_offer_stops_being_a_workbench(self):
+        self.client.force_login(self.walt)
+        self.client.post(reverse('trades:offer_action', args=[self.offer.pk, 'decline']))
+
+        page = self.client.get(reverse('trades:offer_detail', args=[self.offer.pk]))
+        self.assertTrue(page.context['settled'])
+        self.assertNotContains(page, 'name="offered_items"')
 
 
 class StoreActionTests(ComposerBase):

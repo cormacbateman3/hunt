@@ -5,6 +5,9 @@ app_name = 'trades'
 
 urlpatterns = [
     path('listing/<int:listing_id>/propose/', views.propose_offer, name='propose'),
+    # 10.10: a negotiation about a piece, listed or not. This is the route
+    # the collector card and the trade board have wanted since Pass 3.
+    path('piece/<int:item_id>/propose/', views.propose_on_item, name='propose_on_item'),
     path('offers/<int:offer_id>/', views.offer_detail, name='offer_detail'),
     path('offers/<int:offer_id>/counter/', views.counter_offer, name='counter_offer'),
     path('offers/<int:offer_id>/action/<str:action>/', views.offer_action, name='offer_action'),

@@ -126,9 +126,43 @@ class CollectorCardActionTests(CollectorsBaseTest):
         self.assertIn('Propose a trade', html)
         self.assertIn('See their case', html)
 
-    def test_propose_a_trade_opens_their_trade_shelf(self):
-        html = self.client.get(reverse('collectors')).content.decode()
-        self.assertIn('?group=trade#the-collection', html)
+    def test_propose_a_trade_is_one_click_at_a_piece(self):
+        """It used to walk you to their shelf and hope something on it was
+        listed. Since 10.10 an offer hangs off the piece itself."""
+        page = self.client.get(reverse('collectors'))
+        walt_row = next(r for r in page.context['rows'] if r['user'] == self.walt)
+        self.assertIsNotNone(walt_row['propose_item'])
+        self.assertEqual(walt_row['propose_item'].owner, self.walt)
+        self.assertContains(page, reverse(
+            'trades:propose_on_item', args=[walt_row['propose_item'].pk]))
+
+    def test_it_opens_on_the_piece_that_answers_one_of_my_wants(self):
+        wanted = CollectionItem.objects.filter(owner=self.walt).first()
+        WantedItem.objects.create(
+            user=self.me, state=self.pa, county=wanted.county,
+            year_min=wanted.license_year, year_max=wanted.license_year)
+
+        self.client.force_login(self.me)
+        page = self.client.get(reverse('collectors'))
+        walt_row = next(r for r in page.context['rows'] if r['user'] == self.walt)
+        self.assertEqual(walt_row['propose_item'], wanted)
+
+    def test_a_piece_at_auction_is_never_the_one_it_opens_on(self):
+        from datetime import timedelta
+        from decimal import Decimal
+        from django.utils import timezone
+
+        pieces = list(CollectionItem.objects.filter(owner=self.walt))
+        Listing.objects.create(
+            seller=self.walt, source_collection_item=pieces[0],
+            title=pieces[0].title, description='d', state=self.pa,
+            condition_grade='good', status='active', listing_type='auction',
+            starting_price=Decimal('40'),
+            auction_end=timezone.now() + timedelta(days=3))
+
+        page = self.client.get(reverse('collectors'))
+        walt_row = next(r for r in page.context['rows'] if r['user'] == self.walt)
+        self.assertNotEqual(walt_row['propose_item'], pieces[0])
 
     def test_a_collector_who_trades_nothing_is_not_offered_a_trade(self):
         CollectionItem.objects.all().update(tradeability='closed')

@@ -4,6 +4,7 @@ from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.accounts.bench import ship_by_days
 from apps.collections.tradeability import trade_block_reason
 from apps.notifications.services import create_notification
 from apps.enforcement.services import enforce_capability
@@ -142,13 +143,11 @@ def _close_traded_pieces(trade):
     """
     from apps.collections.models import CollectionItem
 
-    accepted = (
-        TradeOffer.objects
-        .filter(trade_listing=trade.listing, status='accepted')
-        .prefetch_related('items')
-        .first()
-    )
-    if not accepted:
+    # The accepted offer is the trade's own record now, so this no longer
+    # has to go looking for it through the lot — which was never possible
+    # for a trade struck without one.
+    accepted = trade.offer
+    if accepted is None:
         return
 
     # Both directions: each side's piece has left its owner.
@@ -362,9 +361,25 @@ def auto_complete_delivered_trades(*, grace_days=3, limit=200):
 TRADEABLE_LISTING_TYPES = ('trade', 'buy_now')
 
 
+def open_trade_on(item):
+    """The live trade already committing this piece, or None.
+
+    Uniqueness used to hang off `Trade.listing`, so the question could only
+    be asked about a lot. It is really a question about the **piece**: you
+    cannot promise the same licence to two people, whether or not either
+    negotiation went through a listing.
+    """
+    return (
+        Trade.objects
+        .filter(offer__items__collection_item=item, status__in=Trade.OPEN_STATUSES)
+        .first()
+    )
+
+
 def create_trade_offer(
     *,
-    listing,
+    subject_item=None,
+    listing=None,
     from_user,
     to_user,
     offered_items,
@@ -375,12 +390,35 @@ def create_trade_offer(
     expires_days=4,
     counter_to=None,
 ):
-    if listing.listing_type not in TRADEABLE_LISTING_TYPES:
-        return None, 'This listing cannot take trade offers.'
-    if listing.status != 'active':
-        return None, 'This listing is not currently active.'
-    if Trade.objects.filter(listing=listing).exists():
-        return None, 'This listing already has an accepted trade.'
+    """Open or continue a negotiation about one piece.
+
+    Either a `subject_item` (somebody's licence, listed or not) or a
+    `listing` whose source item becomes the subject. A listing is no longer
+    required — that requirement is what made "propose a trade" a walk to
+    somebody's shelf rather than a button.
+    """
+    if listing is not None:
+        if listing.listing_type not in TRADEABLE_LISTING_TYPES:
+            return None, 'This listing cannot take trade offers.'
+        if listing.status != 'active':
+            return None, 'This listing is not currently active.'
+        if subject_item is None:
+            subject_item = listing.source_collection_item
+
+    if subject_item is None:
+        return None, 'A trade has to be about something.'
+    # The subject is the anchor of the whole negotiation and does not change
+    # hands as it goes back and forth — but which *side* of the table it sits
+    # on does. Rae asks Walt for his 1916; Walt counters, and the same 1916
+    # is now the thing Walt is giving. So the owner has to be one of the two,
+    # not specifically the recipient.
+    if subject_item.owner_id not in {from_user.id, to_user.id}:
+        return None, 'That piece belongs to neither of you.'
+    blocked = trade_block_reason(subject_item)
+    if blocked:
+        return None, f'"{subject_item.title}" cannot be traded: {blocked}'
+    if open_trade_on(subject_item):
+        return None, 'That piece is already committed to a trade.'
     if from_user.id == to_user.id:
         return None, 'Cannot create a trade offer to yourself.'
 
@@ -399,8 +437,8 @@ def create_trade_offer(
             return None, f'"{item.title}" cannot be traded: {blocked}'
 
     # The design's right-hand roster is a real control: you pick what you
-    # want off their shelf, not just what their listing happens to be. The
-    # listing's own piece is always on the table — it is what you came for.
+    # want off their shelf, not just what you arrived asking about. The
+    # subject piece is always on the table — it is what you came for.
     requested = list(requested_items or [])
     for item in requested:
         if item.owner_id != to_user.id:
@@ -411,13 +449,22 @@ def create_trade_offer(
         if blocked:
             return None, f'"{item.title}" cannot be traded: {blocked}'
 
-    anchor = listing.source_collection_item
-    if anchor and anchor.pk not in {item.pk for item in requested}:
-        requested.insert(0, anchor)
+    # The subject is always on the table, on whichever side its owner is.
+    # Taking it off would turn the negotiation into a different one without
+    # anybody saying so.
+    if subject_item.owner_id == from_user.id:
+        if subject_item.pk not in {item.pk for item in offered_items}:
+            offered_items.insert(0, subject_item)
+    elif subject_item.pk not in {item.pk for item in requested}:
+        requested.insert(0, subject_item)
     if not requested:
         return None, 'At least one requested item is required.'
 
-    if cash_amount and not listing.allow_cash:
+    # A lot's owner decides whether cash is welcome. A piece that was never
+    # listed has nobody's answer on file, so cash is allowed — evening a swap
+    # up is the ordinary case, and refusing by default would be inventing a
+    # preference nobody expressed.
+    if cash_amount and listing is not None and not listing.allow_cash:
         return None, 'This listing does not allow cash add-ons.'
     if cash_amount and cash_amount < 0:
         return None, 'Cash cannot be negative — pick a direction instead.'
@@ -427,6 +474,7 @@ def create_trade_offer(
     expires_at = timezone.now() + timedelta(days=expires_days or 4)
     with transaction.atomic():
         offer = TradeOffer.objects.create(
+            subject_item=subject_item,
             trade_listing=listing,
             from_user=from_user,
             to_user=to_user,
@@ -466,9 +514,10 @@ def create_trade_offer(
             user=to_user,
             notification_type='trade_offer_countered' if counter_to else 'trade_offer_received',
             message=(
-                f'New counteroffer #{offer.pk} on "{listing.title}".'
+                f'New counteroffer on "{subject_item.title}".'
                 if counter_to else
-                f'New trade offer #{offer.pk} on "{listing.title}".'
+                f'{from_user.username} has offered a trade for your '
+                f'"{subject_item.title}".'
             ),
             link_url=f'/trades/offers/{offer.pk}/',
         )
@@ -513,8 +562,10 @@ def accept_trade_offer(offer, actor):
         return None, 'Offer has already expired.'
     if actor.id != offer.to_user_id:
         return None, 'Only the recipient can accept this offer.'
-    if Trade.objects.filter(listing=offer.trade_listing).exists():
-        return None, 'This listing already has an accepted trade.'
+    # The question is about the **piece**, not the lot: you cannot promise
+    # the same licence to two people, listed or not.
+    if offer.subject_item_id and open_trade_on(offer.subject_item):
+        return None, 'That piece is already committed to a trade.'
 
     ok, reason = validate_trade_gate(actor)
     if not ok:
@@ -524,38 +575,50 @@ def accept_trade_offer(offer, actor):
         locked_offer = TradeOffer.objects.select_for_update().get(pk=offer.pk)
         if locked_offer.status != 'pending':
             return None, 'Offer is no longer pending.'
+        if Trade.objects.filter(offer=locked_offer).exists():
+            return None, 'This offer has already been accepted.'
         listing = locked_offer.trade_listing
-        if Trade.objects.filter(listing=listing).exists():
-            return None, 'This listing already has an accepted trade.'
 
         trade = Trade.objects.create(
+            offer=locked_offer,
             listing=listing,
             initiator=locked_offer.from_user,
             counterparty=locked_offer.to_user,
             status='awaiting_shipments',
-            ship_by_deadline=timezone.now() + timedelta(days=5),
+            ship_by_deadline=timezone.now() + timedelta(days=ship_by_days()),
         )
         _create_trade_shipments(trade)
 
         locked_offer.status = 'accepted'
         locked_offer.save(update_fields=['status', 'updated_at'])
-        TradeOffer.objects.filter(
-            trade_listing=listing,
-            status='pending',
-        ).exclude(pk=locked_offer.pk).update(status='declined')
-        listing.status = 'sold'
-        listing.save(update_fields=['status', 'updated_at'])
 
+        # Every other live negotiation about the same piece is over — the
+        # licence has gone. Scoped to the piece rather than the lot, because
+        # a piece can now be asked about without one.
+        rivals = TradeOffer.objects.filter(status='pending').exclude(pk=locked_offer.pk)
+        if locked_offer.subject_item_id:
+            rivals = rivals.filter(subject_item_id=locked_offer.subject_item_id)
+        elif listing:
+            rivals = rivals.filter(trade_listing=listing)
+        else:
+            rivals = TradeOffer.objects.none()
+        rivals.update(status='declined')
+
+        if listing:
+            listing.status = 'sold'
+            listing.save(update_fields=['status', 'updated_at'])
+
+        subject = locked_offer.subject_item.title if locked_offer.subject_item_id else 'your licence'
         create_notification(
             user=trade.initiator,
             notification_type='trade_offer_accepted',
-            message=f'Your trade offer #{locked_offer.pk} was accepted.',
+            message=f'Your trade offer for "{subject}" was accepted.',
             link_url=f'/trades/{trade.pk}/',
         )
         create_notification(
             user=trade.counterparty,
             notification_type='trade_offer_accepted',
-            message=f'You accepted trade offer #{locked_offer.pk}. Trade #{trade.pk} created.',
+            message=f'You accepted the trade for "{subject}". Both sides ship next.',
             link_url=f'/trades/{trade.pk}/',
         )
     return trade, ''

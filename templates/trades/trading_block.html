@@ -1,0 +1,320 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}The Trading Block &middot; {{ other.profile.get_display_name|default:other.username }} &middot; KeystoneBid{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/trade-board.css' %}">{% endblock %}
+
+{% block main_class %}kb-composer{% endblock %}
+
+{% block context_band %}
+<nav class="kb-crumbs" aria-label="Breadcrumb">
+    <div class="kb-band-inner">
+        <a href="{% url 'bench' %}">My Bench</a>
+        <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
+        <a href="{% url 'collectors' %}?tab=trade">The Trading Block</a>
+        <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
+        <span class="kb-crumb-current">
+            {{ other.profile.get_display_name|default:other.username }}{% if offer and round_number > 1 %}, counter #{{ round_number|add:"-1" }}{% endif %}
+        </span>
+        {% if open_negotiations %}
+            <a href="{% url 'bids:my_bids' %}" class="kb-crumb-back">
+                &larr; Back to my {{ open_negotiations }} open negotiation{{ open_negotiations|pluralize }}
+            </a>
+        {% endif %}
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+{% comment %}
+Turn 3a — "The Trading Block: both rosters, the table, the rail, and three
+decisions you can't miss." One screen, and there is only one of it: opening a
+negotiation and answering one are the same page, because the answer to an
+offer is usually *move one licence and send it back*, not *start again*.
+
+The two middle columns are one dark panel — the table the licences are laid
+on — so the pieces are the brightest thing here and direction is read from
+position plus a brass arrow, not from a rust border against a green one.
+{% endcomment %}
+
+{% if form.non_field_errors or form.offered_items.errors %}
+    <div class="kb-alert kb-alert--error">{{ form.non_field_errors }}{{ form.offered_items.errors }}</div>
+{% endif %}
+
+{% if settled %}
+    {# A closed negotiation is a record, not a workbench. #}
+    <div class="tb-read">
+        <div class="tb-centre">
+            {% include 'trades/_laid_table.html' with table_eyebrow="What was on the table" %}
+            <section class="tb-band">
+                <p class="tb-band-who">
+                    {{ offer.get_status_display }} &middot; {{ offer.created_at|date:"j M Y" }}
+                </p>
+                <p class="tb-band-terms">{{ table.terms }}</p>
+                {% if trade %}
+                    <div class="tb-decisions">
+                        <a href="{% url 'trades:trade_detail' trade.pk %}" class="tb-decide tb-decide--go">Open the trade</a>
+                    </div>
+                {% endif %}
+            </section>
+        </div>
+        <aside class="tb-rail">
+            {% include 'trades/_thread.html' %}
+            {% include 'trades/_trader_card.html' with trader=other %}
+        </aside>
+    </div>
+{% else %}
+
+<form method="post" class="tb-composer" id="tb-composer">
+    {% csrf_token %}
+
+    {# ── Left: my shelf ─────────────────────────────────────────────── #}
+    <aside class="tb-roster" data-roster="mine">
+        <header class="tb-roster-head">
+            <h2 class="tb-roster-title">My collection <span class="tb-roster-count">{{ mine.total }} tradeable</span></h2>
+            <label class="tb-find">
+                <span class="kb-sr">Search my collection</span>
+                <input type="search" class="tb-find-input" placeholder="Search county, year&hellip;" data-find-for="mine">
+            </label>
+            <div class="tb-chips">
+                {% for chip in mine.filters %}
+                    <button type="button" class="tb-chip" data-filter="{{ chip.key }}" data-for="mine">{{ chip.label }}</button>
+                {% endfor %}
+            </div>
+        </header>
+        <ul class="tb-shelf" data-shelf="mine">
+            {% for row in mine.rows %}{% if not row.on_table %}
+                {% include 'trades/_piece.html' with row=row field='offered_items' %}
+            {% endif %}{% endfor %}
+        </ul>
+        <p class="tb-roster-foot" data-foot="mine">{{ mine.shown }} of {{ mine.total }} &middot; scroll</p>
+    </aside>
+
+    {# ── Centre: the table, then the band ───────────────────────────── #}
+    <div class="tb-centre">
+        <section class="tb-table" aria-label="On the table">
+            <header class="tb-table-head">
+                <span class="tb-table-eyebrow">On the table</span>
+                <strong class="tb-table-terms" id="tb-terms">{{ terms_line }}</strong>
+            </header>
+
+            <div class="tb-halves">
+                <div class="tb-half tb-half--give">
+                    <h3 class="tb-half-title">I give <span class="tb-half-count" data-count="give">{{ giving_count }}</span></h3>
+                    <ul class="tb-laid" data-table="mine">
+                        {% if anchor_is_mine %}{% include 'trades/_anchor.html' %}{% endif %}
+                        {% for row in mine.rows %}{% if row.on_table %}
+                            {% include 'trades/_piece.html' with row=row field='offered_items' %}
+                        {% endif %}{% endfor %}
+                    </ul>
+                    <p class="tb-empty{% if giving_count %} is-hidden{% endif %}" data-empty="mine">
+                        Drag from my collection
+                    </p>
+                    <div class="tb-cash {% if allow_cash %}is-live{% endif %}">
+                        {% if allow_cash %}
+                            <label class="tb-cash-label">
+                                <input type="radio" name="cash_direction" value="from_proposer"
+                                       {% if form.cash_direction.value != 'to_proposer' %}checked{% endif %}>
+                                Cash I add
+                            </label>
+                        {% else %}
+                            <span class="tb-cash-label">Cash I add</span>
+                            <span class="tb-cash-figure">&mdash;</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="tb-swap" aria-hidden="true">&#8646;</div>
+
+                <div class="tb-half tb-half--get">
+                    <h3 class="tb-half-title">I receive <span class="tb-half-count" data-count="get">{{ receiving_count }}</span></h3>
+                    <ul class="tb-laid" data-table="theirs">
+                        {% if not anchor_is_mine %}{% include 'trades/_anchor.html' %}{% endif %}
+                        {% for row in theirs.rows %}{% if row.on_table %}
+                            {% include 'trades/_piece.html' with row=row field='requested_items' %}
+                        {% endif %}{% endfor %}
+                    </ul>
+                    <p class="tb-empty{% if receiving_count %} is-hidden{% endif %}" data-empty="theirs">
+                        Drag from {{ other.profile.get_display_name|default:other.username }}&rsquo;s collection
+                    </p>
+                    <div class="tb-cash {% if allow_cash %}is-live{% endif %}">
+                        {% if allow_cash %}
+                            <label class="tb-cash-label">
+                                <input type="radio" name="cash_direction" value="to_proposer"
+                                       {% if form.cash_direction.value == 'to_proposer' %}checked{% endif %}>
+                                Cash to me
+                            </label>
+                        {% else %}
+                            <span class="tb-cash-label">Cash to me</span>
+                            <span class="tb-cash-figure">&mdash;</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if allow_cash %}
+                <div class="tb-cash-entry">
+                    <label for="{{ form.cash_amount.id_for_label }}">Cash either way</label>
+                    {{ form.cash_amount }}
+                    <span class="tb-cash-hint">Pick a side above. Leave it at zero for a straight swap.</span>
+                    {{ form.cash_amount.errors }}
+                </div>
+            {% endif %}
+        </section>
+
+        {# The band: who and when, the terms restated, then weighted choices. #}
+        <section class="tb-band">
+            <p class="tb-band-who">
+                {% if answering %}
+                    {% if offer.counter_to_id %}Counter #{{ round_number|add:"-1" }}{% else %}Offer{% endif %}
+                    from {{ other.profile.get_display_name|default:other.username }}
+                    {% if offer.expires_at %}&middot; expires in {{ offer.expires_at|timeuntil }}{% endif %}
+                {% elif waiting_on_them %}
+                    Sent {{ offer.created_at|timesince }} ago &middot;
+                    waiting on {{ other.profile.get_display_name|default:other.username }}
+                {% else %}
+                    A first offer to {{ other.profile.get_display_name|default:other.username }}
+                {% endif %}
+            </p>
+            <p class="tb-band-terms" id="tb-band-terms">{{ terms_line }}</p>
+            <p class="tb-band-small">
+                Both ship within {{ ship_by_days }} days of acceptance &middot; tracking required
+                &middot; each pays their own outbound
+            </p>
+
+            {% if not waiting_on_them %}
+                <div class="tb-band-fields">
+                    <label>
+                        <span>They have</span>
+                        {{ form.expires_days }}
+                        <small>days to answer</small>
+                    </label>
+                    <label class="tb-band-note">
+                        <span>A word with it</span>
+                        {{ form.message }}
+                    </label>
+                </div>
+            {% endif %}
+
+            {% comment %}
+            Three decisions, weighted. Decline is the quietest thing on the
+            band, the counter is outlined in forest, and accept is brass with
+            a raised edge because it is the one that ends the negotiation.
+            Accept never goes straight through.
+            {% endcomment %}
+            <div class="tb-decisions">
+                {% if answering %}
+                    <form method="post" action="{% url 'trades:offer_action' offer.pk 'decline' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="tb-decide tb-decide--quiet">Decline</button>
+                    </form>
+                    <button type="submit" class="tb-decide tb-decide--counter" id="tb-send">
+                        Send counter #{{ round_number }}
+                    </button>
+                    <button type="button" class="tb-decide tb-decide--go" id="tb-accept-open">
+                        Review &amp; accept
+                    </button>
+                {% elif waiting_on_them %}
+                    {% comment %}
+                    A bid cannot be taken back; a trade offer can, right up
+                    until it is answered. The markup has to say which is
+                    which, so this is a POST and it is spelled out.
+                    {% endcomment %}
+                    <form method="post" action="{% url 'trades:offer_action' offer.pk 'withdraw' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="tb-decide tb-decide--quiet">Withdraw this offer</button>
+                    </form>
+                    <button type="submit" class="tb-decide tb-decide--go" id="tb-send">Revise and resend</button>
+                {% else %}
+                    <a href="{% if listing %}{% url 'listings:detail' listing.pk %}{% else %}{% url 'collections:item_detail' subject.pk %}{% endif %}"
+                       class="tb-decide tb-decide--quiet">Cancel</a>
+                    <button type="submit" class="tb-decide tb-decide--go" id="tb-send" disabled>Send this offer</button>
+                {% endif %}
+            </div>
+            <p class="tb-decide-hint{% if picked_count %} is-hidden{% endif %}" id="tb-hint">
+                Put at least one of your licences on the table.
+            </p>
+        </section>
+    </div>
+
+    {# ── Right: their shelf ─────────────────────────────────────────── #}
+    <aside class="tb-roster" data-roster="theirs">
+        <header class="tb-roster-head">
+            <h2 class="tb-roster-title">
+                {{ other.profile.get_display_name|default:other.username }}&rsquo;s collection
+                <span class="tb-roster-count">{{ theirs.total }}</span>
+            </h2>
+            <label class="tb-find">
+                <span class="kb-sr">Search their collection</span>
+                <input type="search" class="tb-find-input" placeholder="Search county, year&hellip;" data-find-for="theirs">
+            </label>
+            <div class="tb-chips">
+                {% for chip in theirs.filters %}
+                    <button type="button" class="tb-chip" data-filter="{{ chip.key }}" data-for="theirs">{{ chip.label }}</button>
+                {% endfor %}
+            </div>
+        </header>
+        <ul class="tb-shelf" data-shelf="theirs">
+            {% for row in theirs.rows %}{% if not row.on_table %}
+                {% include 'trades/_piece.html' with row=row field='requested_items' %}
+            {% endif %}{% endfor %}
+        </ul>
+        <p class="tb-roster-foot" data-foot="theirs">{{ theirs.shown }} of {{ theirs.total }} &middot; scroll</p>
+    </aside>
+
+    {# ── The rail: the negotiation, then who you are dealing with ───── #}
+    <aside class="tb-rail">
+        {% if thread %}{% include 'trades/_thread.html' %}{% endif %}
+        {% include 'trades/_trader_card.html' with trader=other %}
+    </aside>
+</form>
+
+{% if answering %}
+    {% comment %}
+    Accepting commits property in both directions at once and cannot be taken
+    back, so it says out loud what leaves and what arrives before the last
+    button. Without JavaScript this dialog stays hidden and Review & accept
+    does nothing — the fallback is a screen that cannot accept, never one
+    that accepts without asking.
+    {% endcomment %}
+    <div class="tb-confirm" id="tb-accept" hidden>
+        <div class="tb-confirm-box" role="dialog" aria-modal="true" aria-labelledby="tb-confirm-title">
+            <h2 id="tb-confirm-title">Accept this trade?</h2>
+            <p class="tb-confirm-terms">{{ terms_line }}</p>
+            <div class="tb-confirm-cols">
+                <div>
+                    <span class="kb-eyebrow">Leaving you</span>
+                    <ul>{% for row in mine.rows %}{% if row.on_table %}<li>{{ row.item.title }}</li>{% endif %}{% endfor %}</ul>
+                </div>
+                <div>
+                    <span class="kb-eyebrow">Coming to you</span>
+                    <ul>
+                        <li>{{ anchor.title }}</li>
+                        {% for row in theirs.rows %}{% if row.on_table %}<li>{{ row.item.title }}</li>{% endif %}{% endfor %}
+                    </ul>
+                </div>
+            </div>
+            <p class="tb-confirm-small">
+                Both sides ship within {{ ship_by_days }} days with tracking. Accepting
+                declines every other offer on this piece, and cannot be taken back.
+                Anything you moved on the table above is <strong>not</strong> part of
+                this &mdash; accept takes the offer as they sent it.
+            </p>
+            <div class="tb-confirm-actions">
+                <button type="button" class="tb-decide tb-decide--quiet" id="tb-accept-close">Go back</button>
+                <form method="post" action="{% url 'trades:offer_action' offer.pk 'accept' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="tb-decide tb-decide--go">Accept the trade</button>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/trade-composer.js' %}"></script>
+<script src="{% static 'js/trade-confirm.js' %}"></script>
+{% endblock %}

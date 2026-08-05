@@ -15,9 +15,15 @@ about themselves.
 from django.contrib.auth.models import User
 from django.db.models import Count, Max, Min, Q
 
-from .matching import holdings, holdings_matching, owners_by_want
+from .matching import (
+    MAX_WANTS_MATCHED,
+    holdings,
+    holdings_matching,
+    owners_by_want,
+    want_clause,
+)
 from .models import CollectionItem, WantedItem
-from .tradeability import HELD_BY_A_LOT
+from .tradeability import HELD_BY_A_LOT, open_to_trade
 
 # How many people get the big card. Past eight or so the page stops being a
 # shortlist and becomes a directory.
@@ -228,6 +234,39 @@ def _case_strips(user_ids):
     return strips
 
 
+def _propose_targets(user_ids, wants):
+    """Which piece "Propose a trade" should open on, per collector.
+
+    A negotiation is about one licence, so the button has to name one. The
+    best guess is the piece that answers something on your own wanted list —
+    that being why you are looking at this card — and failing that whatever
+    they have most recently opened. You can change it on the next screen;
+    what matters is not landing on a chooser that asks a question the page
+    already knows the answer to.
+    """
+    if not user_ids:
+        return {}
+
+    available = (
+        open_to_trade(CollectionItem.objects.filter(
+            is_public=True, owner_id__in=user_ids))
+        .order_by('-created_at')
+    )
+
+    wanted_ids = set()
+    for want in wants[:MAX_WANTS_MATCHED]:
+        clause = want_clause(want)
+        if clause is not None:
+            wanted_ids |= set(available.filter(clause).values_list('id', flat=True))
+
+    targets = {}
+    for item in available:
+        current = targets.get(item.owner_id)
+        if current is None or (item.id in wanted_ids and current.id not in wanted_ids):
+            targets[item.owner_id] = item
+    return targets
+
+
 def _since(user):
     """'collecting since 1978' if we know, 'here since 2019' if we only know that."""
     joined = user.date_joined.year if user.date_joined else None
@@ -329,6 +368,7 @@ def collector_rows(viewer, params):
     user_ids = [u.id for u in users]
     strips = _case_strips(user_ids)
     home_counties = _home_counties(user_ids)
+    openers = _propose_targets(user_ids, wants)
 
     rows, featured = [], 0
     for user in users:
@@ -351,6 +391,7 @@ def collector_rows(viewer, params):
             'selling_count': user.selling_count,
             'will_trade': bool(user.trade_count),
             'open_to_trade': user.trade_count,
+            'propose_item': openers.get(user.id),
             'of_your_wants': overlap,
             'wants_from_you': wants_mine_count.get(user.id, 0),
             'case': strips.get(user.id, []),

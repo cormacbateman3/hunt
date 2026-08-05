@@ -205,7 +205,7 @@ class OfferPrivacyTests(TradeabilityBase):
         resp = self.client.get(reverse('trades:offer_detail', args=[mine.pk]))
         self.assertEqual(resp.status_code, 200)
 
-        shown = list(resp.context['history'])
+        shown = [r['offer'] for r in resp.context['thread']]
         self.assertIn(mine, shown)
         self.assertNotIn(theirs, shown)
 
@@ -215,8 +215,8 @@ class OfferPrivacyTests(TradeabilityBase):
         second = self._offer(listing, self.rival)
 
         self.client.force_login(self.owner)
-        shown = list(self.client.get(
-            reverse('trades:offer_detail', args=[first.pk])).context['history'])
+        shown = [r['offer'] for r in self.client.get(
+            reverse('trades:offer_detail', args=[first.pk])).context['thread']]
         self.assertIn(first, shown)
         self.assertNotIn(second, shown)
 
@@ -229,8 +229,8 @@ class OfferPrivacyTests(TradeabilityBase):
         rival = self._offer(listing, self.rival)
 
         self.client.force_login(self.suitor)
-        shown = list(self.client.get(
-            reverse('trades:offer_detail', args=[opening.pk])).context['history'])
+        shown = [r['offer'] for r in self.client.get(
+            reverse('trades:offer_detail', args=[opening.pk])).context['thread']]
         self.assertIn(opening, shown)
         self.assertIn(counter, shown)
         self.assertNotIn(rival, shown)
@@ -264,16 +264,16 @@ class CompletedTradeTests(TradeabilityBase):
         theirs = self._item(owner=self.suitor, title='Theirs')
 
         offer = TradeOffer.objects.create(
-            trade_listing=listing, from_user=self.suitor, to_user=self.owner,
-            status='accepted')
+            subject_item=mine, trade_listing=listing,
+            from_user=self.suitor, to_user=self.owner, status='accepted')
         TradeOfferItem.objects.create(
             offer=offer, collection_item=theirs, direction='offered')
         TradeOfferItem.objects.create(
             offer=offer, collection_item=mine, direction='requested')
 
         trade = Trade.objects.create(
-            listing=listing, initiator=self.suitor, counterparty=self.owner,
-            status='delivered_both')
+            offer=offer, listing=listing, initiator=self.suitor,
+            counterparty=self.owner, status='delivered_both')
         return trade, mine, theirs, _close_traded_pieces
 
     def test_completion_stops_advertising_both_pieces(self):
@@ -295,11 +295,12 @@ class CompletedTradeTests(TradeabilityBase):
         close(trade)
         mine.refresh_from_db()
 
-        second = Listing.objects.create(
-            seller=self.rival, title='Another', description='d', state=self.pa,
-            condition_grade='good', status='active', listing_type='trade')
+        # The owner tries to put the departed licence on somebody else's
+        # table. It is refused before anybody can accept and be struck for
+        # failing to ship it.
+        wanted = self._item(owner=self.rival, title='Rival piece')
         offer, error = create_trade_offer(
-            listing=second, from_user=self.owner, to_user=self.rival,
+            subject_item=wanted, from_user=self.owner, to_user=self.rival,
             offered_items=[mine])
         self.assertIsNone(offer)
         self.assertIn('cannot be traded', error)

@@ -93,7 +93,7 @@ def _year_by_county(user):
     return out
 
 
-def roster(*, owner, reader, on_table, side):
+def roster(*, owner, reader, on_table, side, pinned=None):
     """One shelf, annotated for the person reading it.
 
     ``owner`` holds the pieces. ``reader`` is whoever is looking — which is
@@ -121,7 +121,6 @@ def roster(*, owner, reader, on_table, side):
         .prefetch_related('images')
         .order_by('-created_at')[:ROSTER_LIMIT]
     )
-    total = CollectionItem.objects.filter(owner=owner).count()
     if side == 'theirs':
         # Somebody else's shelf shows only what they put on public show, and
         # only what they have left open.
@@ -131,6 +130,16 @@ def roster(*, owner, reader, on_table, side):
         )
         items = [i for i in items if i.pk in allowed]
         total = len(allowed)
+    else:
+        # "61 tradeable", not "61 items" — the shelf is what you can put on
+        # the table, so counting anything else overstates it.
+        total = open_to_trade(CollectionItem.objects.filter(owner=owner)).count()
+
+    # The piece the negotiation is about is already laid out on the table and
+    # cannot be taken off, so listing it again on the shelf offers a pick
+    # that does nothing.
+    if pinned is not None:
+        items = [i for i in items if i.pk != pinned]
 
     if side == 'mine':
         wants = list(
@@ -168,6 +177,12 @@ def roster(*, owner, reader, on_table, side):
                 note, kind = 'Closes a gap', 'gap'
             elif item.county_id and item.license_year in years.get(item.county_id, ()):
                 note, kind = f'You have {item.license_year}', 'wanted'
+
+        # A row with nothing else to say falls back to condition, which is
+        # the next thing you would want to know and stops the shelf reading
+        # as half-blank.
+        if not note and item.condition_grade:
+            note, kind = item.get_condition_grade_display(), ''
 
         rows.append({
             'item': item,
@@ -226,35 +241,98 @@ def table_for(offer, viewer):
     }
 
 
-def thread(offer):
+def thread_offers(offer):
     """Every round of this negotiation, newest first.
 
-    Scoped to the two people having it. Filtering by listing alone showed
-    every rival proposer's offers to every other proposer — what somebody
-    was willing to give up is theirs, not the room's.
+    Scoped to the two people having it **and to the piece**. Filtering by
+    listing alone showed every rival proposer's offers to every other
+    proposer — what somebody was willing to give up is theirs, not the
+    room's. Since 10.10 a negotiation can have no listing at all, so the
+    subject piece is the anchor and the listing is only a fallback for
+    records made before it existed.
     """
     from .models import TradeOffer
 
     parties = {offer.from_user_id, offer.to_user_id}
-    rounds = (
-        TradeOffer.objects
-        .filter(trade_listing_id=offer.trade_listing_id,
-                from_user_id__in=parties, to_user_id__in=parties)
+    rounds = TradeOffer.objects.filter(
+        from_user_id__in=parties, to_user_id__in=parties)
+    if offer.subject_item_id:
+        rounds = rounds.filter(subject_item_id=offer.subject_item_id)
+    elif offer.trade_listing_id:
+        rounds = rounds.filter(trade_listing_id=offer.trade_listing_id)
+    else:
+        rounds = rounds.filter(pk=offer.pk)
+    return (
+        rounds
         .select_related('from_user__profile', 'to_user__profile')
-        .prefetch_related('items')
+        .prefetch_related('items__collection_item')
         .order_by('-created_at')
     )
-    return [
-        {
+
+
+def _what_changed(this, previous):
+    """'Added $40 cash, dropped the 1951 Elk' — the rail's second line.
+
+    A round that only says "3 pieces on the table" makes you open both to
+    see what moved. Comparing consecutive rounds is cheap and it is the
+    whole reason the timeline is worth having.
+    """
+    if previous is None:
+        return ''
+
+    def by_side(offer):
+        out = {'offered': set(), 'requested': set()}
+        for item in offer.items.all():
+            out[item.direction].add(item.collection_item)
+        return out
+
+    now, before = by_side(this), by_side(previous)
+    # A counter comes from the other chair, so what they offered is what I
+    # am now being asked for. Compare like with like.
+    flipped = this.from_user_id != previous.from_user_id
+    before = ({'offered': before['requested'], 'requested': before['offered']}
+              if flipped else before)
+
+    notes = []
+    added = (now['offered'] | now['requested']) - (before['offered'] | before['requested'])
+    dropped = (before['offered'] | before['requested']) - (now['offered'] | now['requested'])
+    for piece in sorted(added, key=lambda p: p.pk)[:2]:
+        notes.append(f'added the {piece.license_year or ""} {piece.title}'.replace('  ', ' ').strip())
+    for piece in sorted(dropped, key=lambda p: p.pk)[:2]:
+        notes.append(f'dropped the {piece.license_year or ""} {piece.title}'.replace('  ', ' ').strip())
+
+    if this.cash_amount != previous.cash_amount:
+        if this.cash_amount:
+            notes.append(f'cash now ${this.cash_amount:,.0f}')
+        else:
+            notes.append('cash off the table')
+    elif this.cash_amount and this.cash_direction != previous.cash_direction:
+        notes.append('turned the cash round')
+
+    if not notes:
+        return 'same pieces, sent again'
+    sentence = ', '.join(notes)
+    return sentence[0].upper() + sentence[1:]
+
+
+def thread(offer):
+    """The rail's timeline — each round with what actually moved."""
+    rounds = list(thread_offers(offer))
+    rows = []
+    for index, round_ in enumerate(rounds):
+        # `rounds` is newest-first, so the round before this one is the next
+        # item along.
+        previous = rounds[index + 1] if index + 1 < len(rounds) else None
+        rows.append({
             'offer': round_,
             'who': (round_.from_user.profile.get_display_name()
                     if hasattr(round_.from_user, 'profile') else round_.from_user.username),
             'verb': 'countered' if round_.counter_to_id else 'opened',
             'pieces': len(round_.items.all()),
+            'changed': _what_changed(round_, previous),
             'is_this_one': round_.pk == offer.pk,
-        }
-        for round_ in rounds
-    ]
+        })
+    return rows
 
 
 def trader_trust(user):

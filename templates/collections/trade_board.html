@@ -80,15 +80,12 @@ what could I get, not what is for sale.
                         {{ row.owner.profile.get_display_name }}
                     </a>
                     {% comment %}
-                    DEFERRED — this should open a proposal against this piece.
-                    Blocked on: TradeOffer.trade_listing is a non-null FK and
-                    Trade.listing is a OneToOne doing double duty as the
-                    uniqueness anchor, so an offer cannot start from an item
-                    nobody has listed. Both have to become nullable together.
-                    Register: docs/internal/plan_design.md
+                    One click, straight at the piece. Until 10.10 made
+                    TradeOffer.trade_listing nullable this had to walk you to
+                    the owner's shelf and hope something on it was listed.
                     {% endcomment %}
-                    <a href="{% url 'accounts:profile' row.owner.username %}?group=trade#the-collection"
-                       class="bd-ask">Ask about it</a>
+                    <a href="{% url 'trades:propose_on_item' row.item.pk %}"
+                       class="bd-ask">Offer for it</a>
                 </div>
             </article>
         {% endfor %}

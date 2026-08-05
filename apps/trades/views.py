@@ -12,7 +12,7 @@ from apps.reviews.forms import ReviewForm
 from apps.reviews.models import Review
 from apps.shipping.services import ShippoError
 from apps.collections.models import CollectionItem
-from apps.collections.tradeability import open_to_trade
+from apps.collections.tradeability import open_to_trade, trade_block_reason
 from apps.listings.models import Listing
 from . import composer
 from .forms import TradeOfferForm
@@ -43,103 +43,6 @@ def _get_trade_listing(pk):
     )
 
 
-def _composer_context(request, *, listing, other, form, on_table_mine,
-                      on_table_theirs):
-    """Everything the dark table and its two rosters need.
-
-    Shared by propose and counter because they are the same screen with the
-    pronouns swapped — the counter is not a different decision, it is the
-    same one taken from the other chair.
-    """
-    anchor = listing.source_collection_item
-    receiving = len(on_table_theirs | ({anchor.pk} if anchor else set()))
-    return {
-        'listing': listing,
-        'form': form,
-        'other': other,
-        'mine': composer.roster(
-            owner=request.user, reader=request.user, side='mine',
-            on_table=on_table_mine),
-        'theirs': composer.roster(
-            owner=other, reader=request.user, side='theirs',
-            on_table=on_table_theirs),
-        'anchor': anchor,
-        'allow_cash': listing.allow_cash,
-        'trader_trust': composer.trader_trust(other),
-        'ship_by_days': ship_by_days(),
-        # Rendered server-side so the sentence is right before any script
-        # runs, and on the counter screen where the table opens full.
-        'terms_line': composer.terms_line(
-            giving=len(on_table_mine),
-            receiving=receiving,
-            cash_amount=None,
-            cash_direction='from_proposer',
-        ),
-    }
-
-
-def _open_negotiations(user, *, excluding=None):
-    """'← Back to my 3 open negotiations' — the breadcrumb's third line."""
-    qs = TradeOffer.objects.filter(
-        Q(from_user=user) | Q(to_user=user), status='pending')
-    if excluding:
-        qs = qs.exclude(pk=excluding)
-    return qs.count()
-
-
-@login_required
-def propose_offer(request, listing_id):
-    listing = _get_trade_listing(listing_id)
-    if request.user.id == listing.seller_id:
-        messages.error(request, 'Sellers cannot propose trade offers on their own listings.')
-        return redirect('listings:detail', pk=listing.pk)
-
-    allowed, reason = enforce_capability(request.user, 'trade')
-    if not allowed:
-        messages.error(request, reason)
-        return redirect('listings:detail', pk=listing.pk)
-
-    offered_queryset = open_to_trade(
-        CollectionItem.objects.filter(owner=request.user)).order_by('-created_at')
-    requested_queryset = open_to_trade(
-        CollectionItem.objects.filter(owner=listing.seller, is_public=True))
-    if not request.user.profile.phone_verified:
-        messages.info(request, 'Phone verification is recommended for smoother trade trust.')
-    form = TradeOfferForm(
-        request.POST or None,
-        offered_queryset=offered_queryset,
-        requested_queryset=requested_queryset,
-        allow_cash=listing.allow_cash,
-    )
-    if request.method == 'POST' and form.is_valid():
-        offer, error = create_trade_offer(
-            listing=listing,
-            from_user=request.user,
-            to_user=listing.seller,
-            offered_items=form.cleaned_data['offered_items'],
-            requested_items=form.cleaned_data.get('requested_items'),
-            message=form.cleaned_data.get('message', ''),
-            cash_amount=form.cleaned_data.get('cash_amount') or Decimal('0.00'),
-            cash_direction=form.cleaned_data.get('cash_direction') or 'from_proposer',
-            expires_days=form.cleaned_data.get('expires_days') or 4,
-        )
-        if offer:
-            messages.success(request, f'Trade offer #{offer.pk} submitted.')
-            return redirect('trades:offer_detail', offer_id=offer.pk)
-        messages.error(request, error)
-
-    context = _composer_context(
-        request, listing=listing, other=listing.seller, form=form,
-        on_table_mine=_posted_ids(request, 'offered_items'),
-        on_table_theirs=_posted_ids(request, 'requested_items'),
-    )
-    context.update({
-        'mode': 'propose',
-        'open_negotiations': _open_negotiations(request.user),
-    })
-    return render(request, 'trades/propose_offer.html', context)
-
-
 def _posted_ids(request, field):
     """Which pieces were on the table when the form came back with errors.
 
@@ -151,40 +54,44 @@ def _posted_ids(request, field):
     return {int(v) for v in request.POST.getlist(field) if v.isdigit()}
 
 
-@login_required
-def counter_offer(request, offer_id):
-    parent_offer = get_object_or_404(
-        TradeOffer.objects.select_related('trade_listing', 'trade_listing__seller', 'from_user', 'to_user')
-        .prefetch_related('items__collection_item'),
-        pk=offer_id,
-    )
-    if request.user.id != parent_offer.to_user_id:
-        return HttpResponseForbidden('Only the recipient can counter this offer.')
-    if parent_offer.status != 'pending':
-        messages.error(request, 'Only pending offers can be countered.')
-        return redirect('trades:offer_detail', offer_id=parent_offer.pk)
+def _open_negotiations(user, *, excluding=None):
+    """'← Back to my 3 open negotiations' — the breadcrumb's third line."""
+    qs = TradeOffer.objects.filter(
+        Q(from_user=user) | Q(to_user=user), status='pending')
+    if excluding:
+        qs = qs.exclude(pk=excluding)
+    return qs.count()
 
-    allowed, reason = enforce_capability(request.user, 'trade')
-    if not allowed:
-        messages.error(request, reason)
-        return redirect('trades:offer_detail', offer_id=parent_offer.pk)
 
-    listing = parent_offer.trade_listing
-    other = parent_offer.from_user
+def _trading_block(request, *, subject, other, listing=None, offer=None):
+    """**The** Trading Block screen — turn 3a, and there is only one of it.
+
+    3a is headed *"both rosters, the table, the rail, and three decisions you
+    can't miss"*: the shelves and the decisions are on the same page. That is
+    the whole idea. You read the offer as it stands, and if you want to
+    change it you move a licence and the middle button becomes the counter —
+    rather than being sent to a second screen that starts from nothing.
+
+    So one function serves both arrivals: opening a negotiation, and
+    answering one.
+    """
+    answering = bool(offer and request.user.id == offer.to_user_id
+                     and offer.status == 'pending')
+
     offered_queryset = open_to_trade(
         CollectionItem.objects.filter(owner=request.user)).order_by('-created_at')
     requested_queryset = open_to_trade(
         CollectionItem.objects.filter(owner=other, is_public=True))
-    if not request.user.profile.phone_verified:
-        messages.info(request, 'Phone verification is recommended for smoother trade trust.')
     form = TradeOfferForm(
         request.POST or None,
         offered_queryset=offered_queryset,
         requested_queryset=requested_queryset,
-        allow_cash=listing.allow_cash,
+        allow_cash=listing.allow_cash if listing else True,
     )
+
     if request.method == 'POST' and form.is_valid():
-        offer, error = create_trade_offer(
+        new_offer, error = create_trade_offer(
+            subject_item=subject,
             listing=listing,
             from_user=request.user,
             to_user=other,
@@ -194,36 +101,152 @@ def counter_offer(request, offer_id):
             cash_amount=form.cleaned_data.get('cash_amount') or Decimal('0.00'),
             cash_direction=form.cleaned_data.get('cash_direction') or 'from_proposer',
             expires_days=form.cleaned_data.get('expires_days') or 4,
-            counter_to=parent_offer,
+            counter_to=offer if answering else None,
         )
-        if offer:
-            messages.success(request, f'Counteroffer #{offer.pk} submitted.')
-            return redirect('trades:offer_detail', offer_id=offer.pk)
+        if new_offer:
+            # `%-d` is not portable, so the day is interpolated rather than
+            # formatted.
+            when = new_offer.expires_at
+            messages.success(request, 'Sent. They have until {} to answer.'.format(
+                f'{when.day} {when:%b}' if when else 'the deadline'))
+            return redirect('trades:offer_detail', offer_id=new_offer.pk)
         messages.error(request, error)
 
-    # A counter opens on the deal as it stands, with the sides swapped: what
-    # they asked of me is now mine to give. Starting from an empty table
-    # would make every counter a fresh proposal.
+    # What is on the table. On a fresh POST, whatever they had picked; on an
+    # offer, the deal as it stands with the sides swapped for whoever is
+    # reading — what they asked of me is mine to give.
     if request.method == 'POST':
         mine = _posted_ids(request, 'offered_items')
         theirs = _posted_ids(request, 'requested_items')
+    elif offer:
+        proposing = request.user.id == offer.from_user_id
+        items = list(offer.items.all())
+        mine = {i.collection_item_id for i in items
+                if i.direction == ('offered' if proposing else 'requested')}
+        theirs = {i.collection_item_id for i in items
+                  if i.direction == ('requested' if proposing else 'offered')}
     else:
-        mine = {i.collection_item_id for i in parent_offer.items.all()
-                if i.direction == 'requested'}
-        theirs = {i.collection_item_id for i in parent_offer.items.all()
-                  if i.direction == 'offered'}
+        mine, theirs = set(), set()
 
-    context = _composer_context(
-        request, listing=listing, other=other, form=form,
-        on_table_mine=mine, on_table_theirs=theirs,
+    thread = composer.thread(offer) if offer else []
+    # The subject sits on whichever side its owner is. On a counter that is
+    # the reader's own side, so the table has to move it across rather than
+    # pinning it under "I receive" and quietly lying.
+    subject_is_mine = subject.owner_id == request.user.id
+    giving = len(mine | ({subject.pk} if subject_is_mine else set()))
+    receiving = len(theirs | (set() if subject_is_mine else {subject.pk}))
+    return {
+        'subject': subject,
+        'listing': listing,
+        'offer': offer,
+        'form': form,
+        'other': other,
+        'mine': composer.roster(owner=request.user, reader=request.user,
+                                side='mine', on_table=mine,
+                                pinned=subject.pk if subject_is_mine else None),
+        'theirs': composer.roster(owner=other, reader=request.user,
+                                  side='theirs', on_table=theirs,
+                                  pinned=None if subject_is_mine else subject.pk),
+        'anchor': subject,
+        'anchor_is_mine': subject_is_mine,
+        'allow_cash': listing.allow_cash if listing else True,
+        'trader_trust': composer.trader_trust(other),
+        'ship_by_days': ship_by_days(),
+        'thread': thread,
+        'round_number': len(thread) + 1,
+        # Rendered server-side so the sentence is right before any script
+        # runs — and it is the sentence the buttons are answering.
+        'terms_line': composer.terms_line(
+            giving=giving, receiving=receiving,
+            cash_amount=offer.cash_amount if offer else None,
+            cash_direction=(offer.cash_direction if offer else 'from_proposer'),
+        ),
+        'giving_count': giving,
+        'receiving_count': receiving,
+        'picked_count': len(mine),
+        'answering': answering,
+        'waiting_on_them': bool(offer and request.user.id == offer.from_user_id
+                                and offer.status == 'pending'),
+        'open_negotiations': _open_negotiations(
+            request.user, excluding=offer.pk if offer else None),
+    }
+
+
+def _guard_trade(request, other, *, back):
+    """Everything that stops a trade before the screen is worth drawing."""
+    if request.user.id == other.id:
+        messages.error(request, 'You cannot trade with yourself.')
+        return redirect(back)
+    allowed, reason = enforce_capability(request.user, 'trade')
+    if not allowed:
+        messages.error(request, reason)
+        return redirect(back)
+    return None
+
+
+@login_required
+def propose_offer(request, listing_id):
+    """Open a negotiation from a lot — a Trading Block lot or a Store shelf."""
+    listing = _get_trade_listing(listing_id)
+    back = redirect('listings:detail', pk=listing.pk).url
+    stop = _guard_trade(request, listing.seller, back=back)
+    if stop:
+        return stop
+
+    subject = listing.source_collection_item
+    if subject is None:
+        messages.error(request, 'This lot has no catalogued piece behind it yet.')
+        return redirect(back)
+    blocked = trade_block_reason(subject)
+    if blocked:
+        messages.error(request, blocked)
+        return redirect(back)
+
+    context = _trading_block(request, subject=subject, other=listing.seller,
+                             listing=listing)
+    if not isinstance(context, dict):
+        return context
+    return render(request, 'trades/trading_block.html', context)
+
+
+@login_required
+def propose_on_item(request, item_id):
+    """Open a negotiation from a piece in somebody's collection.
+
+    The thing 10.10 was for. Until the listing FK became nullable this could
+    not exist, so "propose a trade" on a collector card had to walk you to
+    their shelf and hope something there was listed.
+    """
+    subject = get_object_or_404(
+        CollectionItem.objects.select_related('owner', 'county', 'state'),
+        pk=item_id, is_public=True,
     )
-    context.update({
-        'mode': 'counter',
-        'parent_offer': parent_offer,
-        'round_number': _round_number(parent_offer) + 1,
-        'open_negotiations': _open_negotiations(request.user, excluding=parent_offer.pk),
-    })
-    return render(request, 'trades/propose_offer.html', context)
+    back = redirect('collections:item_detail', pk=subject.pk).url
+    stop = _guard_trade(request, subject.owner, back=back)
+    if stop:
+        return stop
+
+    blocked = trade_block_reason(subject)
+    if blocked:
+        messages.error(request, blocked)
+        return redirect(back)
+
+    # A piece on a Store shelf keeps its lot attached, so the seller's own
+    # terms (cash or no cash) still apply to a trade proposed against it.
+    listing = subject.listings.filter(
+        listing_type__in=TRADEABLE_LISTING_TYPES, status='active').first()
+
+    context = _trading_block(request, subject=subject, other=subject.owner,
+                             listing=listing)
+    if not isinstance(context, dict):
+        return context
+    return render(request, 'trades/trading_block.html', context)
+
+
+@login_required
+def counter_offer(request, offer_id):
+    """Kept so old links still land. Countering happens on the one screen."""
+    return redirect('trades:offer_detail', offer_id=offer_id)
 
 
 def _round_number(offer):
@@ -239,12 +262,19 @@ def _round_number(offer):
 
 @login_required
 def offer_detail(request, offer_id):
+    """Answering a negotiation — the same screen as opening one.
+
+    Turn 3a puts the shelves and the three decisions on one page, so the
+    reply to an offer is *move a licence and send*, not *go to another
+    screen and start again*.
+    """
     offer = get_object_or_404(
-        TradeOffer.objects.select_related('trade_listing', 'from_user', 'to_user', 'trade_listing__source_collection_item')
+        TradeOffer.objects
+        .select_related('trade_listing', 'from_user', 'to_user', 'subject_item')
         .prefetch_related('items__collection_item', 'counteroffers'),
         pk=offer_id,
     )
-    if request.user.id not in {offer.from_user_id, offer.to_user_id, offer.trade_listing.seller_id}:
+    if request.user.id not in {offer.from_user_id, offer.to_user_id}:
         return HttpResponseForbidden('You do not have access to this offer.')
 
     if offer.status == 'pending' and offer.expires_at and offer.expires_at <= timezone.now():
@@ -253,21 +283,32 @@ def offer_detail(request, offer_id):
 
     other = (offer.to_user if request.user.id == offer.from_user_id
              else offer.from_user)
-    thread = composer.thread(offer)
-    trade = Trade.objects.filter(listing=offer.trade_listing).first()
-    return render(request, 'trades/offer_detail.html', {
-        'offer': offer,
-        'other': other,
-        'table': composer.table_for(offer, request.user),
-        'thread': thread,
-        'round_number': len(thread) - next(
-            (i for i, row in enumerate(thread) if row['is_this_one']), 0),
-        'history': [row['offer'] for row in thread],
-        'trader_trust': composer.trader_trust(other),
-        'ship_by_days': ship_by_days(),
-        'is_mine_to_answer': request.user.id == offer.to_user_id,
-        'trade': trade,
-    })
+    subject = offer.subject_item or (
+        offer.trade_listing.source_collection_item if offer.trade_listing_id else None)
+    trade = getattr(offer, 'struck_trade', None) or Trade.objects.filter(
+        offer__in=composer.thread_offers(offer)).first()
+
+    # A settled negotiation is a record, not a workbench: no shelves, no
+    # buttons that would do anything.
+    if subject is None or offer.status != 'pending':
+        return render(request, 'trades/trading_block.html', {
+            'offer': offer,
+            'other': other,
+            'subject': subject,
+            'settled': True,
+            'table': composer.table_for(offer, request.user),
+            'thread': composer.thread(offer),
+            'trader_trust': composer.trader_trust(other),
+            'ship_by_days': ship_by_days(),
+            'trade': trade,
+        })
+
+    context = _trading_block(request, subject=subject, other=other,
+                             listing=offer.trade_listing, offer=offer)
+    if not isinstance(context, dict):
+        return context
+    context['trade'] = trade
+    return render(request, 'trades/trading_block.html', context)
 
 
 @login_required
@@ -304,14 +345,17 @@ def offer_action(request, offer_id, action):
 @login_required
 def trade_detail(request, trade_id):
     trade = get_object_or_404(
-        Trade.objects.select_related('listing', 'initiator', 'counterparty').prefetch_related('shipments'),
+        Trade.objects
+        .select_related('listing', 'initiator', 'counterparty',
+                        'offer__subject_item')
+        .prefetch_related('shipments', 'offer__items__collection_item'),
         pk=trade_id,
     )
-    if request.user.id not in {trade.initiator_id, trade.counterparty_id, trade.listing.seller_id}:
+    # The two traders, and nobody else. A lot's seller used to be admitted
+    # here as a third party, which was only ever the same person.
+    if request.user.id not in {trade.initiator_id, trade.counterparty_id}:
         return HttpResponseForbidden('You do not have access to this trade.')
-    accepted_offer = TradeOffer.objects.filter(trade_listing=trade.listing, status='accepted').prefetch_related(
-        'items__collection_item'
-    ).first()
+    accepted_offer = trade.offer
     sync_trade_status(trade, notify=False)
     shipments_by_sender = {shipment.sender_id: shipment for shipment in trade.shipments.all()}
     other = (trade.counterparty if request.user.id == trade.initiator_id

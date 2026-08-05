@@ -1,6 +1,19 @@
 # KeystoneBid
 
 review docs\internal\design\ui-ux-redesign-model in detail.
+or access it here:
+Use the claude_design MCP (https://api.anthropic.com/v1/design/mcp, auth via /design-login) to import this project:
+https://claude.ai/design/p/5353903d-008e-4c32-8ae3-7e06d53e3302?file=KeystoneBid+UX+Revamp.dc.html
+
+Focus on these files (the whole project is readable):
+- `KeystoneBid UX Revamp.dc.html`
+
+Also read these files the selection imports:
+- `assets/keystone-mark.svg`
+- `assets/keystonebid-logo.png`
+- `support.js`
+
+Implement: `KeystoneBid UX Revamp.dc.html`
 
 ## What this project is
 

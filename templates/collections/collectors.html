@@ -215,19 +215,16 @@ select reaches back into it with the `form` attribute instead.
                             </a>
 
                             {% comment %}
-                            DEFERRED — "Propose a trade" is still a two-step walk:
-                            it opens their trade shelf, where you pick a piece
-                            that is listed. An offer against an unlisted piece
-                            has nowhere to hang.
-                            Blocked on: TradeOffer.trade_listing is a non-null FK
-                            and Trade.listing is a OneToOne doing double duty as
-                            the uniqueness anchor. Both have to become nullable
-                            together, with something else holding uniqueness.
-                            Register: docs/internal/plan_design.md
+                            One click, as the design draws it. It opens on the
+                            piece of theirs that answers something on your own
+                            wanted list, falling back to whatever they opened
+                            most recently — you can change it at the table.
+                            Landing on a chooser would ask a question the card
+                            already knows the answer to.
                             {% endcomment %}
                             <div class="co-card-foot">
-                                {% if row.will_trade %}
-                                    <a href="{% url 'accounts:profile' row.user.username %}?group=trade#the-collection"
+                                {% if row.propose_item %}
+                                    <a href="{% url 'trades:propose_on_item' row.propose_item.pk %}"
                                        class="kb-btn kb-btn--primary kb-btn--sm">Propose a trade</a>
                                     <a href="{% url 'accounts:profile' row.user.username %}"
                                        class="kb-btn kb-btn--secondary kb-btn--sm">See their case</a>
