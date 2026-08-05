@@ -380,32 +380,64 @@ the three-step flow is live.
 
 ---
 
-## Pass 6 — Auth and the ten settings rooms ⬜ NEXT
+## Pass 6 — Auth and the ten settings rooms ✅ DONE
 
-**Owes the deferred register** — `UserProfile.county` becomes an FK, after which the
-collectors rail can filter people by **where they live** as well as where they collect.
+*2026-08-05 · commits `816f922`, `831bb7c`, `cf2d8de` · 351 tests green (38 added)*
+
+**Register debts settled** — `UserProfile.county` is now `home_state` + `home_county`
+FKs (`accounts/0006`, data migration `0007`), and the collectors rail asks **which
+question you mean**: where they live, or where they collect. **Still owed:**
+`display_caption` on `CollectionItem`, and the collection destination's own step 3 —
+both moved on to Pass 7.
 
 
 **Design refs** — turn 4a (sign in), 4b (create account), 4c (all ten rooms),
 3c/3d. Dev plan **10.16** (versioned terms).
 
-- **Sign in / Create account** — read like a membership application from a licence
-  office. Nav bar off, centred nameplate, hatched parchment ground, `FORM 1 · ENTRY`
-  / `FORM 2 · NEW MEMBER`. Password rules as a ticking checklist. **A human at the
-  bottom** — a real address and a promise of a real reply; auth is where older
-  users get stranded. Terms acceptance is versioned (10.16) — the current form has
-  no checkbox at all.
-- **Settings — six stacked cards on one 720px page become ten named rooms**, in
-  four groups: **Me** (Profile & display, Verification & trust, Addresses) ·
-  **Hunting** (Alerts & saved hunts, Notifications & mail) · **Selling** (Listing
-  defaults, Payouts & fees) · **Account** (Privacy & blocking, Records & export,
-  Policies & standing).
-- Profile & display carries the **showcase-layout picker** (Display case first /
-  Map first / One piece at a time / Just the collection).
+### What shipped
+
+| Piece | What landed |
+|---|---|
+| **`home_county` as an FK** | CLAUDE.md has said *"`home_county` is an FK, not a string"* since the start; it was free text help-texted "User's home Pennsylvania county". Now `home_state` + `home_county`, picked from the same unit list the listings use, so a profile can never disagree with a listing about what a county is called. The form only offers units inside the chosen state and refuses a mismatch outright. |
+| **The data migration** | Deliberately timid. Only exact matches inside the default state are taken, after stripping a trailing County/Parish/Borough. Anything else stays in the old text column and still shows through `UserProfile.place` — **nobody loses their county to a migration**. The reverse writes the unit name back, so a rollback keeps what the member had. |
+| **Sign in / Create account** | `templates/registration/_form_shell.html` + both pages. Nav off, centred nameplate, hatched parchment, `FORM 1 · ENTRY` / `FORM 2 · NEW MEMBER`. "Keep me signed in" added. Password rules as a **ticking checklist** rather than a paragraph of help text or an error after submit — client-side, and the code says plainly that Django still does the checking. **A human at the bottom**: a real address and a promise of a real reply. |
+| **Versioned Terms (10.16)** | `core.TermsVersion` + `TermsAcceptance` (`core/0011`). The form had **no checkbox at all**. Enforcement is only fair if you can say what somebody agreed to: a strike issued under 1.3 against a member who joined under 1.1 is not defensible. `PROTECT` on the version so one somebody accepted cannot be deleted; a `UniqueConstraint` so nobody accepts the same version twice. **Nothing is invented when the table is empty** — no published version means no checkbox. |
+| **The right-hand column** | Says out loud that an address is needed to sell and a phone to trade — *but not today*. The gating rules are real and good; discovering them at the moment you try to list something is what makes them feel arbitrary. The figures beside it are counted, never rounded up. |
+| **Settings — ten rooms** | `apps/accounts/settings_rooms.py`. Four groups (Me · Hunting · Selling · Account), grouped by **whose problem it is**; nothing in two groups. Each room loads only its own work, held by a test. An unknown room falls back rather than 404ing. |
+| **Showcase layout** | `UserProfile.showcase_layout` — display case first / map first / one piece at a time / just the collection. On Profile & display. |
+
+### A latent migration defect this uncovered
+
+`collections/0001` declares two FKs as `core.county`; `core/0004` renamed that model
+to `GeographicUnit`. `RenameModel` only rewrites references already in the migration
+state when it runs, and **nothing pinned the ordering** — so the rename was free to
+run first and the state failed to render:
+
+```
+Related model 'core.county' cannot be resolved
+```
+
+It sat there for six migrations and only surfaced when `accounts/0006` added
+accounts→core edges and changed the topological order. Fixed by giving `core/0004`
+the dependencies it always needed on the two migrations naming the old model. No
+schema change: same table, same column, same constraint.
+
+### Deviations, and why
+
+Three rooms are **honest about what is not built** rather than showing controls that
+save nowhere. Each carries a `DEFERRED` marker and says what it does today:
+
+- **Notifications & mail** — per-type email preferences need a
+  `NotificationPreference` model. Today everything on a deadline is emailed and
+  nothing else is, and the room says so.
+- **Alerts & saved hunts** — saved hunts need a `SavedHunt` model. A want does the
+  same job for anything you can name, and the room points at the wanted list.
+- **Records & export** — the downloadable copy is Pass 10 work. The room gives a
+  real address to ask in the meantime.
 
 ---
 
-## Pass 7 — Trade board v2 ⬜
+## Pass 7 — Trade board v2 ⬜ NEXT
 
 **Owes the deferred register** — three things unblock together when 10.10 makes
 tradeability a property of the item: the **"Will trade" flag** returns to the collector
@@ -616,13 +648,15 @@ coming back for it.
 | **"Propose a trade"** as one click | a two-step walk — the button opens their trade-eligible shelf | a proposal today needs a `listing_id`; tradeability is not yet a property of the item | **7** (10.10) | point the button at a person-level propose view |
 | **"Sets going"** — the card's third figure | shows **counties held** instead | no `CollectionSet` model | **13** (10.14) | swap the annotation in `apps/collections/collectors.py`; the layout does not change |
 | **Earned badges** under the profile bio | omitted; marker in `templates/accounts/profile.html` | no `Badge` model or its thirteen awards | **14** | render the badge row where the marker sits |
-| **Display-case captions** | reuses the item `description` | no `display_caption` field on `CollectionItem` | **6** | add the field, fall back to `description` |
+| **Display-case captions** | reuses the item `description` | no `display_caption` field on `CollectionItem` | **7** | add the field, fall back to `description` |
 | **The lot route** — a box of several licences | not built; marker in `templates/listings/sell_start.html` | `ListingLotItem` / `inventory_format` (10.15, T13) | **later** | add the second entry beside the three destinations |
-| **The collection terms panel** | those fields are still on the old collection item form | nothing — it is scope left, not a blocker | **6** | give the collection destination its own step 3 |
+| **The collection terms panel** | those fields are still on the old collection item form | nothing — it is scope left, not a blocker | **7** | give the collection destination its own step 3 |
 | **The map** (Collections tab, profile *Ground covered*) | honest placeholder + a hatched panel; the figures beside it are real | county **geometry** does not exist; `GeographicUnit.valid_from`/`valid_to` absent | **9 / 10** | draw the choropleth; the arithmetic in `apps/collections/tracker.py` is already there |
 | **Trade board** tab | leaves the zone for `/hunt/?format=trade` | the designed board is its own screen | **7** | make the tab local |
 | **Distance** — *"41 within a hundred miles"* | reads *N will trade · N selling now* | no geocoding, no geometry | **9 / 10** | add the measure to the header line |
-| **Filtering people by where they live** | filters on **where they collect** | `UserProfile.county` is free text | **6** | switch the facet to the FK |
+| ~~**Filtering people by where they live**~~ ✅ | the rail now asks which question you mean | settled in Pass 6 | — | — |
+| **Per-type mail preferences** | Notifications & mail says what arrives today | no `NotificationPreference` model | **later** | render the switches where the marker sits |
+| **Records export** | the room offers a real address to ask | nothing but the work | **10** | build the CSV, including the private purchase block |
 | ~~**`SHIP_BY_DAYS`**~~ ✅ | now `MarketplaceSettings.ship_by_days`, read via `bench.ship_by_days()` | settled in Pass 4 | — | a job that *enforces* it is still unwritten; it remains a promise |
 | **Saved hunts** — standing searches that go looking for you | omitted from Saved; marker in `templates/favorites/list.html` | no `SavedHunt` model | **10** | render the strip where the marker sits |
 | **Named sets** on My collection | omitted; marker in `templates/collections/my_collection.html` | no `CollectionSet` model | **13** | render the set strip |
@@ -658,8 +692,8 @@ Verified against the code on 2026-08-04.
 | `Listing.minimum_offer` floor | 5c / 6c / 8b | Pass 5 |
 | `CollectionItem` — purchase price, acquisition, private note | 6c | Pass 5 |
 | `GeographicUnit.valid_from` / `valid_to` | 14b | Pass 10 — until it exists, a Colorado collector's "19 of 185" is measured against today's map and **overstates their gaps** |
-| **`UserProfile.county` is a `CharField`** | 4c / CLAUDE.md | Pass 6. CLAUDE.md says *"`home_county` is an FK, not a string"*; it is currently free text help-texted "User's home Pennsylvania county". This is the bug class that produces "Towson, MD, PA". |
-| Terms version + acceptance | 4b / 10.16 | Pass 6 |
+| ~~**`UserProfile.county` is a `CharField`**~~ | 4c / CLAUDE.md | ✅ **Shipped in Pass 6** — `home_state` + `home_county` FKs, with a timid data migration that leaves anything it cannot match exactly. |
+| ~~Terms version + acceptance~~ | 4b / 10.16 | ✅ **Shipped in Pass 6** — `core.TermsVersion` + `TermsAcceptance`, recorded at registration. |
 | `MarketplaceSettings.ship_by_days` | Pass 1 note | Pass 4 |
 
 ## Two JS defects in `browse_collections.html` (18a) ✅ FIXED in Pass 3
