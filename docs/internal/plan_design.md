@@ -120,6 +120,28 @@ Its geometry is dead.
 
 ---
 
+## ⚠ Screens still on pre-revamp markup
+
+**Read this before concluding a screen was missed.** Several pages have not been
+brought onto the design system yet, and it is not an oversight — they are scheduled.
+Verified 2026-08-05 by counting `kb-` classes against inline `<style>` blocks and
+`--color-*` legacy tokens:
+
+| Screen | Template | Lands in |
+|---|---|---|
+| **Add / edit an item** (sell step 2) | `listings/listing_create.html`, `listing_edit.html` | **Pass 8b** |
+| **Add / edit a collection item** | `collections/collection_item_form.html`, `add_from_order.html` | **Pass 8b** |
+| **Shipping address** | `accounts/address_form.html` | **Pass 8b** |
+| **Collection item detail** | `collections/collection_item_detail.html` | **Pass 8b** |
+| Almanac | placeholder by design | Pass 14 |
+| Staff | not built | Pass 11 |
+
+Passes 5 and 7 built new screens on **either side** of the create form — the three
+destination cards before it, the terms panels after it — and left the form in the
+middle alone. That is the single biggest visual gap in the app right now.
+
+---
+
 ## The design system
 
 Canonical tokens live in `static/css/variables.css` and are consolidated from all
@@ -525,35 +547,80 @@ them is a data migration over live listings, not a restyle, and it is the last t
 
 ---
 
-## Pass 7b — 10.10 remainder: retire `listing_type='trade'` 🚧
+## Pass 7b — 10.10 finished ✅ DONE
 
-*Split out of Pass 7 on 2026-08-05. Pass 7 delivered the screen and the rule; this is
-the schema work underneath, and it is the only thing standing between the site and a
-one-click "propose a trade" from a person or a piece.*
+*2026-08-05 · commits `eac29eb`, `1b34609` · 429 tests green (21 added)*
 
-**Design refs** — turn 3a (already built), 13a (the collector card's button). Dev plan
-**10.10**, remaining scope.
+**Design refs** — turn 3a, 13a. Dev plan **10.10**, remaining scope.
 
-Three knots, and they have to be untied together:
+### The two knots, untied together
 
-1. **`TradeOffer.trade_listing` is a non-null FK.** So an offer cannot start from a
-   person or an unlisted piece — which is exactly what the collector card and the trade
-   board both want to do. Making it nullable is the easy half.
-2. **`Trade.listing` is a `OneToOneField` doing double duty** as the uniqueness anchor
-   ("this lot already has an accepted trade"). Null it and that guarantee evaporates;
-   something else has to hold it — most likely a partial `UniqueConstraint` over the
-   two parties plus an open status.
-3. **`listing_type='trade'` and the standalone Trading Block browse.** A data migration
-   over live listings, plus the 301s. The *name* stays as the trade dashboard's
-   terminology; only the separate browse goes.
+1. **`TradeOffer.trade_listing` was a non-null FK**, so an offer had nowhere to hang
+   unless somebody had first put the licence up for sale. Now nullable, with
+   **`TradeOffer.subject_item`** as the real anchor: the piece under negotiation.
+2. **`Trade.listing` was a `OneToOneField` doing double duty** as the uniqueness
+   anchor. Uniqueness moved to **`Trade.offer`**, where it is actually true — one
+   accepted offer, one trade — and the *live* question ("is this piece already
+   committed?") moved to `services.open_trade_on(item)`, which asks about the **piece**.
+   You cannot promise the same licence to two people whether or not either negotiation
+   went through a lot.
 
-**Acceptance** — a trade can be proposed from a collector card, a collection item or a
-Store shelf; no standalone trade browse; existing trade listings and their accepted
-trades survive the migration with their history intact.
+`trades/0007` fills both new columns from the old ones, so no existing negotiation
+loses its subject and nothing is deleted — a trade struck against a lot still reads as
+one.
 
-**Two smaller pieces of 10.10 also still open**, both listed in the register:
-shared carrier/service chosen once in the offer and flowing into both shipments, and
-the composer's search working without JavaScript.
+### The screen was two screens, and 3a says it is one
+
+The turn is headed *"The Trading Block — both rosters, the table, the rail, and three
+decisions you can't miss."* Pass 7 built it as a composer **with** rosters and a
+decision page **without** them, so arriving at an offer — the only way you ever reach
+it from a notification — got the half with no table.
+
+`offer_detail` **is** the composer now, opened on the deal as it stands with the sides
+swapped for whoever is reading. Answering is *move a licence and send*; the middle
+button is the counter. `counter_offer` redirects so old links land, and a settled
+negotiation drops the shelves and becomes a record.
+
+### What rendering it found
+
+Two faults no test had caught, because both needed the page actually drawn:
+
+- **The recipient could not counter at all.** The licence they were asked for is
+  already on their side of the table and has no checkbox, so the form's *at least one
+  offered item* refused every one-for-one. The rule belongs **after** the subject is
+  placed; it is in the service now, with both halves checked.
+- **The subject appeared twice** — fixed on the table *and* pickable on the shelf it
+  came from.
+
+### Fidelity against 3a, on a second reading
+
+| Detail | What changed |
+|---|---|
+| Roster notes | Fall back to condition when a row has nothing else to say, so the shelves stop reading half-blank |
+| Roster count | *"5 tradeable"*, not *"5 items"* — the shelf is what you can put on the table |
+| The rail | Says **what moved** (*"added the 1944 Fulton, dropped the 1951 Elk, cash now $40"*) instead of a piece count that makes you open two rounds to compare |
+| The subject | Sits on whichever side its owner is — which **flips** on a counter — and is left off that shelf |
+| Terms | *"3 for 2"* on the table, *"My 3 for their 2"* in the band |
+
+**One deliberate departure.** The design writes the band as *"My 3 for his 2"*. It says
+**their**: nobody on this site has told us their pronouns, and a wrong guess in a
+sentence about somebody's property is worse than the neutral word. A test holds it.
+
+### One click, at last
+
+The three Pass 3 markers are all cleared. The collector card opens on the piece of
+theirs that **answers something on your own wanted list**, falling back to whatever
+they most recently opened; the trade board's tile opens on its own piece. Landing on a
+chooser would ask a question the card already knows the answer to.
+
+### Still open, and now genuinely small
+
+- **`listing_type='trade'` itself.** Already unreachable — the sell flow's three
+  destinations are collection / auction / store, and nothing creates one. Retiring the
+  *enum* is a data migration over historical rows with `Trade` FKs pointing at them,
+  which buys nothing today. Left alone deliberately; see the register.
+- **Shared carrier/service** across both shipments (register).
+- **Composer search without JavaScript** (register).
 
 ---
 
@@ -593,6 +660,8 @@ grammar). Dev plan **10.8**, T13.
 | `listings/listing_edit.html` | same shape, same problem |
 | `collections/collection_item_form.html` | same |
 | `collections/add_from_order.html` | same |
+| `collections/collection_item_detail.html` | same — inline styles throughout |
+| `accounts/address_form.html` | same, **and** its Places script wants moving out to `static/js/` and made to say when it fails to load |
 
 Restyle onto `kb-ui.css`, not a rewrite: the field grammar, the prefill panel and the
 image slots all work. What changes is the furniture — the three uppercase label sizes,
@@ -775,7 +844,8 @@ coming back for it.
 | What is reduced | Where it lives now | Blocked on | Clears in | Restore by |
 |---|---|---|---|---|
 | ~~**"Will trade" flag** on the collector card~~ ✅ | now a **count** — *N to trade*, pieces you could ask about today | settled in Pass 7 — with open as the default a binary flag would sit on every card again, so the card carries a figure that varies instead | — | — |
-| **"Propose a trade"** as one click | a two-step walk — the button opens their trade shelf, where you pick something that is listed | **narrowed in Pass 7.** `TradeOffer.trade_listing` is a non-null FK **and** `Trade.listing` is a `OneToOneField` doubling as the uniqueness anchor. Both have to become nullable together, with something else holding uniqueness | **7b** (10.10 remainder) | point the button at a person-level propose view |
+| ~~**"Propose a trade"** as one click~~ ✅ | opens on the piece of theirs that answers one of your wants | settled in Pass 7b — `subject_item` is the anchor, uniqueness moved to `Trade.offer` | — | — |
+| **`listing_type='trade'`** as an enum value | unreachable — nothing creates one, the sell flow offers collection / auction / store | nothing; retiring the value means migrating historical rows that accepted trades still point at, which buys nothing today | **later** | drop the choice and migrate the rows if they ever get in the way |
 | **Shared shipping choice** on a trade | each side picks its own carrier on the trade page | `TradeOffer` has no carrier/service field; 10.10 wants it chosen once in the offer and flowing into both shipments | **7b** | add the fields; `_create_trade_shipments` already builds both sides |
 | **Composer search without JavaScript** | the full shelf renders and the checkboxes work; the search box and chips do nothing | the table is a form mid-composition, and a GET round trip would empty it | **10** (with the mobile pass) | keep the client filter; add a no-JS fallback that preserves the picks |
 | **"Sets going"** — the card's third figure | shows **counties held** instead | no `CollectionSet` model | **13** (10.14) | swap the annotation in `apps/collections/collectors.py`; the layout does not change |
@@ -825,8 +895,8 @@ Verified against the code on 2026-08-04.
 | `CollectionItem` — purchase price, acquisition, private note | 6c | Pass 5 ✅ |
 | ~~`CollectionItem.trade_eligible` is a boolean defaulting to True~~ | 3a / 13a / 10.10 | ✅ **Shipped in Pass 7** — `tradeability` (`open`/`closed`, default `open`) + `trade_wants`. Availability is derived from live lots, never stored. |
 | ~~`TradeOffer` cash runs one way only~~ | 3a / 10.10 | ✅ **Shipped in Pass 7** — `cash_direction` under a `cash_amount >= 0` CheckConstraint. |
-| `TradeOffer` — shared carrier + service for both shipments | 10.10 | **Pass 7b** — each side currently picks its own on the trade page |
-| `TradeOffer.trade_listing` nullable + a new home for `Trade`'s uniqueness | 3a / 13a / 10.10 | **Pass 7b** — until then no trade can start from a person or an unlisted piece |
+| `TradeOffer` — shared carrier + service for both shipments | 10.10 | **later** — each side currently picks its own on the trade page |
+| ~~`TradeOffer.trade_listing` nullable + a new home for `Trade`'s uniqueness~~ | 3a / 13a / 10.10 | ✅ **Shipped in Pass 7b** — `subject_item` anchors the negotiation; uniqueness is `Trade.offer`, and the live check is `open_trade_on(piece)`. |
 | `GeographicUnit.valid_from` / `valid_to` | 14b | Pass 10 — until it exists, a Colorado collector's "19 of 185" is measured against today's map and **overstates their gaps** |
 | ~~**`UserProfile.county` is a `CharField`**~~ | 4c / CLAUDE.md | ✅ **Shipped in Pass 6** — `home_state` + `home_county` FKs, with a timid data migration that leaves anything it cannot match exactly. |
 | ~~Terms version + acceptance~~ | 4b / 10.16 | ✅ **Shipped in Pass 6** — `core.TermsVersion` + `TermsAcceptance`, recorded at registration. |
@@ -950,13 +1020,27 @@ Two faults, both from **rendering a write as a link**:
 Seven tests, including one asserting the privacy room renders a `<form>` and not an
 `<a href>` — the fault was invisible from behaviour alone.
 
-### ℹ️ Google address autocomplete — **nothing was removed**
+### 🔄 Google address autocomplete — nothing was removed; likely a Google-side change
 
-Still there, intact, at `templates/accounts/address_form.html:56–87`: a Places
-`Autocomplete` on `line1` that fills city/state/postcode from the components. It is
-wrapped in `{% if google_maps_api_key %}`, which reads `GOOGLE_MAPS_API_KEY` from the
-environment (`config/settings/base.py:49`, listed in `.env.example`). **An empty key in
-this `.env` is why it stopped appearing** — no code changed. Set the key and it returns.
+The code is intact at `templates/accounts/address_form.html:56–87` — a Places
+`Autocomplete` on `line1` filling city/state/postcode from the components — wrapped in
+`{% if google_maps_api_key %}`. **The key is present** (checked 2026-08-05: 39 chars,
+reaching `settings.GOOGLE_MAPS_API_KEY`, passed into both address views), so the block
+does render and the script tag is emitted. Nothing in this codebase took it out.
+
+That points at the Google side, and the likeliest cause is dated: **the legacy
+`google.maps.places.Autocomplete` was deprecated in March 2025** in favour of
+`PlaceAutocompleteElement`, and keys on projects created after that cut-off cannot load
+it — it fails in the browser console with the page looking exactly as though the
+feature was removed. Next-likeliest: Places API not enabled on the key, or no billing
+account.
+
+**What to do:** open the address form and read the browser console; the error names the
+cause outright. Then **Pass 8b** should move that inline script into
+`static/js/address-autocomplete.js`, try `PlaceAutocompleteElement` first with the
+legacy call as a fallback, and — the real fix either way — **say so on the page when
+the loader fails** instead of silently rendering a plain text field, which is what made
+this indistinguishable from a deletion.
 
 ### ⬜ The listing form still looks nothing like the design — **correct, and scheduled**
 
@@ -965,10 +1049,13 @@ rebuilt step 1 (`sell_start.html`, the three destination cards) and step 3 (the 
 panels), but **step 2 — `listing_create.html`, the actual item form — was never
 touched.** It is pre-revamp markup: an inline `<style>` block, `--color-*` legacy
 tokens, three `kb-` classes in the whole file. The same is true of
-`collection_item_form.html` and `add_from_order.html`, which is why the trade block
-added in Pass 7 sits in old furniture.
+`collection_item_form.html`, `add_from_order.html`, `address_form.html` and
+`collection_item_detail.html`, which is why the trade block added in Pass 7 sits in old
+furniture.
 
-Now **Pass 8b** below, so it stops being invisible.
+It is now **Pass 8b**, *and* it is listed at the top of this document under **"Screens
+still on pre-revamp markup"** — so the next person to ask this question finds the
+answer before they finish scrolling.
 
 ### ⬜ An unsold lot should come back to the collection — **and let them say it is gone**
 
