@@ -1,174 +1,290 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}My Collection | KeystoneBid{% endblock %}
+{% block title %}My collection &middot; My Bench &middot; KeystoneBid{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/pages/browse.css' %}">
-{% endblock %}
+{% block context_band %}{% include 'components/_bench_tabs.html' %}{% endblock %}
+
+{% block main_class %}kb-mine{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/mine.css' %}">{% endblock %}
 
 {% block content %}
+{% comment %}
+Three views of one collection, because between them they answer one question:
+what have I got, what am I missing, and what have I asked for.
+{% endcomment %}
 
-<!-- Featured display case -->
-{% if featured_items %}
-<section class="card" style="margin-bottom: 1rem;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-        <h2 style="font-size: 1.1rem; margin: 0;">Featured Display Case</h2>
-        <span style="color: var(--color-muted); font-size: 0.85rem;">{{ featured_count }}/{{ max_featured }} featured</span>
+<header class="kb-between mn-head">
+    <div>
+        <h1 class="kb-page-title">My collection</h1>
+        <p class="mn-lede">
+            {{ item_total }} item{{ item_total|pluralize }}
+            {% if ground %}
+                &middot; {{ ground.held }} of {{ ground.total }} {{ ground.unit_label_plural|lower }}
+                {% if ground.span %} &middot; earliest {{ ground.span.0 }}, latest {{ ground.span.1 }}{% endif %}
+            {% endif %}
+        </p>
     </div>
-    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.75rem;">
-        {% for item in featured_items %}
-            <article style="border: 1px solid var(--color-aged-amber); border-radius: 8px; overflow: hidden; position: relative;">
-                <span style="position: absolute; top: 0.35rem; left: 0.35rem; background: var(--color-aged-amber); color: #fff; font-size: 0.7rem; padding: 0.15rem 0.4rem; border-radius: 3px; font-weight: 600;">Featured</span>
-                {% with primary=item.images.first %}
-                    {% if primary %}
-                        <a href="{% url 'collections:item_detail' item.pk %}"><img src="{{ primary.image.url }}" alt="{{ item.title }}"
-                             style="width: 100%; height: 130px; object-fit: cover; display: block;"></a>
-                    {% else %}
-                        <div style="width: 100%; height: 130px; background: var(--color-parchment); display: flex; align-items: center; justify-content: center;">
-                            <span style="color: var(--color-muted); font-size: 0.8rem;">No image</span>
-                        </div>
-                    {% endif %}
-                {% endwith %}
-                <div style="padding: 0.5rem;">
-                    <p style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.2rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;"><a href="{% url 'collections:item_detail' item.pk %}" style="color: inherit;">{{ item.title }}</a></p>
-                    <p style="font-size: 0.8rem; color: var(--color-muted);">
-                        {% if item.state %}{{ item.state.code }}{% endif %}{% if item.license_year %} · {{ item.license_year }}{% endif %}
-                    </p>
-                    <form method="post" action="{% url 'collections:feature_toggle' item.pk %}" style="margin-top: 0.4rem;">
-                        {% csrf_token %}
-                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                        <button type="submit" class="btn-secondary" style="font-size: 0.8rem; padding: 0.2rem 0.5rem; width: 100%;">Unfeature</button>
-                    </form>
-                </div>
-            </article>
-        {% endfor %}
+    <div class="kb-inline">
+        <a href="{% url 'collections:create' %}" class="kb-btn kb-btn--primary kb-btn--sm">Add an item</a>
     </div>
-</section>
-{% endif %}
+</header>
 
-<section class="browse-layout">
-    <!-- Filters sidebar -->
-    <aside class="card browse-filters">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-            <h1 style="font-size: 1.25rem; margin: 0;">My Collection</h1>
-            <a class="btn-primary" href="{% url 'collections:create' %}" style="font-size: 0.85rem; padding: 0.35rem 0.7rem;">+ Add item</a>
-        </div>
-        <a href="{% url 'accounts:profile' user.username %}" class="btn-secondary" style="display: block; text-align: center; margin-bottom: 1rem;">View public profile</a>
+<nav class="kb-subtabs mn-views" aria-label="Views of my collection">
+    <a href="?" class="kb-subtab" {% if view == 'items' %}aria-selected="true"{% endif %}>
+        Everything <span class="kb-subtab-count">{{ item_total }}</span>
+    </a>
+    <a href="?view=matrix" class="kb-subtab" {% if view == 'matrix' %}aria-selected="true"{% endif %}>
+        What I&rsquo;m missing
+    </a>
+    <a href="?view=wants" class="kb-subtab" {% if view == 'wants' %}aria-selected="true"{% endif %}>
+        Wanted list <span class="kb-subtab-count">{{ want_total }}</span>
+    </a>
+</nav>
 
-        <h2 style="font-size: 1rem; margin-bottom: 0.6rem;">Filters</h2>
-        <form method="get" style="display: grid; gap: 0.6rem;">
-            <div>
-                <label class="form-label" for="search">Search</label>
-                <input class="form-input" id="search" name="search" value="{{ filters.search }}" placeholder="Title, description…">
+{% comment %}
+DEFERRED — the named-set strip (All items / Resident 1913–1930 / Duplicates /
++ New set). Blocked on: the CollectionSet model (10.14, Pass 13).
+Register: docs/internal/plan_design.md
+{% endcomment %}
+
+{% if view == 'matrix' %}
+    {% comment %}
+    Counties down, decades across. A hatched cell is one the state was not
+    issuing in — never a gap, so never counted against you.
+    {% endcomment %}
+    {% if matrix %}
+        <section class="mn-panel">
+            <div class="mn-panel-head">
+                <span class="kb-eyebrow kb-eyebrow--brass">{{ matrix.state.name }} &rsaquo; {{ matrix.unit_label_plural }} by decade</span>
+                <span class="mn-panel-note">
+                    {{ matrix.units_held }} of {{ matrix.units_total }} {{ matrix.unit_label_plural|lower }}
+                    &middot; {{ matrix.filled }} of {{ matrix.fillable }} cells filled
+                </span>
             </div>
-            <div>
-                <label class="form-label" for="county_id">County / Unit</label>
-                <select class="form-select" id="county_id" name="county_id">
-                    <option value="">Any</option>
+
+            <div class="mn-key">
+                <span class="mn-key-item"><span class="mn-cell mn-cell--held" aria-hidden="true"></span> Held</span>
+                <span class="mn-key-item"><span class="mn-cell mn-cell--open" aria-hidden="true"></span> Still open</span>
+                <span class="mn-key-item"><span class="mn-cell mn-cell--never" aria-hidden="true"></span> Never issued</span>
+            </div>
+
+            <div class="mn-matrix-scroll">
+                <table class="mn-matrix">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="mn-matrix-corner">{{ matrix.unit_label_plural }}</th>
+                            {% for decade in matrix.decades %}
+                                <th scope="col">{{ decade }}s</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in matrix.rows %}
+                            <tr>
+                                <th scope="row">{{ row.unit.name }}</th>
+                                {% for cell in row.cells %}
+                                    <td>
+                                        {% if cell.state == 'held' %}
+                                            <a class="mn-cell mn-cell--held"
+                                               href="?county_id={{ row.unit.id }}&amp;year_min={{ cell.decade }}&amp;year_max={{ cell.decade|add:9 }}"
+                                               title="{{ row.unit.name }}, {{ cell.decade }}s — held"></a>
+                                        {% elif cell.state == 'open' %}
+                                            <a class="mn-cell mn-cell--open"
+                                               href="{% url 'hunt' %}?county_id={{ row.unit.id }}&amp;year_min={{ cell.decade }}&amp;year_max={{ cell.decade|add:9 }}"
+                                               title="{{ row.unit.name }}, {{ cell.decade }}s — go looking"></a>
+                                        {% else %}
+                                            <span class="mn-cell mn-cell--never"
+                                                  title="{{ row.unit.name }}, {{ cell.decade }}s — not issued"></span>
+                                        {% endif %}
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    {% else %}
+        <div class="kb-empty">
+            <h2>Nothing to measure yet</h2>
+            <p>The matrix needs items with a county and a year on them. Add a few
+               and it will show you the shape of what you have.</p>
+            <div class="kb-empty-actions">
+                <a href="{% url 'collections:create' %}" class="kb-btn kb-btn--primary">Add an item</a>
+            </div>
+        </div>
+    {% endif %}
+
+{% elif view == 'wants' %}
+    <p class="mn-note">
+        Everything here is public on your profile, and every entry is a standing
+        search: you get a letter the day one is listed, and collectors who own one
+        can offer you a trade.
+    </p>
+
+    {% if want_rows %}
+        <div class="mn-wants">
+            {% for row in want_rows %}
+                <article class="mn-want{% if row.listed %} mn-want--live{% endif %}">
+                    <div class="mn-want-main">
+                        <span class="mn-want-what">{{ row.summary }}</span>
+                        {% if row.notes %}<span class="mn-want-note">{{ row.notes }}</span>{% endif %}
+                        <span class="mn-want-holders">
+                            {% if row.holders %}
+                                {{ row.holders }} collector{{ row.holders|pluralize }} {{ row.holders|pluralize:"has,have" }} one{% if row.traders %},
+                                {{ row.traders }} open to trades{% else %}, none open to trades{% endif %}
+                            {% else %}
+                                Nobody on the site holds one yet
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <div class="mn-want-state">
+                        {% if row.listed %}
+                            <span class="mn-want-count">{{ row.listed }} listed now</span>
+                            {% if row.closing %}
+                                <span class="mn-want-sub">one closes {{ row.closing.auction_end|date:"l" }}</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="mn-want-count mn-want-count--quiet">None listed</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="mn-want-actions">
+                        {% if row.listed %}
+                            <a href="{{ row.hunt_url }}" class="kb-btn kb-btn--primary kb-btn--sm">See {% if row.listed == 1 %}it{% else %}the {{ row.listed }}{% endif %}</a>
+                        {% elif row.traders %}
+                            <a href="{{ row.collectors_url }}" class="kb-btn kb-btn--secondary kb-btn--sm">Ask the {{ row.traders }}</a>
+                        {% endif %}
+                        <a href="{% url 'collections:wanted_edit' row.want.pk %}" class="mn-quiet">Edit</a>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="kb-empty">
+            <h2>You haven&rsquo;t said what you&rsquo;re after</h2>
+            <p>A want is a standing search. Name a place, a range of years or a type,
+               and anything listed against it finds you &mdash; and so do the collectors
+               who already own one.</p>
+        </div>
+    {% endif %}
+
+    <div class="mn-add">
+        <a href="{% url 'collections:wanted_create' %}" class="kb-btn kb-btn--primary">Add what you&rsquo;re after</a>
+    </div>
+
+{% else %}
+    <div class="mn-layout">
+        <form method="get" class="mn-rail" aria-label="Narrow it down">
+            <div class="kb-between">
+                <span class="kb-eyebrow">Narrow it down</span>
+                {% if request.GET.urlencode %}
+                    <a href="{% url 'collections:my_collection' %}" class="mn-quiet">Clear</a>
+                {% endif %}
+            </div>
+
+            <div class="mn-facet">
+                <label class="kb-label" for="mn-search">Search my collection</label>
+                <input type="search" id="mn-search" name="search" value="{{ filters.search }}"
+                       class="kb-input" placeholder="Title or description">
+            </div>
+
+            <div class="mn-facet">
+                <label class="kb-label" for="mn-county">County</label>
+                <select name="county_id" id="mn-county" class="kb-select" onchange="this.form.submit()">
+                    <option value="">All</option>
                     {% for county in counties %}
-                        <option value="{{ county.id }}" {% if filters.county_id == county.id|stringformat:'s' %}selected{% endif %}>
-                            {{ county.name }}
-                        </option>
+                        <option value="{{ county.id }}" {% if filters.county_id == county.id|stringformat:'s' %}selected{% endif %}>{{ county.name }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                <div>
-                    <label class="form-label" for="year_min">Year from</label>
-                    <input class="form-input" id="year_min" type="number" name="year_min" value="{{ filters.year_min }}" placeholder="e.g. 1930">
-                </div>
-                <div>
-                    <label class="form-label" for="year_max">Year to</label>
-                    <input class="form-input" id="year_max" type="number" name="year_max" value="{{ filters.year_max }}" placeholder="e.g. 2000">
+
+            <div class="mn-facet">
+                <span class="kb-label">Year</span>
+                <div class="mn-years">
+                    <label class="kb-sr" for="mn-from">From</label>
+                    <input type="number" id="mn-from" name="year_min" value="{{ filters.year_min }}"
+                           class="kb-input kb-input--year" placeholder="From">
+                    <span aria-hidden="true">&ndash;</span>
+                    <label class="kb-sr" for="mn-to">To</label>
+                    <input type="number" id="mn-to" name="year_max" value="{{ filters.year_max }}"
+                           class="kb-input kb-input--year" placeholder="To">
                 </div>
             </div>
-            <div>
-                <label class="form-label" for="license_type_id">License type</label>
-                <select class="form-select" id="license_type_id" name="license_type_id">
+
+            <div class="mn-facet">
+                <label class="kb-label" for="mn-type">License type</label>
+                <select name="license_type_id" id="mn-type" class="kb-select" onchange="this.form.submit()">
                     <option value="">Any</option>
                     {% for lt in license_types %}
-                        <option value="{{ lt.id }}" {% if filters.license_type_id == lt.id|stringformat:'s' %}selected{% endif %}>
-                            {{ lt.name }}
-                        </option>
+                        <option value="{{ lt.id }}" {% if filters.license_type_id == lt.id|stringformat:'s' %}selected{% endif %}>{{ lt.name }}</option>
                     {% endfor %}
                 </select>
             </div>
-            <div>
-                <label class="form-label" for="group_by">Group by</label>
-                <select class="form-select" id="group_by" name="group_by">
-                    <option value="" {% if not group_by %}selected{% endif %}>None (newest first)</option>
-                    <option value="county" {% if group_by == 'county' %}selected{% endif %}>County / Unit</option>
-                    <option value="decade" {% if group_by == 'decade' %}selected{% endif %}>Decade</option>
-                </select>
-            </div>
-            <div style="display: flex; gap: 0.5rem;">
-                <button class="btn-primary" type="submit" style="flex: 1;">Apply</button>
-                <a class="btn-secondary" href="{% url 'collections:my_collection' %}" style="flex: 1; text-align: center; padding: 0.6rem 0;">Reset</a>
-            </div>
-        </form>
-    </aside>
 
-    <!-- Collection items -->
-    <section>
-        {% if items %}
-            {% if groups %}
-                {% for group_key, group_items in groups %}
-                    <h2 style="font-size: 1.1rem; margin: 0 0 0.65rem; color: var(--color-forest-green);">{{ group_key }}</h2>
-                    <div style="display: grid; gap: 0.65rem; margin-bottom: 1.5rem;">
-                        {% for item in group_items %}
-                            {% include 'collections/_collection_item_row.html' %}
-                        {% endfor %}
-                    </div>
-                {% endfor %}
-            {% else %}
-                <div style="display: grid; gap: 0.65rem;">
-                    {% for item in items %}
-                        {% include 'collections/_collection_item_row.html' %}
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% else %}
-            <div class="card">
-                <p style="color: var(--color-muted);">
-                    {% if filters.search or filters.county_id or filters.year_min or filters.year_max or filters.license_type_id %}
-                        No items match your filters.
-                    {% else %}
-                        Your collection is empty. <a href="{% url 'collections:create' %}">Add your first item.</a>
+            <div class="mn-facet mn-facet--last">
+                <span class="kb-label">Group by</span>
+                <div class="kb-inline">
+                    <a href="?{% if filters.search %}search={{ filters.search }}&amp;{% endif %}group_by=county"
+                       class="kb-chip kb-chip--sm {% if group_by == 'county' %}is-on{% endif %}">County</a>
+                    <a href="?{% if filters.search %}search={{ filters.search }}&amp;{% endif %}group_by=decade"
+                       class="kb-chip kb-chip--sm {% if group_by == 'decade' %}is-on{% endif %}">Decade</a>
+                    {% if group_by %}
+                        <a href="?{% if filters.search %}search={{ filters.search }}{% endif %}" class="kb-chip kb-chip--sm">Off</a>
                     {% endif %}
-                </p>
+                </div>
             </div>
-        {% endif %}
 
-        <!-- Wanted list -->
-        <div style="margin-top: 1.5rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
-                <h2 style="font-size: 1.1rem; margin: 0;">Wanted List</h2>
-                <a class="btn-secondary" href="{% url 'collections:wanted_create' %}" style="font-size: 0.85rem; padding: 0.35rem 0.7rem;">+ Add wanted</a>
+            <noscript><button type="submit" class="kb-btn kb-btn--primary kb-btn--block">Apply</button></noscript>
+        </form>
+
+        <div class="mn-results">
+            <div class="kb-between mn-results-head">
+                <span class="mn-count">
+                    {% if shown_total == item_total %}
+                        {{ item_total }} item{{ item_total|pluralize }}
+                    {% else %}
+                        {{ shown_total }} of {{ item_total }}
+                    {% endif %}
+                </span>
+                {% if featured_count %}
+                    <span class="mn-count">{{ featured_count }} of {{ max_featured }} in your display case</span>
+                {% endif %}
             </div>
-            {% if wanted_items %}
-                <div style="display: grid; gap: 0.5rem;">
-                    {% for wanted in wanted_items %}
-                        <div class="card" style="padding: 0.6rem 0.75rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
-                            <p style="margin: 0;">
-                                {% if wanted.state %}{{ wanted.state.code }} — {% endif %}
-                                {% if wanted.county %}{{ wanted.county.name }}{% else %}Any unit{% endif %}
-                                {% if wanted.year_min %} · from {{ wanted.year_min }}{% endif %}
-                                {% if wanted.year_max %} · to {{ wanted.year_max }}{% endif %}
-                                {% if wanted.license_type %} · {{ wanted.license_type.name }}{% endif %}
-                                {% if wanted.notes %}<br><span style="color: var(--color-muted); font-size: 0.88rem;">{{ wanted.notes }}</span>{% endif %}
-                            </p>
-                            <div style="display: flex; gap: 0.4rem;">
-                                <a class="btn-secondary" href="{% url 'collections:wanted_edit' wanted.pk %}" style="font-size: 0.8rem; padding: 0.2rem 0.5rem;">Edit</a>
-                                <a class="btn-secondary" href="{% url 'collections:wanted_delete' wanted.pk %}" style="font-size: 0.8rem; padding: 0.2rem 0.5rem;">Delete</a>
-                            </div>
+
+            {% if groups %}
+                {% for label, group_items in groups %}
+                    <section class="mn-group">
+                        <h2 class="mn-group-title">{{ label }} <span class="mn-group-count">{{ group_items|length }}</span></h2>
+                        <div class="mn-grid">
+                            {% for item in group_items %}{% include 'collections/_mine_card.html' %}{% endfor %}
                         </div>
-                    {% endfor %}
+                    </section>
+                {% endfor %}
+            {% elif items %}
+                <div class="mn-grid">
+                    {% for item in items %}{% include 'collections/_mine_card.html' %}{% endfor %}
                 </div>
             {% else %}
-                <p style="color: var(--color-muted);">No wanted items yet.</p>
+                <div class="kb-empty">
+                    <h2>{% if item_total %}Nothing matches that{% else %}Nothing recorded yet{% endif %}</h2>
+                    <p>
+                        {% if item_total %}
+                            Loosen a filter on the left.
+                        {% else %}
+                            A licence you record here can go up for sale in a few minutes
+                            later, because the details carry straight over.
+                        {% endif %}
+                    </p>
+                    <div class="kb-empty-actions">
+                        <a href="{% url 'collections:create' %}" class="kb-btn kb-btn--primary">Add an item</a>
+                    </div>
+                </div>
             {% endif %}
         </div>
-    </section>
-</section>
+    </div>
+{% endif %}
 {% endblock %}

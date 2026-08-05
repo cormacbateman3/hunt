@@ -1,0 +1,462 @@
+/* ==========================================================================
+   My collection — everything, what I'm missing, and what I've asked for
+
+   Three views of one collection, because between them they answer one
+   question. The matrix is the only place on the site that shows a gap you
+   could never have filled, and it has to look different from one you can.
+   ========================================================================== */
+
+.kb-mine {
+    max-width: var(--kb-page-max);
+    margin: 0 auto;
+    padding: var(--kb-6) var(--kb-gutter) var(--kb-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--kb-4);
+}
+
+.mn-head {
+    align-items: flex-end;
+}
+
+.mn-lede {
+    margin: 4px 0 0;
+    font-size: 13.5px;
+    color: var(--kb-ink-3);
+}
+
+.mn-views {
+    margin-bottom: var(--kb-2);
+}
+
+.mn-note {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--kb-ink-3);
+    max-width: 68ch;
+}
+
+.mn-quiet {
+    font-size: 11.5px;
+    color: var(--kb-ink-4);
+    text-decoration: none;
+}
+
+.mn-quiet:hover {
+    color: var(--kb-brass);
+}
+
+/* ── Everything ──────────────────────────────────────────────────────── */
+.mn-layout {
+    display: grid;
+    grid-template-columns: 236px 1fr;
+    align-items: start;
+}
+
+.mn-rail {
+    border-right: 1px solid var(--kb-rule);
+    padding: 0 20px 30px 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--kb-4);
+    position: sticky;
+    top: var(--kb-topbar-h);
+}
+
+.mn-facet {
+    border-top: 1px solid var(--kb-rule);
+    padding-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.mn-facet .kb-input,
+.mn-facet .kb-select {
+    width: 100%;
+}
+
+.mn-years {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mn-years .kb-input {
+    width: 78px;
+}
+
+.mn-results {
+    padding-left: var(--kb-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--kb-4);
+}
+
+.mn-results-head {
+    padding-bottom: 2px;
+}
+
+.mn-count {
+    font-size: 12.5px;
+    color: var(--kb-ink-3);
+}
+
+.mn-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.mn-group-title {
+    font: var(--kb-text-section);
+    color: var(--kb-forest);
+    margin: 0;
+    border-bottom: 1px solid var(--kb-rule);
+    padding-bottom: 6px;
+}
+
+.mn-group-count {
+    font-family: var(--kb-font-body);
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--kb-ink-4);
+}
+
+.mn-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--kb-4);
+}
+
+.mn-card {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.mn-card:hover {
+    border-color: var(--kb-rule-strong);
+}
+
+/* Pinned to the public display case — brass, because it is on show. */
+.mn-card--cased {
+    border-color: var(--kb-brass);
+}
+
+.mn-card-media {
+    aspect-ratio: 4 / 3;
+    background: var(--kb-hatch);
+    display: block;
+    position: relative;
+}
+
+.mn-card-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.mn-card-flag {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(28, 31, 24, 0.62);
+    color: var(--kb-cream);
+    font: 700 var(--kb-badge-size)/1.2 var(--kb-font-body);
+    letter-spacing: var(--kb-badge-tracking);
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border-radius: var(--kb-r-chip);
+}
+
+.mn-card-body {
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+}
+
+.mn-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--kb-forest);
+    text-decoration: none;
+    line-height: 1.35;
+}
+
+.mn-card-meta {
+    font-size: 11.5px;
+    color: var(--kb-ink-3);
+}
+
+.mn-card-foot {
+    border-top: 1px solid var(--kb-rule-soft);
+    padding: 8px 12px;
+    background: var(--kb-page);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mn-card-sell {
+    font: 700 var(--kb-label-size)/1.2 var(--kb-font-body);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--kb-forest);
+    text-decoration: none;
+}
+
+.mn-card-sell:hover {
+    color: var(--kb-brass);
+}
+
+.mn-card-case {
+    background: none;
+    border: 0;
+    padding: 0;
+    font: 400 11.5px/1.4 var(--kb-font-body);
+    color: var(--kb-ink-4);
+    cursor: pointer;
+}
+
+.mn-card--cased .mn-card-case {
+    color: var(--kb-brass);
+    font-weight: 600;
+}
+
+.mn-card-foot .mn-quiet {
+    margin-left: auto;
+}
+
+/* ── The matrix ──────────────────────────────────────────────────────── */
+.mn-panel {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    overflow: hidden;
+}
+
+.mn-panel-head {
+    background: var(--kb-parchment-soft);
+    border-bottom: 1px solid var(--kb-rule);
+    padding: 11px 18px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--kb-4);
+}
+
+.mn-panel-note {
+    font-size: 12.5px;
+    color: var(--kb-ink-3);
+    font-variant-numeric: tabular-nums;
+}
+
+.mn-key {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--kb-rule-soft);
+    display: flex;
+    gap: var(--kb-5);
+    flex-wrap: wrap;
+}
+
+.mn-key-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--kb-ink-3);
+}
+
+.mn-matrix-scroll {
+    overflow-x: auto;
+    padding: 4px 18px 18px;
+}
+
+.mn-matrix {
+    border-collapse: collapse;
+}
+
+.mn-matrix th {
+    font: 400 11.5px/1.3 var(--kb-font-body);
+    color: var(--kb-ink-3);
+    text-align: left;
+    padding: 6px 8px;
+    white-space: nowrap;
+}
+
+.mn-matrix thead th {
+    font-weight: 700;
+    color: var(--kb-ink-2);
+    text-align: center;
+}
+
+.mn-matrix-corner {
+    text-align: left !important;
+}
+
+.mn-matrix tbody th {
+    position: sticky;
+    left: 0;
+    background: var(--kb-surface);
+}
+
+.mn-matrix td {
+    padding: 2px;
+    text-align: center;
+}
+
+.mn-cell {
+    display: block;
+    width: 22px;
+    height: 22px;
+    border-radius: var(--kb-r-micro);
+    border: 1px solid var(--kb-rule);
+    background: var(--kb-page);
+}
+
+.mn-cell--held {
+    background: var(--kb-live);
+    border-color: var(--kb-live);
+}
+
+.mn-cell--open:hover {
+    border-color: var(--kb-brass);
+    background: var(--kb-chip);
+}
+
+/* Hatched, and not a link. There was never anything to find, so offering a
+   search would be a wild goose chase. */
+.mn-cell--never {
+    background: var(--kb-hatch);
+    border-color: var(--kb-rule-soft);
+    cursor: default;
+}
+
+/* ── The wanted list ─────────────────────────────────────────────────── */
+.mn-wants {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    overflow: hidden;
+}
+
+.mn-want {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--kb-rule-soft);
+    border-left: 3px solid transparent;
+    display: grid;
+    grid-template-columns: 1fr 160px 190px;
+    gap: var(--kb-4);
+    align-items: center;
+}
+
+.mn-want:last-child {
+    border-bottom: 0;
+}
+
+.mn-want--live {
+    border-left-color: var(--kb-live);
+    background: var(--kb-tint-positive);
+}
+
+.mn-want-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.mn-want-what {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--kb-ink);
+}
+
+.mn-want-note {
+    font-size: 12px;
+    color: var(--kb-ink-3);
+}
+
+.mn-want-holders {
+    font-size: 11.5px;
+    color: var(--kb-ink-4);
+}
+
+.mn-want-state {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.mn-want-count {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--kb-live);
+}
+
+.mn-want-count--quiet {
+    color: var(--kb-ink-4);
+    font-weight: 400;
+}
+
+.mn-want-sub {
+    font-size: 11.5px;
+    color: var(--kb-ink-4);
+}
+
+.mn-want-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.mn-add {
+    display: flex;
+}
+
+/* ── Narrow ──────────────────────────────────────────────────────────── */
+@media (max-width: 1000px) {
+    .mn-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .mn-rail {
+        position: static;
+        border-right: 0;
+        border-bottom: 1px solid var(--kb-rule);
+        padding: 0 0 var(--kb-5);
+    }
+
+    .mn-results {
+        padding-left: 0;
+        padding-top: var(--kb-5);
+    }
+
+    .mn-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .mn-want {
+        grid-template-columns: 1fr;
+        row-gap: 8px;
+    }
+
+    .mn-want-actions {
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 640px) {
+    .mn-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

@@ -22,8 +22,10 @@ from apps.core.forms import ReferenceDataSuggestionForm
 from apps.core.models import GeographicUnit, LicenseType, State
 from apps.orders.models import Order
 
+from . import wants
 from .browse import page as browse_page
 from .collectors import collector_rows
+from .tracker import ground_covered, matrix as tracker_matrix
 from .forms import CollectionItemForm, CollectionItemImageFormSet, WantedItemForm
 from .models import CollectionItem, CollectionItemImage, WantedItem
 
@@ -120,12 +122,6 @@ def my_collection(request):
     featured_ids = {i.pk for i in featured_items}
     featured_count = base_qs.filter(featured=True).count()
 
-    wanted_items = (
-        WantedItem.objects.filter(user=request.user)
-        .select_related('state', 'county', 'license_type')
-        .order_by('-created_at')
-    )
-
     # Filter sidebar data
     default_state = State.objects.filter(is_primary_default=True).first()
     counties = GeographicUnit.objects.filter(state=default_state).order_by('sort_order', 'name') if default_state else GeographicUnit.objects.none()
@@ -140,15 +136,26 @@ def my_collection(request):
         'material_id': request.GET.get('material_id', ''),
     }
 
+    # Three views of the same collection: what you hold, what you are missing,
+    # and what you have asked for. They are one page because they answer one
+    # question between them.
+    view = request.GET.get('view', 'items')
+
     return render(request, 'collections/my_collection.html', {
+        'view': view,
         'items': items,
+        'item_total': base_qs.count(),
+        'shown_total': len(items),
         'groups': groups,
         'group_by': group_by,
+        'ground': ground_covered(request.user, public_only=False),
+        'matrix': tracker_matrix(request.user) if view == 'matrix' else None,
+        'want_rows': wants.rows(request.user) if view == 'wants' else None,
+        'want_total': WantedItem.objects.filter(user=request.user).count(),
         'featured_items': featured_items,
         'featured_ids': featured_ids,
         'featured_count': featured_count,
         'max_featured': MAX_FEATURED,
-        'wanted_items': wanted_items,
         'counties': counties,
         'license_types': license_types,
         'filters': filters,

@@ -1,0 +1,32 @@
+{% comment %}
+One piece of your own collection. Selling it is the action that matters here —
+the details already recorded carry straight over into a listing.
+{% endcomment %}
+<article class="mn-card{% if item.featured %} mn-card--cased{% endif %}">
+    <a href="{% url 'collections:item_detail' item.pk %}" class="mn-card-media">
+        {% if item.images.all %}
+            <img src="{{ item.images.all.0.image.url }}" alt="" loading="lazy">
+        {% endif %}
+        {% if not item.is_public %}<span class="mn-card-flag">Private</span>{% endif %}
+    </a>
+    <div class="mn-card-body">
+        <a href="{% url 'collections:item_detail' item.pk %}" class="mn-card-title">{{ item.title|truncatechars:36 }}</a>
+        <span class="mn-card-meta">
+            {% if item.county %}{{ item.county.name }}{% elif item.state %}{{ item.state.code }}{% endif %}
+            {% if item.license_year %} &middot; {{ item.license_year }}
+            {% elif item.effective_era %} &middot; {{ item.effective_era }}{% endif %}
+            {% if item.condition_grade %} &middot; {{ item.get_condition_grade_display }}{% endif %}
+        </span>
+    </div>
+    <div class="mn-card-foot">
+        <a href="{% url 'listings:create' %}?from_item={{ item.pk }}" class="mn-card-sell">Sell it</a>
+        <form method="post" action="{% url 'collections:feature_toggle' item.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" class="mn-card-case">
+                {% if item.featured %}In the case{% else %}Add to case{% endif %}
+            </button>
+        </form>
+        <a href="{% url 'collections:edit' item.pk %}" class="mn-quiet">Edit</a>
+    </div>
+</article>

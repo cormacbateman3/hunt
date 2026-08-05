@@ -111,6 +111,87 @@ def ground_covered(user, *, public_only=True):
     }
 
 
+def matrix(user, *, state=None, public_only=False):
+    """Counties down, decades across — what you hold and what you never could.
+
+    A cell is one of three things and the difference matters:
+
+    * **held** — you have at least one from that county in that decade
+    * **open** — a gap you could still fill
+    * **never** — the state was not issuing then, so it was never a gap at all
+
+    Counting a never-issued cell against somebody is the difference between a
+    tracker that helps and one that nags. The floor comes from the state's own
+    ``min_license_year``; there is no per-county record of when issuing
+    started, so this is as fine-grained as the data honestly allows.
+    """
+    from apps.core.models import State
+
+    items = CollectionItem.objects.filter(owner=user)
+    if public_only:
+        items = items.filter(is_public=True)
+
+    if state is None:
+        top = (
+            items.filter(state__isnull=False)
+            .values('state').annotate(n=Count('id')).order_by('-n').first()
+        )
+        if not top:
+            return None
+        state = State.objects.filter(pk=top['state']).first()
+    if not state:
+        return None
+
+    units = list(
+        GeographicUnit.objects.filter(state=state).order_by('sort_order', 'name'))
+    if not units:
+        return None
+
+    held = set()
+    years = []
+    for unit_id, year in items.filter(
+        state=state, county__isnull=False, license_year__isnull=False
+    ).values_list('county_id', 'license_year'):
+        held.add((unit_id, (year // 10) * 10))
+        years.append(year)
+
+    floor = state.min_license_year or (min(years) if years else None)
+    latest = max(years) if years else None
+    first_decade = ((floor // 10) * 10) if floor else 1910
+    last_decade = ((latest // 10) * 10) if latest else first_decade
+    decades = list(range(first_decade, last_decade + 10, 10))
+
+    rows, held_units = [], set()
+    for unit in units:
+        cells = []
+        for decade in decades:
+            if floor and decade + 9 < floor:
+                cells.append({'decade': decade, 'state': 'never'})
+            elif (unit.id, decade) in held:
+                cells.append({'decade': decade, 'state': 'held'})
+                held_units.add(unit.id)
+            else:
+                cells.append({'decade': decade, 'state': 'open'})
+        rows.append({'unit': unit, 'cells': cells})
+
+    fillable = sum(
+        1 for row in rows for cell in row['cells'] if cell['state'] != 'never')
+    filled = sum(
+        1 for row in rows for cell in row['cells'] if cell['state'] == 'held')
+
+    return {
+        'state': state,
+        'unit_label_plural': plural_unit(state.issuance_unit_label),
+        'decades': decades,
+        'rows': rows,
+        'units_held': len(held_units),
+        'units_total': len(units),
+        'filled': filled,
+        'fillable': fillable,
+        'pct': round(filled / fillable * 100) if fillable else 0,
+    }
+
+
 def collection_groups(user, *, public_only=True, limit=5):
     """Chips over somebody's collection — the decades they actually hold."""
     items = CollectionItem.objects.filter(owner=user)
