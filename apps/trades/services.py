@@ -3,6 +3,8 @@ from decimal import Decimal
 from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
+
+from apps.collections.tradeability import trade_block_reason
 from apps.notifications.services import create_notification
 from apps.enforcement.services import enforce_capability
 from apps.orders.models import AddressSnapshot
@@ -345,8 +347,9 @@ def create_trade_offer(
     for item in offered_items:
         if item.owner_id != from_user.id:
             return None, 'All offered items must belong to the proposer.'
-        if not item.trade_eligible:
-            return None, f'"{item.title}" is not trade-eligible.'
+        blocked = trade_block_reason(item)
+        if blocked:
+            return None, f'"{item.title}" cannot be traded: {blocked}'
     if cash_amount and not listing.allow_cash:
         return None, 'This listing does not allow cash add-ons.'
 

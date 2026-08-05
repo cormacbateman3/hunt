@@ -164,7 +164,17 @@ def offer_detail(request, offer_id):
     if offer.status == 'pending' and offer.expires_at and offer.expires_at <= timezone.now():
         offer.status = 'expired'
         offer.save(update_fields=['status', 'updated_at'])
-    history = TradeOffer.objects.filter(trade_listing=offer.trade_listing).select_related('from_user', 'to_user').order_by('-created_at')
+    # Only the negotiation these two people are having. Filtering by listing
+    # alone showed every rival proposer's offers to every other proposer —
+    # what somebody was willing to give up is theirs, not the room's.
+    parties = {offer.from_user_id, offer.to_user_id}
+    history = (
+        TradeOffer.objects
+        .filter(trade_listing=offer.trade_listing,
+                from_user_id__in=parties, to_user_id__in=parties)
+        .select_related('from_user', 'to_user')
+        .order_by('-created_at')
+    )
     trade = Trade.objects.filter(listing=offer.trade_listing).first()
     return render(request, 'trades/offer_detail.html', {
         'offer': offer,

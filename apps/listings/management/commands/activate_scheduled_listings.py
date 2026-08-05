@@ -46,11 +46,6 @@ class Command(BaseCommand):
                 locked.status = 'active'
                 locked.save(update_fields=['status', 'updated_at'])
 
-                # 4e: Mark collection item not trade-eligible now that listing is live
-                if locked.source_collection_item:
-                    locked.source_collection_item.trade_eligible = False
-                    locked.source_collection_item.save(update_fields=['trade_eligible', 'updated_at'])
-
                 create_notification(
                     user=locked.seller,
                     notification_type='listing_activated',

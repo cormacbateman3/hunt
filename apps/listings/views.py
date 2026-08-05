@@ -954,10 +954,9 @@ def listing_create(request):
                 listing.source_collection_item = collection_item
                 listing.save(update_fields=['source_collection_item', 'updated_at'])
 
-            # 4e: Mark collection item as not trade-eligible when listing goes active
-            if listing.source_collection_item and listing.status == 'active':
-                listing.source_collection_item.trade_eligible = False
-                listing.source_collection_item.save(update_fields=['trade_eligible', 'updated_at'])
+            # A live lot blocks a trade offer, but that is a fact about
+            # today, not the owner's standing answer — see
+            # apps/collections/tradeability.py. Nothing is written here.
 
             # Re-bind as inline formset to save FK automatically.
             image_formset = ListingImageFormSet(

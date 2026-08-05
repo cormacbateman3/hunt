@@ -19,6 +19,8 @@ from django.utils import timezone
 
 from apps.bids.models import Bid
 
+from apps.collections.tradeability import is_open_to_trade
+
 from .models import Favorite
 
 TABS = [
@@ -116,7 +118,7 @@ def page(user, tab=''):
             # The item's own flag, said literally. Whether the *owner* trades
             # is a bigger claim than this field can support — see the
             # DEFERRED note in templates/collections/collectors.html.
-            'open_to_trades': item.trade_eligible and item.is_public,
+            'open_to_trades': item.is_public and is_open_to_trade(item),
         })
     tradeable = sum(1 for piece in pieces if piece['open_to_trades'])
 
