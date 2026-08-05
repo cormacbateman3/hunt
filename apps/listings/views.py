@@ -10,7 +10,8 @@ from django.urls import reverse
 from django.views.generic import ListView
 from django.utils import timezone
 from . import sell_flow, seller_desk
-from .models import ERA_LABEL_CHOICES, Listing, ListingQuestion
+from django import forms
+from .models import ERA_LABEL_CHOICES, IMAGE_ROLE_CHOICES, Listing, ListingQuestion
 from .forms import ListingForm, ListingImageFormSet
 from apps.bids.forms import BidForm
 from apps.bids.services import get_user_bid_on_listing, get_winning_bid, minimum_bid_for
@@ -1065,6 +1066,13 @@ def listing_edit(request, pk):
     else:
         form = ListingForm(instance=listing, user=request.user)
         image_formset = ListingImageFormSet(instance=listing)
+
+    # On edit the role is a visible choice rather than something the upload
+    # order decided. Reordering is what used to relabel a back as a detail;
+    # now the seller says which is which and the order is only the order.
+    for image_form in image_formset.forms:
+        image_form.fields['image_role'].widget = forms.Select(
+            choices=IMAGE_ROLE_CHOICES, attrs={'class': 'form-select'})
 
     context = {
         'form': form,

@@ -4,6 +4,7 @@
 {% block title %}Edit Listing | KeystoneBid{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/sell.css' %}">
 <link rel="stylesheet" href="{% static 'css/pages/listing.css' %}">
 {% endblock %}
 
@@ -152,50 +153,81 @@
                 </div>
             </details>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
-                <div data-listing-panel="auction">
-                    <label class="form-label" for="{{ form.starting_price.id_for_label }}">Starting price ($)</label>
-                    {{ form.starting_price }}
-                    {{ form.starting_price.errors }}
-                </div>
-                <div data-listing-panel="auction">
-                    <label class="form-label" for="{{ form.reserve_price.id_for_label }}">Reserve price ($)</label>
-                    {{ form.reserve_price }}
-                    {{ form.reserve_price.errors }}
-                </div>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
-                <div data-listing-panel="auction">
-                    <label class="form-label" for="{{ form.duration_days.id_for_label }}">Auction duration</label>
-                    {{ form.duration_days }}
-                    {{ form.duration_days.errors }}
-                </div>
-                <div data-listing-panel="buy_now">
-                    <label class="form-label" for="{{ form.buy_now_price.id_for_label }}">Buy now price ($)</label>
-                    {{ form.buy_now_price }}
-                    {{ form.buy_now_price.errors }}
-                </div>
-                <div data-listing-panel="buy_now">
-                    <label class="form-label" for="{{ form.allow_offers.id_for_label }}">
-                        {{ form.allow_offers }} Allow offers
+            {% comment %}
+            The same one-panel-per-destination shape as the create form. An
+            edit is not a different decision from the one that made the
+            listing, so it should not look like a different form.
+
+            The cost line is different here, though: a live lot with a bid on
+            it cannot be cancelled, and the seller has to be told that where
+            they are about to change something.
+            {% endcomment %}
+            <div class="sl-terms">
+                <hr class="sl-terms-rule">
+                <h2 class="sl-terms-title">
+                    {% if listing.listing_type == 'auction' %}The terms &mdash; The Auction House
+                    {% else %}The terms &mdash; The General Store{% endif %}
+                </h2>
+
+                {% if listing.listing_type == 'auction' %}
+                    <div class="sl-terms-grid">
+                        <div>
+                            <label class="form-label" for="{{ form.starting_price.id_for_label }}">Starting price</label>
+                            {{ form.starting_price }}
+                            {{ form.starting_price.errors }}
+                        </div>
+                        <div>
+                            <label class="form-label" for="{{ form.reserve_price.id_for_label }}">Reserve</label>
+                            {{ form.reserve_price }}
+                            <small class="sl-hint">A floor you won&rsquo;t go under. Bidders see that there is one, never the figure.</small>
+                            {{ form.reserve_price.errors }}
+                        </div>
+                        <div>
+                            <label class="form-label" for="{{ form.duration_days.id_for_label }}">Runs for</label>
+                            {{ form.duration_days }}
+                            {{ form.duration_days.errors }}
+                        </div>
+                        <div>
+                            <label class="form-label" for="{{ form.bid_increment.id_for_label }}">Smallest raise</label>
+                            {{ form.bid_increment }}
+                            {{ form.bid_increment.errors }}
+                        </div>
+                    </div>
+                    <p class="sl-cost">
+                        {% if listing.bids.exists %}
+                            This lot has bids on it. You can&rsquo;t cancel it now, and changing
+                            the terms under people who have already bid is how disputes start.
+                        {% else %}
+                            No bids yet, so you can still cancel it or change anything here.
+                        {% endif %}
+                    </p>
+
+                {% else %}
+                    <div class="sl-terms-grid">
+                        <div>
+                            <label class="form-label" for="{{ form.buy_now_price.id_for_label }}">Your price</label>
+                            {{ form.buy_now_price }}
+                            {{ form.buy_now_price.errors }}
+                        </div>
+                        <div>
+                            <label class="form-label" for="{{ form.minimum_offer.id_for_label }}">Nothing under</label>
+                            {{ form.minimum_offer }}
+                            <small class="sl-hint">Offers below this are turned away for you, and the
+                                buyer is told the figure. Leave it empty and every offer reaches you.</small>
+                            {{ form.minimum_offer.errors }}
+                        </div>
+                    </div>
+                    <label class="sl-check">
+                        {{ form.allow_offers }}
+                        <span>
+                            <strong>I&rsquo;ll consider offers</strong>
+                            <small class="sl-hint">Binding if you accept. Buyers open, you counter.</small>
+                        </span>
                     </label>
-                    <small style="color: var(--color-muted);">
-                        Buyers can propose a lower price. Offers are binding &mdash; accepting one
-                        sells the item at that price.
-                    </small>
                     {{ form.allow_offers.errors }}
-                </div>
-            </div>
-            <div data-listing-panel="trade">
-                <label class="form-label" for="{{ form.trade_notes.id_for_label }}">Trade preferences</label>
-                {{ form.trade_notes }}
-                {{ form.trade_notes.errors }}
-            </div>
-            <div data-listing-panel="trade">
-                <label class="form-label" for="{{ form.allow_cash.id_for_label }}">
-                    {{ form.allow_cash }} Allow cash add-on in trade offers
-                </label>
-                {{ form.allow_cash.errors }}
+                    <p class="sl-cost">Change the price or take it down whenever. Offers already
+                        open keep the terms they were made under.</p>
+                {% endif %}
             </div>
 
             <details style="margin-top: 0.25rem;" {% if form.auto_relist.errors or form.local_pickup_location.errors %}open{% endif %}>
@@ -255,7 +287,11 @@
         </details>
 
         <hr style="margin: 1.2rem 0; border: 0; border-top: 1px solid var(--color-border);">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.75rem;">Additional images</h2>
+        <h2 style="font-size: 1.2rem; margin-bottom: 0.75rem;">Photographs</h2>
+        <p class="sl-hint" style="margin-bottom: 0.6rem;">
+            What each photograph is of travels with the file, so moving one up or
+            down changes the order and nothing else.
+        </p>
         {{ image_formset.management_form }}
         <div style="display: grid; gap: 0.75rem;">
             {% for image_form in image_formset %}
@@ -263,6 +299,8 @@
                     {{ image_form.id }}
                     {{ image_form.sort_order }}
                     {{ image_form.image }}
+                    <label class="form-label" for="{{ image_form.image_role.id_for_label }}">What this one is</label>
+                    {{ image_form.image_role }}
                     {% if image_form.instance.image %}
                         <img src="{{ image_form.instance.image.url }}" alt="Existing listing image" style="max-width: 180px; border-radius: 6px;">
                     {% endif %}
