@@ -251,11 +251,16 @@ of the shell. `/collections/` is one dispatching view (`collections_zone`).
 
 ---
 
-## Pass 4 — My Bench: the rest of the workspace 🔄 IN PROGRESS
+## Pass 4 — My Bench: the rest of the workspace ✅ DONE
 
-**Owes the deferred register** — `display_caption` on `CollectionItem` (the display
-case currently reuses `description`), and `SHIP_BY_DAYS` moved out of
-`apps/accounts/bench.py` into `MarketplaceSettings` with a job that enforces it.
+*2026-08-05 · commits `290a8bd`, `e417b3f`, `541bb61`, `d1327f2`, `bfd2dd0`,
+`b066bb0` · 309 tests green (106 added)*
+
+**Register debts settled** — `SHIP_BY_DAYS` moved from a constant in
+`apps/accounts/bench.py` to `MarketplaceSettings.ship_by_days` (`core/0010`), read
+through `bench.ship_by_days()`. **Still owed:** `display_caption` on
+`CollectionItem` — the display case reuses `description`, and a dedicated field is
+now a Pass 5 candidate rather than a Pass 4 one.
 
 
 **Design refs** — turn 8a–8e, turn 7a–7d.
@@ -274,30 +279,64 @@ case currently reuses `description`), and `SHIP_BY_DAYS` moved out of
 | **My listings** ✅ | `290a8bd` | `apps/listings/seller_desk.py` + rebuilt template. The **Interest** column — offers, unanswered questions, bids, watchers — from data already in the models. Anything waiting on the seller wins its row outright (edge marker, brass tint, the only filled button) **even against a lot closing in twenty minutes**: the reply is the thing that can lose the sale, the auction closes either way. Observations are checkable and hedged — "Quiet — try $170?" only above three watchers, "Nobody has looked yet" below it; relists counted down before they run out. Status chips filter without losing the other counts. |
 | **Bids & offers** ✅ | `e417b3f` | `apps/accounts/ledger.py` + `templates/accounts/_ledger_row.html`. One page split by **direction** — *Chasing* / *On my things*; `/offers/mine/` redirects in. Three money columns everywhere: yours, theirs, what it means (`You'd keep $237.50 of it`, `next bid $412`). Row colour carries state: rust losing, green ahead, brass your turn. Withdraw is a POST form — **a bid cannot be taken back, an offer can until it's answered**, and the markup has to say which is which. |
 
-### Still to do in this pass
+### The rest of what shipped
 
-- **Saved** — favourites sorted by what closes soonest, with countdown and bid
-  state on the card. Sold ones stay, greyed. Saved hunts strip.
-- **Messages** — two panes, not two pages. The deal stays pinned on screen with
-  amount, your side, live deadline. **Catch the agreement**: a buyer saying "Monday
-  is fine" is exactly the handshake case and is invisible to enforcement today.
-- **Notifications** — reading marks read (drop the per-row Mark-read form). One
-  sentence with the hour in the margin. Three dot states: rust = on a clock,
-  brass = wants an answer, nothing = news.
-- **Orders list** — one ledger, not Purchases + Sales cards. Status in plain
-  English with the consequence: *cancelled in 14 hours*, *a strike on Thursday*,
-  *assumed received on Monday*. One action per row.
-- **Order page** — eight cards → a header, a **five-stop rail**, and one
-  brass-bordered "Your turn" box. Two ways to ship side by side. Money, addresses
-  and the other party move right. **Delete the Stripe session id and the package
-  inputs** (captured on the listing).
-- **The handshake, offered early** (7d) — today the exception flow appears only
-  once a strike exists, after the damage. Offer it beside the deadline, in the
-  seller's own word, with the strike ladder printed next to it.
+| Screen | Commit | What landed |
+|---|---|---|
+| **Orders list** ✅ | `541bb61` | `apps/orders/ledger.py`. One column, not a Purchases card and a Sales card — split that way the two orders on a clock were never next to each other. Every row says **who is being waited on and what happens if nothing changes**, and each consequence is read back from the constant the management command enforces. A test asserts that per status, because a row promising a deadline the job does not keep is worse than no row. |
+| **Order page** ✅ | `541bb61` | Eight stacked cards → a header, a **five-stop rail**, and one brass box that appears **only when it is actually your turn**. Two ways to ship side by side. Stripe session id and package inputs deleted. The seller sees what they keep; the buyer sees what they paid and not the commission, which is not theirs to see. |
+| **The handshake, offered early** ✅ | `541bb61` | The one real behaviour change in the pass — see below. |
+| **Saved** ✅ | `d1327f2` | `apps/favorites/saved.py`. Sorted by what closes soonest, countdown and your own bid state on the card, "forget this" demoted to a quiet foot line. Sold ones stay, greyed, with *Find another* running the same search against live listings. Pieces in other collections say **open to trades** — the item's own flag said literally. |
+| **Notifications** ✅ | `d1327f2` | `apps/notifications/centre.py`. **Reading it marks it read**; the per-row form is gone and one honest *Mark all read* sits at the top. One sentence, hour in the margin, and the row's only button is the thing it is about — and only when there is somewhere for it to go. Three dot states and no more. Counts are taken **before** the marking, so the page describes what you are looking at rather than what is left. |
+| **Messages** ✅ | `bfd2dd0` | `apps/messaging/threads.py`. Two panes, not two pages. The deal pinned with amount, your side and the live deadline. **Catch the agreement** — the nudge appears only for the person the clock runs against, only while there is time, and only while nothing is on the record. |
+| **My collection** ✅ | `b066bb0` | Three views of one collection: everything, **what I'm missing** (the matrix), and the wanted list. `tracker.matrix()` and `wants.rows()`. |
+
+### The handshake — what actually changed
+
+The excuse flow lived on `Strike` and could only be started **after a strike had
+been issued**. Nearly every late shipment is a show pickup, a combined parcel or a
+buyer who said "no rush" — so the flow only ever arrived after somebody had already
+been penalised for something both parties were fine with. That is the difference
+between a rule and a fair rule.
+
+`enforcement.OrderHandshake` (migration `0005`) + `enforcement/handshakes.py`:
+
+- One party proposes, the other confirms. **An unconfirmed proposal does nothing** —
+  an agreement one person made with themselves is not an agreement.
+- **Both enforcement paths honour it**: `enforce_deterministic_policies` skips the
+  `non_shipment` strike, `auto_complete_delivered_orders` skips the auto-complete.
+  Tested in both directions, with and without.
+- **Scoped.** A `shipping` handshake does not excuse a missed `receipt` — whoever
+  agreed to wait for the parcel did not agree to that.
+- **Lapses in 72 hours**, so a seller cannot park one against every order and stop
+  shipping.
+- Confirmation is under a `CheckConstraint`: either nobody agreed, or we can say who
+  and when. (The same discipline 18a asks for on `Strike` — still owed there.)
+
+### The matrix rule worth keeping
+
+A decade the state was **never issuing in** is hatched, is not a link, and is left
+out of the denominator. A gap you could never have filled is not a gap. The floor is
+`State.min_license_year`; there is no per-county issuing record, so that is as
+fine-grained as the data honestly allows and the module says so.
+
+### Deviations, and why
+
+- **Saved hunts strip** — omitted. Needs a `SavedHunt` model. In the register.
+- **Named sets** on My collection (*All items / Resident 1913–1930 / Duplicates*) —
+  omitted. Needs `CollectionSet` (Pass 13). In the register.
+- **Closing price on a sold favourite** — the row says only that it sold. What it
+  made is price history (Pass 12). In the register.
+- **"Catch the agreement" does not read the messages.** A machine deciding a
+  sentence was an agreement is worse than no feature at all, so the copy stays
+  conditional — *"if the two of you have agreed something different"* — and a test
+  holds that wording.
+- **Import a spreadsheet** (10a) — not built; no importer exists and one is a
+  feature, not a button.
 
 ---
 
-## Pass 5 — The sell flow ⬜
+## Pass 5 — The sell flow ⬜ NEXT
 
 **Design refs** — turn 6a/6b/6c (**this supersedes turn 5** — 6's opening line is
 *"You're right and 5a was wrong: the destination should be the first question"*).
@@ -321,6 +360,7 @@ slots**, which the design reinforces; drop T13's **config page**, which it doesn
 - **Lot listing** (9d) — quantity 2–10, one row per piece with front/back, over 10
   routes to box-lot guidance. Rides **10.15**.
 
+edit listing needs to be looked at as well
 ---
 
 ## Pass 6 — Auth and the ten settings rooms ⬜
@@ -559,12 +599,15 @@ coming back for it.
 | **"Propose a trade"** as one click | a two-step walk — the button opens their trade-eligible shelf | a proposal today needs a `listing_id`; tradeability is not yet a property of the item | **7** (10.10) | point the button at a person-level propose view |
 | **"Sets going"** — the card's third figure | shows **counties held** instead | no `CollectionSet` model | **13** (10.14) | swap the annotation in `apps/collections/collectors.py`; the layout does not change |
 | **Earned badges** under the profile bio | omitted; marker in `templates/accounts/profile.html` | no `Badge` model or its thirteen awards | **14** | render the badge row where the marker sits |
-| **Display-case captions** | reuses the item `description` | no `display_caption` field on `CollectionItem` | **4** | add the field, fall back to `description` |
+| **Display-case captions** | reuses the item `description` | no `display_caption` field on `CollectionItem` | **5** | add the field, fall back to `description` |
 | **The map** (Collections tab, profile *Ground covered*) | honest placeholder + a hatched panel; the figures beside it are real | county **geometry** does not exist; `GeographicUnit.valid_from`/`valid_to` absent | **9 / 10** | draw the choropleth; the arithmetic in `apps/collections/tracker.py` is already there |
 | **Trade board** tab | leaves the zone for `/hunt/?format=trade` | the designed board is its own screen | **7** | make the tab local |
 | **Distance** — *"41 within a hundred miles"* | reads *N will trade · N selling now* | no geocoding, no geometry | **9 / 10** | add the measure to the header line |
 | **Filtering people by where they live** | filters on **where they collect** | `UserProfile.county` is free text | **6** | switch the facet to the FK |
-| **`SHIP_BY_DAYS`** promise in the bench | a constant in `apps/accounts/bench.py` | belongs in `MarketplaceSettings` | **4** | move it, and give it a job that enforces it |
+| ~~**`SHIP_BY_DAYS`**~~ ✅ | now `MarketplaceSettings.ship_by_days`, read via `bench.ship_by_days()` | settled in Pass 4 | — | a job that *enforces* it is still unwritten; it remains a promise |
+| **Saved hunts** — standing searches that go looking for you | omitted from Saved; marker in `templates/favorites/list.html` | no `SavedHunt` model | **10** | render the strip where the marker sits |
+| **Named sets** on My collection | omitted; marker in `templates/collections/my_collection.html` | no `CollectionSet` model | **13** | render the set strip |
+| **Closing price** on a sold favourite | the row says only that it sold | price history | **12** | print what it made |
 
 ---
 
