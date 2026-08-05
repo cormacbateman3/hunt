@@ -10,13 +10,8 @@ collects what I collect.
            {% if zone_tab == 'people' %}aria-current="page"{% endif %}>Collectors</a>
         <a href="{% url 'collectors' %}?tab=owned" class="kb-tab"
            {% if zone_tab == 'owned' %}aria-current="page"{% endif %}>Everything owned</a>
-        {% comment %}
-        DEFERRED — Trade board leaves the zone for the catalog's trade format.
-        Blocked on: 10.10 trade re-architecture, then Pass 7 builds the board
-        inside this zone. When it lands, this href becomes a local tab.
-        Register: docs/internal/plan_design.md
-        {% endcomment %}
-        <a href="{% url 'hunt' %}?format=trade" class="kb-tab">Trade board</a>
+        <a href="{% url 'collectors' %}?tab=trade" class="kb-tab"
+           {% if zone_tab == 'trade' %}aria-current="page"{% endif %}>Trade board</a>
 
         {% comment %}
         DEFERRED — The map renders an honest placeholder.

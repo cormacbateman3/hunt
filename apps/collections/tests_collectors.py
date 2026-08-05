@@ -12,6 +12,7 @@ from django.urls import reverse
 from apps.collections.models import CollectionItem, WantedItem
 from apps.collections.tracker import ground_covered, plural_unit
 from apps.core.models import GeographicUnit, LicenseType, State
+from apps.listings.models import Listing
 
 
 class CollectorsBaseTest(TestCase):
@@ -292,3 +293,57 @@ class WhereTheyLiveTests(CollectorsBaseTest):
         rows = self.client.get(reverse('collectors')).context['rows']
         dale = next(row for row in rows if row['user'] == self.dale)
         self.assertTrue(dale['place'])
+
+
+class TradeBoardTests(CollectorsBaseTest):
+    """The board is built from pieces, not listings.
+
+    The tab used to leave the zone for /hunt/?format=trade, which asked the
+    wrong question: a collector here wants to know what they could get, not
+    what is for sale.
+    """
+
+    def setUp(self):
+        CollectionItem.objects.filter(owner=self.walt).update(tradeability='open')
+        CollectionItem.objects.filter(owner=self.dale).update(tradeability='closed')
+
+    def test_the_tab_stays_inside_the_zone(self):
+        html = self.client.get(reverse('collectors')).content.decode()
+        self.assertIn('?tab=trade', html)
+        self.assertNotIn('format=trade', html)
+
+    def test_only_pieces_somebody_opened_appear(self):
+        rows = self.client.get(reverse('collectors'), {'tab': 'trade'}).context['rows']
+        owners = {row['owner'] for row in rows}
+        self.assertIn(self.walt, owners)
+        self.assertNotIn(self.dale, owners)
+
+    def test_a_piece_on_a_live_lot_comes_off_the_board(self):
+        from decimal import Decimal
+        piece = CollectionItem.objects.filter(owner=self.walt).first()
+        Listing.objects.create(
+            seller=self.walt, source_collection_item=piece, title=piece.title,
+            description='d', state=self.pa, condition_grade='good',
+            status='active', listing_type='buy_now', buy_now_price=Decimal('50'))
+
+        rows = self.client.get(reverse('collectors'), {'tab': 'trade'}).context['rows']
+        self.assertNotIn(piece, [row['item'] for row in rows])
+
+    def test_what_answers_your_wanted_list_is_marked_and_leads(self):
+        self.client.force_login(self.me)
+        page = self.client.get(reverse('collectors'), {'tab': 'trade'}).context
+        self.assertTrue(page['rows'][0]['answers_a_want'])
+        self.assertEqual(page['wanted_count'], 2)
+
+    def test_you_never_see_your_own_pieces_on_the_board(self):
+        self._item(self.me, county=self.cameron, year=1933)
+        CollectionItem.objects.filter(owner=self.me).update(tradeability='open')
+
+        self.client.force_login(self.me)
+        rows = self.client.get(reverse('collectors'), {'tab': 'trade'}).context['rows']
+        self.assertNotIn(self.me, {row['owner'] for row in rows})
+
+    def test_a_stranger_sees_the_board_without_a_wanted_column(self):
+        page = self.client.get(reverse('collectors'), {'tab': 'trade'}).context
+        self.assertEqual(page['wanted_count'], 0)
+        self.assertTrue(page['rows'])

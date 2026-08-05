@@ -1,0 +1,171 @@
+/* ==========================================================================
+   The trade board
+
+   Pieces their owners have opened to offers. Anything that answers something
+   on your wanted list carries a rust edge, because that is the only reason
+   most collectors open this page.
+   ========================================================================== */
+
+.kb-board {
+    max-width: var(--kb-page-max);
+    margin: 0 auto;
+    padding: var(--kb-6) var(--kb-gutter) var(--kb-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--kb-4);
+}
+
+.bd-head {
+    align-items: flex-end;
+}
+
+.bd-lede {
+    margin: 4px 0 0;
+    font-size: 13.5px;
+    color: var(--kb-ink-3);
+}
+
+.bd-hit {
+    color: var(--kb-rust);
+}
+
+.bd-sort {
+    flex-shrink: 0;
+}
+
+.bd-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: var(--kb-4);
+}
+
+.bd-piece {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    /* Transparent by default so the wanted marker never shifts a card. */
+    border-top: 3px solid transparent;
+}
+
+.bd-piece:hover {
+    border-color: var(--kb-rule-strong);
+}
+
+.bd-piece--wanted {
+    border-top-color: var(--kb-rust);
+}
+
+.bd-media {
+    aspect-ratio: 4 / 3;
+    background: var(--kb-hatch);
+    display: block;
+    position: relative;
+}
+
+.bd-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.bd-flag {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: var(--kb-rust);
+    color: var(--kb-surface);
+    font: 700 var(--kb-badge-size)/1.2 var(--kb-font-body);
+    letter-spacing: var(--kb-badge-tracking);
+    text-transform: uppercase;
+    padding: 4px 8px;
+    border-radius: var(--kb-r-chip);
+}
+
+.bd-body {
+    padding: 11px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.bd-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--kb-forest);
+    text-decoration: none;
+}
+
+.bd-title:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.bd-meta {
+    font-size: 11.5px;
+    color: var(--kb-ink-3);
+}
+
+/* What they'd take, in their own words. Set in italic because it is a quote,
+   not a field. */
+.bd-wants {
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--kb-ink-2);
+    font-style: italic;
+    margin-top: 2px;
+}
+
+.bd-foot {
+    border-top: 1px solid var(--kb-rule-soft);
+    padding: 8px 12px;
+    background: var(--kb-page);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.bd-owner {
+    font-size: 11.5px;
+    color: var(--kb-ink-3);
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.bd-owner:hover {
+    color: var(--kb-brass);
+}
+
+.bd-ask {
+    font: 700 var(--kb-label-size)/1.2 var(--kb-font-body);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--kb-brass);
+    text-decoration: none;
+    flex-shrink: 0;
+}
+
+@media (max-width: 1100px) {
+    .bd-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+@media (max-width: 900px) {
+    .bd-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 640px) {
+    .bd-grid { grid-template-columns: repeat(2, 1fr); }
+
+    .bd-head {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--kb-3);
+    }
+}

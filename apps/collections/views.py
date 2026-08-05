@@ -23,6 +23,7 @@ from apps.core.models import GeographicUnit, LicenseType, State
 from apps.orders.models import Order
 
 from . import wants
+from .board import board
 from .browse import page as browse_page
 from .collectors import collector_rows
 from .tracker import ground_covered, matrix as tracker_matrix
@@ -206,6 +207,12 @@ def collections_zone(request):
     tab = request.GET.get('tab', 'people')
     if tab == 'owned':
         return browse_collections(request)
+    if tab == 'trade':
+        return render(request, 'collections/trade_board.html', {
+            'zone_tab': 'trade',
+            'following_ids': following_ids(request.user),
+            **board(request.user, request.GET),
+        })
     if tab == 'map':
         return render(request, 'collections/zone_map.html',
                       {'zone_tab': 'map'})

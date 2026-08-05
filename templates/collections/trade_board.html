@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Trade board &middot; Collections &middot; KeystoneBid{% endblock %}
+
+{% block context_band %}{% include 'components/_collections_tabs.html' %}{% endblock %}
+
+{% block main_class %}kb-board{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/board.css' %}">{% endblock %}
+
+{% block content %}
+{% comment %}
+Every piece here is one somebody has actually opened to offers. The tab used
+to leave the zone for the catalog's trade format, which was the wrong shape
+twice: a trade is not a listing, and the question a collector brings here is
+what could I get, not what is for sale.
+{% endcomment %}
+
+<header class="kb-between bd-head">
+    <div>
+        <h1 class="kb-page-title">The trade board</h1>
+        <p class="bd-lede">
+            {{ total }} piece{{ total|pluralize }} their owners have opened to offers.
+            {% if wanted_count %}
+                <strong class="bd-hit">{{ wanted_count }}</strong>
+                answer{{ wanted_count|pluralize:"s," }} something on your wanted list.
+            {% endif %}
+        </p>
+    </div>
+    <div class="kb-inline">
+        {% if has_wants %}
+            <a href="?tab=trade{% if only_wants %}{% else %}&amp;mine=wants{% endif %}"
+               class="kb-chip {% if only_wants %}is-on{% endif %}">Only what I&rsquo;m after</a>
+        {% endif %}
+        <label class="bd-sort">
+            <span class="kb-sr">Sort the board</span>
+            <select class="kb-select" onchange="location.href='?tab=trade&amp;sort=' + this.value">
+                {% for option in sorts %}
+                    <option value="{{ option.key }}" {% if option.active %}selected{% endif %}>{{ option.label }}</option>
+                {% endfor %}
+            </select>
+        </label>
+    </div>
+</header>
+
+{% if rows %}
+    <div class="bd-grid">
+        {% for row in rows %}
+            <article class="bd-piece{% if row.answers_a_want %} bd-piece--wanted{% endif %}">
+                <a href="{% url 'collections:item_detail' row.item.pk %}" class="bd-media">
+                    {% if row.item.images.all %}
+                        <img src="{{ row.item.images.all.0.image.url }}" alt="" loading="lazy">
+                    {% endif %}
+                    {% if row.answers_a_want %}
+                        <span class="bd-flag">On your list</span>
+                    {% endif %}
+                </a>
+
+                <div class="bd-body">
+                    <a href="{% url 'collections:item_detail' row.item.pk %}" class="bd-title">
+                        {{ row.item.license_year|default:row.item.effective_era }}
+                        {{ row.item.county.name|default:row.item.state.code|default:'' }}
+                    </a>
+                    <span class="bd-meta">
+                        {{ row.item.title|truncatechars:34 }}
+                        {% if row.item.condition_grade %} &middot; {{ row.item.get_condition_grade_display }}{% endif %}
+                    </span>
+                    {% comment %}
+                    What they'd take for it, in their own words. Without this
+                    the board is a shelf of things you cannot ask about.
+                    {% endcomment %}
+                    {% if row.wants %}
+                        <span class="bd-wants">&ldquo;{{ row.wants|truncatechars:70 }}&rdquo;</span>
+                    {% endif %}
+                </div>
+
+                <div class="bd-foot">
+                    <a href="{% url 'accounts:profile' row.owner.username %}" class="bd-owner">
+                        {{ row.owner.profile.get_display_name }}
+                    </a>
+                    {% comment %}
+                    DEFERRED — this should open a proposal against this piece.
+                    Blocked on: TradeOffer requires a listing_id, so an offer
+                    cannot yet start from an item.
+                    Register: docs/internal/plan_design.md
+                    {% endcomment %}
+                    <a href="{% url 'accounts:profile' row.owner.username %}?group=trade#the-collection"
+                       class="bd-ask">Ask about it</a>
+                </div>
+            </article>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="kb-empty">
+        <h2>
+            {% if only_wants %}Nothing on the board matches your list
+            {% else %}Nobody has opened a piece to trade yet{% endif %}
+        </h2>
+        <p>
+            {% if only_wants %}
+                The rest of the board is still worth a look &mdash; a collector who
+                trades one thing usually trades another.
+            {% else %}
+                Open one of your own and it appears here. A piece is only on this
+                board because its owner said it could be.
+            {% endif %}
+        </p>
+        <div class="kb-empty-actions">
+            {% if only_wants %}
+                <a href="?tab=trade" class="kb-btn kb-btn--secondary">The whole board</a>
+            {% endif %}
+            {% if user.is_authenticated %}
+                <a href="{% url 'collections:my_collection' %}" class="kb-btn kb-btn--primary">My collection</a>
+            {% endif %}
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
