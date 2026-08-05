@@ -11,6 +11,67 @@ and carries over the items they left open.
 
 ---
 
+## How the three plans relate
+
+`dev_plan.md` is the programme. `data_model_img_prefill_plan.md` is the schema and
+taxonomy workstream underneath it. **The design model was drawn after both**, and
+in places it reaches a different answer.
+
+**Precedence, where two of them describe the same thing:**
+
+> **For anything a member sees** — the design model wins, and this file records how.
+> **For anything a member does not see** — schema, seeders, the reference-data
+> pipeline, the prefill resolver — the data-model plan still rules, and the design
+> has nothing to say about it.
+
+That split matters because the two plans mostly do not overlap. The design almost
+never contradicts the data-model plan; it *depends* on it. The exceptions are
+listed below and are the only places to be careful.
+
+### What the design supersedes
+
+| Superseded | By | What changes |
+|---|---|---|
+| **T13 two-page create flow** — and it is **already shipped** (`templates/listings/listing_create_config.html`) | turn 6a/6b/6c | **Three steps, not two.** Destination first, as three cards that each state *the questions they will ask*. The "yours or stock" radio is deleted — 6a: *"it was solving a problem the destination choice solves better."* "From my collection" becomes a route on step 1 (duplicates first) that skips step 2 entirely, not a config toggle. Lot becomes a quieter second entry. The config page gets replaced in **Pass 5**. |
+| **10.20 Final UI/UX Polish Pass** | Passes 1–11 | Its entire scope — global navigation, sensible grouping, consistent cards, a more engaging home page, the brand voice, the mobile pass — *is* this redesign. 10.20 becomes a sign-off checklist, not a task. |
+| **10.11's "move filters to a horizontal layout"** | turn 1c / 13b | A **vertical left rail with result counts**, not horizontal. Already delivered in Pass 1. |
+| **turn 5** (one door, then a disposition) | **turn 6** | Internal to the design, but worth knowing: 6a opens *"You're right and 5a was wrong: the destination should be the first question."* Build turn 6. |
+
+`10.10 Trade Re-Architecture` is **not** a conflict — the dev plan and the design
+reached the same conclusion independently, in nearly the same words. Both delete
+`listing_type='trade'` and make tradeability a property of the item.
+
+### What still stands, untouched
+
+Everything else in the data-model plan is unaffected, and several items the design
+*depends on*:
+
+- **T3 / T4 facets and year ranges** — and the design gives them a **new consumer**:
+  the tracker matrix reads `LicenseType.first_year` / `last_year` to draw the
+  hatched *never issued* cells, so a gap you could never fill is not counted
+  against you (14b).
+- **T5 taxonomy cleanup + the `RENAMES` map** — and 17b adds duplicate-candidate
+  grouping *upstream* of the merge screen, which it calls "already right".
+- **T11 governance** — non-clobbering seeders, drift report, approve-a-suggestion,
+  merge tooling. 19b: `ReferenceDataSuggestion` "already has accept-and-apply,
+  which is the whole job".
+- **T13 image slots (`image_role`)** — **reinforced**, not superseded: turn 6b draws
+  the labelled Featured·front / Back / three-optional slots exactly as T13 specs
+  them. Still owed.
+- **T13 lot images** — turn 9d draws the lot screen and matches T13's amendment
+  (2–10 items, front/back each, box-lot guidance above 10).
+- **T14 ledger**, **R6 gold labels**, **the prefill polish backlog**, **the Postgres
+  check** — all untouched. 17b adds one thing: a **cleared-rate** column, because
+  `PrefillCorrection` is a better signal than the tier table.
+
+### What the design adds that the data-model plan deferred
+
+The data-model plan put `WantedItem` "deliberately out of scope … revisit with
+10.14". The design now specifies it (11b), along with several other fields — all
+listed under **Field-level gaps** below.
+
+---
+
 ## How to use this document
 
 1. **Every pass re-reads the design model.** Open the `.dc.html` and read the turns
@@ -204,6 +265,11 @@ The zone has **four tabs**: `Collectors` (opens first) · `Everything owned` ·
 **Design refs** — turn 6a/6b/6c (**this supersedes turn 5** — 6's opening line is
 *"You're right and 5a was wrong: the destination should be the first question"*).
 Dev plan 10.8 amendments, T13.
+
+⚠ **This pass replaces shipped code.** T13's two-page create flow is live
+(`listing_create_config.html` + `listing_create.html`). The design's three-step
+flow supersedes it — see the precedence table at the top. Keep T13's **image
+slots**, which the design reinforces; drop T13's **config page**, which it doesn't.
 
 - **Step 1 — where it's going.** Three destination cards (My collection / The
   Auction House / The General Store), each ending with *the questions it will ask*.
