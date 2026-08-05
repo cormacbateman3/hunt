@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% comment %}
+The shell both auth pages sit in.
+
+The nav bar comes off — there is nothing to navigate to, and four zone links
+on a sign-in page are just noise. The nameplate centres, the sheet sits on
+hatched parchment, and there is one thing to do.
+{% endcomment %}
+
+{% block masthead %}{% endblock %}
+
+{% block main_class %}kb-auth{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/auth.css' %}">{% endblock %}
+
+{% block content %}
+<div class="au-page">
+    <header class="au-strap">
+        <span class="au-strap-line">Antique hunting licences of the Commonwealth &amp; beyond</span>
+        <span class="au-strap-alt">{% block alt_prompt %}{% endblock %}</span>
+    </header>
+
+    <div class="au-plate">
+        <img src="{% static 'img/keystone-mark.svg' %}" alt="" class="au-mark">
+        <span class="au-name">KeystoneBid</span>
+        <span class="au-est">Est. 2026 &middot; Pennsylvania</span>
+    </div>
+
+    {% block sheets %}{% endblock %}
+
+    {% comment %}
+    Auth is where older users get stranded, and a dead end here costs the
+    member entirely. One line promising a real reply, with a real address, is
+    worth more than any amount of inline validation — and it sets the tone:
+    this is a place run by people.
+    {% endcomment %}
+    <footer class="au-human">
+        Anything at all wrong &mdash; a bad reset link, a locked account, a name you
+        can&rsquo;t remember &mdash; write to
+        <a href="mailto:help@keystonebid.com">help@keystonebid.com</a>
+        and a person will answer.
+    </footer>
+</div>
+{% endblock %}

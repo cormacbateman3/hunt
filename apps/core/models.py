@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.contrib.auth.models import User
 from django.db import models
 
 from apps.core.constants import (
@@ -278,3 +279,74 @@ class MarketplaceSettings(models.Model):
 
     def __str__(self):
         return f'Marketplace Settings (fee {self.platform_fee_percent}%)'
+
+
+class TermsVersion(models.Model):
+    """A version of the Marketplace Rules and Terms.
+
+    Enforcement is only fair if you can say what somebody agreed to. A single
+    "terms accepted" boolean cannot: the rules change, and a strike issued
+    under version 1.3 against a member who joined under 1.1 is not something
+    you could defend. So the version is a record, and the acceptance points
+    at it.
+
+    The `summary` is the four plain obligations shown beside the checkbox —
+    describe items honestly, no mystery lots, ship within the handling
+    window, settle disagreements between yourselves first. A collector who
+    reads that line knows what they signed, which is the entire point.
+    """
+
+    version = models.CharField(
+        max_length=20, unique=True,
+        help_text='As shown to members — "1.2".',
+    )
+    summary = models.TextField(
+        help_text='The short version, shown beside the acceptance checkbox.',
+    )
+    body = models.TextField(blank=True, help_text='The full text.')
+    effective_from = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Terms Version'
+        verbose_name_plural = 'Terms Versions'
+        ordering = ['-effective_from']
+
+    def __str__(self):
+        return f'Terms {self.version}'
+
+    @classmethod
+    def current(cls):
+        """The version in force now, or None if nothing has been published.
+
+        Nothing is invented when the table is empty — a registration form
+        that shows "version 1.0" against no record would be worse than one
+        that shows no version at all.
+        """
+        from django.utils import timezone
+        return cls.objects.filter(effective_from__lte=timezone.now()).first()
+
+
+class TermsAcceptance(models.Model):
+    """Who agreed to what, and when. Never edited, never deleted."""
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='terms_acceptances')
+    terms = models.ForeignKey(
+        TermsVersion, on_delete=models.PROTECT, related_name='acceptances')
+    accepted_at = models.DateTimeField(auto_now_add=True)
+    # What they were doing when they agreed — registration, or a later
+    # re-acceptance after the rules changed.
+    context = models.CharField(max_length=40, default='registration')
+
+    class Meta:
+        verbose_name = 'Terms Acceptance'
+        verbose_name_plural = 'Terms Acceptances'
+        ordering = ['-accepted_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'terms'], name='one_acceptance_per_version'),
+        ]
+
+    def __str__(self):
+        return f'{self.user.username} accepted {self.terms.version}'

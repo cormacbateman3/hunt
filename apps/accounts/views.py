@@ -78,7 +78,34 @@ def register(request):
     else:
         form = UserRegistrationForm()
 
-    return render(request, 'accounts/register.html', {'form': form})
+    return render(request, 'accounts/register.html', {
+        'form': form,
+        'stats': _joining_stats(),
+    })
+
+
+def _joining_stats():
+    """What is actually here, for the right-hand column.
+
+    Counted, never rounded up. A figure a visitor could check themselves and
+    find wrong is worse than no figure.
+    """
+    from apps.core.models import GeographicUnit, State
+    from apps.listings.models import Listing
+
+    default_state = State.objects.filter(is_primary_default=True).first()
+    units = (
+        Listing.objects.filter(status='active', county_ref__isnull=False)
+        .values('county_ref').distinct().count()
+    )
+    return {
+        'listings': Listing.objects.filter(status='active').count(),
+        'units': units,
+        'unit_label': (
+            f'{default_state.issuance_unit_label}s' if default_state else 'counties'
+        ),
+        'collectors': User.objects.filter(is_active=True).count(),
+    }
 
 
 @login_required

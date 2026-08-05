@@ -36,9 +36,39 @@ class UserRegistrationForm(UserCreationForm):
         })
     )
 
+    accept_terms = forms.BooleanField(
+        required=True,
+        error_messages={'required': 'You have to accept the rules to join.'},
+    )
+
     class Meta:
         model = User
         fields = ['username', 'email', 'password1', 'password2']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from apps.core.models import TermsVersion
+
+        # Acceptance is recorded against a version, so there has to be one.
+        # If nothing is published the checkbox is not shown at all rather
+        # than asking somebody to agree to a document that does not exist.
+        self.terms = TermsVersion.current()
+        if self.terms:
+            self.fields['accept_terms'].label = (
+                f'I’ve read the Marketplace Rules and Terms, version '
+                f'{self.terms.version}.'
+            )
+        else:
+            del self.fields['accept_terms']
+
+    def save(self, commit=True):
+        user = super().save(commit=commit)
+        if commit and self.terms:
+            from apps.core.models import TermsAcceptance
+            TermsAcceptance.objects.get_or_create(
+                user=user, terms=self.terms,
+                defaults={'context': 'registration'})
+        return user
 
     def clean_email(self):
         email = self.cleaned_data.get('email')

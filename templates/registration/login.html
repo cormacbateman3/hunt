@@ -1,41 +1,74 @@
-{% extends 'base.html' %}
+{% extends 'registration/_form_shell.html' %}
 
-{% block title %}Login | KeystoneBid{% endblock %}
+{% block title %}Sign in &middot; KeystoneBid{% endblock %}
 
-{% block content %}
-<section class="card" style="max-width: 520px; margin: 0 auto;">
-    <h1 style="margin-bottom: 0.75rem;">Sign in</h1>
-    <p style="margin-bottom: 1.2rem; color: var(--color-muted);">
-        Access your collector account.
-    </p>
+{% block alt_prompt %}Need an account? <a href="{% url 'accounts:register' %}">Join the community</a>{% endblock %}
 
-    <form method="post" novalidate>
+{% block sheets %}
+<main class="au-sheet">
+    <div class="au-sheet-head">
+        <span class="au-form-no">Form 1 &middot; Entry</span>
+        <h1 class="au-title">Welcome back</h1>
+        <p class="au-lede">Your bench, your collection and your saved hunts are where you left them.</p>
+    </div>
+
+    <form method="post" class="au-form">
         {% csrf_token %}
         {% if form.non_field_errors %}
-            <div class="alert alert-error" style="margin-bottom: 1rem;">
-                {{ form.non_field_errors }}
-            </div>
+            <p class="au-error" role="alert">{{ form.non_field_errors|join:" " }}</p>
         {% endif %}
 
-        <div style="display: grid; gap: 0.85rem;">
-            <div>
-                <label class="form-label" for="{{ form.username.id_for_label }}">Username</label>
-                {{ form.username }}
-                {{ form.username.errors }}
-            </div>
-            <div>
-                <label class="form-label" for="{{ form.password.id_for_label }}">Password</label>
-                {{ form.password }}
-                {{ form.password.errors }}
-            </div>
+        <div class="au-field">
+            <label class="au-label" for="{{ form.username.id_for_label }}">Username</label>
+            {{ form.username }}
+            {{ form.username.errors }}
         </div>
 
-        <div style="margin-top: 1.25rem;">
-            <button type="submit" class="btn-primary">Sign in</button>
-            <a href="{% url 'accounts:password_reset' %}" style="margin-left: 0.75rem; color: var(--color-aged-amber);">
-                Forgot password?
-            </a>
+        <div class="au-field">
+            <div class="au-label-row">
+                <label class="au-label" for="{{ form.password.id_for_label }}">Password</label>
+                {% comment %}
+                Show, rather than a second "confirm" box. This audience types
+                on a desktop keyboard and would rather see what they typed.
+                {% endcomment %}
+                <button type="button" class="au-show" data-reveal="{{ form.password.id_for_label }}">Show</button>
+            </div>
+            {{ form.password }}
+            {{ form.password.errors }}
         </div>
+
+        {% comment %}
+        Added: this audience uses one desktop and does not want to type a
+        password every evening.
+        {% endcomment %}
+        <label class="au-keep">
+            <input type="checkbox" name="keep_signed_in" value="1" checked>
+            Keep me signed in on this machine
+        </label>
+
+        <button type="submit" class="kb-btn kb-btn--primary kb-btn--block kb-btn--lg">Sign in</button>
+
+        <div class="au-under">
+            <a href="{% url 'accounts:password_reset' %}">Forgotten your password?</a>
+            <span>New here? <a href="{% url 'accounts:register' %}">Join the community</a></span>
+        </div>
+
+        {% if request.GET.next %}<input type="hidden" name="next" value="{{ request.GET.next }}">{% endif %}
     </form>
-</section>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Reveal the password. Nothing here is worth a file of its own.
+document.querySelectorAll('[data-reveal]').forEach((button) => {
+    button.addEventListener('click', () => {
+        const field = document.getElementById(button.dataset.reveal);
+        if (!field) return;
+        const showing = field.type === 'text';
+        field.type = showing ? 'password' : 'text';
+        button.textContent = showing ? 'Show' : 'Hide';
+    });
+});
+</script>
 {% endblock %}

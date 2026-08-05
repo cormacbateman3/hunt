@@ -1,0 +1,377 @@
+/* ==========================================================================
+   The door — sign in and create an account
+
+   These are the first thing a collector ever sees, so they set the tone.
+   They read like a membership application from a licence office: a ruled
+   header with a form number, small-caps field labels, and one plain sentence
+   explaining what each step is for.
+   ========================================================================== */
+
+.kb-auth {
+    /* Hatched parchment, the same ground the design uses under both sheets. */
+    background-color: var(--kb-parchment);
+    background-image: url("data:image/svg+xml,%3Csvg width='24' height='24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 24L24 0M-6 6L6-6M18 30L30 18' stroke='%23c4b49a' stroke-width='0.5' opacity='0.35'/%3E%3C/svg%3E");
+    min-height: 100vh;
+    padding: var(--kb-6) var(--kb-gutter) var(--kb-8);
+}
+
+.au-page {
+    max-width: 1040px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--kb-5);
+}
+
+.au-strap {
+    width: 100%;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--kb-4);
+    font-size: 11.5px;
+    color: var(--kb-ink-3);
+    border-bottom: 1px solid var(--kb-rule-strong);
+    padding-bottom: 10px;
+}
+
+.au-strap a {
+    color: var(--kb-brass);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+/* ── The nameplate, centred ──────────────────────────────────────────── */
+.au-plate {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.au-mark {
+    width: 34px;
+    height: 34px;
+    display: block;
+}
+
+.au-name {
+    font-family: var(--kb-font-display);
+    font-size: 32px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    color: var(--kb-forest);
+}
+
+.au-est {
+    font: 700 var(--kb-eyebrow-size)/1.2 var(--kb-font-body);
+    letter-spacing: var(--kb-eyebrow-tracking);
+    text-transform: uppercase;
+    color: var(--kb-ink-4);
+}
+
+/* ── The sheet ───────────────────────────────────────────────────────── */
+.au-split {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: var(--kb-5);
+    align-items: start;
+    width: 100%;
+}
+
+.au-sheet {
+    background: var(--kb-surface);
+    border: 1px solid var(--kb-rule-panel);
+    border-radius: var(--kb-r-xl);
+    width: 100%;
+    max-width: 460px;
+    overflow: hidden;
+}
+
+.au-split .au-sheet {
+    max-width: none;
+}
+
+.au-sheet-head {
+    border-bottom: 1px solid var(--kb-rule);
+    padding: 20px 24px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+/* The form number is the whole conceit: this is an application, and
+   applications have numbers. */
+.au-form-no {
+    font: 700 var(--kb-eyebrow-size)/1.2 var(--kb-font-body);
+    letter-spacing: var(--kb-eyebrow-tracking);
+    text-transform: uppercase;
+    color: var(--kb-brass);
+}
+
+.au-title {
+    font: var(--kb-text-h1);
+    color: var(--kb-forest);
+    margin: 0;
+}
+
+.au-lede {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--kb-ink-3);
+}
+
+.au-form {
+    padding: 20px 24px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--kb-4);
+}
+
+.au-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.au-label {
+    font: 700 var(--kb-fieldlabel-size)/1.2 var(--kb-font-body);
+    letter-spacing: var(--kb-fieldlabel-tracking);
+    text-transform: uppercase;
+    color: var(--kb-ink-3);
+}
+
+.au-label-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+}
+
+.au-show {
+    background: none;
+    border: 0;
+    padding: 0;
+    font-size: 11.5px;
+    color: var(--kb-brass);
+    cursor: pointer;
+}
+
+.au-field input,
+.au-form input[type="text"],
+.au-form input[type="email"],
+.au-form input[type="password"] {
+    width: 100%;
+    padding: 9px 11px;
+    font-size: 14px;
+    border: 1px solid var(--kb-rule-strong);
+    border-radius: var(--kb-r-md);
+    background: var(--kb-field);
+    color: var(--kb-ink);
+}
+
+.au-field input:focus {
+    outline: 2px solid var(--kb-brass);
+    outline-offset: -1px;
+}
+
+.au-hint {
+    display: block;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--kb-ink-4);
+}
+
+.au-error {
+    margin: 0;
+    padding: 10px 12px;
+    background: var(--kb-alert-bg);
+    border: 1px solid var(--kb-alert-border);
+    border-radius: var(--kb-r-sm);
+    font-size: 12.5px;
+    color: var(--kb-rust);
+}
+
+/* ── Password rules as a checklist ───────────────────────────────────── */
+.au-rules {
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.au-rules li {
+    font-size: 11.5px;
+    color: var(--kb-ink-4);
+    padding-left: 17px;
+    position: relative;
+}
+
+.au-rules li::before {
+    content: "\25CB";
+    position: absolute;
+    left: 0;
+}
+
+.au-rules li[data-ok="yes"] {
+    color: var(--kb-live);
+}
+
+.au-rules li[data-ok="yes"]::before {
+    content: "\2713";
+    font-weight: 700;
+}
+
+.au-keep,
+.au-terms {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    font-size: 13px;
+    color: var(--kb-ink);
+    cursor: pointer;
+}
+
+.au-keep input,
+.au-terms input {
+    width: auto;
+    margin-top: 2px;
+    accent-color: var(--kb-forest);
+}
+
+.au-terms span {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.au-terms strong {
+    font-weight: 600;
+}
+
+.au-under {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--kb-4);
+    font-size: 12.5px;
+    color: var(--kb-ink-3);
+    flex-wrap: wrap;
+}
+
+.au-under a {
+    color: var(--kb-brass);
+    text-decoration: none;
+}
+
+/* ── What happens next ───────────────────────────────────────────────── */
+.au-next {
+    background: var(--kb-surface);
+    border: 1px solid var(--kb-rule-panel);
+    border-radius: var(--kb-r-xl);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--kb-4);
+}
+
+.au-steps-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.au-steps-list li {
+    display: flex;
+    gap: 11px;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--kb-ink-3);
+}
+
+.au-steps-list strong {
+    display: block;
+    font-size: 13px;
+    color: var(--kb-ink);
+}
+
+.au-step-no {
+    width: 22px;
+    height: 22px;
+    border-radius: var(--kb-r-pill);
+    background: var(--kb-parchment);
+    color: var(--kb-forest);
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.au-figures {
+    border-top: 1px solid var(--kb-rule-soft);
+    padding-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.au-figure-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.au-figure {
+    font-family: var(--kb-font-display);
+    font-size: 21px;
+    font-weight: 600;
+    color: var(--kb-forest);
+    font-variant-numeric: tabular-nums;
+}
+
+.au-figure-of {
+    font-size: 12px;
+    color: var(--kb-ink-3);
+}
+
+.au-fee {
+    margin: 0;
+    border-top: 1px solid var(--kb-rule-soft);
+    padding-top: 12px;
+    font-size: 11.5px;
+    line-height: 1.55;
+    color: var(--kb-ink-4);
+}
+
+/* ── The human at the bottom ─────────────────────────────────────────── */
+.au-human {
+    max-width: 520px;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--kb-ink-3);
+}
+
+.au-human a {
+    color: var(--kb-brass);
+    font-weight: 600;
+}
+
+@media (max-width: 860px) {
+    .au-split {
+        grid-template-columns: 1fr;
+    }
+
+    .au-strap {
+        flex-direction: column;
+        gap: 4px;
+    }
+}

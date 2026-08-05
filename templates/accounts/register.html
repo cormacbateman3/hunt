@@ -1,51 +1,173 @@
-{% extends 'base.html' %}
+{% extends 'registration/_form_shell.html' %}
 
-{% block title %}Create Account | KeystoneBid{% endblock %}
+{% block title %}Join the community &middot; KeystoneBid{% endblock %}
 
-{% block content %}
-<section class="card" style="max-width: 560px; margin: 0 auto;">
-    <h1 style="margin-bottom: 0.75rem;">Create your account</h1>
-    <p style="margin-bottom: 1.25rem; color: var(--color-muted);">
-        Register to buy and sell antique Pennsylvania hunting licenses.
-    </p>
+{% block alt_prompt %}Already a member? <a href="{% url 'accounts:login' %}">Sign in</a>{% endblock %}
 
-    <form method="post" novalidate>
-        {% csrf_token %}
-        {% if form.non_field_errors %}
-            <div class="alert alert-error" style="margin-bottom: 1rem;">
-                {{ form.non_field_errors }}
-            </div>
-        {% endif %}
+{% block sheets %}
+<div class="au-split">
+    <main class="au-sheet">
+        <div class="au-sheet-head">
+            <span class="au-form-no">Form 2 &middot; New member</span>
+            <h1 class="au-title">Join the community</h1>
+            <p class="au-lede">
+                Free, and no card. Four fields here, and then you&rsquo;re looking at licences.
+            </p>
+        </div>
 
-        <div style="display: grid; gap: 0.85rem;">
-            <div>
-                <label class="form-label" for="{{ form.username.id_for_label }}">Username</label>
+        <form method="post" class="au-form">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <p class="au-error" role="alert">{{ form.non_field_errors|join:" " }}</p>
+            {% endif %}
+
+            <div class="au-field">
+                <label class="au-label" for="{{ form.username.id_for_label }}">Username</label>
                 {{ form.username }}
+                <span class="au-hint">Other collectors see this. You can set a display name later.</span>
                 {{ form.username.errors }}
             </div>
-            <div>
-                <label class="form-label" for="{{ form.email.id_for_label }}">Email</label>
+
+            <div class="au-field">
+                <label class="au-label" for="{{ form.email.id_for_label }}">Email</label>
                 {{ form.email }}
+                <span class="au-hint">We send one link to confirm it. Deal notices come here too.</span>
                 {{ form.email.errors }}
             </div>
-            <div>
-                <label class="form-label" for="{{ form.password1.id_for_label }}">Password</label>
+
+            <div class="au-field">
+                <label class="au-label" for="{{ form.password1.id_for_label }}">Password</label>
                 {{ form.password1 }}
+                {% comment %}
+                Django's validators currently appear as a paragraph of help
+                text, or as an error after you submit. Three ticking items
+                stop it being a scolding.
+                {% endcomment %}
+                <ul class="au-rules" id="au-rules">
+                    <li data-rule="length">At least 10 characters</li>
+                    <li data-rule="username">Not your username</li>
+                    <li data-rule="common">Not a password everyone uses</li>
+                </ul>
                 {{ form.password1.errors }}
             </div>
-            <div>
-                <label class="form-label" for="{{ form.password2.id_for_label }}">Confirm password</label>
+
+            <div class="au-field">
+                <label class="au-label" for="{{ form.password2.id_for_label }}">Again, to be sure</label>
                 {{ form.password2 }}
                 {{ form.password2.errors }}
             </div>
-        </div>
 
-        <div style="margin-top: 1.25rem;">
-            <button type="submit" class="btn-primary">Create account</button>
-            <a href="{% url 'accounts:login' %}" style="margin-left: 0.75rem; color: var(--color-aged-amber);">
-                Already have an account?
-            </a>
-        </div>
-    </form>
-</section>
+            {% if form.accept_terms %}
+                {% comment %}
+                Enforcement is only fair if you can say what somebody agreed
+                to, so the acceptance is recorded against a version. The four
+                obligations sit beside it in one sentence: a collector who
+                reads that line knows what they signed.
+                {% endcomment %}
+                <label class="au-terms">
+                    {{ form.accept_terms }}
+                    <span>
+                        <strong>{{ form.accept_terms.label }}</strong>
+                        <span class="au-hint">{{ form.terms.summary }}</span>
+                        <span class="au-hint">We record which version you accepted.</span>
+                    </span>
+                </label>
+                {{ form.accept_terms.errors }}
+            {% endif %}
+
+            <button type="submit" class="kb-btn kb-btn--primary kb-btn--block kb-btn--lg">Create my account</button>
+        </form>
+    </main>
+
+    {% comment %}
+    The gating rules are real and good; discovering them at the moment you
+    try to list something is what makes them feel arbitrary. So they are said
+    out loud here, with "not today" attached.
+    {% endcomment %}
+    <aside class="au-next">
+        <span class="kb-eyebrow kb-eyebrow--brass">What happens next</span>
+        <ol class="au-steps-list">
+            <li>
+                <span class="au-step-no">1</span>
+                <span>
+                    <strong>Confirm your email</strong>
+                    One link. Takes a minute, and it&rsquo;s what lets you bid.
+                </span>
+            </li>
+            <li>
+                <span class="au-step-no">2</span>
+                <span>
+                    <strong>Say what you collect</strong>
+                    Your county and a couple of lines. Your home page is built from these.
+                </span>
+            </li>
+            <li>
+                <span class="au-step-no">3</span>
+                <span>
+                    <strong>Later, when you&rsquo;re ready</strong>
+                    An address to sell, a phone number to trade. Nothing you need today.
+                </span>
+            </li>
+        </ol>
+
+        {% if stats %}
+            <div class="au-figures">
+                <span class="kb-eyebrow">Right now on KeystoneBid</span>
+                <div class="au-figure-row">
+                    <span class="au-figure">{{ stats.listings }}</span>
+                    <span class="au-figure-of">licences listed</span>
+                </div>
+                <div class="au-figure-row">
+                    <span class="au-figure">{{ stats.units }}</span>
+                    <span class="au-figure-of">{{ stats.unit_label|lower }} represented</span>
+                </div>
+                <div class="au-figure-row">
+                    <span class="au-figure">{{ stats.collectors }}</span>
+                    <span class="au-figure-of">collectors</span>
+                </div>
+            </div>
+        {% endif %}
+
+        <p class="au-fee">
+            No fee to join, to browse, or to trade. Sellers pay a commission when
+            something sells.
+        </p>
+    </aside>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// The three rules tick as you type. They are a checklist, not a scolding —
+// nothing here validates anything; Django still does that on submit.
+(function () {
+    const field = document.getElementById('{{ form.password1.id_for_label }}');
+    const list = document.getElementById('au-rules');
+    const username = document.getElementById('{{ form.username.id_for_label }}');
+    if (!field || !list) return;
+
+    // A short list of what "everyone uses" looks like. Django's own
+    // common-password list is 20,000 long and lives on the server; this is a
+    // hint before you submit, not the check itself.
+    const OBVIOUS = ['password', '12345678', 'qwerty', 'letmein', 'iloveyou',
+                     'admin', 'welcome', 'monkey', 'football', 'baseball'];
+
+    function mark(rule, ok) {
+        const row = list.querySelector(`[data-rule="${rule}"]`);
+        if (row) row.dataset.ok = ok ? 'yes' : 'no';
+    }
+
+    function check() {
+        const value = field.value;
+        mark('length', value.length >= 10);
+        mark('username', !value || !username || !username.value
+             || value.toLowerCase() !== username.value.toLowerCase());
+        mark('common', !!value && !OBVIOUS.some((bad) => value.toLowerCase().includes(bad)));
+    }
+
+    field.addEventListener('input', check);
+    if (username) username.addEventListener('input', check);
+    check();
+})();
+</script>
 {% endblock %}
