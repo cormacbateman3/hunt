@@ -1,0 +1,48 @@
+{% comment %}
+One row of Bids & offers. Three columns of money — yours, theirs, and what it
+would mean — then where it stands and the one action.
+
+`row.action.post` marks the actions that change something and must not be a
+link: withdrawing an offer is one of them.
+{% endcomment %}
+<div class="desk-grid desk-row{% if row.tone == 'rust' %} desk-row--now{% elif row.tone == 'brass' %} desk-row--waiting{% elif row.tone == 'live' %} desk-row--ahead{% endif %}">
+    <div class="desk-item">
+        {% if row.thumb %}
+            <img src="{{ row.thumb }}" alt="" class="desk-thumb" loading="lazy">
+        {% else %}
+            <span class="desk-thumb desk-thumb--blank" aria-hidden="true"></span>
+        {% endif %}
+        <span class="kb-stack desk-item-text">
+            <a href="{{ row.listing.get_absolute_url }}" class="desk-title">{{ row.listing.title }}</a>
+            <span class="desk-sub">{{ row.context }}</span>
+        </span>
+    </div>
+
+    <div class="desk-money">
+        <span class="desk-money-label">{{ row.mine_label }}</span>
+        <span class="desk-price">${{ row.mine|floatformat:2 }}</span>
+    </div>
+
+    <div class="desk-money">
+        <span class="desk-money-label">{{ row.theirs_label }}</span>
+        <span class="desk-price desk-price--{{ row.theirs_tone }}">${{ row.theirs|floatformat:2 }}</span>
+    </div>
+
+    <div class="kb-stack desk-stands">
+        <span class="desk-headline desk-headline--{{ row.tone }}">{{ row.headline }}</span>
+        {% if row.note %}<span class="desk-note">{{ row.note }}</span>{% endif %}
+    </div>
+
+    <div class="desk-action">
+        {% if row.action.post %}
+            <form method="post" action="{{ row.action.url }}">
+                {% csrf_token %}
+                <button type="submit" class="kb-btn kb-btn--{{ row.action.style }} kb-btn--sm">{{ row.action.label }}</button>
+            </form>
+        {% elif row.action.style == 'text' %}
+            <a href="{{ row.action.url }}" class="desk-quiet">{{ row.action.label }}</a>
+        {% else %}
+            <a href="{{ row.action.url }}" class="kb-btn kb-btn--{{ row.action.style }} kb-btn--sm">{{ row.action.label }}</a>
+        {% endif %}
+    </div>
+</div>

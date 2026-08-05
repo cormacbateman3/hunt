@@ -337,12 +337,18 @@ class OfferViewTests(OfferTestBase):
         resp = self.client.get(reverse('listings:detail', args=[listing.pk]))
         self.assertNotContains(resp, reverse('offers:make', args=[listing.pk]))
 
-    def test_my_offers_page_renders(self):
+    def test_the_offers_list_now_lives_in_bids_and_offers(self):
+        """One page, split by direction. To a collector a bid and an offer are
+        the same thing — money out on something they don't own yet."""
         listing = self._listing()
         create_offer(listing=listing, from_user=self.buyer, amount=Decimal('70'))
+
         resp = self.client.get(reverse('offers:mine'))
-        self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, listing.title)
+        self.assertRedirects(resp, reverse('bids:my_bids'))
+
+        merged = self.client.get(reverse('bids:my_bids'))
+        self.assertEqual(merged.status_code, 200)
+        self.assertContains(merged, listing.title)
 
 
 class OfferTemplateRenderTests(OfferTestBase):

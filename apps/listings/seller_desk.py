@@ -202,7 +202,7 @@ def _quiet_note(listing, age_days):
 def _action(listing, now):
     """One action per row. The filled button is reserved for what's waiting."""
     if listing.open_offer_count:
-        return {'label': 'See offers', 'url': reverse('offers:mine') + '?on=' + str(listing.pk),
+        return {'label': 'See offers', 'url': reverse('bids:my_bids') + '#on-my-things',
                 'style': 'primary'}
     if listing.unanswered_count:
         return {'label': 'Answer', 'url': listing.get_absolute_url() + '#questions',

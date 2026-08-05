@@ -68,8 +68,43 @@
     background: var(--kb-tint-attention);
 }
 
+/* Rust is losing something; green is being ahead. Both are states you'd want
+   to spot from across the room. */
+.desk-row--now {
+    border-left-color: var(--kb-rust);
+    background: var(--kb-tint-attention);
+}
+
+.desk-row--ahead {
+    border-left-color: var(--kb-live);
+    background: var(--kb-tint-positive);
+}
+
 .desk-row--done {
     opacity: 0.75;
+}
+
+/* ── Money columns ───────────────────────────────────────────────────── */
+.desk-money {
+    display: flex;
+    flex-direction: column;
+}
+
+.desk-money-label {
+    font-size: 11.5px;
+    color: var(--kb-ink-4);
+}
+
+.desk-price--rust  { color: var(--kb-rust); }
+.desk-price--live  { color: var(--kb-live); }
+.desk-price--brass { color: var(--kb-brass); }
+
+.desk-action form {
+    width: 100%;
+}
+
+.desk-action form .kb-btn {
+    width: 100%;
 }
 
 /* ── Item ────────────────────────────────────────────────────────────── */
@@ -278,6 +313,18 @@
     .desk-action   { grid-area: action; }
     .desk-stands   { grid-area: stands; }
     .desk-interest { grid-area: interest; }
+
+    /* Two money columns share the "at" cell rather than wrapping under it. */
+    .desk-money {
+        grid-area: at;
+    }
+
+    .desk-money:nth-of-type(3) {
+        grid-area: stands;
+        flex-direction: row;
+        gap: 6px;
+        align-items: baseline;
+    }
 }
 
 @media (max-width: 620px) {

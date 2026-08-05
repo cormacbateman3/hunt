@@ -1,29 +1,108 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}My Bids | KeystoneBid{% endblock %}
+{% block title %}Bids &amp; offers &middot; My Bench &middot; KeystoneBid{% endblock %}
+
+{% block context_band %}{% include 'components/_bench_tabs.html' %}{% endblock %}
+
+{% block main_class %}kb-desk{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/desk.css' %}">{% endblock %}
 
 {% block content %}
-<section>
-    <h1 style="margin-bottom: 1rem;">My Bids</h1>
-    <div style="display: grid; gap: 0.8rem;">
-        {% for bid in bids %}
-            <article class="card">
-                <h2 style="font-size: 1.15rem; margin-bottom: 0.35rem;">
-                    <a href="{% url 'listings:detail' bid.listing.id %}">{{ bid.listing.title }}</a>
-                </h2>
-                <p style="color: var(--color-muted); margin-bottom: 0.35rem;">
-                    Bid placed {{ bid.placed_at|date:"M j, Y g:i a" }}
-                </p>
-                <p><strong>Amount:</strong> ${{ bid.amount }}</p>
-                {% if bid.is_winning %}
-                    <span class="badge badge-active" style="margin-top: 0.4rem;">Winning</span>
-                {% endif %}
-            </article>
-        {% empty %}
-            <article class="card">
-                <p>You have not placed any bids yet.</p>
-            </article>
-        {% endfor %}
+{% comment %}
+Bids and offers were two pages. To a collector they are one thing — money out
+on items nobody owns yet — so the split is direction, not mechanism.
+{% endcomment %}
+
+<header class="kb-between desk-head">
+    <div>
+        <h1 class="kb-page-title">Bids &amp; offers</h1>
+        <p class="desk-lede">Bids you can&rsquo;t take back. Offers you can withdraw until they&rsquo;re answered.</p>
     </div>
+    {% if waiting_on_you %}
+        <span class="kb-badge kb-badge--urgent">{{ waiting_on_you }} waiting on you</span>
+    {% endif %}
+</header>
+
+<section class="desk-section">
+    <div class="desk-rule">
+        <h2 class="desk-rule-title">Chasing</h2>
+        <span class="desk-rule-line" aria-hidden="true"></span>
+        {% if chasing_note %}<span class="desk-rule-note">{{ chasing_note }}</span>{% endif %}
+    </div>
+
+    {% if chasing %}
+        <div class="desk-table">
+            {% for row in chasing %}{% include 'accounts/_ledger_row.html' %}{% endfor %}
+        </div>
+    {% else %}
+        <div class="kb-empty">
+            <h2>Nothing out there</h2>
+            <p>Bids and offers you make show up here with what they&rsquo;re at and
+               whose turn it is.</p>
+            <div class="kb-empty-actions">
+                <a href="{% url 'hunt' %}?tab=ending" class="kb-btn kb-btn--primary">See what&rsquo;s closing</a>
+            </div>
+        </div>
+    {% endif %}
 </section>
+
+<section class="desk-section" id="on-my-things">
+    <div class="desk-rule">
+        <h2 class="desk-rule-title">On my things</h2>
+        <span class="desk-rule-line" aria-hidden="true"></span>
+        {% if waiting_on_you %}
+            <span class="desk-rule-note">{{ waiting_on_you }} waiting on you</span>
+        {% endif %}
+    </div>
+
+    {% if on_my_things %}
+        <div class="desk-table">
+            {% for row in on_my_things %}{% include 'accounts/_ledger_row.html' %}{% endfor %}
+        </div>
+    {% else %}
+        <div class="kb-empty">
+            <h2>Nobody has made you an offer</h2>
+            <p>Offers on what you&rsquo;re selling land here, with what you&rsquo;d keep
+               after the fee.</p>
+        </div>
+    {% endif %}
+</section>
+
+{% if settled_bids %}
+    <section class="desk-section">
+        <div class="desk-rule">
+            <h2 class="desk-rule-title">Settled</h2>
+            <span class="desk-rule-line" aria-hidden="true"></span>
+            <span class="desk-rule-note">Lots that have closed</span>
+        </div>
+        <div class="desk-table">
+            {% for bid in settled_bids %}
+                <div class="desk-grid desk-row desk-row--done">
+                    <div class="desk-item">
+                        <span class="desk-thumb desk-thumb--blank" aria-hidden="true"></span>
+                        <span class="kb-stack desk-item-text">
+                            <a href="{{ bid.listing.get_absolute_url }}" class="desk-title">{{ bid.listing.title }}</a>
+                            <span class="desk-sub">Bid {{ bid.placed_at|date:"j M" }}</span>
+                        </span>
+                    </div>
+                    <div class="desk-money">
+                        <span class="desk-money-label">Yours</span>
+                        <span class="desk-price">${{ bid.amount|floatformat:2 }}</span>
+                    </div>
+                    <div class="desk-money"></div>
+                    <div class="kb-stack desk-stands">
+                        <span class="desk-headline{% if bid.is_winning %} desk-headline--live{% endif %}">
+                            {% if bid.is_winning %}You won it{% else %}{{ bid.listing.get_status_display }}{% endif %}
+                        </span>
+                    </div>
+                    <div class="desk-action">
+                        <a href="{{ bid.listing.get_absolute_url }}" class="desk-quiet">Look</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+{% endif %}
 {% endblock %}

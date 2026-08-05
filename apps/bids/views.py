@@ -42,13 +42,21 @@ def bid_create(request, listing_id):
 
 @login_required
 def my_bids(request):
-    """View user's bid history"""
-    bids = Bid.objects.filter(bidder=request.user).select_related('listing').order_by('-placed_at')
+    """Bids & offers — money you have out, in both directions.
 
-    context = {
-        'bids': bids,
-    }
+    Bids and offers were two pages. To a collector they are one thing, so
+    they share a screen split by direction rather than by mechanism. The
+    arithmetic is in :mod:`apps.accounts.ledger`.
+    """
+    from apps.accounts.ledger import ledger
 
+    context = ledger(request.user)
+    context['settled_bids'] = (
+        Bid.objects.filter(bidder=request.user)
+        .exclude(listing__status='active')
+        .select_related('listing')
+        .order_by('-placed_at')[:12]
+    )
     return render(request, 'bids/my_bids.html', context)
 
 

@@ -184,16 +184,6 @@ def offer_action(request, offer_id, action):
 
 @login_required
 def my_offers(request):
-    offers = (
-        Offer.objects.filter(Q(from_user=request.user) | Q(to_user=request.user))
-        .select_related('listing', 'from_user', 'to_user')
-        .order_by('-created_at')
-    )
-    return render(
-        request,
-        'offers/my_offers.html',
-        {
-            'sent': [o for o in offers if o.from_user_id == request.user.id],
-            'received': [o for o in offers if o.to_user_id == request.user.id],
-        },
-    )
+    """Folded into Bids & offers — offers and bids are one thing to a
+    collector, so they share a page split by direction instead."""
+    return redirect('bids:my_bids')
