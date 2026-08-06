@@ -55,10 +55,15 @@ from it.
         <span class="tb-head-face">{{ trader_trust.initials }}</span>
     </span>
     <span class="tb-head-tags">
+        {% comment %}
+        Verified and completed trades are theirs to advertise. A strike count
+        is enforcement, and enforcement is between a member and us — the
+        design put it here, but publishing somebody's record beside their
+        name turns a private penalty into a public one.
+        {% endcomment %}
         {% if trader_trust.verified %}
             <span class="tb-tag tb-tag--good">
-                Verified{% if trader_trust.trades %} &middot; {{ trader_trust.trades }} trade{{ trader_trust.trades|pluralize }}{% endif %}
-                &middot; {{ trader_trust.strikes }} strike{{ trader_trust.strikes|pluralize }}
+                Verified{% if trader_trust.trades %} &middot; {{ trader_trust.trades }} trade{{ trader_trust.trades|pluralize }} completed{% endif %}
             </span>
         {% endif %}
         {% if offer.expires_at and not settled %}
@@ -133,7 +138,7 @@ from it.
             {% endcomment %}
             <div class="tb-cash">
                 <label for="{{ form.cash_i_add.id_for_label }}">Cash I add</label>
-                {{ form.cash_i_add }}
+                <span class="tb-cash-box"><span aria-hidden="true">$</span>{{ form.cash_i_add }}</span>
             </div>
         </section>
 
@@ -153,7 +158,7 @@ from it.
             </ul>
             <div class="tb-cash">
                 <label for="{{ form.cash_to_me.id_for_label }}">Cash to me</label>
-                {{ form.cash_to_me }}
+                <span class="tb-cash-box"><span aria-hidden="true">$</span>{{ form.cash_to_me }}</span>
             </div>
         </section>
 
@@ -194,21 +199,21 @@ from it.
             </span>
             <span class="tb-band-terms" id="tb-band-terms">{{ band_terms }}</span>
             <span class="tb-band-small">
-                Both ship by {{ ship_by_date }} &middot; tracking required &middot; each pays their own outbound
+                Both ship within {{ ship_by_promise }} &middot; tracking required &middot; each pays their own outbound
             </span>
         </div>
 
         <div class="tb-band-spacer"></div>
 
         {% if not waiting_on_them %}
+            <label class="tb-band-field tb-band-field--note">
+                <span class="kb-sr">A word with it</span>
+                {{ form.message }}
+            </label>
             <label class="tb-band-field">
                 <span>They have</span>
                 {{ form.expires_days }}
                 <span>days</span>
-            </label>
-            <label class="tb-band-field tb-band-field--note">
-                <span class="kb-sr">A word with it</span>
-                {{ form.message }}
             </label>
         {% endif %}
 
@@ -230,7 +235,13 @@ from it.
                         class="tb-decide tb-decide--quiet">Withdraw</button>
                 <button type="submit" class="tb-decide tb-decide--go" id="tb-send">Revise and resend</button>
             {% else %}
-                <a href="{% if listing %}{% url 'listings:detail' listing.pk %}{% else %}{% url 'collections:item_detail' subject.pk %}{% endif %}"
+                {% comment %}
+                Back where you came from: the lot, the piece, or — arriving
+                from a collector card with nothing picked — their profile.
+                {% endcomment %}
+                <a href="{% if listing %}{% url 'listings:detail' listing.pk %}
+                         {% elif subject %}{% url 'collections:item_detail' subject.pk %}
+                         {% else %}{% url 'accounts:profile' other.username %}{% endif %}"
                    class="tb-decide tb-decide--quiet">Cancel</a>
                 <button type="submit" class="tb-decide tb-decide--go" id="tb-send"
                         {% if not giving_count %}disabled{% endif %}>Send this offer</button>
@@ -264,7 +275,7 @@ from it.
                 </div>
             </div>
             <p class="tb-confirm-small">
-                Both sides ship by {{ ship_by_date }} with tracking. Accepting declines
+                Both sides ship within {{ ship_by_promise }}, with tracking. Accepting declines
                 every other offer on this piece, and cannot be taken back. Anything you
                 moved above is <strong>not</strong> part of this &mdash; accept takes the
                 offer as they sent it.

@@ -80,12 +80,12 @@ what could I get, not what is for sale.
                         {{ row.owner.profile.get_display_name }}
                     </a>
                     {% comment %}
-                    One click, straight at the piece. Until 10.10 made
-                    TradeOffer.trade_listing nullable this had to walk you to
-                    the owner's shelf and hope something on it was listed.
+                    One click, straight at the piece. "Offer" on its own
+                    reads as money — it is what the General Store's button
+                    means — and nothing here is for sale. Say what it is.
                     {% endcomment %}
                     <a href="{% url 'trades:propose_on_item' row.item.pk %}"
-                       class="bd-ask">Offer for it</a>
+                       class="bd-ask">Propose a trade</a>
                 </div>
             </article>
         {% endfor %}

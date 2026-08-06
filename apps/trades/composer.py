@@ -90,7 +90,7 @@ def _year_by_county(user):
     return out
 
 
-def roster(*, owner, reader, on_table, side, came_for=None):
+def roster(*, owner, reader, on_table, side):
     """One shelf, annotated for the person reading it.
 
     ``owner`` holds the pieces. ``reader`` is whoever is looking — which is
@@ -146,7 +146,14 @@ def roster(*, owner, reader, on_table, side, came_for=None):
         dupe_counts = _duplicate_counts(items, dupe_keys)
         counties, years = set(), {}
     else:
-        wanted, dupe_keys, dupe_counts = set(), set(), {}
+        # Their shelf, read against my own list: what I have actually asked
+        # for beats a county I merely happen not to hold.
+        my_wants = list(
+            WantedItem.objects.filter(user=reader)
+            .select_related('state', 'county', 'license_type')[:40]
+        ) if reader.is_authenticated else []
+        wanted = _wanted_ids(my_wants, holdings(owner))
+        dupe_keys, dupe_counts = set(), {}
         counties = _counties_held(reader) if reader.is_authenticated else set()
         years = _year_by_county(reader) if reader.is_authenticated else {}
 
@@ -169,7 +176,12 @@ def roster(*, owner, reader, on_table, side, came_for=None):
                 note, kind = 'Matches their wants', 'wanted'
             elif key in dupe_keys:
                 note, kind = f'Duplicate ×{dupe_counts.get(key, 2)}', 'duplicate'
-        elif item.county_id and item.county_id not in counties:
+        elif item.pk in wanted:
+            note, kind = 'On your wanted list', 'wanted'
+        elif (counties and item.county_id and item.county_id not in counties):
+            # **Only when a gap means something.** Against an empty
+            # collection every county on earth is a gap, so the label went on
+            # every row and said nothing. It needs a map to be a hole in.
             note, kind = 'Closes a county gap', 'gap'
         elif item.county_id and item.license_year in years.get(item.county_id, ()):
             note, kind = f'you have {item.license_year}', 'plain'
@@ -181,7 +193,7 @@ def roster(*, owner, reader, on_table, side, came_for=None):
         #
         # The card on the table takes county and year instead. By then you
         # have decided; what you want is to recognise the licence.
-        if kind in ('wanted', 'gap', 'came'):
+        if kind in ('wanted', 'gap'):
             shelf_note, shelf_kind = note, kind
         else:
             parts = []
@@ -192,9 +204,6 @@ def roster(*, owner, reader, on_table, side, came_for=None):
             if item.pk in on_table:
                 parts.append('on the table')
             shelf_note, shelf_kind = ' · '.join(parts), kind or 'plain'
-
-        if item.pk == came_for:
-            shelf_note, shelf_kind = 'What you came for', 'came'
 
         card_bits = [item.county.name] if item.county_id else []
         if item.license_year:
@@ -260,29 +269,48 @@ def table_for(offer, viewer):
     }
 
 
-def thread_offers(offer):
-    """Every round of this negotiation, newest first.
+# A negotiation cannot go round forever; this only guards a cycle in the
+# data, which a self-referential FK makes possible however unlikely.
+MAX_ROUNDS = 60
 
-    Scoped to the two people having it **and to the piece**. Filtering by
-    listing alone showed every rival proposer's offers to every other
-    proposer — what somebody was willing to give up is theirs, not the
-    room's. Since 10.10 a negotiation can have no listing at all, so the
-    subject piece is the anchor and the listing is only a fallback for
-    records made before it existed.
+
+def thread_offers(offer):
+    """The rounds of **this** negotiation, newest first.
+
+    A negotiation is a *chain*, linked by ``counter_to`` — not "every offer
+    these two people ever made about this piece". Two people can perfectly
+    well open a second negotiation about the same licence after the first
+    was declined, and merging them produced a history where three separate
+    openings all claimed to be part of one conversation.
+
+    So this walks the chain: up through ``counter_to`` to the round that
+    opened it, then back down through the counters. Nothing else can join.
     """
     from .models import TradeOffer
 
-    parties = {offer.from_user_id, offer.to_user_id}
-    rounds = TradeOffer.objects.filter(
-        from_user_id__in=parties, to_user_id__in=parties)
-    if offer.subject_item_id:
-        rounds = rounds.filter(subject_item_id=offer.subject_item_id)
-    elif offer.trade_listing_id:
-        rounds = rounds.filter(trade_listing_id=offer.trade_listing_id)
-    else:
-        rounds = rounds.filter(pk=offer.pk)
-    return (
-        rounds
+    root = offer
+    seen = {offer.pk}
+    while root.counter_to_id and len(seen) < MAX_ROUNDS:
+        parent = root.counter_to
+        if parent is None or parent.pk in seen:
+            break
+        seen.add(parent.pk)
+        root = parent
+
+    chain, current = [root], root
+    while len(chain) < MAX_ROUNDS:
+        # A round can only be countered once — later ones are countering the
+        # counter — so the earliest child is the next link.
+        nxt = (TradeOffer.objects.filter(counter_to_id=current.pk)
+               .order_by('created_at').first())
+        if nxt is None or nxt.pk in {row.pk for row in chain}:
+            break
+        chain.append(nxt)
+        current = nxt
+
+    return list(
+        TradeOffer.objects
+        .filter(pk__in=[row.pk for row in chain])
         .select_related('from_user__profile', 'to_user__profile')
         .prefetch_related('items__collection_item')
         .order_by('-created_at')
@@ -332,6 +360,25 @@ def _what_changed(this, previous):
         return 'same pieces, sent again'
     sentence = ', '.join(notes)
     return sentence[0].upper() + sentence[1:]
+
+
+def words_said(offer, viewer=None):
+    """The lines people attached to their offers, oldest first.
+
+    Not a message thread — these are notes on the record, and the story
+    strip shows them as such rather than as a conversation you can reply to
+    in place.
+    """
+    out = []
+    for round_ in sorted(thread_offers(offer), key=lambda r: r.created_at):
+        if not round_.message:
+            continue
+        who = (round_.from_user.profile.get_display_name()
+               if hasattr(round_.from_user, 'profile') else round_.from_user.username)
+        if viewer is not None and round_.from_user_id == getattr(viewer, 'id', None):
+            who = 'You'
+        out.append({'who': who, 'text': round_.message, 'at': round_.created_at})
+    return out
 
 
 def thread(offer, viewer=None):

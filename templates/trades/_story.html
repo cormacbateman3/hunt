@@ -37,18 +37,24 @@ Expects `thread`, `other`, `trader_trust`, and optionally `offer`.
             </div>
         {% endfor %}
 
+        {% comment %}
+        Whatever was said with the offers, in order. This is not a message
+        thread and does not pretend to be one — messages have their own
+        rules, and "Reply to Walt" over an empty box, when Walt has never
+        written to you, invents a conversation that has not happened.
+        {% endcomment %}
         <div class="tb-story-cell tb-story-talk">
-            {% if offer.message %}
-                <blockquote class="tb-quote">&ldquo;{{ offer.message }}&rdquo;</blockquote>
-            {% endif %}
-            {% comment %}
-            Messages are their own thread with their own rules — read
-            receipts, blocking, the deal pinned at the top — so this opens
-            that rather than growing a second, weaker one here.
-            {% endcomment %}
-            <a href="{% url 'messaging:inbox' %}?with={{ other.pk }}" class="tb-reply">
-                Reply to {{ other.profile.get_display_name|default:other.username }}&hellip;
-            </a>
+            <span class="tb-story-when">Said with the offers</span>
+            {% for said in words %}
+                <blockquote class="tb-quote">
+                    <span class="tb-quote-who">{{ said.who }}</span>
+                    &ldquo;{{ said.text }}&rdquo;
+                </blockquote>
+            {% empty %}
+                <span class="tb-story-what tb-story-quiet">
+                    Nothing yet. A line with an offer usually saves a round.
+                </span>
+            {% endfor %}
         </div>
     </section>
 
@@ -78,11 +84,8 @@ Expects `thread`, `other`, `trader_trust`, and optionally `offer`.
             {% endif %}
             {% if trader_trust.trades %}
                 <li class="tb-trust-yes">
-                    {{ trader_trust.trades }} trade{{ trader_trust.trades|pluralize }} completed{% if not trader_trust.strikes %}, 0 strikes{% endif %}
+                    {{ trader_trust.trades }} trade{{ trader_trust.trades|pluralize }} completed
                 </li>
-            {% endif %}
-            {% if trader_trust.strikes %}
-                <li class="tb-trust-no">{{ trader_trust.strikes }} strike{{ trader_trust.strikes|pluralize }} on the record</li>
             {% endif %}
             {% comment %}
             Measured from parcels that actually moved, and withheld until
@@ -100,8 +103,24 @@ Expects `thread`, `other`, `trader_trust`, and optionally `offer`.
             </div>
         {% endif %}
 
-        <a href="{% url 'accounts:profile' other.username %}" class="tb-trader-link">
-            See their collection &amp; profile &rarr;
-        </a>
+        <div class="tb-trader-acts">
+            <a href="{% url 'accounts:profile' other.username %}" class="tb-trader-link">
+                See their collection &amp; profile &rarr;
+            </a>
+            {% comment %}
+            Starting a conversation is a write, so it is a form. It opens
+            Messages, where read receipts and blocking apply — the right
+            place for talk that is not part of the record.
+            {% endcomment %}
+            <form method="post" action="{% url 'messaging:start' %}">
+                {% csrf_token %}
+                <input type="hidden" name="recipient_id" value="{{ other.pk }}">
+                {% if offer %}<input type="hidden" name="trade_offer_id" value="{{ offer.pk }}">{% endif %}
+                <input type="hidden" name="conversation_type" value="trade">
+                <button type="submit" class="tb-trader-link">
+                    Message them about this &rarr;
+                </button>
+            </form>
+        </div>
     </section>
 </div>

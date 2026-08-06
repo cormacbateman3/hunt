@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.utils import timezone
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.db.models import Q
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
@@ -55,13 +56,17 @@ def _posted_ids(request, field):
     return {int(v) for v in request.POST.getlist(field) if v.isdigit()}
 
 
-def _ship_by_date():
-    """When both parcels would be due if this were accepted today.
+def _ship_by_promise():
+    """What both sides are agreeing to about shipping.
 
-    `%-d` is not portable, so the day is interpolated rather than formatted.
+    A **duration**, not a date. Nobody knows when this will be accepted —
+    it could be four days from now — so printing "ship by Mon 10 Aug" on an
+    unanswered offer states a deadline that is simply wrong, and it is the
+    deadline a strike is measured against. The date appears once acceptance
+    makes it real, on the struck trade.
     """
-    due = timezone.localtime() + timedelta(days=ship_by_days())
-    return f'{due:%a} {due.day} {due:%b}'
+    days = ship_by_days()
+    return f'{days} day{"" if days == 1 else "s"} from acceptance'
 
 
 def _open_negotiations(user, *, excluding=None):
@@ -114,8 +119,11 @@ def _trading_block(request, *, subject, other, listing=None, offer=None):
     )
 
     if request.method == 'POST' and form.is_valid():
+        asked = list(form.cleaned_data.get('requested_items') or [])
         new_offer, error = create_trade_offer(
-            subject_item=subject,
+            # Arriving at a person, the negotiation is filed under the first
+            # licence actually asked for.
+            subject_item=subject or (asked[0] if asked else None),
             listing=listing,
             from_user=request.user,
             to_user=other,
@@ -153,15 +161,20 @@ def _trading_block(request, *, subject, other, listing=None, offer=None):
                 if i.direction == ('offered' if proposing else 'requested')}
         theirs = {i.collection_item_id for i in items
                   if i.direction == ('requested' if proposing else 'offered')}
-    else:
-        # Opening a negotiation lays the piece you came about on the table
-        # already — but as an ordinary row with an ×, because swapping it out
-        # is a normal move. The design's own second round is "asked for the
-        # 1944 Fulton instead".
+    elif subject is not None:
+        # Arriving *at a piece* lays it on the table already — but as an
+        # ordinary row with an ×, because swapping it out is a normal move.
+        # The design's own second round is "asked for the 1944 Fulton
+        # instead".
         mine, theirs = set(), {subject.pk}
+    else:
+        # Arriving at a *person*, nothing is laid out. Picking a licence for
+        # somebody and calling it the one they came for invents a decision
+        # they never made.
+        mine, theirs = set(), set()
 
     thread = composer.thread(offer, viewer=request.user) if offer else []
-    subject_is_mine = subject.owner_id == request.user.id
+    words = composer.words_said(offer, viewer=request.user) if offer else []
     giving, receiving = len(mine), len(theirs)
 
     # Cash direction is recorded from the proposer's side and never changes,
@@ -179,22 +192,17 @@ def _trading_block(request, *, subject, other, listing=None, offer=None):
         'offer': offer,
         'form': form,
         'other': other,
-        'mine': composer.roster(
-            owner=request.user, reader=request.user, side='mine',
-            on_table=mine, came_for=subject.pk if subject_is_mine else None),
-        'theirs': composer.roster(
-            owner=other, reader=request.user, side='theirs',
-            on_table=theirs, came_for=None if subject_is_mine else subject.pk),
+        'mine': composer.roster(owner=request.user, reader=request.user,
+                                side='mine', on_table=mine),
+        'theirs': composer.roster(owner=other, reader=request.user,
+                                  side='theirs', on_table=theirs),
         'allow_cash': listing.allow_cash if listing else True,
         'trader_trust': composer.trader_trust(other),
         'me_initials': composer.initials_for(request.user),
-        # A date, not a duration. "Both ship by Mon 10 Aug" is a thing you
-        # can hold against a calendar; "within five days of acceptance" asks
-        # the reader to do the arithmetic that decides whether they take a
-        # strike.
-        'ship_by_date': _ship_by_date(),
+        'ship_by_promise': _ship_by_promise(),
         'ship_by_days': ship_by_days(),
         'thread': thread,
+        'words': words,
         'round_number': len(thread) + 1,
         # Rendered server-side so the sentence is right before any script
         # runs — and it is the sentence the buttons are answering.
@@ -250,6 +258,27 @@ def propose_offer(request, listing_id):
 
     context = _trading_block(request, subject=subject, other=listing.seller,
                              listing=listing)
+    if not isinstance(context, dict):
+        return context
+    return render(request, 'trades/trading_block.html', context)
+
+
+@login_required
+def propose_to_person(request, username):
+    """Open a negotiation with somebody, with nothing on the table yet.
+
+    From a collector card you have not picked a licence — the card picked
+    one to link to. Laying that piece out and calling it what you came for
+    puts words in your mouth, so the table opens empty and the negotiation
+    is filed under whichever licence you actually ask for first.
+    """
+    other = get_object_or_404(User, username=username, is_active=True)
+    back = redirect('accounts:profile', username=other.username).url
+    stop = _guard_trade(request, other, back=back)
+    if stop:
+        return stop
+
+    context = _trading_block(request, subject=None, other=other)
     if not isinstance(context, dict):
         return context
     return render(request, 'trades/trading_block.html', context)
@@ -343,7 +372,8 @@ def offer_detail(request, offer_id):
             'subject': subject,
             'settled': True,
             'table': composer.table_for(offer, request.user),
-            'thread': composer.thread(offer),
+            'thread': composer.thread(offer, viewer=request.user),
+            'words': composer.words_said(offer, viewer=request.user),
             'trader_trust': composer.trader_trust(other),
             'ship_by_days': ship_by_days(),
             'trade': trade,
@@ -406,7 +436,8 @@ def trade_detail(request, trade_id):
     shipments_by_sender = {shipment.sender_id: shipment for shipment in trade.shipments.all()}
     other = (trade.counterparty if request.user.id == trade.initiator_id
              else trade.initiator)
-    thread = composer.thread(accepted_offer) if accepted_offer else []
+    thread = composer.thread(accepted_offer, viewer=request.user) if accepted_offer else []
+    words = composer.words_said(accepted_offer, viewer=request.user) if accepted_offer else []
     strikes = Strike.objects.filter(related_trade=trade).select_related(
         'user', 'excuse_initiated_by', 'excuse_confirmed_by'
     )
@@ -424,6 +455,7 @@ def trade_detail(request, trade_id):
         'other': other,
         'table': composer.table_for(accepted_offer, request.user) if accepted_offer else None,
         'thread': thread,
+        'words': words,
         'trader_trust': composer.trader_trust(other),
         'my_shipment': shipments_by_sender.get(request.user.id),
         'their_shipment': shipments_by_sender.get(other.id),

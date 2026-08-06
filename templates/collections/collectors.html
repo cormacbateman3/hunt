@@ -215,16 +215,16 @@ select reaches back into it with the `form` attribute instead.
                             </a>
 
                             {% comment %}
-                            One click, as the design draws it. It opens on the
-                            piece of theirs that answers something on your own
-                            wanted list, falling back to whatever they opened
-                            most recently — you can change it at the table.
-                            Landing on a chooser would ask a question the card
-                            already knows the answer to.
+                            One click, straight to the table — with nothing on
+                            it. From a card you have not picked a licence, and
+                            laying one out for you and calling it what you came
+                            for puts words in your mouth. `propose_item` still
+                            decides whether the button is worth offering at
+                            all: no open piece, no button.
                             {% endcomment %}
                             <div class="co-card-foot">
                                 {% if row.propose_item %}
-                                    <a href="{% url 'trades:propose_on_item' row.propose_item.pk %}"
+                                    <a href="{% url 'trades:propose_to_person' row.user.username %}"
                                        class="kb-btn kb-btn--primary kb-btn--sm">Propose a trade</a>
                                     <a href="{% url 'accounts:profile' row.user.username %}"
                                        class="kb-btn kb-btn--secondary kb-btn--sm">See their case</a>

@@ -42,7 +42,8 @@
         var card = row.cloneNode(true);
         var box = card.querySelector('.tb-piece-pick');
         if (box) { box.remove(); }
-        card.classList.remove('is-hidden');
+        card.classList.remove('is-hidden', 'is-lifting', 'is-drop-target');
+        card.removeAttribute('draggable');
 
         /* A label inside a label would steal the click; the card is inert. */
         var hit = card.querySelector('.tb-piece-hit');
@@ -223,6 +224,9 @@
         + '<span class="tb-look-meta"></span><span class="tb-look-note"></span></div>';
     document.body.appendChild(look);
 
+    /* Long enough that running the cursor across a shelf does not flash a
+     * card at every row. */
+    var LOOK_DELAY = 650;
     var media = look.querySelector('.tb-look-media');
     var opening = null;
 
@@ -255,7 +259,7 @@
         var piece = e.target.closest('.tb-piece');
         if (!piece || form.dataset.dragging) { return hideLook(); }
         clearTimeout(opening);
-        opening = setTimeout(function () { showLook(piece); }, 260);
+        opening = setTimeout(function () { showLook(piece); }, LOOK_DELAY);
     });
 
     form.addEventListener('mouseout', function (e) {

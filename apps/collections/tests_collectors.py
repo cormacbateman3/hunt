@@ -126,15 +126,16 @@ class CollectorCardActionTests(CollectorsBaseTest):
         self.assertIn('Propose a trade', html)
         self.assertIn('See their case', html)
 
-    def test_propose_a_trade_is_one_click_at_a_piece(self):
+    def test_propose_a_trade_is_one_click_to_the_table(self):
         """It used to walk you to their shelf and hope something on it was
-        listed. Since 10.10 an offer hangs off the piece itself."""
+        listed. It goes straight to the table now — with nothing on it,
+        because from a card you have not picked a licence."""
         page = self.client.get(reverse('collectors'))
         walt_row = next(r for r in page.context['rows'] if r['user'] == self.walt)
         self.assertIsNotNone(walt_row['propose_item'])
-        self.assertEqual(walt_row['propose_item'].owner, self.walt)
         self.assertContains(page, reverse(
-            'trades:propose_on_item', args=[walt_row['propose_item'].pk]))
+            'trades:propose_to_person', args=[self.walt.username]))
+        self.assertNotContains(page, '/trades/piece/')
 
     def test_it_opens_on_the_piece_that_answers_one_of_my_wants(self):
         wanted = CollectionItem.objects.filter(owner=self.walt).first()

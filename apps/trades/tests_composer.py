@@ -175,7 +175,6 @@ class ComposerScreenTests(ComposerBase):
                    if r['item'] == self.theirs_a)
         self.assertTrue(row['on_table'])
         self.assertTrue(row['available'])
-        self.assertContains(page, 'What you came for')
 
     def test_you_can_ask_for_something_else_instead(self):
         listing = self._listing(self.theirs_a)
@@ -540,13 +539,15 @@ class TheDrawingTests(ComposerBase):
         rae = self._page(self.rae)
         self.assertContains(rae, 'name="cash_to_me" value="40.00"')
 
-    def test_the_band_gives_a_date_not_a_duration(self):
-        """"Both ship by Mon 10 Aug" is something you can hold against a
-        calendar; "within five days" asks the reader to do the arithmetic
-        that decides whether they take a strike."""
+    def test_the_band_promises_a_duration_not_a_date(self):
+        """Nobody knows when this will be accepted — it could be four days
+        from now — so "ship by Mon 10 Aug" on an unanswered offer states a
+        deadline that is simply wrong, and it is the deadline a strike is
+        measured against."""
         page = self._page(self.walt)
-        self.assertRegex(page.context['ship_by_date'], r'^[A-Z][a-z]{2} \d{1,2} [A-Z][a-z]{2}$')
-        self.assertContains(page, 'Both ship by ' + page.context['ship_by_date'])
+        self.assertRegex(page.context['ship_by_promise'], r'^\d+ days? from acceptance$')
+        self.assertContains(page, 'Both ship within ' + page.context['ship_by_promise'])
+        self.assertNotContains(page, 'Both ship by')
 
     def test_the_trader_card_carries_initials_for_a_blank_avatar(self):
         """The design draws a 38px square with initials, not a blank disc."""
@@ -620,3 +621,133 @@ class TermsLineTests(TestCase):
             composer.terms_line(giving=0, receiving=0, cash_amount=None,
                                 cash_direction='from_proposer'),
             'Nothing on the table yet')
+
+
+class OneNegotiationTests(ComposerBase):
+    """A negotiation is a chain, not "every offer these two ever made".
+
+    Two people can perfectly well open a second negotiation about the same
+    licence after the first was declined. Grouping by subject merged them,
+    so the history showed three separate openings claiming to be one
+    conversation.
+    """
+
+    def _open(self, requested):
+        listing = self._listing(self.theirs_a)
+        self.client.force_login(self.rae)
+        self.client.post(reverse('trades:propose', args=[listing.pk]), {
+            'offered_items': [self.mine_a.pk],
+            'requested_items': [requested.pk],
+            'expires_days': 4,
+        })
+        return TradeOffer.objects.order_by('-created_at').first()
+
+    def test_a_second_negotiation_is_its_own_thread(self):
+        first = self._open(self.theirs_a)
+        first.status = 'declined'
+        first.save(update_fields=['status'])
+        second = self._open(self.theirs_b)
+
+        self.assertEqual([r.pk for r in composer.thread_offers(second)], [second.pk])
+        self.assertEqual([r.pk for r in composer.thread_offers(first)], [first.pk])
+
+    def test_a_counter_joins_the_chain_it_answers(self):
+        opening = self._open(self.theirs_a)
+        self.client.force_login(self.walt)
+        self.client.post(reverse('trades:offer_detail', args=[opening.pk]), {
+            'offered_items': [self.theirs_b.pk],
+            'requested_items': [self.mine_b.pk],
+            'expires_days': 4,
+        })
+        counter = TradeOffer.objects.exclude(pk=opening.pk).get()
+
+        chain = [r.pk for r in composer.thread_offers(counter)]
+        self.assertEqual(sorted(chain), sorted([opening.pk, counter.pk]))
+        # Read from either end, it is the same negotiation.
+        self.assertEqual(sorted(r.pk for r in composer.thread_offers(opening)),
+                         sorted(chain))
+
+
+class HonestNotesTests(ComposerBase):
+    def test_no_gap_labels_against_an_empty_collection(self):
+        """Every county on earth is a gap when you hold nothing, so the
+        label went on every row and said nothing."""
+        CollectionItem.objects.filter(owner=self.rae).delete()
+        shelf = composer.roster(owner=self.walt, reader=self.rae,
+                                on_table=set(), side='theirs')
+        self.assertNotIn('gap', {r['note_kind'] for r in shelf['rows']})
+
+    def test_a_gap_is_claimed_once_there_is_a_map_to_have_one_in(self):
+        shelf = composer.roster(owner=self.walt, reader=self.rae,
+                                on_table=set(), side='theirs')
+        row = next(r for r in shelf['rows'] if r['item'] == self.theirs_a)
+        self.assertEqual(row['note'], 'Closes a county gap')
+
+    def test_what_i_actually_asked_for_beats_a_county_i_happen_to_lack(self):
+        WantedItem.objects.create(user=self.rae, state=self.pa,
+                                  county=self.cameron, year_min=1916, year_max=1916)
+        shelf = composer.roster(owner=self.walt, reader=self.rae,
+                                on_table=set(), side='theirs')
+        row = next(r for r in shelf['rows'] if r['item'] == self.theirs_a)
+        self.assertEqual(row['note'], 'On your wanted list')
+
+    def test_nothing_claims_to_be_what_you_came_for(self):
+        """Arriving from a collector card, the piece is picked for you — so
+        saying you came for it is inventing a decision you did not make."""
+        listing = self._listing(self.theirs_a)
+        self.client.force_login(self.rae)
+        page = self.client.get(reverse('trades:propose', args=[listing.pk]))
+        self.assertNotContains(page, 'What you came for')
+
+    def test_a_strike_count_is_never_published(self):
+        from apps.enforcement.models import Strike
+        Strike.objects.create(user=self.walt, reason='non_shipment')
+
+        listing = self._listing(self.theirs_a)
+        self.client.force_login(self.rae)
+        page = self.client.get(reverse('trades:propose', args=[listing.pk]))
+        self.assertNotContains(page, 'strike')
+        self.assertNotContains(page, 'Strike')
+
+
+class ArrivingAtAPieceTests(ComposerBase):
+    def test_the_piece_you_clicked_is_the_piece_on_the_table(self):
+        self.client.force_login(self.rae)
+        page = self.client.get(
+            reverse('trades:propose_on_item', args=[self.theirs_b.pk]))
+
+        laid = {r['item'] for r in page.context['theirs']['rows'] if r['on_table']}
+        self.assertEqual(laid, {self.theirs_b})
+        self.assertEqual(page.context['subject'], self.theirs_b)
+
+
+class ArrivingAtAPersonTests(ComposerBase):
+    """From a collector card nobody has picked a licence yet."""
+
+    def setUp(self):
+        self.client.force_login(self.rae)
+
+    def test_the_table_opens_empty(self):
+        page = self.client.get(
+            reverse('trades:propose_to_person', args=[self.walt.username]))
+        self.assertEqual(page.status_code, 200)
+        self.assertIsNone(page.context['subject'])
+        self.assertEqual(page.context['giving_count'], 0)
+        self.assertEqual(page.context['receiving_count'], 0)
+        self.assertFalse([r for r in page.context['theirs']['rows'] if r['on_table']])
+
+    def test_the_negotiation_is_filed_under_the_first_thing_asked_for(self):
+        self.client.post(
+            reverse('trades:propose_to_person', args=[self.walt.username]), {
+                'offered_items': [self.mine_a.pk],
+                'requested_items': [self.theirs_b.pk],
+                'expires_days': 4,
+            })
+        offer = TradeOffer.objects.get()
+        self.assertEqual(offer.subject_item, self.theirs_b)
+
+    def test_asking_for_nothing_is_refused(self):
+        self.client.post(
+            reverse('trades:propose_to_person', args=[self.walt.username]), {
+                'offered_items': [self.mine_a.pk], 'expires_days': 4})
+        self.assertFalse(TradeOffer.objects.exists())

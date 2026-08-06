@@ -259,22 +259,36 @@
 .tb-side--get .tb-cash { background: #eef3ea; }
 .tb-side--get .tb-cash label { color: var(--kb-live); }
 
-.tb-cash-input {
+/* The currency mark sits inside the box, so it is plainly the unit rather
+   than a label that could belong to the field beside it. */
+.tb-cash-box {
     margin-left: auto;
-    width: 82px;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 5px 9px;
     border: 1px solid var(--kb-rule-strong);
     border-radius: var(--kb-r-chip);
-    padding: 5px 9px;
+    background: var(--kb-surface);
+    color: var(--kb-ink-3);
+    font-size: 12.5px;
+}
+
+.tb-cash-input {
+    width: 62px;
+    border: 0;
+    padding: 0;
+    background: none;
     font-family: var(--kb-font-body);
     font-size: 12.5px;
     text-align: right;
     font-variant-numeric: tabular-nums;
-    background: var(--kb-surface);
     color: var(--kb-ink);
 }
 
-.tb-side--get .tb-cash-input { border-color: var(--kb-live); }
-.tb-cash-input:focus { outline: 2px solid var(--kb-brass); outline-offset: 1px; }
+.tb-cash-input:focus { outline: none; }
+.tb-side--get .tb-cash-box { border-color: var(--kb-live); }
+.tb-cash-box:focus-within { outline: 2px solid var(--kb-brass); outline-offset: 1px; }
 
 /* ── One licence ───────────────────────────────────────────────────── */
 .tb-piece-hit {
@@ -621,6 +635,34 @@
     font-size: 12.5px;
     line-height: 1.45;
     color: var(--kb-ink-2);
+}
+
+.tb-quote-who {
+    display: block;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--kb-ink-4);
+}
+
+.tb-story-quiet { color: var(--kb-ink-4); }
+
+.tb-trader-acts {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    align-items: flex-start;
+}
+
+.tb-trader-acts form { margin: 0; }
+
+.tb-trader-acts button {
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    font-family: var(--kb-font-body);
 }
 
 .tb-reply {

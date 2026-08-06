@@ -114,6 +114,16 @@
                     <a class="btn-secondary" href="{% url 'listings:sell_start' %}?q={{ item.title|urlencode }}">List for sale</a>
                     <a class="btn-secondary" href="{% url 'collections:delete' item.pk %}" style="color: var(--color-hunting-rust);">Delete</a>
                 {% elif user.is_authenticated %}
+                    {% comment %}
+                    The badge above says "Open to trade"; without this there
+                    was no way to act on it, which makes the badge an
+                    advertisement for something the page will not do.
+                    {% endcomment %}
+                    {% if not trade_block %}
+                        <a class="btn-primary" href="{% url 'trades:propose_on_item' item.pk %}">
+                            Propose a trade
+                        </a>
+                    {% endif %}
                     <form method="post" action="{% url 'favorites:toggle_collection_item' item.pk %}">
                         {% csrf_token %}
                         <input type="hidden" name="next" value="{{ request.get_full_path }}">
