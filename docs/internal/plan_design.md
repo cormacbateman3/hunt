@@ -752,24 +752,39 @@ money and nothing there is for sale.
 
 ---
 
-## Pass 8 — Letters, Q&A, reviews, reporting, appeals ⬜ NEXT
+## Pass 8 — Letters, Q&A, reviews, reporting, appeals 🚧 IN PROGRESS
 
 **Design refs** — turn 9a (emails), 9b (Q&A + reviews), 9c (report + appeal).
 Dev plan **10.13**.
 
-- **One email shell, seven letters** — green bar, mark, date, a **serif headline
+- **One email shell, seven letters** ⬜ — green bar, mark, date, a **serif headline
   that is a sentence** (not the enum label the generic template prints today), an
   optional item block, one action, a footer saying why it arrived. 560px, Georgia,
   nothing depends on an image loading. Two lines worth stealing: *"Replies to this
   address reach a person, not a machine"* and, on anything with a deadline, the
   consequence in plain words.
-- **Q&A** — answers indent under questions with the seller marked in brass. Price
-  talk gets hidden with a one-line explanation and a link to Make an offer —
-  kinder than a Flag button and it teaches the norm once.
-- **Reviews** — each of the three options gets a line describing the deal it fits,
+- **Q&A** ✅ **done 2026-08-06** · commit `961c5e6` · 501 tests green (13 added).
+  Answers indent 39px under their questions with the seller marked in brass
+  (*"Harold Kreider, the seller"*); an unanswered one is visibly *waiting on an
+  answer*; the head carries the count and the seller's **answer habit** ("answers
+  within the day" — median over ≥3, and it says nothing rather than something
+  damning below that). **Price talk is hidden the moment it is asked**
+  (`qa.is_price_talk` — dollar figures and the stock haggling openers), shown only
+  to its asker with the one-line norm and a *Make an offer instead →* link (the
+  bid-box sentence on auctions); the seller is never notified, and hidden
+  questions stay out of the public count. Flag became a quiet **Report** word on
+  entries (the existing flag flow, reworded); the ask box ends with *write to
+  them instead*, a real POST into Messages carrying the listing. Bylines are
+  **M. Yoder** short forms — `initials_for` moved to `accounts.identity` (composer
+  re-exports) and gained `short_name`; both are template filters now. One copy
+  departure, standing: *"write to them instead"*, never "him" — pronouns are not
+  guessed here. `django.contrib.humanize` joined the apps for the *yesterday /
+  2 hours ago* bylines.
+- **Reviews** ⬜ — each of the three options gets a line describing the deal it fits,
   and the footer draws the line between a poor review and an actual complaint.
-- **Report / Appeal** — both 10.13, neither built. **Blocked on the `Report` model**
-  (see Carried-over).
+- **Report / Appeal** ⬜ — both 10.13, neither built. **Blocked on the `Report` model**
+  (see Carried-over). When it lands, the Q&A entries' quiet Report word should
+  point into it rather than the bare flag toggle.
 
 ---
 
