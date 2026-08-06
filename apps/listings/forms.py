@@ -14,6 +14,7 @@ from apps.core.constants import (
     SHAPE_CHOICES,
 )
 from apps.core.models import GeographicUnit, LicenseType, ReferenceDataSuggestion, State
+from apps.core.widgets import TagsStillAttachedSelect
 from apps.listings.models import ERA_LABEL_CHOICES, Listing, ListingImage
 
 
@@ -40,58 +41,58 @@ class ListingForm(forms.ModelForm):
         initial=7,
         required=False,
         help_text="How long should the auction run?",
-        widget=forms.Select(attrs={'class': 'form-select'}),
+        widget=forms.Select(attrs={'class': 'kb-select'}),
     )
     state = forms.ModelChoiceField(
         queryset=State.objects.none(),
         required=True,
-        widget=forms.Select(attrs={'class': 'form-select'}),
+        widget=forms.Select(attrs={'class': 'kb-select'}),
     )
     county_ref = forms.ModelChoiceField(
         queryset=GeographicUnit.objects.none(),
         required=False,
         empty_label='Select geographic unit',
-        widget=forms.Select(attrs={'class': 'form-select'}),
+        widget=forms.Select(attrs={'class': 'kb-select'}),
     )
-    residency = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select residency', widget=forms.Select(attrs={'class': 'form-select'}))
-    residency_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter residency value'}))
-    holder_eligibility = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select holder eligibility', widget=forms.Select(attrs={'class': 'form-select'}))
-    holder_eligibility_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter eligibility value'}))
-    activity_scope = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select activity scope', widget=forms.Select(attrs={'class': 'form-select'}))
-    activity_scope_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter activity scope'}))
-    duration = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select duration', widget=forms.Select(attrs={'class': 'form-select'}))
-    duration_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter duration'}))
+    residency = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select residency', widget=forms.Select(attrs={'class': 'kb-select'}))
+    residency_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Enter residency value'}))
+    holder_eligibility = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select holder eligibility', widget=forms.Select(attrs={'class': 'kb-select'}))
+    holder_eligibility_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Enter eligibility value'}))
+    activity_scope = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select activity scope', widget=forms.Select(attrs={'class': 'kb-select'}))
+    activity_scope_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Enter activity scope'}))
+    duration = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select duration', widget=forms.Select(attrs={'class': 'kb-select'}))
+    duration_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Enter duration'}))
     addon_type = forms.ModelMultipleChoiceField(
         queryset=LicenseType.objects.none(), required=False,
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'chip-checkboxes'}),
     )
-    addon_type_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter add-on type'}))
-    material = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select material', widget=forms.Select(attrs={'class': 'form-select'}))
-    material_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter material'}))
-    issue_class = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Ordinary issue', widget=forms.Select(attrs={'class': 'form-select'}))
-    issue_class_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter issue class'}))
+    addon_type_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Enter add-on type'}))
+    material = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select material', widget=forms.Select(attrs={'class': 'kb-select'}))
+    material_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Enter material'}))
+    issue_class = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Ordinary issue', widget=forms.Select(attrs={'class': 'kb-select'}))
+    issue_class_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Enter issue class'}))
     shape = forms.ChoiceField(
         choices=[('', 'Select shape')] + SHAPE_CHOICES,
         required=False,
-        widget=forms.Select(attrs={'class': 'form-select'}),
+        widget=forms.Select(attrs={'class': 'kb-select'}),
     )
-    shape_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter shape'}))
+    shape_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Enter shape'}))
     colors = forms.MultipleChoiceField(
         choices=COLOR_CHOICES,
         required=False,
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'chip-checkboxes'}),
     )
-    colors_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter color'}))
+    colors_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Enter color'}))
     source_collection_item = forms.ModelChoiceField(
         queryset=CollectionItem.objects.none(),
         required=False,
         empty_label='None',
-        widget=forms.Select(attrs={'class': 'form-select'}),
+        widget=forms.Select(attrs={'class': 'kb-select'}),
         help_text='Prefill safe fields from an item in your collection.',
     )
     scheduled_at = forms.DateTimeField(
         required=False,
-        widget=forms.DateTimeInput(attrs={'class': 'form-input', 'type': 'datetime-local'}),
+        widget=forms.DateTimeInput(attrs={'class': 'kb-input', 'type': 'datetime-local'}),
         help_text='Leave blank to publish immediately. Max 30 days in the future.',
         input_formats=['%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M'],
     )
@@ -108,25 +109,25 @@ class ListingForm(forms.ModelForm):
     )
     local_pickup_location = forms.CharField(
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. Lancaster, PA'}),
+        widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'e.g. Lancaster, PA'}),
         help_text='City or region for local pickup.',
     )
     serial_number = forms.CharField(
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. A-12345'}),
+        widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'e.g. A-12345'}),
         help_text='License serial or stub number, if visible.',
     )
     era_label = forms.ChoiceField(
         choices=[('', 'Select era')] + ERA_LABEL_CHOICES,
         required=False,
-        widget=forms.Select(attrs={'class': 'form-select'}),
+        widget=forms.Select(attrs={'class': 'kb-select'}),
         help_text='Required when license year is unknown.',
     )
     ship_from_address = forms.ModelChoiceField(
         queryset=Address.objects.none(),
         required=False,
         empty_label='Account default address',
-        widget=forms.Select(attrs={'class': 'form-select'}),
+        widget=forms.Select(attrs={'class': 'kb-select'}),
         help_text='Where this item ships from.',
     )
 
@@ -176,27 +177,27 @@ class ListingForm(forms.ModelForm):
             'shipping_payer',
         ]
         widgets = {
-            'listing_type': forms.Select(attrs={'class': 'form-select'}),
-            'item_kind': forms.RadioSelect(),
-            'addons_attached': forms.NullBooleanSelect(attrs={'class': 'form-select'}),
-            'title': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g., 1942 Adams County Resident Hunting License'}),
-            'description': forms.Textarea(attrs={'class': 'form-input', 'placeholder': 'Describe the license condition, notable features, provenance, and any context collectors should know.', 'rows': 6}),
-            'license_year': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '1942 (leave blank if unknown)'}),
-            'condition_grade': forms.Select(attrs={'class': 'form-select'}),
-            'starting_price': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '$25.00', 'step': '1', 'min': '1'}),
-            'reserve_price': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '$50.00 (optional)', 'step': '1', 'min': '1'}),
-            'buy_now_price': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '$75.00', 'step': '1', 'min': '1'}),
-            'bid_increment': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '$1', 'step': '1', 'min': '1'}),
-            'trade_notes': forms.Textarea(attrs={'class': 'form-input', 'rows': 4, 'placeholder': 'What are you looking for in return?'}),
+            'listing_type': forms.Select(attrs={'class': 'kb-select'}),
+            'item_kind': forms.RadioSelect(attrs={'class': 'chip-radios'}),
+            'addons_attached': TagsStillAttachedSelect(attrs={'class': 'kb-select'}),
+            'title': forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Written for you from the answers below — edit freely'}),
+            'description': forms.Textarea(attrs={'class': 'kb-textarea', 'placeholder': 'Where it came from, what stands out, and the flaws said plainly — that last part is the difference between 98% positive and a dispute.', 'rows': 5, 'maxlength': 2000}),
+            'license_year': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '1942 (leave blank if unknown)'}),
+            'condition_grade': forms.RadioSelect(attrs={'class': 'chip-radios'}),
+            'starting_price': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '$25.00', 'step': '1', 'min': '1'}),
+            'reserve_price': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '$50.00 (optional)', 'step': '1', 'min': '1'}),
+            'buy_now_price': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '$75.00', 'step': '1', 'min': '1'}),
+            'bid_increment': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '$1', 'step': '1', 'min': '1'}),
+            'trade_notes': forms.Textarea(attrs={'class': 'kb-textarea', 'rows': 4, 'placeholder': 'What are you looking for in return?'}),
             'allow_cash': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
             'allow_offers': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
-            'minimum_offer': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01', 'min': '1', 'placeholder': 'Leave empty and every offer reaches you'}),
-            'package_weight_oz': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '8.0', 'step': '0.5', 'min': '0.5'}),
-            'package_length_in': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '10', 'step': '0.5', 'min': '1'}),
-            'package_width_in': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '7', 'step': '0.5', 'min': '1'}),
-            'package_height_in': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '1', 'step': '0.5', 'min': '0.5'}),
-            'shipping_service': forms.Select(attrs={'class': 'form-select'}),
-            'shipping_payer': forms.Select(attrs={'class': 'form-select'}),
+            'minimum_offer': forms.NumberInput(attrs={'class': 'kb-input', 'step': '0.01', 'min': '1', 'placeholder': 'Leave empty and every offer reaches you'}),
+            'package_weight_oz': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '8.0', 'step': '0.5', 'min': '0.5'}),
+            'package_length_in': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '10', 'step': '0.5', 'min': '1'}),
+            'package_width_in': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '7', 'step': '0.5', 'min': '1'}),
+            'package_height_in': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '1', 'step': '0.5', 'min': '0.5'}),
+            'shipping_service': forms.Select(attrs={'class': 'kb-select'}),
+            'shipping_payer': forms.Select(attrs={'class': 'kb-select'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -206,6 +207,11 @@ class ListingForm(forms.ModelForm):
         self.fields['source_collection_item'].queryset = CollectionItem.objects.none()
         self.fields['featured_image'].required = False
         self.fields['license_year'].required = False
+        # The grade renders as a chip ladder — a "---------" radio is not a
+        # rung anybody can stand on.
+        self.fields['condition_grade'].choices = [
+            choice for choice in self.fields['condition_grade'].choices if choice[0]
+        ]
         # Model defaults cover these — never block a submit on them.
         for optional_field in ('bid_increment', 'shipping_service', 'shipping_payer'):
             self.fields[optional_field].required = False

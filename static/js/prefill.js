@@ -115,12 +115,20 @@
             return node.value;
         }
 
+        reveal() {
+            // The "Read from your photograph" card ships hidden and only
+            // appears once there is a read to show (turn 6b's rail panel).
+            const card = this.panel && this.panel.closest('[data-prefill-card]');
+            if (card) card.hidden = false;
+        }
+
         status(html) {
             if (!this.panel) return;
+            this.reveal();
             let box = this.panel.querySelector('.prefill-status');
             if (!box) {
                 box = document.createElement('div');
-                box.className = 'prefill-status';
+                box.className = 'prefill-status pf-busy';
                 this.panel.prepend(box);
             }
             box.innerHTML = html;
@@ -335,11 +343,15 @@
                 ? (this.group(field).slice(-1)[0] || {}).parentElement
                 : el(spec.sel);
             if (!anchor || anchor.parentElement.querySelector(`[data-prefill-badge="${field}"]`)) return;
+            // Turn 6b's check-this state: the field the photograph filled
+            // gets the brass border and label until the seller clears it.
+            const wrap = anchor.closest('.if-field');
+            if (wrap) wrap.classList.add('is-flagged');
             const badge = document.createElement('span');
             badge.className = 'prefill-badge';
             badge.dataset.prefillBadge = field;
-            badge.title = 'AI read this as: ' + (data.source_text || data.name || '');
-            badge.innerHTML = '&#10024; AI <button type="button" aria-label="Clear suggestion">&times;</button>';
+            badge.title = 'Read from the photograph as: ' + (data.source_text || data.name || '');
+            badge.innerHTML = '&#10024; read from the photo <button type="button" aria-label="Clear suggestion">&times;</button>';
             badge.querySelector('button').addEventListener('click', () => {
                 this.applying = true;
                 try {
@@ -359,36 +371,51 @@
                 }
                 this.cleared[field] = true;
                 delete this.applied[field];
+                if (wrap) wrap.classList.remove('is-flagged');
                 badge.remove();
             });
             anchor.insertAdjacentElement('afterend', badge);
         }
 
         renderPanel(hints, payload) {
-            const applied = Object.keys(this.applied).length;
-            let html = `<div class="prefill-status">&#10024; Prefilled ${applied} field${applied === 1 ? '' : 's'} from your image — please verify. AI suggestions can be wrong, and listings are your responsibility.</div>`;
+            // The drawing's plain list: a tick for confident, a question mark
+            // for check-this, a chip for take-it-or-leave-it, and one row for
+            // a word it couldn't match (turns 5b/6b).
+            this.reveal();
+            const esc = (value) => String(value ?? '')
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            const label = (field) => esc(FIELD_LABELS[field] || field);
+            let rows = '';
+
             const lot = hints.find(h => h.kind === 'lot');
             if (lot) {
-                html += '<div class="prefill-lot">This photo looks like <strong>multiple items</strong>. List them as a lot (coming with lot listings) or upload one item per photo.</div>';
+                rows += '<div class="pf-lot">This photograph looks like <strong>multiple items</strong>. List them as a lot (coming with lot listings), or one item per photograph.</div>';
+            }
+            for (const [field, info] of Object.entries(this.applied)) {
+                const value = esc(info.name || info.suggested);
+                if (info.tier === 'medium') {
+                    rows += `<div class="pf-row pf-row--check"><span class="pf-mark pf-mark--ask">?</span><span class="pf-field">${label(field)}</span><span class="pf-value">${value}</span><span class="pf-note">worth a look</span></div>`;
+                } else {
+                    rows += `<div class="pf-row"><span class="pf-mark pf-mark--ok">&#10003;</span><span class="pf-field">${label(field)}</span><span class="pf-value">${value}</span></div>`;
+                }
             }
             const lows = hints.filter(h => h.kind === 'low');
-            if (lows.length) {
-                html += '<div class="prefill-hints"><strong>Low confidence</strong> — click to apply: ' +
-                    lows.map((h, i) => `<button type="button" class="prefill-chip" data-low="${i}">${FIELD_LABELS[h.field] || h.field}: ${h.data.name || h.data.source_text}</button>`).join(' ') +
-                    '</div>';
-            }
+            rows += lows.map((h, i) =>
+                `<div class="pf-row"><span class="pf-mark pf-mark--maybe">&#9675;</span><span class="pf-field">${label(h.field)}</span><span class="pf-value">${esc(h.data.name || h.data.source_text)}</span><button type="button" class="pf-act" data-low="${i}">Use it</button></div>`
+            ).join('');
             const extras = hints.filter(h => h.kind === 'addon-extra');
-            if (extras.length) {
-                html += '<div class="prefill-hints">Also read on the item (one add-on selectable for now): ' +
-                    extras.map(h => `<span class="prefill-chip prefill-chip-static">${h.name}</span>`).join(' ') + '</div>';
-            }
+            rows += extras.map(h =>
+                `<div class="pf-row"><span class="pf-mark pf-mark--maybe">&#9675;</span><span class="pf-field">Add-on</span><span class="pf-value">${esc(h.name)}</span><span class="pf-note">one selectable for now</span></div>`
+            ).join('');
             const misses = hints.filter(h => h.kind === 'unmatched');
-            if (misses.length) {
-                html += '<div class="prefill-hints"><strong>We read these but couldn\'t match them:</strong><ul>' +
-                    misses.map((h, i) => `<li>"${h.source}" (${FIELD_LABELS[h.field] || h.field}) <button type="button" class="prefill-chip" data-suggest="${i}">Suggest this value</button></li>`).join('') +
-                    '</ul></div>';
-            }
-            this.panel.innerHTML = html;
+            rows += misses.map((h, i) =>
+                `<div class="pf-row"><span class="pf-mark pf-mark--miss">&times;</span><span class="pf-field">${label(h.field)}</span><span class="pf-value pf-value--read">&ldquo;${esc(h.source)}&rdquo;</span><button type="button" class="pf-act" data-suggest="${i}">Suggest it</button></div>`
+            ).join('');
+
+            this.panel.innerHTML =
+                `<div class="pf-rows">${rows}</div>` +
+                '<div class="pf-foot">A tick means we filled it in. A question mark means we filled it in but check it. Anything you&rsquo;ve typed yourself is never overwritten &mdash; and the reads can be wrong, so the entry stays yours to verify.</div>';
 
             this.panel.querySelectorAll('[data-low]').forEach(btn => {
                 btn.addEventListener('click', async () => {
@@ -397,7 +424,10 @@
                     try { await this.set(h.field, h.data); } finally { this.applying = false; }
                     this.applied[h.field] = { suggested: h.data.value, tier: 'low', name: h.data.name };
                     btn.disabled = true;
-                    btn.textContent += ' ✓';
+                    btn.textContent = 'In ✓';
+                    const mark = btn.closest('.pf-row').querySelector('.pf-mark');
+                    mark.className = 'pf-mark pf-mark--ok';
+                    mark.innerHTML = '&#10003;';
                 });
             });
             this.panel.querySelectorAll('[data-suggest]').forEach(btn => {
@@ -417,9 +447,9 @@
                             headers: { 'X-CSRFToken': csrfToken() },
                         });
                         btn.disabled = true;
-                        btn.textContent = 'Suggested ✓';
+                        btn.textContent = 'Sent ✓';
                     } catch (err) {
-                        btn.textContent = 'Failed — try the "Is a value missing?" form';
+                        btn.textContent = 'Failed — use "Is a value missing?"';
                     }
                 });
             });

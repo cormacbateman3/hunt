@@ -9,6 +9,7 @@ from apps.core.constants import (
     SHAPE_CHOICES,
 )
 from apps.core.models import GeographicUnit, LicenseType, ReferenceDataSuggestion, State
+from apps.core.widgets import TagsStillAttachedSelect
 from apps.collections.models import CollectionItem, CollectionItemImage, WantedItem
 from apps.listings.models import ERA_LABEL_CHOICES
 
@@ -25,38 +26,38 @@ def _state_license_type_queryset(state, category=None):
 
 
 class CollectionItemForm(forms.ModelForm):
-    state = forms.ModelChoiceField(queryset=State.objects.none(), required=True, widget=forms.Select(attrs={'class': 'form-select'}))
-    county = forms.ModelChoiceField(queryset=GeographicUnit.objects.none(), required=False, empty_label='Select geographic unit', widget=forms.Select(attrs={'class': 'form-select'}))
-    residency = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select residency', widget=forms.Select(attrs={'class': 'form-select'}))
-    residency_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter residency value'}))
-    holder_eligibility = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select holder eligibility', widget=forms.Select(attrs={'class': 'form-select'}))
-    holder_eligibility_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter eligibility value'}))
-    activity_scope = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select activity scope', widget=forms.Select(attrs={'class': 'form-select'}))
-    activity_scope_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter activity scope'}))
-    duration = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select duration', widget=forms.Select(attrs={'class': 'form-select'}))
-    duration_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter duration'}))
+    state = forms.ModelChoiceField(queryset=State.objects.none(), required=True, widget=forms.Select(attrs={'class': 'kb-select'}))
+    county = forms.ModelChoiceField(queryset=GeographicUnit.objects.none(), required=False, empty_label='Select geographic unit', widget=forms.Select(attrs={'class': 'kb-select'}))
+    residency = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select residency', widget=forms.Select(attrs={'class': 'kb-select'}))
+    residency_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Enter residency value'}))
+    holder_eligibility = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select holder eligibility', widget=forms.Select(attrs={'class': 'kb-select'}))
+    holder_eligibility_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Enter eligibility value'}))
+    activity_scope = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select activity scope', widget=forms.Select(attrs={'class': 'kb-select'}))
+    activity_scope_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Enter activity scope'}))
+    duration = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select duration', widget=forms.Select(attrs={'class': 'kb-select'}))
+    duration_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Enter duration'}))
     addon_type = forms.ModelMultipleChoiceField(
         queryset=LicenseType.objects.none(), required=False,
         widget=forms.CheckboxSelectMultiple(attrs={'class': 'chip-checkboxes'}),
     )
-    addon_type_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter add-on type'}))
-    material = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select material', widget=forms.Select(attrs={'class': 'form-select'}))
-    material_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter material'}))
-    issue_class = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Ordinary issue', widget=forms.Select(attrs={'class': 'form-select'}))
-    issue_class_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter issue class'}))
-    shape = forms.ChoiceField(choices=[('', 'Select shape')] + SHAPE_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-select'}))
-    shape_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter shape'}))
+    addon_type_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Enter add-on type'}))
+    material = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select material', widget=forms.Select(attrs={'class': 'kb-select'}))
+    material_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Enter material'}))
+    issue_class = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Ordinary issue', widget=forms.Select(attrs={'class': 'kb-select'}))
+    issue_class_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Enter issue class'}))
+    shape = forms.ChoiceField(choices=[('', 'Select shape')] + SHAPE_CHOICES, required=False, widget=forms.Select(attrs={'class': 'kb-select'}))
+    shape_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Enter shape'}))
     colors = forms.MultipleChoiceField(choices=COLOR_CHOICES, required=False, widget=forms.CheckboxSelectMultiple(attrs={'class': 'chip-checkboxes'}))
-    colors_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter color'}))
+    colors_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Enter color'}))
     serial_number = forms.CharField(
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. A-12345'}),
+        widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'e.g. A-12345'}),
         help_text='License serial or stub number, if visible.',
     )
     era_label = forms.ChoiceField(
         choices=[('', 'Select era')] + ERA_LABEL_CHOICES,
         required=False,
-        widget=forms.Select(attrs={'class': 'form-select'}),
+        widget=forms.Select(attrs={'class': 'kb-select'}),
         help_text='Required when license year is unknown.',
     )
 
@@ -85,21 +86,27 @@ class CollectionItemForm(forms.ModelForm):
             'tradeability',
             'trade_wants',
             'disposition',
+            'purchase_price',
+            'acquired_note',
+            'private_note',
             'serial_number',
             'era_label',
         ]
         widgets = {
-            'item_kind': forms.RadioSelect(),
-            'addons_attached': forms.NullBooleanSelect(attrs={'class': 'form-select'}),
-            'title': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g., 1942 Adams County Resident Hunting License'}),
-            'description': forms.Textarea(attrs={'class': 'form-input', 'rows': 4, 'placeholder': 'Condition, notable features, provenance, and any context worth keeping.'}),
-            'license_year': forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '1942 (leave blank if unknown)'}),
-            'resident_status': forms.Select(attrs={'class': 'form-select'}),
-            'condition_grade': forms.Select(attrs={'class': 'form-select'}),
+            'item_kind': forms.RadioSelect(attrs={'class': 'chip-radios'}),
+            'addons_attached': TagsStillAttachedSelect(attrs={'class': 'kb-select'}),
+            'title': forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Written for you from the answers below — edit freely'}),
+            'description': forms.Textarea(attrs={'class': 'kb-textarea', 'rows': 4, 'maxlength': 2000, 'placeholder': 'Turkey tag still attached and uncut. Light foxing along the bottom edge, pin intact. Out of an estate lot from Muncy.'}),
+            'license_year': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '1942 (leave blank if unknown)'}),
+            'resident_status': forms.Select(attrs={'class': 'kb-select'}),
+            'condition_grade': forms.RadioSelect(attrs={'class': 'chip-radios'}),
             'is_public': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
             'tradeability': forms.RadioSelect(),
-            'trade_wants': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Anything pre-1930 from a county I am missing'}),
-            'disposition': forms.RadioSelect(),
+            'trade_wants': forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Anything pre-1930 from a county I am missing'}),
+            'disposition': forms.RadioSelect(attrs={'class': 'chip-radios'}),
+            'purchase_price': forms.NumberInput(attrs={'class': 'kb-input', 'step': '0.01', 'min': '0', 'placeholder': '48.00'}),
+            'acquired_note': forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Mar 2026, Bloomsburg'}),
+            'private_note': forms.Textarea(attrs={'class': 'kb-textarea', 'rows': 2, 'placeholder': 'A note to yourself about this piece.'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -110,6 +117,11 @@ class CollectionItemForm(forms.ModelForm):
         # see clean_tradeability and clean_disposition.
         self.fields['tradeability'].required = False
         self.fields['disposition'].required = False
+        # Chip ladder: the model's grade is optional here, so the quiet way
+        # out is a named chip rather than a "---------" radio.
+        self.fields['condition_grade'].choices = [('', 'Not set')] + [
+            choice for choice in self.fields['condition_grade'].choices if choice[0]
+        ]
         # `traded` is the trade lifecycle's record, not a choice anybody
         # makes on a form. It stays selectable only on a piece that already
         # carries it, so editing that piece doesn't force a different answer.
@@ -318,16 +330,17 @@ class CollectionItemImageForm(forms.ModelForm):
         model = CollectionItemImage
         fields = ['image', 'image_role', 'sort_order']
         widgets = {
-            'sort_order': forms.NumberInput(attrs={'class': 'form-input', 'min': 0}),
+            'sort_order': forms.HiddenInput(),
             'image_role': forms.HiddenInput(),
         }
 
 
+# Five slots drawn on the frame: front, back, and three details.
 CollectionItemImageFormSet = forms.inlineformset_factory(
     CollectionItem,
     CollectionItemImage,
     form=CollectionItemImageForm,
-    extra=4,
+    extra=5,
     max_num=12,
     validate_max=True,
     can_delete=True,
@@ -335,17 +348,17 @@ CollectionItemImageFormSet = forms.inlineformset_factory(
 
 
 class WantedItemForm(forms.ModelForm):
-    state = forms.ModelChoiceField(queryset=State.objects.none(), required=False, widget=forms.Select(attrs={'class': 'form-select'}))
-    county = forms.ModelChoiceField(queryset=GeographicUnit.objects.none(), required=False, empty_label='Any geographic unit', widget=forms.Select(attrs={'class': 'form-select'}))
-    license_type = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Any type', widget=forms.Select(attrs={'class': 'form-select'}))
+    state = forms.ModelChoiceField(queryset=State.objects.none(), required=False, widget=forms.Select(attrs={'class': 'kb-select'}))
+    county = forms.ModelChoiceField(queryset=GeographicUnit.objects.none(), required=False, empty_label='Any geographic unit', widget=forms.Select(attrs={'class': 'kb-select'}))
+    license_type = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Any type', widget=forms.Select(attrs={'class': 'kb-select'}))
 
     class Meta:
         model = WantedItem
         fields = ['state', 'county', 'year_min', 'year_max', 'license_type', 'notes']
         widgets = {
-            'year_min': forms.NumberInput(attrs={'class': 'form-input'}),
-            'year_max': forms.NumberInput(attrs={'class': 'form-input'}),
-            'notes': forms.TextInput(attrs={'class': 'form-input', 'maxlength': 250}),
+            'year_min': forms.NumberInput(attrs={'class': 'kb-input'}),
+            'year_max': forms.NumberInput(attrs={'class': 'kb-input'}),
+            'notes': forms.TextInput(attrs={'class': 'kb-input', 'maxlength': 250}),
         }
 
     def __init__(self, *args, **kwargs):

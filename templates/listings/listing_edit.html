@@ -1,326 +1,383 @@
 {% extends 'base.html' %}
 {% load static core_tags %}
 
-{% block title %}Edit Listing | KeystoneBid{% endblock %}
+{% block title %}Edit — {{ listing.title }} | KeystoneBid{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/pages/sell.css' %}">
-<link rel="stylesheet" href="{% static 'css/pages/listing.css' %}">
+<link rel="stylesheet" href="{% static 'css/pages/item-form.css' %}">
 {% endblock %}
 
 {% block content %}
-<section class="card" style="max-width: 960px; margin: 0 auto;">
-    <h1 style="margin-bottom: 0.75rem;">Edit listing</h1>
-    <p style="margin-bottom: 1rem; color: var(--color-muted);">
-        Update the issuing state, geographic unit, taxonomy, and physical attributes without leaving the page.
-    </p>
+<div class="if-page">
+    <div class="if-head">
+        <h1>Edit the entry</h1>
+        <p class="if-lede">
+            An edit is not a different decision from the one that made the listing,
+            so it works the same way the listing was made.
+        </p>
+    </div>
+
+    {% if form.errors or image_formset.non_form_errors %}
+        <div class="if-errors" role="alert">
+            <strong>
+                {% with n=form.errors|length %}
+                    {{ n }} thing{{ n|pluralize }} to fix before the changes can be saved
+                {% endwith %}
+            </strong>
+            <ul>
+                {% for field in form %}{% for error in field.errors %}
+                    <li>&middot; <a href="#{{ field.id_for_label }}">{{ field.label }}</a> &mdash; {{ error }}</li>
+                {% endfor %}{% endfor %}
+                {% for error in form.non_field_errors %}<li>&middot; {{ error }}</li>{% endfor %}
+                {% for error in image_formset.non_form_errors %}<li>&middot; {{ error }}</li>{% endfor %}
+            </ul>
+        </div>
+    {% endif %}
 
     <form method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
-        {% if form.errors or image_formset.non_form_errors %}
-            <div class="alert alert-error" role="alert" style="margin-bottom: 1rem;">
-                <strong>Your changes weren't saved — please fix the following:</strong>
-                <ul style="margin: 0.35rem 0 0 1.1rem;">
-                    {% for field in form %}{% for error in field.errors %}
-                        <li><a href="#{{ field.id_for_label }}" style="color: inherit;">{{ field.label }}: {{ error }}</a></li>
-                    {% endfor %}{% endfor %}
-                    {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
-                    {% for error in image_formset.non_form_errors %}<li>{{ error }}</li>{% endfor %}
-                </ul>
-            </div>
-        {% endif %}
-        {% if form.non_field_errors %}
-            <div class="alert alert-error" style="margin-bottom: 1rem;">{{ form.non_field_errors }}</div>
-        {% endif %}
+        <input type="hidden" name="prefill_job_id" id="prefill-job-id" value="">
 
-        <div style="display: grid; gap: 0.85rem;">
-            <div>
-                <label class="form-label" for="{{ form.source_collection_item.id_for_label }}">Source collection item (optional)</label>
-                {{ form.source_collection_item }}
-                {{ form.source_collection_item.errors }}
-            </div>
-            <div>
-                <label class="form-label">License or add-on?</label>
-                <div style="display: flex; gap: 1.25rem; flex-wrap: wrap;">
-                    {% for radio in form.item_kind %}
-                        <label style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 400; margin: 0; cursor: pointer;">
-                            {{ radio.tag }}<span>{{ radio.choice_label }}</span>
-                        </label>
-                    {% endfor %}
-                </div>
-                {{ form.item_kind.errors }}
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
-                <div>
-                    <label class="form-label" for="{{ form.listing_type.id_for_label }}">Listing type</label>
-                    {{ form.listing_type }}
-                    {{ form.listing_type.errors }}
-                </div>
-                <div>
-                    <label class="form-label" for="{{ form.state.id_for_label }}">Issuing state</label>
-                    {{ form.state }}
-                    {{ form.state.errors }}
-                </div>
-            </div>
-            <div>
-                <label class="form-label" for="{{ form.title.id_for_label }}">Title</label>
-                {{ form.title }}
-                {{ form.title.errors }}
-            </div>
-            <div>
-                <label class="form-label" for="{{ form.description.id_for_label }}">Description / condition notes</label>
-                {{ form.description }}
-                {{ form.description.errors }}
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
-                <div>
-                    <label class="form-label" for="{{ form.license_year.id_for_label }}">License year</label>
-                    {{ form.license_year }}
-                    <small class="form-help" id="{{ form.license_year.id_for_label }}_helptext" style="color: var(--color-muted);">{{ form.license_year.help_text }}</small>
-                    {{ form.license_year.errors }}
-                </div>
-                <div id="era-label-field">
-                    <label class="form-label" for="{{ form.era_label.id_for_label }}">
-                        Era (Circa) <span id="era-label-required" style="color: var(--color-error); display: none;">*</span>
-                    </label>
-                    {{ form.era_label }}
-                    <small style="color: var(--color-muted);">{{ form.era_label.help_text }}</small>
-                    {{ form.era_label.errors }}
-                </div>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
-                <div>
-                    <label class="form-label" id="county-ref-label" for="{{ form.county_ref.id_for_label }}">{{ form.county_ref.label }}</label>
-                    {{ form.county_ref }}
-                    {{ form.county_ref.errors }}
-                </div>
-                <div>
-                    <label class="form-label" for="{{ form.condition_grade.id_for_label }}">Condition grade</label>
-                    {{ form.condition_grade }}
-                    {{ form.condition_grade.errors }}
-                </div>
-            </div>
-
-            <details id="taxonomy-details" {% if taxonomy_has_errors %}open{% endif %} style="border: 1px solid var(--color-border); border-radius: 8px; padding: 0.75rem;">
-                <summary style="cursor: pointer; font-size: 1.05rem; font-weight: 600;">
-                    Item taxonomy <span style="font-weight: 400; color: var(--color-muted); font-size: 0.85rem;">— identify what the item is (optional but boosts completeness)</span>
-                </summary>
-                <div style="display: grid; gap: 0.85rem; margin-top: 0.75rem;">
-            {% for field_name, other_name, heading in taxonomy_fields %}
-                {% with field=form|bound_field:field_name other_field=form|bound_field:other_name %}
-                <div style="display: grid; gap: 0.45rem;" data-taxonomy-field="{{ field_name }}">
-                    <label class="form-label" for="{{ field.id_for_label }}" data-taxonomy-label="{{ field_name }}">{{ heading }}</label>
-                    {{ field }}
-                    {{ field.errors }}
-                    <div data-other-wrapper="{{ field_name }}" style="display: none;">
-                        <label class="form-label" for="{{ other_field.id_for_label }}">{{ heading }} other</label>
-                        {{ other_field }}
-                        {{ other_field.errors }}
+        <div class="if-floor">
+            {# ── The evidence rail ─────────────────────────────────── #}
+            <div class="if-rail">
+                <section class="if-panel">
+                    <div class="if-panel-head">
+                        <span class="if-panel-eyebrow">Photographs</span>
+                        <span class="if-panel-meta">what each one is travels with the file</span>
                     </div>
-                </div>
-                {% endwith %}
-            {% endfor %}
-
-            <div id="addons-attached-field">
-                <label class="form-label" for="{{ form.addons_attached.id_for_label }}">Add-ons attached / intact?</label>
-                {{ form.addons_attached }}
-                <small style="color: var(--color-muted);">For a license with add-ons: are the tags/stamps still physically attached? Leave Unknown if unsure.</small>
-                {{ form.addons_attached.errors }}
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
-                <div>
-                    <label class="form-label" for="{{ form.shape.id_for_label }}">Shape</label>
-                    {{ form.shape }}
-                    {{ form.shape.errors }}
-                    <div data-other-wrapper="shape" style="display: none; margin-top: 0.45rem;">
-                        <label class="form-label" for="{{ form.shape_other.id_for_label }}">Shape other</label>
-                        {{ form.shape_other }}
-                        {{ form.shape_other.errors }}
-                    </div>
-                </div>
-                <div>
-                    <label class="form-label" for="{{ form.colors.id_for_label }}">Color(s)</label>
-                    {{ form.colors }}
-                    {{ form.colors.errors }}
-                    <div data-other-wrapper="colors" style="display: none; margin-top: 0.45rem;">
-                        <label class="form-label" for="{{ form.colors_other.id_for_label }}">Color other</label>
-                        {{ form.colors_other }}
-                        {{ form.colors_other.errors }}
-                    </div>
-                </div>
-            </div>
-                </div>
-            </details>
-
-            {% comment %}
-            The same one-panel-per-destination shape as the create form. An
-            edit is not a different decision from the one that made the
-            listing, so it should not look like a different form.
-
-            The cost line is different here, though: a live lot with a bid on
-            it cannot be cancelled, and the seller has to be told that where
-            they are about to change something.
-            {% endcomment %}
-            <div class="sl-terms">
-                <hr class="sl-terms-rule">
-                <h2 class="sl-terms-title">
-                    {% if listing.listing_type == 'auction' %}The terms &mdash; The Auction House
-                    {% else %}The terms &mdash; The General Store{% endif %}
-                </h2>
-
-                {% if listing.listing_type == 'auction' %}
-                    <div class="sl-terms-grid">
-                        <div>
-                            <label class="form-label" for="{{ form.starting_price.id_for_label }}">Starting price</label>
-                            {{ form.starting_price }}
-                            {{ form.starting_price.errors }}
+                    <div class="if-photos-body">
+                        <div class="if-field">
+                            <label class="kb-label" for="{{ form.featured_image.id_for_label }}">Featured &middot; front</label>
+                            {% if listing.featured_image %}
+                                <img src="{{ listing.featured_image.url }}" alt="The front of {{ listing.title }}" class="if-row-thumb if-row-thumb--wide">
+                            {% endif %}
+                            {{ form.featured_image }}
+                            {{ form.featured_image.errors }}
                         </div>
-                        <div>
-                            <label class="form-label" for="{{ form.reserve_price.id_for_label }}">Reserve</label>
-                            {{ form.reserve_price }}
-                            <small class="sl-hint">A floor you won&rsquo;t go under. Bidders see that there is one, never the figure.</small>
-                            {{ form.reserve_price.errors }}
-                        </div>
-                        <div>
-                            <label class="form-label" for="{{ form.duration_days.id_for_label }}">Runs for</label>
-                            {{ form.duration_days }}
-                            {{ form.duration_days.errors }}
-                        </div>
-                        <div>
-                            <label class="form-label" for="{{ form.bid_increment.id_for_label }}">Smallest raise</label>
-                            {{ form.bid_increment }}
-                            {{ form.bid_increment.errors }}
-                        </div>
-                    </div>
-                    <p class="sl-cost">
-                        {% if listing.bids.exists %}
-                            This lot has bids on it. You can&rsquo;t cancel it now, and changing
-                            the terms under people who have already bid is how disputes start.
-                        {% else %}
-                            No bids yet, so you can still cancel it or change anything here.
-                        {% endif %}
-                    </p>
-
-                {% else %}
-                    <div class="sl-terms-grid">
-                        <div>
-                            <label class="form-label" for="{{ form.buy_now_price.id_for_label }}">Your price</label>
-                            {{ form.buy_now_price }}
-                            {{ form.buy_now_price.errors }}
-                        </div>
-                        <div>
-                            <label class="form-label" for="{{ form.minimum_offer.id_for_label }}">Nothing under</label>
-                            {{ form.minimum_offer }}
-                            <small class="sl-hint">Offers below this are turned away for you, and the
-                                buyer is told the figure. Leave it empty and every offer reaches you.</small>
-                            {{ form.minimum_offer.errors }}
-                        </div>
-                    </div>
-                    <label class="sl-check">
-                        {{ form.allow_offers }}
-                        <span>
-                            <strong>I&rsquo;ll consider offers</strong>
-                            <small class="sl-hint">Binding if you accept. Buyers open, you counter.</small>
+                        {{ image_formset.management_form }}
+                        {% for image_form in image_formset %}
+                            <div class="if-photo-row" data-image-row draggable="true">
+                                {{ image_form.id }}
+                                {{ image_form.sort_order }}
+                                {{ image_form.image_role }}
+                                {% if image_form.instance.image %}
+                                    <img src="{{ image_form.instance.image.url }}" alt="" class="if-row-thumb">
+                                {% else %}
+                                    <span class="if-row-thumb if-row-thumb--empty"></span>
+                                {% endif %}
+                                <div class="if-photo-row-body">
+                                    <span class="if-photo-role">
+                                        {% if image_form.instance.pk %}{{ image_form.instance.get_image_role_display }}{% else %}Detail &middot; new{% endif %}
+                                    </span>
+                                    {{ image_form.image }}
+                                    {{ image_form.errors }}
+                                </div>
+                                <div class="if-photo-row-acts">
+                                    <button type="button" class="pf-act" data-move-up title="Move up">&uarr;</button>
+                                    <button type="button" class="pf-act" data-move-down title="Move down">&darr;</button>
+                                    {% if image_form.DELETE %}
+                                        <label class="if-photo-del">{{ image_form.DELETE }} drop</label>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                        <span class="if-photos-note">
+                            Moving one up or down changes the order and nothing else &mdash;
+                            a back stays the back.
                         </span>
-                    </label>
-                    {{ form.allow_offers.errors }}
-                    <p class="sl-cost">Change the price or take it down whenever. Offers already
-                        open keep the terms they were made under.</p>
-                {% endif %}
-            </div>
-
-            <details style="margin-top: 0.25rem;" {% if form.auto_relist.errors or form.local_pickup_location.errors %}open{% endif %}>
-                <summary style="cursor: pointer; font-size: 1.05rem; font-weight: 600;">Listing options</summary>
-                <div style="display: grid; gap: 0.85rem; margin-top: 0.75rem;">
-            <div data-listing-panel="auction">
-                <label class="form-label" for="{{ form.auto_relist.id_for_label }}">
-                    {{ form.auto_relist }} Auto-relist if unsold
-                </label>
-                {% if form.auto_relist.help_text %}<small style="color: var(--color-muted);">{{ form.auto_relist.help_text }}</small>{% endif %}
-                {{ form.auto_relist.errors }}
-            </div>
-            <div>
-                <label class="form-label" for="{{ form.local_pickup_available.id_for_label }}">
-                    {{ form.local_pickup_available }} Offer local pickup
-                </label>
-                {% if form.local_pickup_available.help_text %}<small style="color: var(--color-muted);">{{ form.local_pickup_available.help_text }}</small>{% endif %}
-                {{ form.local_pickup_available.errors }}
-                <div id="local-pickup-location-wrapper" style="margin-top: 0.45rem; display: none;">
-                    <label class="form-label" for="{{ form.local_pickup_location.id_for_label }}">Pickup location</label>
-                    {{ form.local_pickup_location }}
-                    {{ form.local_pickup_location.errors }}
-                </div>
-            </div>
-                </div>
-            </details>
-
-            <div>
-                <label class="form-label" for="{{ form.featured_image.id_for_label }}">Featured image</label>
-                {{ form.featured_image }}
-                {{ form.featured_image.errors }}
-                <input type="hidden" name="prefill_job_id" id="prefill-job-id" value="">
-                <div id="prefill-panel"></div>
-            </div>
-        </div>
-
-        <!-- Section 2: Optional fields (collapsed) -->
-        <details style="margin-top: 1.25rem;" {% if listing.serial_number %}open{% endif %}>
-            <summary style="cursor: pointer; font-size: 1.05rem; font-weight: 600; margin-bottom: 0.5rem;">
-                Optional details
-            </summary>
-            <div style="display: grid; gap: 0.85rem; margin-top: 0.75rem;">
-                <div>
-                    <label class="form-label" for="{{ form.serial_number.id_for_label }}">Serial / stub number</label>
-                    {{ form.serial_number }}
-                    <small style="color: var(--color-muted);">{{ form.serial_number.help_text }}</small>
-                    {{ form.serial_number.errors }}
-                </div>
-            </div>
-        </details>
-
-        <details style="margin-top: 1rem;" {% if form.ship_from_address.errors or form.package_weight_oz.errors or form.package_length_in.errors or form.package_width_in.errors or form.package_height_in.errors or form.shipping_service.errors or form.shipping_payer.errors %}open{% endif %}>
-            <summary style="cursor: pointer; font-size: 1.05rem; font-weight: 600;">Shipping</summary>
-            <div style="display: grid; gap: 0.85rem; margin-top: 0.75rem;">
-                {% include 'listings/_shipping_section.html' %}
-            </div>
-        </details>
-
-        <hr style="margin: 1.2rem 0; border: 0; border-top: 1px solid var(--color-border);">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.75rem;">Photographs</h2>
-        <p class="sl-hint" style="margin-bottom: 0.6rem;">
-            What each photograph is of travels with the file, so moving one up or
-            down changes the order and nothing else.
-        </p>
-        {{ image_formset.management_form }}
-        <div style="display: grid; gap: 0.75rem;">
-            {% for image_form in image_formset %}
-                <div style="display: grid; gap: 0.45rem; border: 1px solid var(--color-border); border-radius: 6px; padding: 0.55rem;" data-image-row draggable="true">
-                    {{ image_form.id }}
-                    {{ image_form.sort_order }}
-                    {{ image_form.image }}
-                    <label class="form-label" for="{{ image_form.image_role.id_for_label }}">What this one is</label>
-                    {{ image_form.image_role }}
-                    {% if image_form.instance.image %}
-                        <img src="{{ image_form.instance.image.url }}" alt="Existing listing image" style="max-width: 180px; border-radius: 6px;">
-                    {% endif %}
-                    <div style="display: flex; gap: 0.45rem;">
-                        <button type="button" class="btn-secondary" data-move-up>Move up</button>
-                        <button type="button" class="btn-secondary" data-move-down>Move down</button>
                     </div>
-                    {% if image_form.DELETE %}
-                        <label class="form-label">Delete {{ image_form.DELETE }}</label>
-                    {% endif %}
-                    {{ image_form.errors }}
-                </div>
-            {% endfor %}
-        </div>
+                </section>
 
-        <div style="margin-top: 1.25rem;">
-            <button type="submit" class="btn-primary">Save changes</button>
-            <a href="{% url 'listings:detail' listing.pk %}" style="margin-left: 0.75rem; color: var(--color-aged-amber);">
-                Cancel
-            </a>
+                <section class="if-panel" data-prefill-card hidden>
+                    <div class="if-panel-head">
+                        <span class="if-panel-eyebrow">Read from your photograph</span>
+                        <span class="if-panel-meta">saved answers are never overwritten</span>
+                    </div>
+                    <div id="prefill-panel"></div>
+                </section>
+
+                <section class="if-panel if-panel--preview" data-preview>
+                    <div class="if-panel-head">
+                        <span class="if-panel-eyebrow">How buyers will see it</span>
+                        <span class="if-panel-meta">updates as you type</span>
+                    </div>
+                    <div class="if-preview-body">
+                        <div class="if-preview-card">
+                            <div class="if-preview-media" data-pv-media>
+                                {% if listing.featured_image %}<img src="{{ listing.featured_image.url }}" alt="">{% endif %}
+                                <span class="if-preview-flag{% if listing.listing_type == 'buy_now' %} if-preview-flag--store{% endif %}">
+                                    {% if listing.listing_type == 'buy_now' %}Buy now{% else %}Auction{% endif %}
+                                </span>
+                            </div>
+                            <div class="if-preview-text">
+                                <span class="if-preview-title" data-pv-title>{{ listing.title }}</span>
+                                <span class="if-preview-line" data-pv-facts></span>
+                                <span class="if-preview-line if-preview-line--soft" data-pv-cond></span>
+                            </div>
+                        </div>
+                        <div class="if-complete" data-complete>
+                            <div class="if-complete-row">
+                                <span class="if-complete-label">Complete</span>
+                                <span class="if-complete-score" data-complete-score>{{ listing.listing_completeness_score }}%</span>
+                            </div>
+                            <div class="if-complete-track"><div class="if-complete-fill" data-complete-fill style="width: {{ listing.listing_completeness_score }}%;"></div></div>
+                            <span class="if-complete-next" data-complete-next>Fuller entries sell for more, which is the only reason we mention it.</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            {# ── The work ──────────────────────────────────────────── #}
+            <div class="if-work">
+                <div class="if-grid if-grid--halves">
+                    <div class="if-field{% if form.title.errors %} has-error{% endif %}" data-title-field>
+                        <div class="if-label-row">
+                            <label class="kb-label" for="{{ form.title.id_for_label }}">Title</label>
+                        </div>
+                        {{ form.title }}
+                        {{ form.title.errors }}
+                    </div>
+                    <div class="if-field{% if form.description.errors %} has-error{% endif %}">
+                        <div class="if-label-row">
+                            <label class="kb-label" for="{{ form.description.id_for_label }}">Description</label>
+                            <span class="if-label-note if-label-note--quiet" data-desc-count></span>
+                        </div>
+                        {{ form.description }}
+                        {{ form.description.errors }}
+                    </div>
+                </div>
+
+                <div class="if-grid if-grid--halves">
+                    <div class="if-field{% if form.listing_type.errors %} has-error{% endif %}">
+                        <label class="kb-label" for="{{ form.listing_type.id_for_label }}">Where it&rsquo;s listed</label>
+                        {{ form.listing_type }}
+                        {{ form.listing_type.errors }}
+                    </div>
+                    <div class="if-field{% if form.source_collection_item.errors %} has-error{% endif %}">
+                        <label class="kb-label" for="{{ form.source_collection_item.id_for_label }}">Started from</label>
+                        {{ form.source_collection_item }}
+                        {{ form.source_collection_item.errors }}
+                    </div>
+                </div>
+
+                <section class="if-section">
+                    <div class="if-section-head">
+                        <h2>What it is</h2>
+                        <span class="if-section-line"></span>
+                    </div>
+
+                    <div class="if-field{% if form.item_kind.errors %} has-error{% endif %}">
+                        <span class="kb-label">Is it a license, or an add-on on its own?</span>
+                        {{ form.item_kind }}
+                        <span class="kb-hint">A back tag with its turkey tag still attached is a license.</span>
+                        {{ form.item_kind.errors }}
+                    </div>
+
+                    <div class="if-grid if-grid--place">
+                        <div class="if-field{% if form.state.errors %} has-error{% endif %}">
+                            <label class="kb-label" for="{{ form.state.id_for_label }}">Issuing state</label>
+                            {{ form.state }}
+                            {{ form.state.errors }}
+                        </div>
+                        <div class="if-field{% if form.county_ref.errors %} has-error{% endif %}">
+                            <label class="kb-label" id="county-ref-label" for="{{ form.county_ref.id_for_label }}">{{ form.county_ref.label }}</label>
+                            {{ form.county_ref }}
+                            {{ form.county_ref.errors }}
+                        </div>
+                        <div class="if-field{% if form.license_year.errors %} has-error{% endif %}">
+                            <label class="kb-label" for="{{ form.license_year.id_for_label }}">License year</label>
+                            {{ form.license_year }}
+                            <span class="kb-hint">{{ form.license_year.help_text }}</span>
+                            {{ form.license_year.errors }}
+                        </div>
+                        <div class="if-field if-field--era{% if form.era_label.errors %} has-error{% endif %}" id="era-label-field">
+                            <label class="kb-label" for="{{ form.era_label.id_for_label }}">
+                                Or roughly <span id="era-label-required" style="display: none;">&mdash; needed</span>
+                            </label>
+                            {{ form.era_label }}
+                            {{ form.era_label.errors }}
+                        </div>
+                    </div>
+
+                    <div class="if-field{% if form.condition_grade.errors %} has-error{% endif %}">
+                        <span class="kb-label">Condition</span>
+                        {{ form.condition_grade }}
+                        {{ form.condition_grade.errors }}
+                    </div>
+
+                    <div class="if-grid if-grid--serial">
+                        <div class="if-field{% if form.serial_number.errors %} has-error{% endif %}">
+                            <label class="kb-label" for="{{ form.serial_number.id_for_label }}">Serial or stub</label>
+                            {{ form.serial_number }}
+                            <span class="kb-hint">Exactly as printed, letters and all.</span>
+                            {{ form.serial_number.errors }}
+                        </div>
+                    </div>
+                </section>
+
+                <section class="if-section">
+                    <div class="if-section-head">
+                        <h2>The detail collectors filter on</h2>
+                        <span class="if-section-line"></span>
+                        <span class="if-section-note">these are the facets in the Hunt rail</span>
+                    </div>
+                    <div class="if-grid if-grid--thirds">
+                        {% for field_name, other_name, heading in taxonomy_fields %}
+                            {% with field=form|bound_field:field_name other_field=form|bound_field:other_name %}
+                            <div class="if-field{% if field.errors %} has-error{% endif %}{% if field_name == 'addon_type' %} if-span{% endif %}" data-taxonomy-field="{{ field_name }}">
+                                <label class="kb-label" for="{{ field.id_for_label }}" data-taxonomy-label="{{ field_name }}">{{ heading }}</label>
+                                {{ field }}
+                                {{ field.errors }}
+                                <div data-other-wrapper="{{ field_name }}" style="display: none;">
+                                    <label class="kb-label" for="{{ other_field.id_for_label }}">{{ heading }} &mdash; in your words</label>
+                                    {{ other_field }}
+                                    {{ other_field.errors }}
+                                </div>
+                            </div>
+                            {% endwith %}
+                        {% endfor %}
+                    </div>
+                    <div class="if-grid if-grid--physical">
+                        <div class="if-field{% if form.shape.errors %} has-error{% endif %}">
+                            <label class="kb-label" for="{{ form.shape.id_for_label }}">Shape</label>
+                            {{ form.shape }}
+                            {{ form.shape.errors }}
+                            <div data-other-wrapper="shape" style="display: none;">
+                                <label class="kb-label" for="{{ form.shape_other.id_for_label }}">Shape &mdash; in your words</label>
+                                {{ form.shape_other }}
+                                {{ form.shape_other.errors }}
+                            </div>
+                        </div>
+                        <div class="if-field{% if form.colors.errors %} has-error{% endif %}">
+                            <label class="kb-label" for="{{ form.colors.id_for_label }}">Colours</label>
+                            {{ form.colors }}
+                            {{ form.colors.errors }}
+                            <div data-other-wrapper="colors" style="display: none;">
+                                <label class="kb-label" for="{{ form.colors_other.id_for_label }}">Colour &mdash; in your words</label>
+                                {{ form.colors_other }}
+                                {{ form.colors_other.errors }}
+                            </div>
+                        </div>
+                        <div class="if-field{% if form.addons_attached.errors %} has-error{% endif %}" id="addons-attached-field">
+                            <label class="kb-label" for="{{ form.addons_attached.id_for_label }}">Tags still attached?</label>
+                            {{ form.addons_attached }}
+                            {{ form.addons_attached.errors }}
+                        </div>
+                    </div>
+                </section>
+
+                {% comment %}
+                The same one-panel-per-destination shape as the create form. The
+                cost line is different here: a live lot with a bid on it cannot
+                be cancelled, and the seller has to be told that where they are
+                about to change something.
+                {% endcomment %}
+                <div class="sl-terms">
+                    <hr class="sl-terms-rule">
+                    <h2 class="sl-terms-title">
+                        {% if listing.listing_type == 'auction' %}The terms &mdash; The Auction House
+                        {% else %}The terms &mdash; The General Store{% endif %}
+                    </h2>
+
+                    {% if listing.listing_type == 'auction' %}
+                        <div class="sl-terms-grid">
+                            <div class="if-field{% if form.starting_price.errors %} has-error{% endif %}">
+                                <label class="kb-label" for="{{ form.starting_price.id_for_label }}">Starting price</label>
+                                {{ form.starting_price }}
+                                {{ form.starting_price.errors }}
+                            </div>
+                            <div class="if-field{% if form.reserve_price.errors %} has-error{% endif %}">
+                                <label class="kb-label" for="{{ form.reserve_price.id_for_label }}">Reserve</label>
+                                {{ form.reserve_price }}
+                                <span class="kb-hint">A floor you won&rsquo;t go under. Bidders see that there is one, never the figure.</span>
+                                {{ form.reserve_price.errors }}
+                            </div>
+                            <div class="if-field{% if form.duration_days.errors %} has-error{% endif %}">
+                                <label class="kb-label" for="{{ form.duration_days.id_for_label }}">Runs for</label>
+                                {{ form.duration_days }}
+                                {{ form.duration_days.errors }}
+                            </div>
+                            <div class="if-field{% if form.bid_increment.errors %} has-error{% endif %}">
+                                <label class="kb-label" for="{{ form.bid_increment.id_for_label }}">Smallest raise</label>
+                                {{ form.bid_increment }}
+                                {{ form.bid_increment.errors }}
+                            </div>
+                        </div>
+                        <p class="sl-cost">
+                            {% if listing.bids.exists %}
+                                This lot has bids on it. You can&rsquo;t cancel it now, and changing
+                                the terms under people who have already bid is how disputes start.
+                            {% else %}
+                                No bids yet, so you can still cancel it or change anything here.
+                            {% endif %}
+                        </p>
+
+                    {% else %}
+                        <div class="sl-terms-grid">
+                            <div class="if-field{% if form.buy_now_price.errors %} has-error{% endif %}">
+                                <label class="kb-label" for="{{ form.buy_now_price.id_for_label }}">Your price</label>
+                                {{ form.buy_now_price }}
+                                {{ form.buy_now_price.errors }}
+                            </div>
+                            <div class="if-field{% if form.minimum_offer.errors %} has-error{% endif %}">
+                                <label class="kb-label" for="{{ form.minimum_offer.id_for_label }}">Nothing under</label>
+                                {{ form.minimum_offer }}
+                                <span class="kb-hint">Offers below this are turned away for you, and the
+                                    buyer is told the figure. Leave it empty and every offer reaches you.</span>
+                                {{ form.minimum_offer.errors }}
+                            </div>
+                        </div>
+                        <label class="sl-check">
+                            {{ form.allow_offers }}
+                            <span>
+                                <strong>I&rsquo;ll consider offers</strong>
+                                <small class="sl-hint">Binding if you accept. Buyers open, you counter.</small>
+                            </span>
+                        </label>
+                        {{ form.allow_offers.errors }}
+                        <p class="sl-cost">Change the price or take it down whenever. Offers already
+                            open keep the terms they were made under.</p>
+                    {% endif %}
+                </div>
+
+                <details class="if-more" {% if form.auto_relist.errors or form.local_pickup_location.errors %}open{% endif %}>
+                    <summary>Timing and pickup</summary>
+                    <div class="if-more-body">
+                        <div data-listing-panel="auction">
+                            <label class="kb-check" style="justify-content: flex-start;">
+                                {{ form.auto_relist }} <span>Auto-relist if unsold</span>
+                            </label>
+                            {% if form.auto_relist.help_text %}<span class="kb-hint">{{ form.auto_relist.help_text }}</span>{% endif %}
+                            {{ form.auto_relist.errors }}
+                        </div>
+                        <div>
+                            <label class="kb-check" style="justify-content: flex-start;">
+                                {{ form.local_pickup_available }} <span>Offer local pickup</span>
+                            </label>
+                            {{ form.local_pickup_available.errors }}
+                            <div id="local-pickup-location-wrapper" class="if-field" style="margin-top: 8px; display: none;">
+                                <label class="kb-label" for="{{ form.local_pickup_location.id_for_label }}">Pickup location</label>
+                                {{ form.local_pickup_location }}
+                                {{ form.local_pickup_location.errors }}
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="if-more" {% if form.ship_from_address.errors or form.package_weight_oz.errors or form.package_length_in.errors or form.package_width_in.errors or form.package_height_in.errors or form.shipping_service.errors or form.shipping_payer.errors %}open{% endif %}>
+                    <summary>Shipping</summary>
+                    <div class="if-more-body">
+                        {% include 'listings/_shipping_section.html' %}
+                    </div>
+                </details>
+
+                <div class="if-foot">
+                    <button type="submit" class="if-go">Save the changes</button>
+                    <a class="if-foot-cancel" href="{% url 'listings:detail' listing.pk %}">Leave it as it was</a>
+                </div>
+            </div>
         </div>
     </form>
 
@@ -330,19 +387,26 @@
     honouring the closing one -- which closed the host form early and
     orphaned the submit button and every field after this point.
     {% endcomment %}
-    <details style="margin-top: 1rem;">
-        <summary style="cursor: pointer; color: var(--color-aged-amber);">Is a value missing?</summary>
-        <div style="margin-top: 0.75rem;">
+    <details class="if-more">
+        <summary>Is a value missing?</summary>
+        <div class="if-more-body">
             {% include 'core/_reference_data_suggestion_form.html' %}
         </div>
     </details>
-</section>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'js/prefill.js' %}"></script>
+<script src="{% static 'js/item-form.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    KBItemForm.init({
+        form: 'form[enctype]',
+        kind: 'listing',
+        freshTitle: false,
+        slots: { front: { input: '#{{ form.featured_image.id_for_label }}' }, back: {}, details: [] },
+    });
     KBPrefill.init({
         createUrl: '{% url "prefill:create_job" %}',
         correctionsUrlTemplate: '{% url "prefill:job_corrections" 0 %}',
@@ -476,7 +540,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 rebuildChecklist(field, fieldName, items);
             } else {
                 const currentValue = field.value;
-                field.innerHTML = `<option value="">Select ${fieldName.replace('_', ' ')}</option>`;
+                field.innerHTML = `<option value="">${fieldName === 'issue_class' ? 'Ordinary issue' : 'Select ' + fieldName.replace('_', ' ')}</option>`;
                 items.forEach((item) => {
                     const option = document.createElement('option');
                     option.value = item.id;
@@ -512,7 +576,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
             const row = btn.closest('[data-image-row]');
             const prev = row.previousElementSibling;
-            if (prev) row.parentNode.insertBefore(row, prev);
+            if (prev && prev.hasAttribute('data-image-row')) row.parentNode.insertBefore(row, prev);
             applySort();
         });
     });
@@ -520,7 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
             const row = btn.closest('[data-image-row]');
             const next = row.nextElementSibling;
-            if (next) row.parentNode.insertBefore(next, row);
+            if (next && next.hasAttribute('data-image-row')) row.parentNode.insertBefore(next, row);
             applySort();
         });
     });
@@ -539,7 +603,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    /* 10.8 shared: item-kind sections (T6b) + Era (Circa) autofill */
+    /* 10.8 shared: item-kind sections (T6b) */
     const kindRadios = Array.from(document.querySelectorAll('input[name="item_kind"]'));
     const BASE_DIMS = ['residency', 'holder_eligibility', 'activity_scope', 'duration'];
     const addonLabel = document.querySelector('[data-taxonomy-label="addon_type"]');
@@ -550,7 +614,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const wrap = document.querySelector(`[data-taxonomy-field="${name}"]`);
             if (wrap) wrap.style.display = kind === 'addon' ? 'none' : '';
         });
-        if (addonLabel) addonLabel.textContent = kind === 'addon' ? 'What is this item?' : 'Attached / included add-ons';
+        if (addonLabel) addonLabel.textContent = kind === 'addon' ? 'What is this item?' : 'Tags or stamps on it';
         if (addonsAttachedField) addonsAttachedField.style.display = kind === 'addon' ? 'none' : '';
     };
     kindRadios.forEach(r => r.addEventListener('change', applyKind));
@@ -562,8 +626,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const eraFromYear = (raw) => {
             const y = parseInt(raw, 10);
             if (!y) return '';
-            if (y < 1920) return 'Pre-1920';
             if (y === 2000) return '2000';
+            if (y < 1920) return 'Pre-1920';
             return `${Math.floor(y / 10) * 10}s`;
         };
         yearInput.addEventListener('input', () => {

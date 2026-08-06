@@ -1,460 +1,407 @@
 {% extends 'base.html' %}
 {% load static core_tags %}
 
-{% block title %}Create Listing | KeystoneBid{% endblock %}
+{% block title %}Add an item — the item | KeystoneBid{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/pages/sell.css' %}">
-<link rel="stylesheet" href="{% static 'css/pages/listing.css' %}">
-<style>
-/* ── Image upload zone ── */
-.img-zone { margin-bottom: 0.5rem; }
-
-.img-drop-area {
-    border: 2px dashed var(--color-border, #d4cfc4);
-    border-radius: 10px;
-    padding: 1rem;
-    text-align: center;
-    transition: border-color 0.15s, background 0.15s;
-    cursor: pointer;
-    background: #fafaf7;
-}
-
-.img-drop-area.drag-over {
-    border-color: var(--color-forest-green);
-    background: rgba(26,92,13,0.04);
-}
-
-.img-empty-state { padding: 0.5rem 0; }
-
-.img-empty-icon {
-    font-size: 2rem;
-    color: var(--color-muted);
-    margin-bottom: 0.35rem;
-}
-
-.img-empty-state p { font-size: 0.9rem; color: var(--color-muted); margin: 0.2rem 0; }
-
-.img-pick-btn {
-    background: none; border: none; cursor: pointer;
-    color: var(--color-forest-green); font-weight: 600; font-size: 0.9rem;
-    text-decoration: underline; padding: 0;
-}
-
-.img-pick-btn:hover { color: #0f3a06; }
-
-.img-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-    gap: 0.6rem;
-    margin-top: 0.7rem;
-}
-
-.img-thumb {
-    position: relative;
-    border-radius: 8px;
-    overflow: hidden;
-    border: 2px solid var(--color-border, #d4cfc4);
-    aspect-ratio: 1;
-    cursor: grab;
-    background: #f0ede6;
-}
-
-.img-thumb:first-child { border-color: var(--color-forest-green); }
-
-.img-thumb img {
-    width: 100%; height: 100%;
-    object-fit: cover; display: block;
-}
-
-.img-thumb.drag-over { border-color: var(--color-aged-amber); opacity: 0.75; }
-.img-thumb.dragging  { opacity: 0.4; }
-
-.img-featured-badge {
-    position: absolute; top: 4px; left: 4px;
-    background: var(--color-forest-green); color: #fff;
-    font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.04em; padding: 2px 5px; border-radius: 4px;
-    pointer-events: none;
-}
-
-.img-remove-btn {
-    position: absolute; top: 4px; right: 4px;
-    background: rgba(0,0,0,0.55); color: #fff;
-    border: none; border-radius: 50%;
-    width: 22px; height: 22px;
-    font-size: 0.85rem; line-height: 1;
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-    opacity: 0; transition: opacity 0.15s;
-    padding: 0;
-}
-
-.img-thumb:hover .img-remove-btn,
-.img-thumb:focus-within .img-remove-btn { opacity: 1; }
-
-/* Always visible on touch devices */
-@media (pointer: coarse) {
-    .img-remove-btn { opacity: 0.85; }
-}
-
-.img-add-more {
-    border-radius: 8px;
-    border: 2px dashed var(--color-border, #d4cfc4);
-    aspect-ratio: 1;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; background: #fafaf7;
-    color: var(--color-muted); font-size: 1.5rem;
-    transition: border-color 0.1s;
-}
-.img-add-more:hover { border-color: var(--color-forest-green); color: var(--color-forest-green); }
-</style>
+<link rel="stylesheet" href="{% static 'css/pages/item-form.css' %}">
 {% endblock %}
 
 {% block content %}
-{% include 'listings/_sell_steps.html' with step=2 destination=destination %}
-<section class="card" style="max-width: 960px; margin: 0 auto;">
-    <h1 style="margin-bottom: 0.75rem;">Create listing</h1>
-    <p style="margin-bottom: 1rem; color: var(--color-muted);">
-        Describe the item as it's printed — a photo can pre-fill most of this for you.
-    </p>
+<div class="if-page">
+    {% include 'listings/_sell_steps.html' with step=2 destination=destination %}
+
+    <div class="if-head">
+        <h1>The item</h1>
+        <p class="if-lede">
+            Going to {{ config_listing_type_label|default:'the block' }}. A photograph
+            reads most of this for you &mdash; start with one.
+        </p>
+    </div>
+
+    {% if form.errors or image_formset.non_form_errors %}
+        <div class="if-errors" role="alert">
+            <strong>
+                {% with n=form.errors|length %}
+                    {{ n }} thing{{ n|pluralize }} to fix before this can be put up
+                {% endwith %}
+            </strong>
+            <ul>
+                {% for field in form %}{% for error in field.errors %}
+                    <li>&middot; <a href="#{{ field.id_for_label }}">{{ field.label }}</a> &mdash; {{ error }}</li>
+                {% endfor %}{% endfor %}
+                {% for error in form.non_field_errors %}<li>&middot; {{ error }}</li>{% endfor %}
+                {% for error in image_formset.non_form_errors %}<li>&middot; {{ error }}</li>{% endfor %}
+            </ul>
+        </div>
+    {% endif %}
 
     <form method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
-        {% if form.errors or image_formset.non_form_errors %}
-            <div class="alert alert-error" role="alert" style="margin-bottom: 1rem;">
-                <strong>Your listing wasn't saved — please fix the following:</strong>
-                <ul style="margin: 0.35rem 0 0 1.1rem;">
-                    {% for field in form %}{% for error in field.errors %}
-                        <li><a href="#{{ field.id_for_label }}" style="color: inherit;">{{ field.label }}: {{ error }}</a></li>
-                    {% endfor %}{% endfor %}
-                    {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
-                    {% for error in image_formset.non_form_errors %}<li>{{ error }}</li>{% endfor %}
-                </ul>
-            </div>
-        {% endif %}
-        {% if form.non_field_errors %}
-            <div class="alert alert-error" style="margin-bottom: 1rem;">{{ form.non_field_errors }}</div>
-        {% endif %}
+        {% comment %}
+        The destination was settled in step 1 and the steps strip above
+        already names it. The select stays in the DOM because the panel
+        JS reads it, but nobody has to answer it twice.
+        {% endcomment %}
+        <div style="display: none;">{{ form.listing_type }}{{ form.source_collection_item }}</div>
+        <input type="hidden" name="prefill_job_id" id="prefill-job-id" value="">
 
-        <div style="display: grid; gap: 0.85rem;">
-            <!-- 1. List from collection (optional) -->
-            <div>
-                <label class="form-label" for="{{ form.source_collection_item.id_for_label }}">List from collection (optional)</label>
-                {{ form.source_collection_item }}
-                {% if form.source_collection_item.help_text %}
-                    <small style="color: var(--color-muted);">{{ form.source_collection_item.help_text }}</small>
-                {% endif %}
-                {{ form.source_collection_item.errors }}
-            </div>
-
-            <!-- Item kind -->
-            <div>
-                <label class="form-label">License or add-on?</label>
-                <div style="display: flex; gap: 1.25rem; flex-wrap: wrap;">
-                    {% for radio in form.item_kind %}
-                        <label style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 400; margin: 0; cursor: pointer;">
-                            {{ radio.tag }}<span>{{ radio.choice_label }}</span>
-                        </label>
-                    {% endfor %}
-                </div>
-                {{ form.item_kind.errors }}
-            </div>
-
-            {% comment %}
-            The destination was settled in step 1 and the steps strip above
-            already names it. The select stays in the DOM because the panel
-            JS reads it, but nobody has to answer it twice.
-            {% endcomment %}
-            <div style="display: none;">{{ form.listing_type }}</div>
-            {{ form.listing_type.errors }}
-
-            <!-- 3. Image upload zone -->
-            <div>
-                <label class="form-label" style="margin-bottom: 0.35rem; display: block;">
-                    Photographs <span style="font-weight: 400; color: var(--color-muted);">— the first is what buyers see, the second is the back (serial, pin, printing), and up to three more for a flaw, a maker mark or the pin</span>
-                </label>
-                {% if retained_uploads %}
-                    {# A file input cannot be repopulated after a failed POST; the server holds the upload and shows it here. #}
-                    <div class="alert alert-info" style="margin-bottom: 0.6rem;">
-                        <strong>Your {{ retained_uploads|length }} uploaded image{{ retained_uploads|pluralize }} {{ retained_uploads|pluralize:"was,were" }} kept</strong>
-                        &mdash; you don't need to choose {{ retained_uploads|pluralize:"it,them" }} again. Pick new files only if you want to replace {{ retained_uploads|pluralize:"it,them" }}.
-                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
-                            {% for field, name, url in retained_uploads %}
-                                <img src="{{ url }}" alt="{{ name }}" title="{{ name }}"
-                                     style="width: 64px; height: 64px; object-fit: cover; border-radius: 6px; border: 1px solid var(--color-border);">
+        <div class="if-floor">
+            {# ── The evidence rail ─────────────────────────────────── #}
+            <div class="if-rail">
+                <section class="if-panel if-panel--photos" data-photo-panel>
+                    <div class="if-panel-head">
+                        <span class="if-panel-eyebrow">Photographs</span>
+                        <span class="if-panel-meta" data-photo-count>0 of 5</span>
+                    </div>
+                    <div class="if-photos-body">
+                        {% if retained_uploads %}
+                            <div class="if-kept">
+                                <p class="if-photos-note">
+                                    Your {{ retained_uploads|length }} upload{{ retained_uploads|pluralize }}
+                                    {{ retained_uploads|pluralize:"was,were" }} kept through the error above
+                                    &mdash; pick new files only to replace {{ retained_uploads|pluralize:"it,them" }}.
+                                </p>
+                                <div class="if-kept-row">
+                                    {% for field, name, url in retained_uploads %}
+                                        <img src="{{ url }}" alt="{{ name }}" title="{{ name }}">
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+                        <div class="if-slots" data-slots-ui hidden>
+                        <div class="if-slot-pair">
+                            <div class="if-slot-col">
+                                <button type="button" class="if-slot if-slot--front" data-slot="front">
+                                    <span class="if-slot-badge">Featured &middot; front</span>
+                                    <span class="if-slot-x" data-slot-x="front" role="button" aria-label="Remove the front photograph">&times;</span>
+                                </button>
+                                <span class="if-slot-cap">The one buyers see first</span>
+                            </div>
+                            <div class="if-slot-col">
+                                <button type="button" class="if-slot" data-slot="back">
+                                    <span class="if-slot-badge if-slot-badge--back">Back</span>
+                                    <span class="if-slot-x" data-slot-x="back" role="button" aria-label="Remove the back photograph">&times;</span>
+                                </button>
+                                <span class="if-slot-cap">Serial, pin, printing</span>
+                            </div>
+                        </div>
+                        <div class="if-details-row">
+                            <button type="button" class="if-slot if-slot--detail" data-slot="detail0">+
+                                <span class="if-slot-x" data-slot-x="detail0" role="button" aria-label="Remove this photograph">&times;</span>
+                            </button>
+                            <button type="button" class="if-slot if-slot--detail" data-slot="detail1">+
+                                <span class="if-slot-x" data-slot-x="detail1" role="button" aria-label="Remove this photograph">&times;</span>
+                            </button>
+                            <button type="button" class="if-slot if-slot--detail" data-slot="detail2">+
+                                <span class="if-slot-x" data-slot-x="detail2" role="button" aria-label="Remove this photograph">&times;</span>
+                            </button>
+                        </div>
+                        <span class="if-photos-note">
+                            Front and back are fixed slots, so reordering can&rsquo;t relabel
+                            them. Drag the details into whatever order you like &mdash; a flaw,
+                            a maker mark, the pin.
+                        </span>
+                        </div>
+                        {# The slots stage into these; without JavaScript they are the form. #}
+                        <div class="if-native" id="img-native">
+                            {{ form.featured_image }}
+                            {% if form.featured_image.errors %}<ul class="errorlist">{% for e in form.featured_image.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+                            {{ image_formset.management_form }}
+                            {% for img_form in image_formset %}
+                                {{ img_form.image }}
+                                {{ img_form.image_role }}
+                                {{ img_form.sort_order }}
+                                {{ img_form.id }}
+                                {% if img_form.DELETE %}{{ img_form.DELETE }}{% endif %}
                             {% endfor %}
                         </div>
                     </div>
-                {% endif %}
-                <div class="img-zone" id="img-zone">
-                    <div class="img-drop-area" id="img-drop">
-                        <div class="img-empty-state" id="img-empty">
-                            <div class="img-empty-icon">&#128444;</div>
-                            <p>Drag &amp; drop up to 5 images here</p>
-                            <p>or <button type="button" class="img-pick-btn" id="img-pick-btn">choose files from device</button></p>
-                            <p style="font-size: 0.8rem; color: var(--color-muted);">JPG, PNG, WEBP accepted</p>
-                        </div>
-                        <div class="img-grid" id="img-grid" style="display:none;"></div>
+                </section>
+
+                <section class="if-panel" data-prefill-card hidden>
+                    <div class="if-panel-head">
+                        <span class="if-panel-eyebrow">Read from your photograph</span>
+                        <span class="if-panel-meta">tap any line to change it</span>
                     </div>
-                    <!-- Hidden native inputs: featured_image + image formset -->
-                    <div id="img-native" style="display:none;">
-                        {{ form.featured_image }}
-                        {{ image_formset.management_form }}
-                        {% for img_form in image_formset %}
-                            {{ img_form.image }}
-                            {{ img_form.image_role }}
-                            {{ img_form.sort_order }}
-                            {{ img_form.id }}
-                            {% if img_form.DELETE %}{{ img_form.DELETE }}{% endif %}
-                        {% endfor %}
+                    <div id="prefill-panel"></div>
+                </section>
+
+                <section class="if-panel if-panel--preview" data-preview>
+                    <div class="if-panel-head">
+                        <span class="if-panel-eyebrow">How buyers will see it</span>
+                        <span class="if-panel-meta">updates as you type</span>
                     </div>
-                </div>
-                {% if form.featured_image.errors %}
-                    <div style="color: var(--color-error); font-size: 0.85rem; margin-top: 0.2rem;">{{ form.featured_image.errors }}</div>
-                {% endif %}
-                <input type="hidden" name="prefill_job_id" id="prefill-job-id" value="">
-                <div id="prefill-panel"></div>
-            </div>
-
-            <!-- Issuing state, below images -->
-            <div>
-                <label class="form-label" for="{{ form.state.id_for_label }}">Issuing state</label>
-                {{ form.state }}
-                {{ form.state.errors }}
-            </div>
-
-            <!-- 4. Title -->
-            <div>
-                <label class="form-label" for="{{ form.title.id_for_label }}">Title</label>
-                {{ form.title }}
-                {{ form.title.errors }}
-            </div>
-
-            <!-- 5. Description -->
-            <div>
-                <label class="form-label" for="{{ form.description.id_for_label }}">Description / condition notes</label>
-                {{ form.description }}
-                {{ form.description.errors }}
-            </div>
-
-            <!-- 6. Year + Era -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
-                <div>
-                    <label class="form-label" for="{{ form.license_year.id_for_label }}">License year</label>
-                    {{ form.license_year }}
-                    <small class="form-help" id="{{ form.license_year.id_for_label }}_helptext" style="color: var(--color-muted);">{{ form.license_year.help_text }}</small>
-                    {{ form.license_year.errors }}
-                </div>
-                <div id="era-label-field">
-                    <label class="form-label" for="{{ form.era_label.id_for_label }}">
-                        Era (Circa) <span id="era-label-required" style="color: var(--color-error); display: none;">*</span>
-                    </label>
-                    {{ form.era_label }}
-                    <small style="color: var(--color-muted);">{{ form.era_label.help_text }}</small>
-                    {{ form.era_label.errors }}
-                </div>
-            </div>
-
-            <!-- 7. County + Condition -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
-                <div>
-                    <label class="form-label" id="county-ref-label" for="{{ form.county_ref.id_for_label }}">{{ form.county_ref.label }}</label>
-                    {{ form.county_ref }}
-                    {{ form.county_ref.errors }}
-                </div>
-                <div>
-                    <label class="form-label" for="{{ form.condition_grade.id_for_label }}">Condition grade</label>
-                    {{ form.condition_grade }}
-                    {{ form.condition_grade.errors }}
-                </div>
-            </div>
-
-            <!-- 8. Item taxonomy — collapsible (10.8); opens itself when it holds errors -->
-            <details id="taxonomy-details" {% if taxonomy_has_errors %}open{% endif %} style="border: 1px solid var(--color-border); border-radius: 8px; padding: 0.75rem;">
-                <summary style="cursor: pointer; font-size: 1.05rem; font-weight: 600;">
-                    Item taxonomy <span style="font-weight: 400; color: var(--color-muted); font-size: 0.85rem;">— identify what the item is (optional but boosts completeness)</span>
-                </summary>
-                <div style="display: grid; gap: 0.85rem; margin-top: 0.75rem;">
-                    {% for field_name, other_name, heading in taxonomy_fields %}
-                        {% with field=form|bound_field:field_name other_field=form|bound_field:other_name %}
-                        <div style="display: grid; gap: 0.45rem;" data-taxonomy-field="{{ field_name }}">
-                            <label class="form-label" for="{{ field.id_for_label }}" data-taxonomy-label="{{ field_name }}">{{ heading }}</label>
-                            {{ field }}
-                            {{ field.errors }}
-                            <div data-other-wrapper="{{ field_name }}" style="display: none;">
-                                <label class="form-label" for="{{ other_field.id_for_label }}">{{ heading }} other</label>
-                                {{ other_field }}
-                                {{ other_field.errors }}
+                    <div class="if-preview-body">
+                        <div class="if-preview-card">
+                            <div class="if-preview-media" data-pv-media>
+                                <span class="if-preview-flag{% if config_listing_type == 'buy_now' %} if-preview-flag--store{% endif %}">
+                                    {% if config_listing_type == 'buy_now' %}Buy now{% else %}Auction{% endif %}
+                                </span>
+                            </div>
+                            <div class="if-preview-text">
+                                <span class="if-preview-title" data-pv-title>Untitled, so far</span>
+                                <span class="if-preview-line" data-pv-facts>County, year and residency go here</span>
+                                <span class="if-preview-line if-preview-line--soft" data-pv-cond>Condition not set</span>
                             </div>
                         </div>
-                        {% endwith %}
-                    {% endfor %}
+                        <div class="if-complete" data-complete>
+                            <div class="if-complete-row">
+                                <span class="if-complete-label">Complete</span>
+                                <span class="if-complete-score" data-complete-score>0%</span>
+                            </div>
+                            <div class="if-complete-track"><div class="if-complete-fill" data-complete-fill style="width: 0%;"></div></div>
+                            <span class="if-complete-next" data-complete-next>Fuller entries sell for more, which is the only reason we mention it.</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
 
-                    <div id="addons-attached-field">
-                        <label class="form-label" for="{{ form.addons_attached.id_for_label }}">Add-ons attached / intact?</label>
-                        {{ form.addons_attached }}
-                        <small style="color: var(--color-muted);">For a license with add-ons: are the tags/stamps still physically attached? Leave Unknown if unsure.</small>
-                        {{ form.addons_attached.errors }}
+            {# ── The work ──────────────────────────────────────────── #}
+            <div class="if-work">
+                <div class="if-grid if-grid--halves">
+                    <div class="if-field{% if form.title.errors %} has-error{% endif %}" data-title-field>
+                        <div class="if-label-row">
+                            <label class="kb-label" for="{{ form.title.id_for_label }}">Title</label>
+                            <span class="if-label-note">written for you &middot; edit freely</span>
+                        </div>
+                        {{ form.title }}
+                        {{ form.title.errors }}
+                    </div>
+                    <div class="if-field{% if form.description.errors %} has-error{% endif %}">
+                        <div class="if-label-row">
+                            <label class="kb-label" for="{{ form.description.id_for_label }}">Description</label>
+                            <span class="if-label-note if-label-note--quiet" data-desc-count></span>
+                        </div>
+                        {{ form.description }}
+                        {{ form.description.errors }}
+                    </div>
+                </div>
+
+                <section class="if-section">
+                    <div class="if-section-head">
+                        <h2>What it is</h2>
+                        <span class="if-section-line"></span>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
-                        <div>
-                            <label class="form-label" for="{{ form.shape.id_for_label }}">Shape</label>
+                    <div class="if-field{% if form.item_kind.errors %} has-error{% endif %}">
+                        <span class="kb-label">Is it a license, or an add-on on its own?</span>
+                        {{ form.item_kind }}
+                        <span class="kb-hint">A back tag with its turkey tag still attached is a license.</span>
+                        {{ form.item_kind.errors }}
+                    </div>
+
+                    <div class="if-grid if-grid--place">
+                        <div class="if-field{% if form.state.errors %} has-error{% endif %}">
+                            <label class="kb-label" for="{{ form.state.id_for_label }}">Issuing state</label>
+                            {{ form.state }}
+                            {{ form.state.errors }}
+                        </div>
+                        <div class="if-field{% if form.county_ref.errors %} has-error{% endif %}">
+                            <label class="kb-label" id="county-ref-label" for="{{ form.county_ref.id_for_label }}">{{ form.county_ref.label }}</label>
+                            {{ form.county_ref }}
+                            <span class="kb-hint">Or pick the statewide row when no county is printed.</span>
+                            {{ form.county_ref.errors }}
+                        </div>
+                        <div class="if-field{% if form.license_year.errors %} has-error{% endif %}">
+                            <label class="kb-label" for="{{ form.license_year.id_for_label }}">License year</label>
+                            {{ form.license_year }}
+                            <span class="kb-hint">{{ form.license_year.help_text }}</span>
+                            {{ form.license_year.errors }}
+                        </div>
+                        <div class="if-field if-field--era{% if form.era_label.errors %} has-error{% endif %}" id="era-label-field">
+                            <label class="kb-label" for="{{ form.era_label.id_for_label }}">
+                                Or roughly <span id="era-label-required" style="display: none;">&mdash; needed</span>
+                            </label>
+                            {{ form.era_label }}
+                            <span class="kb-hint">Filled in from the year for you.</span>
+                            {{ form.era_label.errors }}
+                        </div>
+                    </div>
+
+                    <div class="if-field{% if form.condition_grade.errors %} has-error{% endif %}">
+                        <span class="kb-label">Condition</span>
+                        {{ form.condition_grade }}
+                        <span class="kb-hint">Pick one, even roughly &mdash; buyers filter on it.</span>
+                        {{ form.condition_grade.errors }}
+                    </div>
+
+                    <div class="if-grid if-grid--serial">
+                        <div class="if-field{% if form.serial_number.errors %} has-error{% endif %}">
+                            <label class="kb-label" for="{{ form.serial_number.id_for_label }}">Serial or stub</label>
+                            {{ form.serial_number }}
+                            <span class="kb-hint">Exactly as printed, letters and all.</span>
+                            {{ form.serial_number.errors }}
+                        </div>
+                    </div>
+                </section>
+
+                <section class="if-section">
+                    <div class="if-section-head">
+                        <h2>The detail collectors filter on</h2>
+                        <span class="if-section-line"></span>
+                        <span class="if-section-note">these are the facets in the Hunt rail</span>
+                    </div>
+                    <div class="if-grid if-grid--thirds">
+                        {% for field_name, other_name, heading in taxonomy_fields %}
+                            {% with field=form|bound_field:field_name other_field=form|bound_field:other_name %}
+                            <div class="if-field{% if field.errors %} has-error{% endif %}{% if field_name == 'addon_type' %} if-span{% endif %}" data-taxonomy-field="{{ field_name }}">
+                                <label class="kb-label" for="{{ field.id_for_label }}" data-taxonomy-label="{{ field_name }}">{{ heading }}</label>
+                                {{ field }}
+                                {% if field_name == 'material' %}
+                                    <span class="kb-hint">Card, paper, metal, celluloid, cloth. The one thing the photograph can&rsquo;t tell.</span>
+                                {% endif %}
+                                {{ field.errors }}
+                                <div data-other-wrapper="{{ field_name }}" style="display: none;">
+                                    <label class="kb-label" for="{{ other_field.id_for_label }}">{{ heading }} &mdash; in your words</label>
+                                    {{ other_field }}
+                                    {{ other_field.errors }}
+                                </div>
+                            </div>
+                            {% endwith %}
+                        {% endfor %}
+                    </div>
+                    <div class="if-grid if-grid--physical">
+                        <div class="if-field{% if form.shape.errors %} has-error{% endif %}">
+                            <label class="kb-label" for="{{ form.shape.id_for_label }}">Shape</label>
                             {{ form.shape }}
                             {{ form.shape.errors }}
-                            <div data-other-wrapper="shape" style="display: none; margin-top: 0.45rem;">
-                                <label class="form-label" for="{{ form.shape_other.id_for_label }}">Shape other</label>
+                            <div data-other-wrapper="shape" style="display: none;">
+                                <label class="kb-label" for="{{ form.shape_other.id_for_label }}">Shape &mdash; in your words</label>
                                 {{ form.shape_other }}
                                 {{ form.shape_other.errors }}
                             </div>
                         </div>
-                        <div>
-                            <label class="form-label" for="{{ form.colors.id_for_label }}">Color(s)</label>
+                        <div class="if-field{% if form.colors.errors %} has-error{% endif %}">
+                            <label class="kb-label" for="{{ form.colors.id_for_label }}">Colours</label>
                             {{ form.colors }}
                             {{ form.colors.errors }}
-                            <div data-other-wrapper="colors" style="display: none; margin-top: 0.45rem;">
-                                <label class="form-label" for="{{ form.colors_other.id_for_label }}">Color other</label>
+                            <div data-other-wrapper="colors" style="display: none;">
+                                <label class="kb-label" for="{{ form.colors_other.id_for_label }}">Colour &mdash; in your words</label>
                                 {{ form.colors_other }}
                                 {{ form.colors_other.errors }}
                             </div>
                         </div>
-                    </div>
-                </div>
-            </details>
-        </div>
-
-        <!-- Optional details -->
-        <details style="margin-top: 1.25rem;" {% if form.serial_number.value %}open{% endif %}>
-            <summary style="cursor: pointer; font-size: 1.05rem; font-weight: 600; margin-bottom: 0.5rem;">
-                Optional details
-            </summary>
-            <div style="display: grid; gap: 0.85rem; margin-top: 0.75rem;">
-                <div>
-                    <label class="form-label" for="{{ form.serial_number.id_for_label }}">Serial / stub number</label>
-                    {{ form.serial_number }}
-                    <small style="color: var(--color-muted);">{{ form.serial_number.help_text }}</small>
-                    {{ form.serial_number.errors }}
-                </div>
-            </div>
-        </details>
-
-        {% comment %}
-        Step 3 — the terms. One panel per destination, carrying only its own
-        fields. The old form held all three sets at once and hid two with
-        JavaScript, which is why it read as long and unfocused.
-
-        Each panel ends with the same three things: the action, what it costs
-        to change your mind, and one line of local knowledge.
-        {% endcomment %}
-        <div class="sl-terms">
-            <hr class="sl-terms-rule">
-            <h2 class="sl-terms-title">
-                {% if config_listing_type == 'auction' %}The terms &mdash; The Auction House
-                {% else %}The terms &mdash; The General Store{% endif %}
-            </h2>
-
-            {% if config_listing_type == 'auction' %}
-                <div class="sl-terms-grid">
-                    <div>
-                        <label class="form-label" for="{{ form.starting_price.id_for_label }}">Starting price</label>
-                        {{ form.starting_price }}
-                        {{ form.starting_price.errors }}
-                    </div>
-                    <div>
-                        <label class="form-label" for="{{ form.reserve_price.id_for_label }}">Reserve</label>
-                        {{ form.reserve_price }}
-                        <small class="sl-hint">A floor you won&rsquo;t go under. Bidders see that there is one, never the figure.</small>
-                        {{ form.reserve_price.errors }}
-                    </div>
-                    <div>
-                        <label class="form-label" for="{{ form.duration_days.id_for_label }}">Runs for</label>
-                        {{ form.duration_days }}
-                        {{ form.duration_days.errors }}
-                    </div>
-                    <div>
-                        <label class="form-label" for="{{ form.bid_increment.id_for_label }}">Smallest raise</label>
-                        {{ form.bid_increment }}
-                        <small class="sl-hint">Each new bid must beat the current one by at least this much.</small>
-                        {{ form.bid_increment.errors }}
-                    </div>
-                </div>
-                <p class="sl-local">Sunday evenings draw the most bidders on here.</p>
-                <p class="sl-cost">You can cancel a lot until the first bid is in.</p>
-
-            {% else %}
-                <div class="sl-terms-grid">
-                    <div>
-                        <label class="form-label" for="{{ form.buy_now_price.id_for_label }}">Your price</label>
-                        {{ form.buy_now_price }}
-                        {{ form.buy_now_price.errors }}
-                    </div>
-                    <div>
-                        <label class="form-label" for="{{ form.minimum_offer.id_for_label }}">Nothing under</label>
-                        {{ form.minimum_offer }}
-                        <small class="sl-hint">Offers below this are turned away for you, and the buyer is
-                            told the figure so they can try again. Leave it empty and every offer reaches you.</small>
-                        {{ form.minimum_offer.errors }}
-                    </div>
-                </div>
-                <label class="sl-check">
-                    {{ form.allow_offers }}
-                    <span>
-                        <strong>I&rsquo;ll consider offers</strong>
-                        <small class="sl-hint">Binding if you accept. Buyers open, you counter.</small>
-                    </span>
-                </label>
-                {{ form.allow_offers.errors }}
-                <p class="sl-cost">Change the price or take it down whenever.</p>
-            {% endif %}
-        </div>
-
-        <div style="margin-top: 1.25rem; display: grid; gap: 0.85rem;">
-            <details style="margin-top: 0.25rem;" {% if form.scheduled_at.errors or form.local_pickup_location.errors %}open{% endif %}>
-                <summary style="cursor: pointer; font-size: 1.05rem; font-weight: 600;">Listing options</summary>
-                <div style="display: grid; gap: 0.85rem; margin-top: 0.75rem;">
-                    <div data-listing-panel="auction" data-listing-panel-also="buy_now">
-                        <label class="form-label" for="{{ form.scheduled_at.id_for_label }}">Schedule go-live (optional)</label>
-                        {{ form.scheduled_at }}
-                        {% if form.scheduled_at.help_text %}<small style="color: var(--color-muted);">{{ form.scheduled_at.help_text }}</small>{% endif %}
-                        {{ form.scheduled_at.errors }}
-                    </div>
-                    <div data-listing-panel="auction">
-                        <label class="form-label" for="{{ form.auto_relist.id_for_label }}">
-                            {{ form.auto_relist }} Auto-relist if unsold
-                        </label>
-                        {% if form.auto_relist.help_text %}<small style="color: var(--color-muted);">{{ form.auto_relist.help_text }}</small>{% endif %}
-                        {{ form.auto_relist.errors }}
-                    </div>
-                    <div>
-                        <label class="form-label" for="{{ form.local_pickup_available.id_for_label }}">
-                            {{ form.local_pickup_available }} Offer local pickup
-                        </label>
-                        {% if form.local_pickup_available.help_text %}<small style="color: var(--color-muted);">{{ form.local_pickup_available.help_text }}</small>{% endif %}
-                        {{ form.local_pickup_available.errors }}
-                        <div id="local-pickup-location-wrapper" style="margin-top: 0.45rem; display: none;">
-                            <label class="form-label" for="{{ form.local_pickup_location.id_for_label }}">Pickup location</label>
-                            {{ form.local_pickup_location }}
-                            {% if form.local_pickup_location.help_text %}<small style="color: var(--color-muted);">{{ form.local_pickup_location.help_text }}</small>{% endif %}
-                            {{ form.local_pickup_location.errors }}
+                        <div class="if-field{% if form.addons_attached.errors %} has-error{% endif %}" id="addons-attached-field">
+                            <label class="kb-label" for="{{ form.addons_attached.id_for_label }}">Tags still attached?</label>
+                            {{ form.addons_attached }}
+                            {{ form.addons_attached.errors }}
                         </div>
                     </div>
+                </section>
+
+                {% comment %}
+                Step 3 — the terms. One panel per destination, carrying only its
+                own fields. Nothing is public until the button at the foot.
+                {% endcomment %}
+                <div class="sl-terms">
+                    <hr class="sl-terms-rule">
+                    <h2 class="sl-terms-title">
+                        {% if config_listing_type == 'auction' %}The terms &mdash; The Auction House
+                        {% else %}The terms &mdash; The General Store{% endif %}
+                    </h2>
+
+                    {% if config_listing_type == 'auction' %}
+                        <div class="sl-terms-grid">
+                            <div class="if-field{% if form.starting_price.errors %} has-error{% endif %}">
+                                <label class="kb-label" for="{{ form.starting_price.id_for_label }}">Starting price</label>
+                                {{ form.starting_price }}
+                                {{ form.starting_price.errors }}
+                            </div>
+                            <div class="if-field{% if form.reserve_price.errors %} has-error{% endif %}">
+                                <label class="kb-label" for="{{ form.reserve_price.id_for_label }}">Reserve</label>
+                                {{ form.reserve_price }}
+                                <span class="kb-hint">A floor you won&rsquo;t go under. Bidders see that there is one, never the figure.</span>
+                                {{ form.reserve_price.errors }}
+                            </div>
+                            <div class="if-field{% if form.duration_days.errors %} has-error{% endif %}">
+                                <label class="kb-label" for="{{ form.duration_days.id_for_label }}">Runs for</label>
+                                {{ form.duration_days }}
+                                {{ form.duration_days.errors }}
+                            </div>
+                            <div class="if-field{% if form.bid_increment.errors %} has-error{% endif %}">
+                                <label class="kb-label" for="{{ form.bid_increment.id_for_label }}">Smallest raise</label>
+                                {{ form.bid_increment }}
+                                <span class="kb-hint">Each new bid must beat the current one by at least this much.</span>
+                                {{ form.bid_increment.errors }}
+                            </div>
+                        </div>
+                        <p class="sl-local">Sunday evenings draw the most bidders on here.</p>
+                        <p class="sl-cost">You can cancel a lot until the first bid is in.</p>
+
+                    {% else %}
+                        <div class="sl-terms-grid">
+                            <div class="if-field{% if form.buy_now_price.errors %} has-error{% endif %}">
+                                <label class="kb-label" for="{{ form.buy_now_price.id_for_label }}">Your price</label>
+                                {{ form.buy_now_price }}
+                                {{ form.buy_now_price.errors }}
+                            </div>
+                            <div class="if-field{% if form.minimum_offer.errors %} has-error{% endif %}">
+                                <label class="kb-label" for="{{ form.minimum_offer.id_for_label }}">Nothing under</label>
+                                {{ form.minimum_offer }}
+                                <span class="kb-hint">Offers below this are turned away for you, and the buyer is
+                                    told the figure so they can try again. Leave it empty and every offer reaches you.</span>
+                                {{ form.minimum_offer.errors }}
+                            </div>
+                        </div>
+                        <label class="sl-check">
+                            {{ form.allow_offers }}
+                            <span>
+                                <strong>I&rsquo;ll consider offers</strong>
+                                <small class="sl-hint">Binding if you accept. Buyers open, you counter.</small>
+                            </span>
+                        </label>
+                        {{ form.allow_offers.errors }}
+                        <p class="sl-cost">Change the price or take it down whenever.</p>
+                    {% endif %}
                 </div>
-            </details>
-        </div>
 
-        <details style="margin-top: 1rem;" {% if form.ship_from_address.errors or form.package_weight_oz.errors or form.package_length_in.errors or form.package_width_in.errors or form.package_height_in.errors or form.shipping_service.errors or form.shipping_payer.errors %}open{% endif %}>
-            <summary style="cursor: pointer; font-size: 1.05rem; font-weight: 600;">Shipping</summary>
-            <div style="display: grid; gap: 0.85rem; margin-top: 0.75rem;">
-                {% include 'listings/_shipping_section.html' %}
+                <details class="if-more" {% if form.scheduled_at.errors or form.local_pickup_location.errors %}open{% endif %}>
+                    <summary>Timing and pickup</summary>
+                    <div class="if-more-body">
+                        <div data-listing-panel="auction" data-listing-panel-also="buy_now" class="if-field{% if form.scheduled_at.errors %} has-error{% endif %}">
+                            <label class="kb-label" for="{{ form.scheduled_at.id_for_label }}">Schedule go-live</label>
+                            {{ form.scheduled_at }}
+                            {% if form.scheduled_at.help_text %}<span class="kb-hint">{{ form.scheduled_at.help_text }}</span>{% endif %}
+                            {{ form.scheduled_at.errors }}
+                        </div>
+                        <div data-listing-panel="auction">
+                            <label class="kb-check" style="justify-content: flex-start;">
+                                {{ form.auto_relist }} <span>Auto-relist if unsold</span>
+                            </label>
+                            {% if form.auto_relist.help_text %}<span class="kb-hint">{{ form.auto_relist.help_text }}</span>{% endif %}
+                            {{ form.auto_relist.errors }}
+                        </div>
+                        <div>
+                            <label class="kb-check" style="justify-content: flex-start;">
+                                {{ form.local_pickup_available }} <span>Offer local pickup</span>
+                            </label>
+                            {{ form.local_pickup_available.errors }}
+                            <div id="local-pickup-location-wrapper" class="if-field" style="margin-top: 8px; display: none;">
+                                <label class="kb-label" for="{{ form.local_pickup_location.id_for_label }}">Pickup location</label>
+                                {{ form.local_pickup_location }}
+                                {{ form.local_pickup_location.errors }}
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="if-more" {% if form.ship_from_address.errors or form.package_weight_oz.errors or form.package_length_in.errors or form.package_width_in.errors or form.package_height_in.errors or form.shipping_service.errors or form.shipping_payer.errors %}open{% endif %}>
+                    <summary>Shipping</summary>
+                    <div class="if-more-body">
+                        {% include 'listings/_shipping_section.html' %}
+                    </div>
+                </details>
+
+                <div class="if-foot">
+                    <button type="submit" class="if-go">
+                        {% if config_listing_type == 'auction' %}Put it up for auction{% else %}Put it on the shelf{% endif %}
+                    </button>
+                    <a class="if-foot-cancel" href="{% url 'listings:sell_start' %}">Back a step</a>
+                    <span class="if-foot-note">Nothing is public until this button.</span>
+                </div>
             </div>
-        </details>
-
-        <hr style="margin: 1.2rem 0; border: 0; border-top: 1px solid var(--color-border);">
-        <div style="margin-top: 1.25rem;">
-            <button type="submit" class="btn-primary">Create listing</button>
-            <a href="{% url 'listings:auction_house' %}" style="margin-left: 0.75rem; color: var(--color-aged-amber);">
-                Cancel
-            </a>
         </div>
     </form>
 
@@ -464,19 +411,34 @@
     honouring the closing one -- which closed the host form early and
     orphaned the submit button and every field after this point.
     {% endcomment %}
-    <details style="margin-top: 1rem;">
-        <summary style="cursor: pointer; color: var(--color-aged-amber);">Is a value missing?</summary>
-        <div style="margin-top: 0.75rem;">
+    <details class="if-more">
+        <summary>Is a value missing?</summary>
+        <div class="if-more-body">
             {% include 'core/_reference_data_suggestion_form.html' %}
         </div>
     </details>
-</section>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'js/prefill.js' %}"></script>
+<script src="{% static 'js/item-form.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    KBItemForm.init({
+        form: 'form[enctype]',
+        kind: 'listing',
+        freshTitle: {% if form.title.value %}false{% else %}true{% endif %},
+        slots: {
+            front: { input: '#{{ form.featured_image.id_for_label }}' },
+            back: { input: '#id_images-0-image', role: '#id_images-0-image_role', sort: '#id_images-0-sort_order', del: '#id_images-0-DELETE' },
+            details: [
+                { input: '#id_images-1-image', role: '#id_images-1-image_role', sort: '#id_images-1-sort_order', del: '#id_images-1-DELETE' },
+                { input: '#id_images-2-image', role: '#id_images-2-image_role', sort: '#id_images-2-sort_order', del: '#id_images-2-DELETE' },
+                { input: '#id_images-3-image', role: '#id_images-3-image_role', sort: '#id_images-3-sort_order', del: '#id_images-3-DELETE' },
+            ],
+        },
+    });
     KBPrefill.init({
         createUrl: '{% url "prefill:create_job" %}',
         correctionsUrlTemplate: '{% url "prefill:job_corrections" 0 %}',
@@ -549,7 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const wrap = document.querySelector(`[data-taxonomy-field="${name}"]`);
             if (wrap) wrap.style.display = kind === 'addon' ? 'none' : '';
         });
-        if (addonLabel) addonLabel.textContent = kind === 'addon' ? 'What is this item?' : 'Attached / included add-ons';
+        if (addonLabel) addonLabel.textContent = kind === 'addon' ? 'What is this item?' : 'Tags or stamps on it';
         if (addonsAttachedField) addonsAttachedField.style.display = kind === 'addon' ? 'none' : '';
     };
     kindRadios.forEach(r => r.addEventListener('change', applyKind));
@@ -643,7 +605,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 rebuildChecklist(field, fieldName, items);
             } else {
                 const currentValue = field.value;
-                field.innerHTML = `<option value="">Select ${fieldName.replace('_', ' ')}</option>`;
+                field.innerHTML = `<option value="">${fieldName === 'issue_class' ? 'Ordinary issue' : 'Select ' + fieldName.replace('_', ' ')}</option>`;
                 items.forEach((item) => {
                     const option = document.createElement('option');
                     option.value = item.id;
@@ -667,184 +629,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     loadReferenceData();
-
-    /* ── Image upload zone ── */
-    const SLOT_IDS = [
-        'id_featured_image',
-        'id_images-0-image',
-        'id_images-1-image',
-        'id_images-2-image',
-        'id_images-3-image',
-    ];
-    const MAX_IMAGES = 5;
-    let staged = []; // {file, previewUrl}
-    let dragIdx = null;
-
-    const dropArea = document.getElementById('img-drop');
-    const emptyState = document.getElementById('img-empty');
-    const grid = document.getElementById('img-grid');
-    const pickBtn = document.getElementById('img-pick-btn');
-
-    // Hidden file picker (multiple)
-    const filePicker = document.createElement('input');
-    filePicker.type = 'file';
-    filePicker.accept = 'image/*';
-    filePicker.multiple = true;
-
-    pickBtn.addEventListener('click', () => filePicker.click());
-    filePicker.addEventListener('change', () => {
-        addFiles(Array.from(filePicker.files));
-        filePicker.value = '';
-    });
-
-    dropArea.addEventListener('dragover', (e) => { e.preventDefault(); dropArea.classList.add('drag-over'); });
-    dropArea.addEventListener('dragleave', () => dropArea.classList.remove('drag-over'));
-    dropArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropArea.classList.remove('drag-over');
-        const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-        addFiles(files);
-    });
-
-    function addFiles(files) {
-        const remaining = MAX_IMAGES - staged.length;
-        files.slice(0, remaining).forEach(file => {
-            // re-dropping the same photo must not duplicate it (10.8)
-            if (staged.some(s => s.file.name === file.name && s.file.size === file.size)) return;
-            staged.push({ file, previewUrl: URL.createObjectURL(file) });
-        });
-        render();
-    }
-
-    function kbConfirm(message) {
-        return new Promise((resolve) => {
-            const overlay = document.createElement('div');
-            overlay.className = 'kb-modal-overlay';
-            overlay.innerHTML = '<div class="kb-modal"><p>' + message + '</p>'
-                + '<div class="kb-modal-actions">'
-                + '<button type="button" class="btn-secondary" data-cancel>Cancel</button>'
-                + '<button type="button" class="btn-primary" data-ok>Remove</button>'
-                + '</div></div>';
-            document.body.appendChild(overlay);
-            overlay.querySelector('[data-ok]').addEventListener('click', () => { overlay.remove(); resolve(true); });
-            overlay.querySelector('[data-cancel]').addEventListener('click', () => { overlay.remove(); resolve(false); });
-            overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); resolve(false); } });
-        });
-    }
-
-    function assignToInputs() {
-        SLOT_IDS.forEach((id, i) => {
-            const input = document.getElementById(id);
-            if (!input) return;
-            const dt = new DataTransfer();
-            if (staged[i]) dt.items.add(staged[i].file);
-            input.files = dt.files;
-        });
-        for (let i = 0; i < 4; i++) {
-            const sortInput = document.getElementById(`id_images-${i}-sort_order`);
-            if (sortInput) sortInput.value = i;
-            // Formset slot 0 is the back of the licence; the rest are details.
-            // The featured image is the front and is its own field.
-            const roleInput = document.getElementById(`id_images-${i}-image_role`);
-            if (roleInput) roleInput.value = i === 0 ? 'back' : 'detail';
-        }
-        // Programmatic .files assignment fires no event — tell prefill about the featured image.
-        const featured = document.getElementById('id_featured_image');
-        if (featured && featured.files.length) {
-            featured.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-    }
-
-    function render() {
-        grid.innerHTML = '';
-        staged.forEach((item, idx) => {
-            const thumb = document.createElement('div');
-            thumb.className = 'img-thumb';
-            thumb.draggable = true;
-            thumb.dataset.idx = idx;
-
-            const img = document.createElement('img');
-            img.src = item.previewUrl;
-            img.alt = `Image ${idx + 1}`;
-            thumb.appendChild(img);
-
-            // Two named slots and three details. The label is what the
-            // photograph IS, and it now persists as image_role rather than
-            // being inferred from where the thumbnail happens to sit.
-            const badge = document.createElement('span');
-            if (idx === 0) {
-                badge.className = 'img-featured-badge';
-                badge.textContent = 'Featured · front';
-            } else if (idx === 1) {
-                badge.className = 'img-featured-badge img-back-badge';
-                badge.textContent = 'Back';
-            } else {
-                badge.className = 'img-featured-badge img-detail-badge';
-                badge.textContent = 'Detail';
-            }
-            thumb.appendChild(badge);
-
-            const rmBtn = document.createElement('button');
-            rmBtn.type = 'button';
-            rmBtn.className = 'img-remove-btn';
-            rmBtn.title = 'Remove image';
-            rmBtn.textContent = '✕';
-            rmBtn.dataset.idx = idx;
-            thumb.appendChild(rmBtn);
-
-            // Thumb drag events
-            thumb.addEventListener('dragstart', () => { dragIdx = idx; thumb.classList.add('dragging'); });
-            thumb.addEventListener('dragend', () => { thumb.classList.remove('dragging'); dragIdx = null; });
-            thumb.addEventListener('dragover', (e) => { e.preventDefault(); thumb.classList.add('drag-over'); });
-            thumb.addEventListener('dragleave', () => thumb.classList.remove('drag-over'));
-            thumb.addEventListener('drop', (e) => {
-                e.preventDefault();
-                thumb.classList.remove('drag-over');
-                if (dragIdx === null || dragIdx === idx) return;
-                const [moved] = staged.splice(dragIdx, 1);
-                staged.splice(idx, 0, moved);
-                render();
-            });
-
-            grid.appendChild(thumb);
-        });
-
-        // "Add more" slot
-        if (staged.length < MAX_IMAGES) {
-            const addMore = document.createElement('div');
-            addMore.className = 'img-add-more';
-            addMore.title = 'Add more images';
-            addMore.textContent = '+';
-            addMore.addEventListener('click', () => filePicker.click());
-            grid.appendChild(addMore);
-        }
-
-        const hasImages = staged.length > 0;
-        grid.style.display = hasImages ? 'grid' : 'none';
-        emptyState.style.display = hasImages ? 'none' : '';
-        assignToInputs();
-    }
-
-    // Remove button delegation
-    grid.addEventListener('click', async (e) => {
-        const btn = e.target.closest('.img-remove-btn');
-        if (!btn) return;
-        const idx = parseInt(btn.dataset.idx, 10);
-        if (!await kbConfirm('Remove this image?')) return;
-        URL.revokeObjectURL(staged[idx].previewUrl);
-        staged.splice(idx, 1);
-        render();
-    });
-
-    // Click on drop area (not on a thumb) opens picker
-    dropArea.addEventListener('click', (e) => {
-        if (e.target === dropArea || e.target === grid || e.target === emptyState) return;
-        if (!e.target.closest('.img-thumb') && !e.target.closest('.img-add-more') && !e.target.closest('.img-pick-btn')) {
-            filePicker.click();
-        }
-    });
-
-    render(); // initial call
 });
 </script>
 {% endblock %}

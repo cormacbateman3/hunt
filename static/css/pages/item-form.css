@@ -1,0 +1,920 @@
+/* ==========================================================================
+   The item form — turn 6b (step 2, the item) and turn 5b (add an item)
+
+   One furniture set for four screens: listing create, listing edit,
+   collection add/edit, add-from-order. The evidence — photographs, what was
+   read off them, the resulting card — sits permanently on the left while
+   you work down the right. Values are the frames': 400px rail, 26px gap,
+   10px/700/0.13em panel eyebrows, hairlines instead of the dashed drop zone.
+   ========================================================================== */
+
+.if-page {
+    max-width: 1224px;
+    margin: 0 auto;
+    padding: var(--kb-5) var(--kb-gutter) var(--kb-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--kb-4);
+}
+
+.if-head {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.if-head h1 {
+    font: var(--kb-text-h1, 600 30px/1.15 var(--kb-font-display));
+    font-family: var(--kb-font-display);
+    color: var(--kb-forest);
+    margin: 0;
+}
+
+.if-lede {
+    margin: 0;
+    font-size: 14px;
+    color: var(--kb-ink-2);
+}
+
+/* Two columns: the evidence rail and the work. */
+.if-floor {
+    display: grid;
+    grid-template-columns: 400px minmax(0, 1fr);
+    gap: 26px;
+    align-items: start;
+}
+
+.if-rail {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: sticky;
+    top: 16px;
+}
+
+.if-work {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-width: 0;
+}
+
+/* ── The error band — the frame's rust summary, kept from the old page ── */
+.if-errors {
+    background: var(--kb-alert-bg, #fdf1e7);
+    border: 1px solid var(--kb-alert-border, #f0d4bf);
+    border-left: 3px solid var(--kb-rust, #9c3d1e);
+    border-radius: 0 3px 3px 0;
+    padding: 13px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.if-errors strong {
+    font-size: 13px;
+    color: var(--kb-rust, #9c3d1e);
+}
+
+.if-errors ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.if-errors li {
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: #6b4433;
+}
+
+.if-errors a {
+    color: inherit;
+    text-decoration: underline;
+}
+
+/* ── Rail panels ────────────────────────────────────────────────────── */
+.if-panel {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    overflow: hidden;
+}
+
+.if-panel-head {
+    background: var(--kb-cream);
+    border-bottom: 1px solid var(--kb-rule);
+    padding: 10px 15px;
+    display: flex;
+    align-items: baseline;
+}
+
+.if-panel-eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--kb-brass);
+}
+
+.if-panel-meta {
+    font-size: 11px;
+    color: var(--kb-ink-4);
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Photographs: two named slots, three details ────────────────────── */
+.if-photos-body {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+
+.if-slot-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.if-slot-col {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.if-slot {
+    aspect-ratio: 4 / 3;
+    border: 1px solid var(--kb-rule-strong);
+    border-radius: var(--kb-r-md);
+    background: var(--kb-hatch);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    padding: 0;
+    display: block;
+    width: 100%;
+}
+
+.if-slot--front {
+    border: 2px solid var(--kb-forest);
+}
+
+.if-slot img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.if-slot-badge {
+    position: absolute;
+    top: 0;
+    left: 0;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    background: var(--kb-forest);
+    color: var(--kb-cream);
+}
+
+.if-slot-badge--back {
+    background: var(--kb-brass);
+    color: #fff;
+}
+
+.if-slot-x {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 20px;
+    height: 20px;
+    border: 0;
+    border-radius: var(--kb-r-chip);
+    background: rgba(28, 31, 24, 0.62);
+    color: #fff;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.if-slot:hover .if-slot-x,
+.if-slot:focus-within .if-slot-x {
+    display: flex;
+}
+
+@media (pointer: coarse) {
+    .if-slot.is-filled .if-slot-x { display: flex; }
+}
+
+.if-slot-cap {
+    font-size: 11px;
+    color: var(--kb-ink-3);
+    text-align: center;
+}
+
+.if-details-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.if-slot--detail {
+    border: 1px dashed var(--kb-rule-strong);
+    background: var(--kb-page);
+    color: var(--kb-rule-strong);
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.if-slot--detail.is-filled {
+    border-style: solid;
+    background: var(--kb-hatch);
+    cursor: grab;
+}
+
+.if-slot--detail.is-dragging { opacity: 0.4; }
+.if-slot--detail.is-target { border-color: var(--kb-brass); }
+
+.if-photos-note {
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--kb-ink-4);
+}
+
+/* Uploads the server held onto through a failed submit. */
+.if-kept {
+    border: 1px solid var(--kb-note-border, #f0e6c8);
+    background: var(--kb-note-bg, #fdf6e3);
+    border-radius: var(--kb-r-md);
+    padding: 9px 11px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.if-kept-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.if-kept-row img {
+    width: 44px;
+    height: 34px;
+    object-fit: cover;
+    border-radius: var(--kb-r-chip);
+    border: 1px solid var(--kb-rule);
+}
+
+/* The whole panel takes a drop. */
+.if-panel--photos.is-over {
+    outline: 2px solid var(--kb-forest);
+    outline-offset: -2px;
+}
+
+/* ── Read from your photograph ──────────────────────────────────────── */
+.pf-rows {
+    display: flex;
+    flex-direction: column;
+}
+
+.pf-row {
+    padding: 9px 15px;
+    border-bottom: 1px solid var(--kb-rule-soft);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pf-row:last-child { border-bottom: 0; }
+
+.pf-row--check { background: var(--kb-note-bg, #fdf6e3); }
+
+.pf-mark {
+    width: 14px;
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: left;
+}
+
+.pf-mark--ok { color: var(--kb-live); }
+.pf-mark--ask { color: var(--kb-brass); }
+.pf-mark--maybe { color: var(--kb-rule-strong); font-weight: 400; }
+.pf-mark--miss { color: var(--kb-rust, #9c3d1e); }
+
+.pf-field {
+    font-size: 12.5px;
+    color: var(--kb-ink-3);
+    width: 96px;
+    flex-shrink: 0;
+}
+
+.pf-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--kb-ink);
+    font-variant-numeric: tabular-nums;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pf-value--read {
+    font-family: var(--kb-font-mono);
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--kb-ink-2);
+}
+
+.pf-note {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--kb-brass);
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.pf-act {
+    border: 1px solid var(--kb-rule-strong);
+    background: var(--kb-surface);
+    color: var(--kb-forest);
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: var(--kb-r-md);
+    margin-left: auto;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.pf-act:disabled {
+    color: var(--kb-ink-4);
+    cursor: default;
+}
+
+.pf-foot {
+    border-top: 1px solid var(--kb-rule-soft);
+    background: var(--kb-cream);
+    padding: 11px 15px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--kb-ink-2);
+}
+
+.pf-lot {
+    padding: 9px 15px;
+    border-bottom: 1px solid var(--kb-rule-soft);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--kb-ink-2);
+    background: var(--kb-note-bg, #fdf6e3);
+}
+
+/* Working shimmer, while the read runs. */
+.pf-busy {
+    padding: 12px 15px;
+    font-size: 12.5px;
+    color: var(--kb-ink-3);
+}
+
+.prefill-shimmer {
+    animation: pf-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pf-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+}
+
+/* The ✨ badge prefill pins beside a field it half-trusts. */
+.prefill-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--kb-brass);
+    margin-top: 3px;
+}
+
+.prefill-badge button {
+    border: 0;
+    background: none;
+    color: var(--kb-ink-4);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 0 2px;
+}
+
+/* ── How buyers will see it ─────────────────────────────────────────── */
+.if-panel--preview {
+    background: var(--kb-parchment);
+    border-color: var(--kb-rule);
+}
+
+.if-panel--preview .if-panel-head {
+    background: none;
+    border-bottom: 1px solid var(--kb-rule);
+}
+
+.if-preview-body {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.if-preview-card {
+    width: 220px;
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    overflow: hidden;
+    margin: 0 auto;
+}
+
+.if-preview-media {
+    aspect-ratio: 4 / 3;
+    background: var(--kb-hatch);
+    position: relative;
+}
+
+.if-preview-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.if-preview-flag {
+    position: absolute;
+    top: 0;
+    left: 0;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    background: var(--kb-forest);
+    color: var(--kb-cream);
+}
+
+.if-preview-flag--store { background: var(--kb-brass); color: #fff; }
+
+.if-preview-text {
+    padding: 11px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.if-preview-title {
+    font-family: var(--kb-font-display);
+    font-size: 14.5px;
+    font-weight: 600;
+    line-height: 1.28;
+    color: var(--kb-forest);
+}
+
+.if-preview-line {
+    font-size: 11.5px;
+    color: var(--kb-ink-3);
+}
+
+.if-preview-line--soft { color: var(--kb-ink-4); }
+
+.if-complete {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.if-complete-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+}
+
+.if-complete-label {
+    font-size: 12.5px;
+    color: var(--kb-ink-2);
+}
+
+.if-complete-score {
+    font-family: var(--kb-font-display);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--kb-forest);
+    font-variant-numeric: tabular-nums;
+}
+
+.if-complete-track {
+    height: 6px;
+    border-radius: var(--kb-r-pill);
+    background: var(--kb-rule);
+    overflow: hidden;
+}
+
+.if-complete-fill {
+    height: 100%;
+    background: var(--kb-brass);
+    transition: width 0.25s ease;
+}
+
+.if-complete-next {
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--kb-ink-3);
+}
+
+/* ── Sections on the right ──────────────────────────────────────────── */
+.if-section {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.if-section-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.if-section-head h2 {
+    font-family: var(--kb-font-display);
+    font-size: 19px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--kb-forest);
+    white-space: nowrap;
+}
+
+.if-section-line {
+    flex: 1;
+    height: 1px;
+    background: var(--kb-rule);
+}
+
+.if-section-note {
+    font-size: 11.5px;
+    color: var(--kb-ink-4);
+    white-space: nowrap;
+}
+
+/* Field grids — the frame's own column recipes. */
+.if-grid { display: grid; gap: 14px; align-items: start; }
+.if-grid--halves { grid-template-columns: 1fr 1fr; gap: 20px; }
+.if-grid--place { grid-template-columns: 190px minmax(0, 1fr) 130px 130px; }
+.if-grid--thirds { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.if-grid--physical { grid-template-columns: 190px minmax(0, 1fr) 200px; }
+.if-grid--serial { grid-template-columns: 220px minmax(0, 1fr); }
+
+.if-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.if-field .kb-hint { margin-top: 0; }
+
+.if-label-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.if-label-row .kb-label { margin-bottom: 0; }
+
+.if-label-note {
+    font-size: 11px;
+    color: var(--kb-brass);
+    font-weight: 600;
+    margin-left: auto;
+}
+
+.if-label-note--quiet {
+    color: var(--kb-ink-4);
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+}
+
+/* A field the photograph filled and wants checked. */
+.if-field.is-flagged .kb-input,
+.if-field.is-flagged .kb-select {
+    border: 2px solid var(--kb-brass);
+    padding: 9px 11px;
+}
+
+.if-field.is-flagged .kb-label { color: var(--kb-brass); }
+
+.if-flag-hint {
+    font-size: 11.5px;
+    color: var(--kb-brass);
+}
+
+/* The era select reads as written-for-you. */
+.if-field--era .kb-select {
+    background: var(--kb-page);
+    color: var(--kb-ink-4);
+}
+
+/* Field errors, at the field. */
+.errorlist {
+    list-style: none;
+    margin: 2px 0 0;
+    padding: 0;
+    font-size: 11.5px;
+    color: var(--kb-rust, #9c3d1e);
+}
+
+.if-field.has-error .kb-input,
+.if-field.has-error .kb-select,
+.if-field.has-error .kb-textarea {
+    border-color: var(--kb-rust, #9c3d1e);
+}
+
+.if-field.has-error .kb-label { color: var(--kb-rust, #9c3d1e); }
+
+/* ── Chip controls ──────────────────────────────────────────────────── */
+/* One look for the radio ladders (condition, kind) and the checklists
+   (add-ons, colours). The input is the state; the label is the chip. */
+.chip-radios,
+.if-page .chip-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.chip-radios > div { display: contents; }
+
+.chip-radios label,
+.if-page .chip-checkboxes label,
+.if-page .chip-option {
+    border: 1px solid var(--kb-rule-strong);
+    background: var(--kb-surface);
+    color: var(--kb-ink-2);
+    font-size: 12px;
+    line-height: 1.2;
+    padding: 8px 13px;
+    border-radius: var(--kb-r-md);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-weight: 400;
+}
+
+.chip-radios input,
+.if-page .chip-checkboxes input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.chip-radios label:has(input:checked),
+.if-page .chip-checkboxes label:has(input:checked),
+.if-page .chip-option:has(input:checked) {
+    border-color: var(--kb-forest);
+    background: var(--kb-forest);
+    color: #fff;
+    font-weight: 600;
+}
+
+.chip-radios label:focus-within,
+.if-page .chip-checkboxes label:focus-within {
+    outline: 2px solid var(--kb-forest);
+    outline-offset: 1px;
+}
+
+/* ── What it's called — the written-for-you title (turn 5b) ─────────── */
+.if-called {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-cream);
+    padding: 15px 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.if-called-text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.if-called-eyebrow {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--kb-ink-3);
+}
+
+.if-called-title {
+    font-family: var(--kb-font-display);
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--kb-forest);
+    line-height: 1.3;
+}
+
+.if-called-own {
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+/* ── The footer ─────────────────────────────────────────────────────── */
+.if-foot {
+    border-top: 1px solid var(--kb-rule);
+    padding-top: 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.if-go {
+    background: var(--kb-brass);
+    color: var(--kb-forest-ink, #1b2416);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    padding: 15px 28px;
+    border-radius: var(--kb-r-md);
+    border: 0;
+    box-shadow: 0 1px 0 var(--kb-brass-deep, #7d5d17);
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.if-go:hover { background: var(--kb-brass-bright, #b38a2e); }
+
+.if-foot-note {
+    font-size: 12px;
+    color: var(--kb-ink-4);
+}
+
+.if-foot-cancel {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--kb-forest);
+    text-decoration: none;
+    border: 1px solid var(--kb-rule-strong);
+    background: var(--kb-surface);
+    border-radius: var(--kb-r-md);
+    padding: 14px 20px;
+    flex-shrink: 0;
+}
+
+/* A grid cell that takes the whole row (the add-on checklist). */
+.if-span { grid-column: 1 / -1; }
+
+/* ── Photograph rows, on the edit forms ─────────────────────────────── */
+/* The roles are settled facts there — a back stays a back — so the rows
+   show what each file is instead of re-asking. */
+.if-photo-row {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-md);
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--kb-surface);
+}
+
+.if-row-thumb {
+    width: 62px;
+    height: 44px;
+    object-fit: cover;
+    border-radius: var(--kb-r-chip);
+    border: 1px solid var(--kb-rule);
+    flex-shrink: 0;
+}
+
+.if-row-thumb--wide {
+    width: 120px;
+    height: 84px;
+}
+
+.if-row-thumb--empty {
+    display: block;
+    background: var(--kb-hatch);
+}
+
+.if-photo-row-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+}
+
+.if-photo-role {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--kb-brass);
+}
+
+.if-photo-row-body input[type="file"] {
+    font-size: 11.5px;
+    color: var(--kb-ink-3);
+    max-width: 100%;
+}
+
+.if-photo-row-acts {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.if-photo-row-acts .pf-act { margin-left: 0; }
+
+.if-photo-del {
+    font-size: 11px;
+    color: var(--kb-ink-4);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+}
+
+/* The slot UI and the plain inputs trade places when JavaScript arrives. */
+.if-slots {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+
+.if-native {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.if-native input[type="file"] {
+    font-size: 12px;
+    color: var(--kb-ink-3);
+}
+
+.if-native.is-managed { display: none; }
+
+/* ── Collapsed extras: timing, shipping, the suggestion form ─────────── */
+.if-more {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    padding: 13px 16px;
+}
+
+.if-more summary {
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--kb-forest);
+    list-style-position: outside;
+}
+
+.if-more-body {
+    display: grid;
+    gap: 14px;
+    margin-top: 14px;
+}
+
+/* ── Smaller rooms ──────────────────────────────────────────────────── */
+@media (max-width: 980px) {
+    .if-floor { grid-template-columns: 1fr; }
+    .if-rail { position: static; }
+    .if-grid--place,
+    .if-grid--thirds,
+    .if-grid--physical { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 620px) {
+    .if-grid--halves,
+    .if-grid--place,
+    .if-grid--thirds,
+    .if-grid--physical,
+    .if-grid--serial { grid-template-columns: 1fr; }
+    .if-called { flex-direction: column; align-items: flex-start; }
+}
