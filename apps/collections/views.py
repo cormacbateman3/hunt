@@ -18,6 +18,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.accounts.follows import following_ids
+from apps.core.constants import FORM_TAXONOMY_FIELDS
 from apps.core.forms import ReferenceDataSuggestionForm
 from apps.core.models import GeographicUnit, LicenseType, State
 from apps.orders.models import Order
@@ -42,14 +43,9 @@ def _link_prefill_job(request, item):
         ).update(resulting_collection_item=item)
 
 
-TAXONOMY_FIELDS = [
-    ('residency', 'residency_other', 'Residency'),
-    ('holder_eligibility', 'holder_eligibility_other', 'Holder Eligibility'),
-    ('activity_scope', 'activity_scope_other', 'Activity Scope'),
-    ('duration', 'duration_other', 'Duration'),
-    ('addon_type', 'addon_type_other', 'Add-on Type'),
-    ('material', 'material_other', 'Physical Form / Material'),
-]
+# One list, shared with the listing forms — the labels are the turn 6b
+# drawing's, and both forms read the same rows so they can never drift.
+TAXONOMY_FIELDS = FORM_TAXONOMY_FIELDS
 
 MAX_FEATURED = 6
 

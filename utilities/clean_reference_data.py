@@ -79,6 +79,16 @@ CONTROLLED_MATERIALS = [
     'Plastic',
 ]
 
+# A property of the issue, not an attachment: a Special Issue turkey tag is
+# both a Turkey Tag (addon_type) and a Special Issue (issue_class), and one
+# category holding both would force a collector to choose between two true
+# things. Universal rows — no state variants known or expected.
+ISSUE_CLASSES = [
+    'Special Issue',
+    'Limited Edition',
+    'Commemorative',
+]
+
 # Raw addon_type column -> instrument facet. shape/colors form vocab lives in
 # apps/core/constants.py only (SHAPE_CHOICES / COLOR_CHOICES) — no taxonomy rows.
 INSTRUMENT_MAP = {
@@ -231,6 +241,9 @@ def build_license_types(license_class_rows, addon_rows):
     for material in CONTROLLED_MATERIALS:
         add_license_type(cleaned, seen, '', material, 'material')
 
+    for issue_class in ISSUE_CLASSES:
+        add_license_type(cleaned, seen, '', issue_class, 'issue_class')
+
     for category in (
         'residency',
         'holder_eligibility',
@@ -238,6 +251,7 @@ def build_license_types(license_class_rows, addon_rows):
         'duration',
         'addon_type',
         'material',
+        'issue_class',
     ):
         add_license_type(cleaned, seen, '', 'Other', category)
 

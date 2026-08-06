@@ -67,6 +67,23 @@ class CollectionItem(models.Model):
                   'it can take one right now also depends on whether it is on '
                   'an auction lot, and that is worked out rather than stored.',
     )
+    # Where the physical object is. Ownership transfer between accounts does
+    # not exist yet, so a piece that left — sold at a show, given to a
+    # grandson, posted to a trade partner — sat in the collection being
+    # offered to people. `traded` is set by the trade lifecycle; the other
+    # departures are the owner's own record.
+    DISPOSITION_CHOICES = [
+        ('held', 'In my hands'),
+        ('traded', 'Traded away here'),
+        ('sold_elsewhere', 'Sold elsewhere'),
+        ('given_away', 'Given away'),
+        ('lost', 'Lost'),
+    ]
+    disposition = models.CharField(
+        max_length=20, choices=DISPOSITION_CHOICES, default='held',
+        help_text='Whether the piece is still physically yours. Anything but '
+                  '"held" takes it off the trade board and out of offers.',
+    )
     trade_wants = models.CharField(
         max_length=250, blank=True,
         help_text='What you would take for it. Shown beside the piece.',

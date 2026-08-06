@@ -42,6 +42,8 @@ class CollectionItemForm(forms.ModelForm):
     addon_type_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter add-on type'}))
     material = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select material', widget=forms.Select(attrs={'class': 'form-select'}))
     material_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter material'}))
+    issue_class = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Ordinary issue', widget=forms.Select(attrs={'class': 'form-select'}))
+    issue_class_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter issue class'}))
     shape = forms.ChoiceField(choices=[('', 'Select shape')] + SHAPE_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-select'}))
     shape_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter shape'}))
     colors = forms.MultipleChoiceField(choices=COLOR_CHOICES, required=False, widget=forms.CheckboxSelectMultiple(attrs={'class': 'chip-checkboxes'}))
@@ -74,6 +76,7 @@ class CollectionItemForm(forms.ModelForm):
             'duration',
             'addon_type',
             'material',
+            'issue_class',
             'shape',
             'colors',
             'resident_status',
@@ -81,6 +84,7 @@ class CollectionItemForm(forms.ModelForm):
             'is_public',
             'tradeability',
             'trade_wants',
+            'disposition',
             'serial_number',
             'era_label',
         ]
@@ -95,6 +99,7 @@ class CollectionItemForm(forms.ModelForm):
             'is_public': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
             'tradeability': forms.RadioSelect(),
             'trade_wants': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Anything pre-1930 from a county I am missing'}),
+            'disposition': forms.RadioSelect(),
         }
 
     def __init__(self, *args, **kwargs):
@@ -102,8 +107,18 @@ class CollectionItemForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['state'].queryset = State.objects.order_by('-is_primary_default', 'name')
         # Not required, because a silence must not be read as an answer —
-        # see clean_tradeability.
+        # see clean_tradeability and clean_disposition.
         self.fields['tradeability'].required = False
+        self.fields['disposition'].required = False
+        # `traded` is the trade lifecycle's record, not a choice anybody
+        # makes on a form. It stays selectable only on a piece that already
+        # carries it, so editing that piece doesn't force a different answer.
+        if not (self.instance.pk and self.instance.disposition == 'traded'):
+            self.fields['disposition'].choices = [
+                (value, label)
+                for value, label in CollectionItem.DISPOSITION_CHOICES
+                if value != 'traded'
+            ]
 
         state = self._resolve_state()
         if state:
@@ -171,6 +186,17 @@ class CollectionItemForm(forms.ModelForm):
         if self.instance and self.instance.pk:
             return self.instance.tradeability
         return CollectionItem._meta.get_field('tradeability').get_default()
+
+    def clean_disposition(self):
+        """Same rule as tradeability: a form without the control (the
+        add-from-order form, for one) must not quietly mark a piece held —
+        or worse, un-mark one that has left."""
+        answer = self.cleaned_data.get('disposition')
+        if answer:
+            return answer
+        if self.instance and self.instance.pk:
+            return self.instance.disposition
+        return CollectionItem._meta.get_field('disposition').get_default()
 
     def clean(self):
         cleaned_data = super().clean()

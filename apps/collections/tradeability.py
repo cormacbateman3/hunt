@@ -71,6 +71,8 @@ def trade_block_reason(item):
     should be able to say what it was. This is the sentence — see
     :func:`trade_block_label` for the two words a 196px shelf row can hold.
     """
+    if item.disposition != 'held':
+        return 'This piece is no longer in the collection.'
     if item.tradeability != 'open':
         return 'The owner has closed this piece to trade.'
     held = hold_on(item)
@@ -89,6 +91,10 @@ def trade_block_label(item, *, mine=False):
     closed this piece" about a licence in their own collection is the wrong
     voice as well as the wrong length.
     """
+    if item.disposition != 'held':
+        # The disposition names are already the two words: "Sold elsewhere",
+        # "Given away", "Lost", "Traded away here".
+        return item.get_disposition_display()
     if item.tradeability != 'open':
         return 'You closed this' if mine else 'Not for trade'
     held = hold_on(item)
@@ -105,15 +111,23 @@ def is_open_to_trade(item):
 
 def open_to_trade(queryset):
     """Narrow a CollectionItem queryset to what can take an offer today."""
-    return queryset.filter(tradeability='open').exclude(HELD_BY_A_LOT)
+    return (
+        queryset.filter(tradeability='open', disposition='held')
+        .exclude(HELD_BY_A_LOT)
+    )
 
 
 def would_trade(queryset):
     """Narrow to pieces whose owner has left them open to trade.
 
-    Deliberately does **not** exclude held pieces. This answers a question
-    about a *person* — does this collector trade — and somebody does not stop
-    being a trader because one piece is at auction. Item-level surfaces (a
-    propose button, a badge on one piece) use :func:`open_to_trade` instead.
+    Deliberately does **not** exclude auction-held pieces. This answers a
+    question about a *person* — does this collector trade — and somebody does
+    not stop being a trader because one piece is at auction. Item-level
+    surfaces (a propose button, a badge on one piece) use
+    :func:`open_to_trade` instead.
+
+    A piece that has physically left the collection is excluded even here:
+    "would you trade it" is not a question anybody can answer about a licence
+    in somebody else's drawer.
     """
-    return queryset.filter(tradeability='open')
+    return queryset.filter(tradeability='open', disposition='held')

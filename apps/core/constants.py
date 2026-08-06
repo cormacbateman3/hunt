@@ -45,6 +45,10 @@ LICENSE_TYPE_CATEGORY_CHOICES = [
     ('duration', 'Duration'),
     ('addon_type', 'Add-on Type'),
     ('material', 'Physical Form / Material'),
+    # A property of the issue, not an attachment — a Special Issue turkey tag
+    # is both, which is why this is its own category rather than an addon_type
+    # value (Pass 8b; the reasoning lives in plan_design.md's inbox).
+    ('issue_class', 'Issue Class'),
     ('shape', 'Shape'),
     ('colors', 'Color(s)'),
 ]
@@ -56,9 +60,10 @@ FORM_LICENSE_TYPE_CATEGORIES = [
     'duration',
     'addon_type',
     'material',
+    'issue_class',
 ]
 
-# The same six categories, asked the way a person would ask them. Nobody
+# The same categories, asked the way a person would ask them. Nobody
 # outside this codebase knows what holder_eligibility or activity_scope mean,
 # so no filter should say them out loud. Browse UI uses these; the admin and
 # the model keep the schema names, which is where they belong.
@@ -69,7 +74,22 @@ LICENSE_TYPE_CATEGORY_QUESTIONS = {
     'duration': 'How long',
     'addon_type': 'Attachments',
     'material': 'Material',
+    'issue_class': 'Issue class',
 }
+
+# The same categories again, labelled the way the item form asks them —
+# turn 6b writes the labels out on the drawing ("Who it was for", "What it
+# allowed"), and both the listing and collection forms read from here so the
+# two can never drift.
+FORM_TAXONOMY_FIELDS = [
+    ('residency', 'residency_other', 'Residency'),
+    ('holder_eligibility', 'holder_eligibility_other', 'Who it was for'),
+    ('activity_scope', 'activity_scope_other', 'What it allowed'),
+    ('duration', 'duration_other', 'How long it lasted'),
+    ('addon_type', 'addon_type_other', 'Tags or stamps on it'),
+    ('material', 'material_other', 'What it’s made of'),
+    ('issue_class', 'issue_class_other', 'Issue class'),
+]
 
 SHAPE_CHOICES = [
     ('rectangle', 'Rectangle'),

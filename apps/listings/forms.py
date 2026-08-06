@@ -68,6 +68,8 @@ class ListingForm(forms.ModelForm):
     addon_type_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter add-on type'}))
     material = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select material', widget=forms.Select(attrs={'class': 'form-select'}))
     material_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter material'}))
+    issue_class = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Ordinary issue', widget=forms.Select(attrs={'class': 'form-select'}))
+    issue_class_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Enter issue class'}))
     shape = forms.ChoiceField(
         choices=[('', 'Select shape')] + SHAPE_CHOICES,
         required=False,
@@ -146,6 +148,7 @@ class ListingForm(forms.ModelForm):
             'duration',
             'addon_type',
             'material',
+            'issue_class',
             'shape',
             'colors',
             'condition_grade',

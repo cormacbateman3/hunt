@@ -18,7 +18,11 @@ from apps.bids.services import get_user_bid_on_listing, get_winning_bid, minimum
 from apps.collections.models import CollectionItem
 from apps.collections.tradeability import is_open_to_trade
 from apps.core.models import GeographicUnit, LicenseType, State
-from apps.core.constants import FORM_LICENSE_TYPE_CATEGORIES, LICENSE_TYPE_CATEGORY_CHOICES
+from apps.core.constants import (
+    FORM_LICENSE_TYPE_CATEGORIES,
+    FORM_TAXONOMY_FIELDS,
+    LICENSE_TYPE_CATEGORY_CHOICES,
+)
 from apps.core.forms import ReferenceDataSuggestionForm
 from apps.core.upload_stash import clear_stash, restore_missing, stash_uploads, stashed_files
 from apps.offers.services import active_offers, can_offer_on, reserving_offer
@@ -33,14 +37,9 @@ from apps.favorites.models import Favorite
 from apps.reviews.models import Review
 
 
-TAXONOMY_FIELDS = [
-    ('residency', 'residency_other', 'Residency'),
-    ('holder_eligibility', 'holder_eligibility_other', 'Holder Eligibility'),
-    ('activity_scope', 'activity_scope_other', 'Activity Scope'),
-    ('duration', 'duration_other', 'Duration'),
-    ('addon_type', 'addon_type_other', 'Add-on Type'),
-    ('material', 'material_other', 'Physical Form / Material'),
-]
+# One list, shared with the collection forms — the labels are the turn 6b
+# drawing's, and both forms read the same rows so they can never drift.
+TAXONOMY_FIELDS = FORM_TAXONOMY_FIELDS
 
 
 def _taxonomy_has_errors(form):
