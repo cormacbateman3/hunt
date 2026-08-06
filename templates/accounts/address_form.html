@@ -1,89 +1,97 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}{{ action }} Address | KeystoneBid{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/item-form.css' %}">
+{% endblock %}
+
 {% block content %}
-<section class="card" style="max-width: 560px; margin: 0 auto;">
-    <h1 style="margin-bottom: 1rem;">{{ action }} shipping address</h1>
-    <form method="post">
+<div class="if-page if-page--slip">
+    <div class="if-head">
+        <h1>{{ action }} shipping address</h1>
+        <p class="if-lede">Where parcels come from and go to. Start typing the street and the rest can fill itself.</p>
+    </div>
+
+    {% if form.errors %}
+        <div class="if-errors" role="alert">
+            <strong>
+                {% with n=form.errors|length %}
+                    {{ n }} thing{{ n|pluralize }} to fix before this can be saved
+                {% endwith %}
+            </strong>
+            <ul>
+                {% for field in form %}{% for error in field.errors %}
+                    <li>&middot; <a href="#{{ field.id_for_label }}">{{ field.label }}</a> &mdash; {{ error }}</li>
+                {% endfor %}{% endfor %}
+                {% for error in form.non_field_errors %}<li>&middot; {{ error }}</li>{% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <form method="post"
+          {% if google_maps_api_key %}
+          data-address-autocomplete
+          data-places-key="{{ google_maps_api_key }}"
+          data-line1="#{{ form.line1.id_for_label }}"
+          data-city="#{{ form.city.id_for_label }}"
+          data-state="#{{ form.state.id_for_label }}"
+          data-zip="#{{ form.postal_code.id_for_label }}"
+          {% endif %}>
         {% csrf_token %}
-        <div style="display: grid; gap: 0.85rem;">
-            <div>
-                <label class="form-label" for="{{ form.full_name.id_for_label }}">Full name</label>
+        <div class="if-work">
+            <div class="if-field{% if form.full_name.errors %} has-error{% endif %}">
+                <label class="kb-label" for="{{ form.full_name.id_for_label }}">Full name</label>
                 {{ form.full_name }}
                 {{ form.full_name.errors }}
             </div>
-            <div>
-                <label class="form-label" for="{{ form.line1.id_for_label }}">Street address</label>
+            <div class="if-field{% if form.line1.errors %} has-error{% endif %}">
+                <label class="kb-label" for="{{ form.line1.id_for_label }}">Street address</label>
                 {{ form.line1 }}
+                <span class="kb-hint" data-places-notice hidden></span>
                 {{ form.line1.errors }}
             </div>
-            <div>
-                <label class="form-label" for="{{ form.line2.id_for_label }}">Apt / suite / unit <span style="color: var(--color-muted); font-weight: 400;">(optional)</span></label>
+            <div class="if-field{% if form.line2.errors %} has-error{% endif %}">
+                <label class="kb-label" for="{{ form.line2.id_for_label }}">Apt / suite / unit &mdash; if any</label>
                 {{ form.line2 }}
                 {{ form.line2.errors }}
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 80px 120px; gap: 0.6rem;">
-                <div>
-                    <label class="form-label" for="{{ form.city.id_for_label }}">City</label>
+            <div class="if-grid if-grid--address">
+                <div class="if-field{% if form.city.errors %} has-error{% endif %}">
+                    <label class="kb-label" for="{{ form.city.id_for_label }}">City</label>
                     {{ form.city }}
                     {{ form.city.errors }}
                 </div>
-                <div>
-                    <label class="form-label" for="{{ form.state.id_for_label }}">State</label>
+                <div class="if-field{% if form.state.errors %} has-error{% endif %}">
+                    <label class="kb-label" for="{{ form.state.id_for_label }}">State</label>
                     {{ form.state }}
                     {{ form.state.errors }}
                 </div>
-                <div>
-                    <label class="form-label" for="{{ form.postal_code.id_for_label }}">ZIP</label>
+                <div class="if-field{% if form.postal_code.errors %} has-error{% endif %}">
+                    <label class="kb-label" for="{{ form.postal_code.id_for_label }}">ZIP</label>
                     {{ form.postal_code }}
                     {{ form.postal_code.errors }}
                 </div>
             </div>
-            <div>
-                <label class="form-label" for="{{ form.phone.id_for_label }}">Phone <span style="color: var(--color-muted); font-weight: 400;">(optional)</span></label>
+            <div class="if-field{% if form.phone.errors %} has-error{% endif %}">
+                <label class="kb-label" for="{{ form.phone.id_for_label }}">Phone &mdash; if any</label>
                 {{ form.phone }}
+                <span class="kb-hint">Carriers sometimes want one; nobody else sees it.</span>
                 {{ form.phone.errors }}
             </div>
-        </div>
-        <div style="margin-top: 1.2rem;">
-            <button type="submit" class="btn-primary">Save address</button>
-            <a href="{% url 'accounts:profile_edit' %}" style="margin-left: 0.75rem; color: var(--color-aged-amber);">Cancel</a>
+
+            <div class="if-foot">
+                <button type="submit" class="if-go">Save the address</button>
+                <a class="if-foot-cancel" href="{% url 'accounts:profile_edit' %}">Leave it</a>
+            </div>
         </div>
     </form>
-</section>
+</div>
+{% endblock %}
 
+{% block extra_js %}
 {% if google_maps_api_key %}
-<script>
-/* Narrow Google Places loader — this page only, and only when a key exists.
-   Picking a suggestion fills street/city/state/ZIP; typing plain still works. */
-function initKbAddressAutocomplete() {
-    const line1 = document.getElementById('{{ form.line1.id_for_label }}');
-    if (!line1 || !window.google) return;
-    const autocomplete = new google.maps.places.Autocomplete(line1, {
-        types: ['address'],
-        componentRestrictions: { country: 'us' },
-        fields: ['address_components'],
-    });
-    autocomplete.addListener('place_changed', () => {
-        const components = (autocomplete.getPlace() || {}).address_components || [];
-        const get = (type, short) => {
-            const c = components.find(c => c.types.includes(type));
-            return c ? (short ? c.short_name : c.long_name) : '';
-        };
-        const number = get('street_number');
-        const route = get('route');
-        if (route) line1.value = (number ? number + ' ' : '') + route;
-        const city = get('locality') || get('sublocality') || get('postal_town');
-        if (city) document.getElementById('{{ form.city.id_for_label }}').value = city;
-        const state = get('administrative_area_level_1', true);
-        if (state) document.getElementById('{{ form.state.id_for_label }}').value = state;
-        const zip = get('postal_code');
-        if (zip) document.getElementById('{{ form.postal_code.id_for_label }}').value = zip;
-    });
-}
-</script>
-<script async
-        src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places&callback=initKbAddressAutocomplete"></script>
+<script src="{% static 'js/address-autocomplete.js' %}"></script>
 {% endif %}
 {% endblock %}

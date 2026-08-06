@@ -26,7 +26,7 @@ def _state_license_type_queryset(state, category=None):
 
 
 class CollectionItemForm(forms.ModelForm):
-    state = forms.ModelChoiceField(queryset=State.objects.none(), required=True, widget=forms.Select(attrs={'class': 'kb-select'}))
+    state = forms.ModelChoiceField(queryset=State.objects.none(), required=True, empty_label='Choose a state', widget=forms.Select(attrs={'class': 'kb-select'}))
     county = forms.ModelChoiceField(queryset=GeographicUnit.objects.none(), required=False, empty_label='Select geographic unit', widget=forms.Select(attrs={'class': 'kb-select'}))
     residency = forms.ModelChoiceField(queryset=LicenseType.objects.none(), required=False, empty_label='Select residency', widget=forms.Select(attrs={'class': 'kb-select'}))
     residency_other = forms.CharField(required=False, widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Enter residency value'}))

@@ -11,27 +11,27 @@ class UserRegistrationForm(UserCreationForm):
     email = forms.EmailField(
         required=True,
         widget=forms.EmailInput(attrs={
-            'class': 'form-input',
+            'class': 'kb-input',
             'placeholder': 'your@email.com'
         })
     )
     username = forms.CharField(
         widget=forms.TextInput(attrs={
-            'class': 'form-input',
+            'class': 'kb-input',
             'placeholder': 'Username'
         })
     )
     password1 = forms.CharField(
         label='Password',
         widget=forms.PasswordInput(attrs={
-            'class': 'form-input',
+            'class': 'kb-input',
             'placeholder': 'Password'
         })
     )
     password2 = forms.CharField(
         label='Confirm Password',
         widget=forms.PasswordInput(attrs={
-            'class': 'form-input',
+            'class': 'kb-input',
             'placeholder': 'Confirm Password'
         })
     )
@@ -81,13 +81,13 @@ class UserLoginForm(AuthenticationForm):
     """Custom login form with styling"""
     username = forms.CharField(
         widget=forms.TextInput(attrs={
-            'class': 'form-input',
+            'class': 'kb-input',
             'placeholder': 'Username'
         })
     )
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={
-            'class': 'form-input',
+            'class': 'kb-input',
             'placeholder': 'Password'
         })
     )
@@ -117,12 +117,12 @@ class UserProfileForm(forms.ModelForm):
         }
         widgets = {
             'display_name': forms.TextInput(attrs={
-                'class': 'form-input', 'placeholder': 'Ray Miller',
+                'class': 'kb-input', 'placeholder': 'Ray Miller',
             }),
             'home_state': forms.Select(attrs={'class': 'form-select'}),
             'home_county': forms.Select(attrs={'class': 'form-select'}),
             'bio': forms.Textarea(attrs={
-                'class': 'form-input', 'rows': 4, 'maxlength': 400,
+                'class': 'kb-input', 'rows': 4, 'maxlength': 400,
                 'placeholder': 'Chasing a full run of numbered county tags, '
                                '1913 to 1937. Twenty-six counties to go.',
             }),
@@ -192,33 +192,33 @@ class AddressForm(forms.ModelForm):
         fields = ['full_name', 'line1', 'line2', 'city', 'state', 'postal_code', 'phone']
         widgets = {
             'full_name': forms.TextInput(attrs={
-                'class': 'form-input',
+                'class': 'kb-input',
                 'placeholder': 'Full name'
             }),
             'line1': forms.TextInput(attrs={
-                'class': 'form-input',
+                'class': 'kb-input',
                 'placeholder': 'Street address'
             }),
             'line2': forms.TextInput(attrs={
-                'class': 'form-input',
+                'class': 'kb-input',
                 'placeholder': 'Apt, suite, unit (optional)'
             }),
             'city': forms.TextInput(attrs={
-                'class': 'form-input',
+                'class': 'kb-input',
                 'placeholder': 'City'
             }),
             'state': forms.TextInput(attrs={
-                'class': 'form-input',
+                'class': 'kb-input',
                 'placeholder': 'State (2-letter)',
                 'maxlength': 2,
                 'style': 'text-transform: uppercase;'
             }),
             'postal_code': forms.TextInput(attrs={
-                'class': 'form-input',
+                'class': 'kb-input',
                 'placeholder': 'ZIP code'
             }),
             'phone': forms.TextInput(attrs={
-                'class': 'form-input',
+                'class': 'kb-input',
                 'placeholder': 'Phone (optional)'
             }),
         }
@@ -238,23 +238,23 @@ class ListingDefaultsForm(forms.Form):
     )
     package_weight_oz = forms.DecimalField(
         required=False, min_value=0.5, max_digits=6, decimal_places=1,
-        widget=forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '8.0', 'step': '0.5'}),
+        widget=forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '8.0', 'step': '0.5'}),
     )
     package_length_in = forms.DecimalField(
         required=False, min_value=1, max_digits=5, decimal_places=1,
-        widget=forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '10', 'step': '0.5'}),
+        widget=forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '10', 'step': '0.5'}),
     )
     package_width_in = forms.DecimalField(
         required=False, min_value=1, max_digits=5, decimal_places=1,
-        widget=forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '7', 'step': '0.5'}),
+        widget=forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '7', 'step': '0.5'}),
     )
     package_height_in = forms.DecimalField(
         required=False, min_value=0.5, max_digits=5, decimal_places=1,
-        widget=forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '1', 'step': '0.5'}),
+        widget=forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '1', 'step': '0.5'}),
     )
     bid_increment = forms.DecimalField(
         required=False, min_value=1, max_digits=8, decimal_places=2,
-        widget=forms.NumberInput(attrs={'class': 'form-input', 'placeholder': '1', 'step': '1'}),
+        widget=forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '1', 'step': '1'}),
     )
     auto_relist = forms.BooleanField(
         required=False, widget=forms.CheckboxInput(attrs={'class': 'form-checkbox'}),

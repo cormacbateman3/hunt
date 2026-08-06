@@ -1,139 +1,158 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}{{ item.title }} | KeystoneBid{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/collection-item.css' %}">
+{% endblock %}
+
 {% block content %}
-<section style="max-width: 1000px; margin: 0 auto;">
-    <p style="margin-bottom: 0.75rem;">
-        <a href="{% url 'collectors' %}?tab=owned" style="color: var(--color-aged-amber);">&larr; Everything owned</a>
+<div class="cd-page">
+    <p class="cd-crumbs">
+        <a href="{% url 'collectors' %}?tab=owned">&larr; Everything owned</a>
         {% if is_owner %}
-            &middot; <a href="{% url 'collections:my_collection' %}" style="color: var(--color-aged-amber);">My collection</a>
+            <span>&middot;</span>
+            <a href="{% url 'collections:my_collection' %}">My collection</a>
         {% endif %}
     </p>
 
-    <div class="card" style="display: grid; grid-template-columns: minmax(0, 420px) 1fr; gap: 1.5rem; padding: 1.25rem;">
-        <!-- Images -->
-        <div>
+    <div class="cd-sheet">
+        {# ── The plates ────────────────────────────────────────────── #}
+        <div class="cd-plates">
             {% with primary=item.images.first %}
                 {% if primary %}
-                    <img src="{{ primary.image.url }}" alt="{{ item.title }}" id="collection-main-image"
-                         style="width: 100%; border-radius: 8px; border: 1px solid var(--color-border); object-fit: contain; background: var(--color-parchment);">
-                {% else %}
-                    <div style="width: 100%; aspect-ratio: 4 / 3; background: var(--color-parchment); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
-                        <span style="color: var(--color-muted);">No image</span>
+                    <div class="cd-plate">
+                        <img src="{{ primary.image.url }}" alt="{{ item.title }}" id="collection-main-image">
                     </div>
+                {% else %}
+                    <div class="cd-plate cd-plate--empty">No photograph yet</div>
                 {% endif %}
             {% endwith %}
             {% if item.images.count > 1 %}
-                <div style="display: flex; gap: 0.4rem; margin-top: 0.5rem; flex-wrap: wrap;">
+                <div class="cd-thumbs">
                     {% for image in item.images.all %}
-                        <img src="{{ image.image.url }}" alt="{{ item.title }} image {{ forloop.counter }}"
-                             style="width: 64px; height: 64px; object-fit: cover; border-radius: 6px; border: 1px solid var(--color-border); cursor: pointer;"
-                             onclick="document.getElementById('collection-main-image').src = this.src;">
+                        <button type="button" class="cd-thumb"
+                                onclick="document.getElementById('collection-main-image').src = this.querySelector('img').src;">
+                            <img src="{{ image.image.url }}" alt="{{ item.title }} &mdash; {{ image.get_image_role_display|lower }}">
+                            <span class="cd-thumb-role">{{ image.get_image_role_display }}</span>
+                        </button>
                     {% endfor %}
                 </div>
             {% endif %}
         </div>
 
-        <!-- Details -->
-        <div>
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; flex-wrap: wrap;">
-                <h1 style="font-size: 1.45rem; margin: 0 0 0.3rem;">{{ item.title }}</h1>
-                {% if item.featured %}
-                    <span style="background: var(--color-aged-amber); color: #fff; font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 3px; font-weight: 600;">Featured</span>
-                {% endif %}
+        {# ── The record ────────────────────────────────────────────── #}
+        <div class="cd-record">
+            <div class="cd-name-row">
+                <h1 class="cd-name">{{ item.title }}</h1>
+                {% if item.featured %}<span class="cd-tag cd-tag--gold">In the case</span>{% endif %}
             </div>
 
-            <p style="color: var(--color-muted); margin: 0 0 0.75rem;">
+            <p class="cd-owner">
                 From the collection of
-                <a href="{% url 'accounts:profile' item.owner.username %}" style="color: var(--color-aged-amber);">{{ item.owner.username }}</a>
+                <a href="{% url 'accounts:profile' item.owner.username %}">{{ item.owner.username }}</a>
             </p>
 
-            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 0.9rem;">
-                <span class="badge" style="background: var(--color-parchment);">{{ item.get_item_kind_display }}</span>
+            <div class="cd-tags">
+                <span class="cd-tag">{{ item.get_item_kind_display }}</span>
                 {% if item.condition_grade %}
-                    <span class="badge" style="background: var(--color-parchment);">{{ item.get_condition_grade_display }}</span>
+                    <span class="cd-tag">{{ item.get_condition_grade_display }}</span>
                 {% endif %}
                 {% comment %}
                 Availability, not the owner's standing answer — a piece can be
                 open to trade and still unavailable because it is on an
-                auction lot, and those two facts want different sentences.
+                auction lot, and those two facts want different sentences. A
+                piece that has left the collection says where it went.
                 {% endcomment %}
-                {% if trade_block %}
-                    <span class="badge badge-expired" title="{{ trade_block }}">Not open to offers</span>
+                {% if item.disposition != 'held' %}
+                    <span class="cd-tag cd-tag--held">{{ item.get_disposition_display }}</span>
+                {% elif trade_block %}
+                    <span class="cd-tag cd-tag--held" title="{{ trade_block }}">Not open to offers</span>
                 {% else %}
-                    <span class="badge badge-active">Open to trade</span>
+                    <span class="cd-tag cd-tag--open">Open to trade</span>
                 {% endif %}
                 {% if item.addons_attached %}
-                    <span class="badge badge-active">Tags intact</span>
+                    <span class="cd-tag cd-tag--open">Tags intact</span>
                 {% endif %}
             </div>
 
             {% if trade_block %}
-                <p style="color: var(--color-muted); margin: -0.4rem 0 0.9rem; font-size: 0.9rem;">{{ trade_block }}</p>
+                <p class="cd-block-line">{{ trade_block }}</p>
             {% elif item.trade_wants %}
-                <p style="margin: -0.4rem 0 0.9rem; font-size: 0.9rem; font-style: italic;">
-                    Would take: &ldquo;{{ item.trade_wants }}&rdquo;
-                </p>
+                <p class="cd-wants">Would take: &ldquo;{{ item.trade_wants }}&rdquo;</p>
             {% endif %}
 
-            <dl style="display: grid; grid-template-columns: auto 1fr; gap: 0.3rem 1rem; margin: 0 0 1rem; font-size: 0.95rem;">
+            <dl class="cd-facts">
                 {% if item.state %}
-                    <dt style="color: var(--color-muted);">State</dt><dd style="margin: 0;">{{ item.state.name }}</dd>
+                    <dt>State</dt><dd>{{ item.state.name }}</dd>
                 {% endif %}
                 {% if item.county %}
-                    <dt style="color: var(--color-muted);">{{ item.county.unit_type }}</dt><dd style="margin: 0;">{{ item.county.name }}</dd>
+                    <dt>{{ item.county.unit_type }}</dt><dd>{{ item.county.name }}</dd>
                 {% endif %}
                 {% if item.license_year %}
-                    <dt style="color: var(--color-muted);">Year</dt><dd style="margin: 0;">{{ item.license_year }}</dd>
+                    <dt>Year</dt><dd>{{ item.license_year }}</dd>
                 {% elif item.effective_era %}
-                    <dt style="color: var(--color-muted);">Era</dt><dd style="margin: 0;">{{ item.effective_era }}</dd>
+                    <dt>Era</dt><dd>{{ item.effective_era }}</dd>
                 {% endif %}
                 {% for label, types in taxonomy_groups %}
-                    <dt style="color: var(--color-muted);">{{ label }}</dt>
-                    <dd style="margin: 0;">{% for t in types %}{{ t.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</dd>
+                    <dt>{{ label }}</dt>
+                    <dd>{% for t in types %}{{ t.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</dd>
                 {% endfor %}
                 {% if item.shape %}
-                    <dt style="color: var(--color-muted);">Shape</dt><dd style="margin: 0;">{{ item.get_shape_display }}</dd>
+                    <dt>Shape</dt><dd>{{ item.get_shape_display }}</dd>
                 {% endif %}
                 {% if item.colors %}
-                    <dt style="color: var(--color-muted);">Colors</dt><dd style="margin: 0;">{{ item.display_colors }}</dd>
+                    <dt>Colours</dt><dd>{{ item.display_colors }}</dd>
                 {% endif %}
                 {% if item.serial_number %}
-                    <dt style="color: var(--color-muted);">Serial</dt><dd style="margin: 0;">{{ item.serial_number }}</dd>
+                    <dt>Serial</dt><dd>{{ item.serial_number }}</dd>
                 {% endif %}
             </dl>
 
             {% if item.description %}
-                <p style="white-space: pre-line; margin-bottom: 1rem;">{{ item.description }}</p>
+                <p class="cd-notes">{{ item.description }}</p>
             {% endif %}
 
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            {% if is_owner and item.purchase_price or is_owner and item.acquired_note or is_owner and item.private_note %}
+                <div class="cd-private">
+                    <span class="cd-private-eyebrow">Only you see this</span>
+                    <div class="cd-private-row">
+                        {% if item.purchase_price %}<span>Paid <strong>${{ item.purchase_price }}</strong></span>{% endif %}
+                        {% if item.acquired_note %}<span>{{ item.acquired_note }}</span>{% endif %}
+                    </div>
+                    {% if item.private_note %}<p class="cd-private-note">{{ item.private_note }}</p>{% endif %}
+                </div>
+            {% endif %}
+
+            <div class="cd-acts">
                 {% if is_owner %}
-                    <a class="btn-secondary" href="{% url 'collections:edit' item.pk %}">Edit</a>
-                    <a class="btn-secondary" href="{% url 'listings:sell_start' %}?q={{ item.title|urlencode }}">List for sale</a>
-                    <a class="btn-secondary" href="{% url 'collections:delete' item.pk %}" style="color: var(--color-hunting-rust);">Delete</a>
+                    <a class="kb-btn kb-btn--secondary" href="{% url 'collections:edit' item.pk %}">Edit the record</a>
+                    {% if item.disposition == 'held' %}
+                        <a class="kb-btn kb-btn--secondary" href="{% url 'listings:sell_start' %}?q={{ item.title|urlencode }}">Sell it</a>
+                    {% endif %}
+                    <a class="kb-btn kb-btn--text" href="{% url 'collections:delete' item.pk %}">Strike it from the record</a>
                 {% elif user.is_authenticated %}
                     {% comment %}
-                    The badge above says "Open to trade"; without this there
-                    was no way to act on it, which makes the badge an
+                    The tag above says "Open to trade"; without this there
+                    was no way to act on it, which makes the tag an
                     advertisement for something the page will not do.
                     {% endcomment %}
                     {% if not trade_block %}
-                        <a class="btn-primary" href="{% url 'trades:propose_on_item' item.pk %}">
+                        <a class="kb-btn kb-btn--primary" href="{% url 'trades:propose_on_item' item.pk %}">
                             Propose a trade
                         </a>
                     {% endif %}
                     <form method="post" action="{% url 'favorites:toggle_collection_item' item.pk %}">
                         {% csrf_token %}
                         <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                        <button type="submit" class="btn-secondary">
-                            {% if is_favorited %}Unfavorite{% else %}Favorite{% endif %}
+                        <button type="submit" class="kb-btn kb-btn--secondary">
+                            {% if is_favorited %}Unsave it{% else %}Save it{% endif %}
                         </button>
                     </form>
                 {% endif %}
             </div>
         </div>
     </div>
-</section>
+</div>
 {% endblock %}

@@ -46,6 +46,7 @@ class ListingForm(forms.ModelForm):
     state = forms.ModelChoiceField(
         queryset=State.objects.none(),
         required=True,
+        empty_label='Choose a state',
         widget=forms.Select(attrs={'class': 'kb-select'}),
     )
     county_ref = forms.ModelChoiceField(

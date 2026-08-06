@@ -912,6 +912,14 @@
 /* ── Add-from-order: no rail, one column, the purchase up top ────────── */
 .if-page--narrow { max-width: 880px; }
 
+/* ── The address slip ───────────────────────────────────────────────── */
+.if-page--slip { max-width: 560px; }
+.if-grid--address { grid-template-columns: minmax(0, 1fr) 80px 120px; }
+
+@media (max-width: 480px) {
+    .if-grid--address { grid-template-columns: 1fr; }
+}
+
 .if-arrived {
     background: var(--kb-parchment);
     border: 1px solid var(--kb-rule);
