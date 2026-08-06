@@ -11,6 +11,7 @@ from django.views.generic import ListView
 from django.utils import timezone
 from . import sell_flow, seller_desk
 from django import forms
+from . import qa
 from .models import ERA_LABEL_CHOICES, IMAGE_ROLE_CHOICES, Listing, ListingQuestion
 from .forms import ListingForm, ListingImageFormSet
 from apps.bids.forms import BidForm
@@ -780,7 +781,11 @@ def listing_detail(request, pk):
         'is_auction': is_auction,
         'is_buy_now': listing.listing_type == 'buy_now',
         'is_trade': listing.listing_type == 'trade',
-        'questions': listing.questions.exclude(moderation_state='hidden').select_related('asker').all(),
+        # The thread as this viewer may see it: public entries for everyone,
+        # a hidden (price-talk) question only to the person who asked it.
+        'questions': qa.visible_questions(listing, request.user),
+        'qa_asked': qa.asked_count(listing),
+        'qa_habit': qa.answer_habit(listing.seller),
         'is_favorited_listing': (
             request.user.is_authenticated
             and Favorite.objects.filter(user=request.user, listing=listing).exists()
@@ -1351,19 +1356,33 @@ def ask_question(request, pk):
         messages.error(request, 'Question must be at least 5 characters.')
         return redirect('listings:detail', pk=pk)
 
+    # Price talk goes to the offer, not the thread (turn 9b). The question
+    # is kept — hidden, visible only to its asker with the explanation in
+    # place — and the seller is never notified, so a side-deal opener
+    # teaches the norm instead of starting a negotiation.
+    hidden = qa.is_price_talk(question)
     ListingQuestion.objects.create(
         listing=listing,
         asker=request.user,
         question=question,
+        moderation_state='hidden' if hidden else 'ok',
     )
-    create_notification(
-        user=listing.seller,
-        notification_type='listing_question_received',
-        message=f'New question on "{listing.title}" from {request.user.username}.',
-        link_url=reverse('listings:detail', kwargs={'pk': listing.pk}),
-        dedupe_window_hours=1,
-    )
-    messages.success(request, 'Question submitted.')
+    if hidden:
+        messages.info(
+            request,
+            'Price talk belongs in an offer, not the public thread — your '
+            'question was kept between us. See it on the listing for where '
+            'to take the number.',
+        )
+    else:
+        create_notification(
+            user=listing.seller,
+            notification_type='listing_question_received',
+            message=f'New question on "{listing.title}" from {request.user.username}.',
+            link_url=reverse('listings:detail', kwargs={'pk': listing.pk}),
+            dedupe_window_hours=1,
+        )
+        messages.success(request, 'Asked. Answers are public — you will hear when it has one.')
     return redirect('listings:detail', pk=listing.pk)
 
 

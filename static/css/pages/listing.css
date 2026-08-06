@@ -447,3 +447,204 @@
         grid-template-columns: repeat(4, 1fr);
     }
 }
+
+/* ── Questions — turn 9b ─────────────────────────────────────────────── */
+/* Answers sit indented under their questions, the seller marked in brass.
+   The 39px indent is the frame's: chip width plus the gap, so an answer
+   hangs exactly under its question's words. */
+
+.qa-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.qa-title {
+    font-family: var(--kb-font-display);
+    font-size: 21px;
+    font-weight: 600;
+    color: var(--kb-forest);
+    margin: 0;
+}
+
+.qa-meta {
+    font-size: 12.5px;
+    color: var(--kb-ink-4);
+    font-variant-numeric: tabular-nums;
+}
+
+.qa-public-note {
+    font-size: 11.5px;
+    color: var(--kb-ink-4);
+    margin: 2px 0 0;
+}
+
+.qa-thread {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    overflow: hidden;
+    margin-top: 14px;
+}
+
+.qa-entry {
+    padding: 15px 17px;
+    border-bottom: 1px solid var(--kb-rule-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.qa-entry:last-child { border-bottom: 0; }
+
+.qa-q,
+.qa-a {
+    display: flex;
+    gap: 11px;
+    align-items: flex-start;
+}
+
+.qa-a { padding-left: 39px; }
+
+.qa-chip {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--kb-r-md);
+    background: var(--kb-parchment);
+    color: var(--kb-ink-3);
+    font-size: 10.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.qa-chip--seller {
+    background: var(--kb-forest);
+    color: var(--kb-cream);
+}
+
+.qa-said {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+}
+
+.qa-text {
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--kb-ink);
+    margin: 0;
+}
+
+.qa-byline {
+    font-size: 11px;
+    color: var(--kb-ink-4);
+}
+
+.qa-waiting {
+    color: var(--kb-brass);
+    font-weight: 600;
+    font-style: normal;
+}
+
+.qa-seller {
+    color: var(--kb-brass);
+    font-weight: 700;
+}
+
+/* The house rule, said once, in place. */
+.qa-norm {
+    background: var(--kb-cream);
+    border-left: 2px solid var(--kb-brass);
+    border-radius: 0 var(--kb-r-md) var(--kb-r-md) 0;
+    padding: 9px 12px;
+    margin-top: 4px;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--kb-ink-2);
+}
+
+.qa-norm a {
+    color: var(--kb-brass);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.qa-state {
+    font-size: 11px;
+    color: var(--kb-ink-4);
+    flex-shrink: 0;
+}
+
+.qa-state--act {
+    border: 0;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+.qa-state--act:hover { color: var(--kb-rust, #9c3d1e); }
+
+.qa-state-note {
+    font-size: 11px;
+    color: var(--kb-ink-4);
+}
+
+.qa-report { flex-shrink: 0; }
+
+.qa-answer-form .qa-said { gap: 8px; }
+.qa-answer-form .kb-btn { align-self: flex-start; }
+
+/* The ask box, at the foot of the thread. */
+.qa-ask {
+    margin-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.qa-ask-go {
+    align-self: flex-start;
+    background: var(--kb-forest);
+    color: #fff;
+    border: 0;
+    border-radius: var(--kb-r-md);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 10px 16px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.qa-ask-go:hover { background: var(--kb-forest-deep, #1c2717); }
+
+.qa-ask-note {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    flex-wrap: wrap;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--kb-ink-4);
+    margin-top: 6px;
+}
+
+.qa-private { display: inline; }
+
+.qa-private-link {
+    border: 0;
+    background: none;
+    padding: 0;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--kb-brass);
+    cursor: pointer;
+}
+
+.qa-private-link:hover { color: var(--kb-brass-deep, #7d5d17); }

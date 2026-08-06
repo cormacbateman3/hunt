@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static humanize core_tags %}
 
 {% block title %}{{ listing.title }} &middot; KeystoneBid{% endblock %}
 
@@ -184,53 +184,109 @@ Header. Format and state read first, then the title, then the object line.
             </div>
 
             {% if is_auction or is_buy_now %}
+                {% comment %}
+                Turn 9b. Answers sit indented under their questions with the
+                seller marked in brass; an unanswered one is visibly waiting.
+                Price talk never reaches this thread — it is hidden the
+                moment it is asked, shown only to its asker with the
+                explanation in place, which teaches the norm once instead of
+                moderating it forever.
+                {% endcomment %}
                 <div class="lst-panel" id="tab-qa" role="tabpanel" hidden>
+                    <div class="qa-head">
+                        <h2 class="qa-title">Questions about this one</h2>
+                        <span class="qa-meta">
+                            {{ qa_asked }} asked
+                            {% if qa_habit %} &middot; {{ listing.seller.profile.get_display_name }} {{ qa_habit }}{% endif %}
+                        </span>
+                    </div>
+                    <p class="qa-public-note">Public &mdash; everyone watching this lot sees them.</p>
+
+                    {% if questions %}
+                    <div class="qa-thread">
+                        {% for q in questions %}
+                            <article class="qa-entry">
+                                <div class="qa-q">
+                                    <span class="qa-chip">{{ q.asker|initials }}</span>
+                                    <div class="qa-said">
+                                        <p class="qa-text">{{ q.question }}</p>
+                                        <span class="qa-byline">
+                                            {{ q.asker|byline_name }} &middot; {{ q.created_at|naturalday }}{% if not q.seller_answer and q.moderation_state != 'hidden' %} &middot; <em class="qa-waiting">waiting on an answer</em>{% endif %}
+                                        </span>
+                                        {% if q.moderation_state == 'hidden' %}
+                                            <div class="qa-norm">
+                                                Price talk belongs in an offer, not out here.
+                                                {% if is_buy_now and listing.allow_offers %}
+                                                    <a href="{% url 'offers:make' listing.pk %}">Make an offer instead &rarr;</a>
+                                                {% elif is_auction %}
+                                                    The bid box is where the number goes.
+                                                {% endif %}
+                                            </div>
+                                        {% elif q.moderation_state == 'flagged' %}
+                                            <span class="qa-state-note">Reported &mdash; a person will look at it.</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if q.moderation_state == 'hidden' %}
+                                        <span class="qa-state">Hidden</span>
+                                    {% elif user.is_authenticated and q.moderation_state == 'ok' and user.id != listing.seller_id and user.id != q.asker_id %}
+                                        <form method="post" action="{% url 'listings:flag_question' listing.pk q.pk %}" class="qa-report">
+                                            {% csrf_token %}
+                                            <button type="submit" class="qa-state qa-state--act">Report</button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                                {% if q.seller_answer %}
+                                    <div class="qa-a">
+                                        <span class="qa-chip qa-chip--seller">{{ listing.seller|initials }}</span>
+                                        <div class="qa-said">
+                                            <p class="qa-text">{{ q.seller_answer }}</p>
+                                            <span class="qa-byline">
+                                                <strong class="qa-seller">{{ listing.seller.profile.get_display_name }}, the seller</strong>
+                                                {% if q.answered_at %} &middot; {{ q.answered_at|naturalday }}{% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                {% elif user.is_authenticated and user.id == listing.seller_id and q.moderation_state != 'hidden' %}
+                                    <form method="post" action="{% url 'listings:answer_question' listing.pk q.pk %}" class="qa-a qa-answer-form">
+                                        {% csrf_token %}
+                                        <span class="qa-chip qa-chip--seller">{{ listing.seller|initials }}</span>
+                                        <div class="qa-said">
+                                            <textarea class="kb-textarea" name="seller_answer" rows="2"
+                                                      placeholder="Answer it here, in public &mdash; for the next buyer as much as this one" required></textarea>
+                                            <button type="submit" class="kb-btn kb-btn--primary kb-btn--sm">Answer it</button>
+                                        </div>
+                                    </form>
+                                {% endif %}
+                            </article>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                        <p class="kb-muted lst-note">No questions yet. Anything asked here is answered in public, for the next buyer as much as this one.</p>
+                    {% endif %}
+
                     {% if user.is_authenticated and user.id != listing.seller_id %}
-                        <form method="post" action="{% url 'listings:ask_question' listing.pk %}" class="lst-ask">
+                        <form method="post" action="{% url 'listings:ask_question' listing.pk %}" class="qa-ask">
                             {% csrf_token %}
-                            <label class="kb-label" for="ask-question">Ask the seller</label>
-                            <textarea class="kb-textarea" id="ask-question" name="question" rows="3"
-                                      placeholder="Anything the photographs don&rsquo;t answer" required></textarea>
-                            <button type="submit" class="kb-btn kb-btn--secondary">Ask question</button>
+                            <textarea class="kb-textarea" id="ask-question" name="question" rows="2"
+                                      placeholder="Ask {{ listing.seller.profile.get_display_name }} something about the item&hellip;" required></textarea>
+                            <button type="submit" class="qa-ask-go">Ask it</button>
                         </form>
+                        {% comment %}A sibling, never nested — a form inside a form closes it early.{% endcomment %}
+                        <div class="qa-ask-note">
+                            <span>Everyone can read this. For anything private &mdash; or an offer &mdash;</span>
+                            <form method="post" action="{% url 'messaging:start' %}" class="qa-private">
+                                {% csrf_token %}
+                                <input type="hidden" name="recipient_id" value="{{ listing.seller_id }}">
+                                <input type="hidden" name="listing_id" value="{{ listing.pk }}">
+                                <input type="hidden" name="conversation_type" value="{{ listing.listing_type }}">
+                                <button type="submit" class="qa-private-link">write to them instead</button>
+                            </form>
+                        </div>
                     {% elif not user.is_authenticated %}
                         <p class="kb-muted lst-note">
                             <a href="{% url 'accounts:login' %}?next={{ request.path }}">Sign in</a> to ask a question.
                         </p>
                     {% endif %}
-
-                    <div class="lst-qa">
-                        {% for q in questions %}
-                            <article class="lst-q {% if q.moderation_state == 'flagged' %}is-flagged{% endif %}">
-                                <div class="kb-between">
-                                    <p class="lst-q-text"><strong>{{ q.asker.username }}</strong> asked: {{ q.question }}</p>
-                                    {% if user.is_authenticated and q.moderation_state == 'ok' and user.id != listing.seller_id %}
-                                        <form method="post" action="{% url 'listings:flag_question' listing.pk q.pk %}">
-                                            {% csrf_token %}
-                                            <button type="submit" class="kb-btn kb-btn--text lst-flag" title="Flag as inappropriate">Flag</button>
-                                        </form>
-                                    {% endif %}
-                                </div>
-                                <span class="kb-faint lst-q-date">{{ q.created_at|date:"M j, Y g:i a" }}</span>
-                                {% if q.moderation_state == 'flagged' %}
-                                    <p class="lst-flagged-note">This has been flagged and is under review.</p>
-                                {% endif %}
-                                {% if q.seller_answer %}
-                                    <p class="lst-answer"><strong>Seller:</strong> {{ q.seller_answer }}</p>
-                                {% elif user.is_authenticated and user.id == listing.seller_id %}
-                                    <form method="post" action="{% url 'listings:answer_question' listing.pk q.pk %}" class="lst-ask">
-                                        {% csrf_token %}
-                                        <textarea class="kb-textarea" name="seller_answer" rows="2" placeholder="Post an answer" required></textarea>
-                                        <button type="submit" class="kb-btn kb-btn--secondary">Post answer</button>
-                                    </form>
-                                {% else %}
-                                    <p class="kb-muted lst-note">Awaiting seller response.</p>
-                                {% endif %}
-                            </article>
-                        {% empty %}
-                            <p class="kb-muted lst-note">No questions yet. Anything asked here is answered in public, for the next buyer as much as this one.</p>
-                        {% endfor %}
-                    </div>
                 </div>
             {% endif %}
 

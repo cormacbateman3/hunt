@@ -14,6 +14,9 @@ two halves quietly stop agreeing.
 
 from django.db.models import Q
 
+# Lives in accounts now (the Q&A thread wanted the same avatar square);
+# re-exported so every existing caller keeps its import path.
+from apps.accounts.identity import initials_for  # noqa: F401
 from apps.collections.matching import holdings, holdings_matching
 from apps.collections.models import CollectionItem, WantedItem
 from apps.collections.tradeability import trade_block_label, would_trade
@@ -470,13 +473,6 @@ def trader_trust(user):
     }
 
 
-def initials_for(user):
-    """Two letters for an avatar square."""
-    name = (user.profile.get_display_name()
-            if hasattr(user, 'profile') else user.username) or user.username
-    words = [part for part in name.split() if part]
-    return (''.join(word[0] for word in words[:2]) if len(words) > 1
-            else name[:2]).upper()
 
 
 def terms_line(*, giving, receiving, cash_amount, cash_direction, mine=False):
