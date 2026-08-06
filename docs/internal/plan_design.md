@@ -150,14 +150,14 @@ implementing.
 **Read this before concluding a screen was missed.** Several pages have not been
 brought onto the design system yet, and it is not an oversight — they are scheduled.
 Verified 2026-08-05 by counting `kb-` classes against inline `<style>` blocks and
-`--color-*` legacy tokens:
+`--color-*` legacy tokens; **the six form screens landed 2026-08-06 (Pass 8b)**:
 
 | Screen | Template | Lands in |
 |---|---|---|
-| **Add / edit an item** (sell step 2) | `listings/listing_create.html`, `listing_edit.html` | **Pass 8b** |
-| **Add / edit a collection item** | `collections/collection_item_form.html`, `add_from_order.html` | **Pass 8b** |
-| **Shipping address** | `accounts/address_form.html` | **Pass 8b** |
-| **Collection item detail** | `collections/collection_item_detail.html` | **Pass 8b** |
+| ~~Add / edit an item (sell step 2)~~ | `listings/listing_create.html`, `listing_edit.html` | **Pass 8b ✅** |
+| ~~Add / edit a collection item~~ | `collections/collection_item_form.html`, `add_from_order.html` | **Pass 8b ✅** |
+| ~~Shipping address~~ | `accounts/address_form.html` | **Pass 8b ✅** |
+| ~~Collection item detail~~ | `collections/collection_item_detail.html` | **Pass 8b ✅** |
 | Almanac | placeholder by design | Pass 14 |
 | Staff | not built | Pass 11 |
 
@@ -773,39 +773,67 @@ Dev plan **10.13**.
 
 ---
 
-## Pass 8b — The forms nobody restyled ⬜
+## Pass 8b — The forms nobody restyled ✅ DONE
 
-*Raised in review 2026-08-05 and confirmed: the create/edit forms were never brought
-onto the design system. Passes 5 and 7 built new screens around them and left the
-middle alone, which is why the trade block added in Pass 7 sits in old furniture.*
+*Completed 2026-08-06 · commits `bbc04ad, cc5d095, 4cb74ed, 29db9b4` · 488 tests
+green (17 added). Raised in review 2026-08-05 and confirmed: the create/edit forms
+were never brought onto the design system — Passes 5 and 7 built new screens around
+them and left the middle alone.*
 
-**Design refs** — turn 6b (step 2, the item), 10a/11b (collection item), 4c (field
-grammar). Dev plan **10.8**, T13.
+**Design refs** — turn 6b (step 2, the item), turn 5b (the collection room — its
+*flow* died with turn 6, its *form body* is the only drawing of the collection
+variant), 10a/11b (field grammar), 4c. Dev plan **10.8**, T13.
 
-| Screen | State today |
+### What each screen became
+
+| Screen | Built |
 |---|---|
-| `listings/listing_create.html` | pre-revamp: inline `<style>`, `--color-*` legacy tokens, **3 `kb-` classes in the whole file** |
-| `listings/listing_edit.html` | same shape, same problem |
-| `collections/collection_item_form.html` | same |
-| `collections/add_from_order.html` | same |
-| `collections/collection_item_detail.html` | same — inline styles throughout |
-| `accounts/address_form.html` | same, **and** its Places script wants moving out to `static/js/` and made to say when it fails to load |
+| `listing_create.html` | The 6b floor: 400px evidence rail (photograph slots, the read-out, the buyer's card) beside the work column. Taxonomy out of the drawer — seven plain selects under *"The detail collectors filter on"*, labelled the frame's way (*Who it was for*, *What it allowed*…). Condition is a chip ladder with no blank rung. Pass 5's `sl-terms` tail kept as-is. |
+| `listing_edit.html` | Same floor. Photographs stay a **row list** rather than slots — on an edit the roles are settled facts (*a back stays a back*), and the rows say what each file is instead of re-asking. A deliberate reading, not a miss. |
+| `collection_item_form.html` | The 5b room: five slots (front lives in the formset with its role, so it keeps its meaning if the piece is ever listed), the **written-for-you title panel** with its *Write my own* escape, the finer-detail drawer, then *Where it stands* — visibility, the trade block, disposition (edit only), and the **private block** that existed on the model but nowhere on a form. |
+| `add_from_order.html` | One-column variant: the purchase up top on parchment, your-own-eye condition, the listing's photographs copying across on their own. |
+| `collection_item_detail.html` | A specimen sheet: plates left with each photograph naming what it is, the record right, availability tags that say **where a departed piece went**, the owner's ledger on parchment. A departed piece loses its Sell button. |
+| `accounts/address_form.html` | The slip. Places moved out to `static/js/address-autocomplete.js`, and **the failure is said aloud** — one quiet line under the street field when the script can't load, instead of a search box that does nothing. |
 
-Restyle onto `kb-ui.css`, not a rewrite: the field grammar, the prefill panel and the
-image slots all work. What changes is the furniture — the three uppercase label sizes,
-the 3px/4px geometry, hairlines instead of the dashed drop zone, and the same
-`_trade_block.html` / private-block fieldsets the design draws.
+New furniture: `static/css/pages/item-form.css` (the `if-*` set, shared by all four
+forms), `static/css/pages/collection-item.css` (`cd-*`), `static/js/item-form.js`
+(slots, live preview, completeness-with-advice, the self-writing title — everything
+degrades to plain inputs without JavaScript). `prefill.js`'s panel now renders the
+drawing's plain list — tick, question mark, chip, miss — with *Use it* / *Suggest it*
+in place, and flags the filled field in brass until cleared.
 
-**Two things ride along**, because they are the same files:
+### The two riders, landed
 
-- **`CollectionItem.disposition`** — `held` / `sold elsewhere` / `given away` / `lost`.
-  A lot that expires unsold already releases the piece on its own (Pass 7), but nothing
-  can record that a piece has physically **left**, so somebody who sold it at a show has
-  no way to stop it being offered. It is also the honest home for the ownership gap
-  `_close_traded_pieces` currently papers over.
-- **`issue_class` taxonomy** — *Special Issue*, *Limited Edition*, *Commemorative*. Its
-  own category, not `addon_type` (see the inbox for why). Touches the seed data and the
-  filter rail as well as these forms.
+- **`CollectionItem.disposition`** — `held / traded / sold_elsewhere / given_away /
+  lost`. Anything but held blocks `open_to_trade` *and* `would_trade` at the source,
+  and the shelf label is simply the disposition's own words. `_close_traded_pieces`
+  now writes `disposition='traded'` **instead of** `tradeability='closed'` — the
+  owner's standing answer is not what changed; the piece left. `traded` is never a
+  form choice; a silent form keeps the recorded value (same rule as tradeability).
+- **`issue_class`** — its own taxonomy category (*Special Issue, Limited Edition,
+  Commemorative* + the Other flow), seeded through the pipeline like materials
+  (`ISSUE_CLASSES` in `clean_reference_data.py`; regen was lossless, `created=4
+  drift=0`). Threads everywhere the other six go: both forms, the API grouping, the
+  rail. Both forms' taxonomy rows now come from **one constant**
+  (`FORM_TAXONOMY_FIELDS`) so the labels can never drift again.
+
+### Corrections to the record while in here
+
+The data-model plan's 2026-08-03 audit said `image_role` didn't exist and listing
+detail never showed T2. **Both were stale by the time this pass opened** — the
+schema shipped with Pass 5's sell-flow work (listings `0019`, collections `0010`,
+one-front-one-back constraints included) and listing detail already prints *Form*
+and *Add-ons: still attached*. This pass finished the half that was genuinely owed:
+a slot UI that **persists** the roles it shows. The audit notes are corrected in
+`data_model_img_prefill_plan.md`.
+
+### Deliberate departures from the drawing
+
+| The frame draws | Built instead | Why |
+|---|---|---|
+| A **Restored** chip beyond a divider on the condition row | The eight-rung ladder only | The designer's own note says restored *isn't a rung* — "a repaired item can still be Excellent". That's a separate boolean wanting its own filter (10.11), card badge, and `WantedItem.repairs_ok` — one family, in the register. |
+| *"Save and come back to it"* secondary button | Omitted | There is no draft feature. Never draw a control over nothing (16b's rule). Register, with lots/drafts work. |
+| A separate **Condition description** box beside Serial | One Description field, placed per each frame | The model has one text field. Splitting it is a schema call nobody has made. |
 
 ---
 
@@ -1107,7 +1135,7 @@ What's still owed from the data-model plan
 Untouched, and some of it the design actively needs:
 
 T3/T4 year ranges now have a new consumer — the tracker matrix reads first_year/last_year to hatch the "never issued" cells, so a gap you could never fill isn't counted against you
-T13 image slots (image_role) — reinforced by turn 6b, not superseded; still absent from the schema
+~~T13 image slots (image_role) — reinforced by turn 6b, not superseded~~ **shipped**: the schema landed with Pass 5's sell-flow work (listings 0019 / collections 0010, one-front-one-back constraints), and Pass 8b built the slot UI that persists the roles it shows
 T13 lot images — turn 9d draws exactly T13's spec
 T5 taxonomy cleanup, T11 governance — 19b says ReferenceDataSuggestion's accept-and-apply "is the whole job"
 T14 ledger, R6 gold labels, prefill polish, Postgres check — all stand
@@ -1186,34 +1214,33 @@ It is now **Pass 8b**, *and* it is listed at the top of this document under **"S
 still on pre-revamp markup"** — so the next person to ask this question finds the
 answer before they finish scrolling.
 
-### ⬜ An unsold lot should come back to the collection — **and let them say it is gone**
+### ✅ An unsold lot should come back to the collection — **and let them say it is gone** — shipped in Pass 8b
 
-Half of this is already true and became true in Pass 7: availability is derived, so a
-lot that expires or is taken down releases the piece **on its own**, with no flag to
-restore. What is missing is the second half — **nothing can record that a piece has
-left**. Somebody who sold it at a show off-site has no way to say so, and the piece
-sits in their collection being offered to people.
+Half became true in Pass 7 (availability derived, lots release on their own). The
+second half landed 2026-08-06: `CollectionItem.disposition` (`held / traded /
+sold_elsewhere / given_away / lost`). Anything but held blocks both `open_to_trade`
+and `would_trade`, the shelf label is the disposition's own words, and
+`_close_traded_pieces` now records `traded` instead of overwriting the owner's
+tradeability answer. The control lives on the edit form under **Where it is** —
+never on create, where a piece is obviously in hand — and `traded` is never a form
+choice. Still owed, in the register: **runs, the tracker matrix and county counts
+still include departed pieces** — whether a sold-elsewhere 1926 Cameron still counts
+toward "47 of 67" is a product question, not a bug fix.
 
-Needs a disposition on `CollectionItem` (`held` / `sold elsewhere` / `given away` /
-`lost`), which is genuinely useful beyond this: it is what the ledger and the export
-need, and it is the honest place for the ownership-transfer gap that
-`_close_traded_pieces` currently papers over by closing tradeability. **Pass 8b.**
-
-### ⬜ Special Issue / Limited Edition as an attribute
+### ✅ Special Issue / Limited Edition as an attribute — shipped in Pass 8b
 
 Wanted, but **`addon_type` is the wrong home** and it is worth saying why before
 somebody adds it there. `addon_type` holds things like *Turkey Tag* — physical add-ons
 attached to a licence, one per item. A Special Issue turkey tag is **both**, so putting
 them in the same category makes the collector choose between two true things.
 
-It is a property of the **issue**, so it wants its own taxonomy category —
-`issue_class`, seeded with *Special Issue*, *Limited Edition*, *Commemorative*. That
-inherits everything the other categories already have: the browse rail, faceted counts,
-the "Other" free-text flow with admin promotion, and the prefill resolver. The cost is
-that it touches the seed data, the six form dimensions, the filter rail and the prefill
-config, which makes it a **data-model task, not a UI one** — it belongs with T5, and it
-is listed there as well. **Pass 8b**, unless the category name should be something else,
-which is a call worth making before the seed data exists.
+Landed 2026-08-06 as its own category: `issue_class`, seeded through the pipeline
+like materials (*Special Issue, Limited Edition, Commemorative* + Other; regen was
+lossless, seeder `created=4 drift=0`). It inherits everything the other categories
+have — both forms, the API grouping, the rail, the Other flow with admin promotion —
+because everything reads `FORM_LICENSE_TYPE_CATEGORIES` and the forms' rows now come
+from one shared constant. The name stayed `issue_class` as recorded here; renaming
+is seed data plus one constant if a better word ever arrives.
 
 ---
 
