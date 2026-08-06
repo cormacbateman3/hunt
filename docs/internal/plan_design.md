@@ -36,6 +36,7 @@ listed below and are the only places to be careful.
 | **10.20 Final UI/UX Polish Pass** | Passes 1–11 | Its entire scope — global navigation, sensible grouping, consistent cards, a more engaging home page, the brand voice, the mobile pass — *is* this redesign. 10.20 becomes a sign-off checklist, not a task. |
 | **10.11's "move filters to a horizontal layout"** | turn 1c / 13b | A **vertical left rail with result counts**, not horizontal. Already delivered in Pass 1. |
 | **turn 5** (one door, then a disposition) | **turn 6** | Internal to the design, but worth knowing: 6a opens *"You're right and 5a was wrong: the destination should be the first question."* Build turn 6. |
+| **turn 3a's trade board** | **turn 2e's** | ⚠ **The one place an earlier turn wins**, and a product-owner call rather than a reading. 3a's reasoning holds but it does not survive our width: 241px a side against 2e's 295px, because 3a spends a quarter of the page on a permanent rail. See Pass 7b. |
 
 `10.10 Trade Re-Architecture` is **not** a conflict — the dev plan and the design
 reached the same conclusion independently, in nearly the same words. Both delete
@@ -131,6 +132,12 @@ every turn from 2 to 21 uses the revision. The evidence is not close:
 **Where they disagree, the later turns win.** Turn 1 remains the only place the
 palette and type scale are stated as a system, so it is still the source for those.
 Its geometry is dead.
+
+**One exception, and only one.** The trade board is built on **2e**, not 3a — a
+product-owner call, because 3a's rail does not survive our width. It is recorded in the
+supersedes table above and in Pass 7b. If you find another turn where the earlier
+drawing looks better, that is a decision to take to the owner, not one to make while
+implementing.
 
 ### Status legend
 
@@ -487,7 +494,13 @@ save nowhere. Each carries a `DEFERRED` marker and says what it does today:
 
 ---
 
-## Pass 7 — Trade board v2 ✅ DONE
+## Pass 7 — Tradeability, the trade board tab, the first board ✅ DONE
+
+> **Read Pass 7b before this section.** The board built here (turn 3a's dark table) was
+> **set aside for turn 2e's four columns**. Everything below about the *rule* —
+> tradeability, what an auction blocks, the trade board tab — still stands; the screen
+> described at the end does not.
+
 
 *2026-08-05 · commits `e2042bf`, `f41796f`, `7b55937`, `9387830`, `b4da1b1`,
 `fb75bca` · 408 tests green (99 added)*
@@ -565,11 +578,29 @@ them is a data migration over live listings, not a restyle, and it is the last t
 
 ---
 
-## Pass 7b — 10.10 finished ✅ DONE
+## Pass 7b — 10.10 finished, and the board rebuilt on 2e ✅ DONE
 
-*2026-08-05 · commits `eac29eb`, `1b34609` · 429 tests green (21 added)*
+*2026-08-05 · commits `eac29eb`, `1b34609`, `7be99a3`, `fa43a48`, `c2ca31f`,
+`0775661`, `079b77d` · **456 tests green** (68 added)*
 
-**Design refs** — turn 3a, 13a. Dev plan **10.10**, remaining scope.
+**Design refs** — **turn 2e** (the built board), turn 3a (built, then set aside — see
+the override below), 13a. Dev plan **10.10**, remaining scope.
+
+> **Four review rounds.** The first three built 3a and were each rejected on fidelity;
+> the fourth switched to 2e. What went wrong is worth keeping, because it is a
+> process failure and not a taste one:
+>
+> 1. **Round one** built from the turn's *prose*, not its markup — implemented every
+>    phrase while missing that the licences on the panel are cream cards, which is the
+>    stated point of the turn.
+> 2. **Round two** took the frame's values but never rendered the page: 429 green tests
+>    sat over a grid whose children wrapped onto three lines.
+> 3. **Round three** rendered text and read the words — right words, wrong layout.
+> 4. **Round four** was the owner pointing out that the layout, not the styling, was
+>    the problem all along.
+>
+> The rule is now at the top of this file: **read the drawing, then render the page and
+> look at it.**
 
 ### The two knots, untied together
 
@@ -624,66 +655,91 @@ Two faults no test had caught, because both needed the page actually drawn:
 **their**: nobody on this site has told us their pronouns, and a wrong guess in a
 sentence about somebody's property is worse than the neutral word. A test holds it.
 
-### One click, at last
+### ⚠ The board is built on turn 2e, not 3a — a deliberate override
 
-The three Pass 3 markers are all cleared. The collector card opens on the piece of
-theirs that **answers something on your own wanted list**, falling back to whatever
-they most recently opened; the trade board's tile opens on its own piece. Landing on a
-chooser would ask a question the card already knows the answer to.
+*Product owner's call, 2026-08-05, after three rounds on 3a.* **This is the one place
+in the whole redesign where an earlier turn wins**, so it is flagged here and in the
+precedence table at the top.
 
-### The rebuild against the frame's own values
+3a's own reasoning is sound — one dark panel, direction from position rather than
+colour. What it does not survive is our width. Measured in the same 1224px well:
 
-*Second correction, 2026-08-05. The first build of 3a came from the turn's paragraph;
-this one comes from its markup. See the reading rule at the top of this document.*
+| | Space per column |
+|---|---|
+| **3a** — 196px shelves + a 484px table split into two halves | **241px** a side |
+| **2e** — `repeat(4, 1fr)`, no side rail | **295px** each |
 
-**The two rendering faults** — invisible to a green suite, obvious the moment the page
-was drawn:
+That is 40% more room for the licences, and the licences were what had nowhere to be
+read. 3a spends a quarter of the page on a permanent rail to serve a glance; 2e puts
+the negotiation and the trader **below** the work and gives the whole width to the
+four columns.
 
-1. `.tb-piece-hit` was a **three-column grid with four in-flow children**, so the mark
-   wrapped onto a second row under every licence in both shelves.
-2. `.tb-note` was `white-space: nowrap` in an `auto` column, so "WHAT YOU CAME FOR"
-   claimed ~130px of a ~241px half and the title broke a character at a time.
+So the screen is 2e: **your shelf · what you give · what you receive · their shelf**,
+four white cards edged and header-tinted by direction (rust leaving, green arriving),
+one compact dark bar under them carrying the terms and the three decisions, and the
+story strip and trader card below that.
 
-Both had the same cause: **the note was a column when the design has it as the second
-line inside the text**. The row is `display:flex` with three children now.
+3a's build is in the history at `1b34609` if the call is ever revisited.
 
-**Structure**
+### What the four-column build carries
 
-| | Was | Now (from the frame) |
+| Piece | From the frame |
+|---|---|
+| Trader strip | `#f2eee4` band: 34px initials squares, both names in Petrona 20px, brass `↔`, badges right |
+| Columns | `repeat(4, 1fr)` gap 14, white cards, `11px 13px` heads, `8px 13px` rows |
+| Give / receive | `1px #9c3d1e` / `1px #2f6b34` edges; heads tinted `#fdf1e7` / `#eef3ea` |
+| Row marks | 20px bordered `+`, filled `✓` on `#f2eee4` once laid, **nothing** on a held piece |
+| **Cash** | **A box at the foot of each side**, with the `$` inside it |
+| The bar | `#26331f`, terms `14.5px`, two outlined decisions and one brass |
+| Story | `repeat(3, 1fr) 1.3fr` — three rounds and what was said |
+| Notes | "Very good · on the table" · "Matches their wants" · "Closes a county gap" · "Listed in the Auction House" |
+
+`--kb-hatch` on empty thumbnails, so a licence nobody has photographed reads as
+un-photographed rather than broken.
+
+### One click, at last — and to the right place
+
+The three Pass 3 markers are cleared, but not the way the first build did it. There are
+**two ways in and they mean different things**:
+
+- **`trades:propose_on_item`** — you clicked a licence. It is on the table when the
+  screen opens.
+- **`trades:propose_to_person`** — you clicked a collector card. **The table opens
+  empty.** The card picks a piece to *link* to; you did not choose it, and laying it out
+  and calling it "what you came for" put words in your mouth. The negotiation is filed
+  under whichever licence you actually ask for first.
+
+### Corrections after review — five were logic, not styling
+
+1. **The timeline merged separate negotiations.** It grouped every offer the same two
+   people ever made about one licence, so two independent negotiations — ordinary after
+   a decline — read as one history with three "Opened" rows. A negotiation is a
+   **chain** linked by `counter_to`; `thread_offers` walks it and nothing else joins.
+2. **"Closes a county gap" on every row.** Against an empty collection every county is
+   a gap. It now needs a map to be a hole in, and a wanted-list match outranks it.
+3. **Trade offers never reached Bids & offers.** The ledger read `Bid` and `Offer` and
+   nothing else, so a sent trade left no trace on the bench. They sit by direction like
+   everything else, with "3 licences" where a price would go.
+4. **Revise-and-resend left the original live.** Only a counter *from the other chair*
+   superseded the previous offer, so revising your own put two live negotiations about
+   one licence on the bench — either acceptable.
+5. **Public ≠ tradeable.** The other trader's shelf filtered on both, hiding every piece
+   somebody had opened to trade and simply not put on show.
+
+Plus: the subject piece got an `×` like everything else (the design draws one on every
+card, and its own second round is *"asked for the 1944 Fulton instead"*); real
+drag-and-drop, since the panel says drag; `user-select: none` so a drag stops
+inverting the row's text; a 650ms hover card with a 4:3 image; and an "Offer for it"
+label on the trade board changed to **"Propose a trade"**, because *offer* reads as
+money and nothing there is for sale.
+
+### Three deliberate departures from the drawing
+
+| The frame | What shipped | Why |
 |---|---|---|
-| Outer | one 4-column grid `196 1fr 196 300` | `1fr 300px`, rail beside the **whole** left stack |
-| The band | nested in the centre column, ~484px | spans the full 900px floor |
-| Halves | `1fr 30px 1fr`, bare glyph | `1fr 1px 1fr`, **30px brass disc** on the hairline |
-| Roster | header/list/foot as three loose blocks | **one white card**, hairline-divided rows |
-
-**Colour** — six tokens added, because the frame uses distinctions one flat green
-cannot carry: `--kb-table` `#22301c` · `--kb-table-edge` `#1a2416` · `--kb-table-head`
-`#1e2a19` · `--kb-table-cash` `#1b2416` · `--kb-table-cash-on` `#2b3a22` · plus
-`--kb-on-forest-give` `#d9ab5f` / `--kb-on-forest-get` `#9fc48c` for the two half
-labels.
-
-**The licences are cream now.** `--kb-cream` cards on the dark table — *"the licenses
-on the table become the brightest objects on the page"*, which is what the turn is for.
-
-**Other corrections from the same read**
-
-- A piece on the table **stays on its shelf**, tinted and ticked, and appears as a card
-  as well. It is a clone, not a move; the shelf keeps the checkbox that submits.
-- Shelf notes are **two words** — `trade_block_label()` beside `trade_block_reason()`.
-  "The owner has closed this piece to trade" ran off a 196px row and was the wrong
-  voice for somebody's own collection. It reads "At auction" / "You closed this".
-- `shown` and `total` count **the same set**; they printed "1 of 0".
-- The cash strip's direction and figure now turn round **with the reader** — Rae asks
-  for $40, so Rae sees "to me" and Walt sees "from me" — and the figure is rendered
-  server-side rather than waiting for a script.
-- The band gives a **date**: "Both ship by Mon 10 Aug", not "within 5 days".
-- Decline is a real white button with the softest border, not a text link; accept is
-  `14px/700` at `14px 30px` against the other two at `13px/600` at `12px 20px`.
-- Trader card is **parchment** with a 38px **square** of initials, and carries "Ships
-  in N days on average" — withheld below three shipped parcels, because one fast
-  parcel is not a reputation.
-
-`TheDrawingTests` holds the eight facts the layout depends on that a suite *can* see.
+| "0 strikes" beside the trader's name | **omitted** | Enforcement is between a member and us. Publishing a record turns a private penalty into a public one. Verified and completed-trade counts stay — those are theirs to advertise |
+| "My 3 for **his** 2" | "for **their** 2" | Nobody here has told us their pronouns |
+| "Reply to Walt…" over a box | the cell shows **what was said with the offers**; messaging moved to the trader card | It invented a conversation that had not happened — Walt has never written to you |
 
 ### Still open, and now genuinely small
 
@@ -696,7 +752,7 @@ on the table become the brightest objects on the page"*, which is what the turn 
 
 ---
 
-## Pass 8 — Letters, Q&A, reviews, reporting, appeals ⬜
+## Pass 8 — Letters, Q&A, reviews, reporting, appeals ⬜ NEXT
 
 **Design refs** — turn 9a (emails), 9b (Q&A + reviews), 9c (report + appeal).
 Dev plan **10.13**.
@@ -928,6 +984,7 @@ coming back for it.
 | **The map** (Collections tab, profile *Ground covered*) | honest placeholder + a hatched panel; the figures beside it are real | county **geometry** does not exist; `GeographicUnit.valid_from`/`valid_to` absent | **9 / 10** | draw the choropleth; the arithmetic in `apps/collections/tracker.py` is already there |
 | ~~**Trade board** tab~~ ✅ | local at `/collections/?tab=trade`, built from collection items and sorted by overlap with your wanted list | settled in Pass 7 | — | — |
 | **Distance** — *"41 within a hundred miles"* | reads *N will trade · N selling now* | no geocoding, no geometry | **9 / 10** | add the measure to the header line |
+| **Trade board on 3a's dark table** | built on **2e**'s four columns instead | nothing technical — 3a's rail costs 54px a side we do not have. Product-owner call, `1b34609` holds the 3a build | **later, if ever** | revisit if the page ever gets more than 1224px to work in |
 | ~~**Filtering people by where they live**~~ ✅ | the rail now asks which question you mean | settled in Pass 6 | — | — |
 | **Per-type mail preferences** | Notifications & mail says what arrives today | no `NotificationPreference` model | **later** | render the switches where the marker sits |
 | **Records export** | the room offers a real address to ask | nothing but the work | **10** | build the CSV, including the private purchase block |
@@ -1011,8 +1068,8 @@ Where every `data-screen-label` in the design document lands.
 | Turn | Screens | Pass |
 |---|---|---|
 | 1b/1c | shell, Bench, Hunt, listing detail, propose trade | 1 ✅ / **7 ✅** |
-| 2a–2e | masthead, home signed in/out, trade board | 2 ✅ |
-| 3a–3d | trade board v2, collector profile, settings | **7 ✅**, **3 ✅**, 6 ✅ |
+| 2a–2e | masthead, home signed in/out, **trade board (2e — the one built)** | 2 ✅ / **7b ✅** |
+| 3a–3d | trade board v2 *(built then set aside for 2e)*, collector profile, settings | **7 ✅**, **3 ✅**, 6 ✅ |
 | 4a–4c | sign in, create account, ten settings rooms | 6 |
 | 5a–5c | one door, add an item, offer it | 5 (superseded by 6) |
 | 6a–6c | step 1 destination, step 2 item, step 3 terms | 5 |
