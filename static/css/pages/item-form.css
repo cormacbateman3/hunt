@@ -895,10 +895,57 @@
     list-style-position: outside;
 }
 
+.if-more-sub {
+    display: block;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--kb-ink-3);
+    margin-top: 2px;
+}
+
 .if-more-body {
     display: grid;
     gap: 14px;
     margin-top: 14px;
+}
+
+/* ── Add-from-order: no rail, one column, the purchase up top ────────── */
+.if-page--narrow { max-width: 880px; }
+
+.if-arrived {
+    background: var(--kb-parchment);
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    padding: 18px 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.if-arrived-text {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+}
+
+.if-arrived-text h1 {
+    font-family: var(--kb-font-display);
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--kb-forest);
+    margin: 0;
+    line-height: 1.2;
+}
+
+.if-arrived-thumb {
+    width: 96px;
+    height: 72px;
+    object-fit: cover;
+    border-radius: var(--kb-r-md);
+    border: 1px solid var(--kb-rule);
+    flex-shrink: 0;
 }
 
 /* ── Smaller rooms ──────────────────────────────────────────────────── */

@@ -1,157 +1,201 @@
 {% extends 'base.html' %}
 {% load core_tags %}
+{% load static %}
 
-{% block title %}Add to Collection | KeystoneBid{% endblock %}
+{% block title %}Add to the collection | KeystoneBid{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/item-form.css' %}">
+{% endblock %}
 
 {% block content %}
-<!-- Purchase banner -->
-<div style="background: linear-gradient(135deg, var(--color-forest-green) 0%, #2c5a1e 100%); color: #fff; border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1.25rem; display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
-    <div style="flex: 1; min-width: 200px;">
-        <p style="font-size: 0.8rem; opacity: 0.8; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em;">Adding purchase to collection — Order #{{ order.pk }}</p>
-        <h1 style="font-size: 1.3rem; margin-bottom: 0.3rem; color: #fff;">{{ listing.title }}</h1>
-        <p style="opacity: 0.85; font-size: 0.9rem;">
-            {% if listing.state %}{{ listing.state.name }}{% endif %}
-            {% if listing.county_ref %} · {{ listing.county_ref.name }}{% endif %}
-            {% if listing.license_year %} · {{ listing.license_year }}{% endif %}
-        </p>
+<div class="if-page if-page--narrow">
+    {# What arrived, and where it came from. #}
+    <div class="if-arrived">
+        <div class="if-arrived-text">
+            <span class="if-panel-eyebrow">Order no. {{ order.pk }} &middot; into the collection</span>
+            <h1>{{ listing.title }}</h1>
+            <p class="if-lede">
+                {% if listing.state %}{{ listing.state.name }}{% endif %}{% if listing.county_ref %} &middot; {{ listing.county_ref.name }}{% endif %}{% if listing.license_year %} &middot; {{ listing.license_year }}{% endif %}
+                &mdash; filled in from the listing. Check it against what actually arrived.
+            </p>
+        </div>
+        {% if listing.featured_image %}
+            <img src="{{ listing.featured_image.url }}" alt="{{ listing.title }}" class="if-arrived-thumb">
+        {% endif %}
     </div>
-    {% with primary=listing.featured_image %}
-        {% if primary %}
-            <img src="{{ primary.url }}" alt="{{ listing.title }}"
-                 style="width: 80px; height: 80px; object-fit: cover; border-radius: 6px; flex-shrink: 0;">
-        {% endif %}
-    {% endwith %}
-</div>
 
-<section class="card" style="max-width: 960px; margin: 0 auto;">
-    <p style="color: var(--color-muted); margin-bottom: 1rem; font-size: 0.9rem;">
-        Fields are pre-filled from the listing. Review and adjust before saving to your collection.
-    </p>
-
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        {% if form.non_field_errors %}
-            <div class="alert alert-error" style="margin-bottom: 1rem;">{{ form.non_field_errors }}</div>
-        {% endif %}
-
-        <div style="display: grid; gap: 0.85rem;">
-            <div>
-                <label class="form-label" for="{{ form.title.id_for_label }}">Title</label>
-                {{ form.title }}
-                {{ form.title.errors }}
-            </div>
-            <div>
-                <label class="form-label" for="{{ form.description.id_for_label }}">Description</label>
-                {{ form.description }}
-                {{ form.description.errors }}
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
-                <div>
-                    <label class="form-label" for="{{ form.state.id_for_label }}">Issuing state</label>
-                    {{ form.state }}
-                    {{ form.state.errors }}
-                </div>
-                <div>
-                    <label class="form-label" for="{{ form.license_year.id_for_label }}">License year</label>
-                    {{ form.license_year }}
-                    {{ form.license_year.errors }}
-                </div>
-            </div>
-            <div>
-                <label class="form-label" id="county-label" for="{{ form.county.id_for_label }}">{{ form.county.label }}</label>
-                {{ form.county }}
-                {{ form.county.errors }}
-            </div>
-
-            <hr style="margin: 0.25rem 0; border: 0; border-top: 1px solid var(--color-border);">
-            <h2 style="font-size: 1.1rem; margin: 0;">Item Taxonomy</h2>
-
-            {% for field_name, other_name, heading in taxonomy_fields %}
-                {% with field=form|bound_field:field_name other_field=form|bound_field:other_name %}
-                <div style="display: grid; gap: 0.45rem;">
-                    <label class="form-label" for="{{ field.id_for_label }}">{{ heading }}</label>
-                    {{ field }}
-                    {{ field.errors }}
-                    <div data-other-wrapper="{{ field_name }}" style="display: none;">
-                        <label class="form-label" for="{{ other_field.id_for_label }}">{{ heading }} other</label>
-                        {{ other_field }}
-                        {{ other_field.errors }}
-                    </div>
-                </div>
+    {% if form.errors or image_formset.non_form_errors %}
+        <div class="if-errors" role="alert">
+            <strong>
+                {% with n=form.errors|length %}
+                    {{ n }} thing{{ n|pluralize }} to fix before this can be saved
                 {% endwith %}
-            {% endfor %}
+            </strong>
+            <ul>
+                {% for field in form %}{% for error in field.errors %}
+                    <li>&middot; <a href="#{{ field.id_for_label }}">{{ field.label }}</a> &mdash; {{ error }}</li>
+                {% endfor %}{% endfor %}
+                {% for error in form.non_field_errors %}<li>&middot; {{ error }}</li>{% endfor %}
+            </ul>
+        </div>
+    {% endif %}
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem;">
-                <div>
-                    <label class="form-label" for="{{ form.shape.id_for_label }}">Shape</label>
-                    {{ form.shape }}
-                    {{ form.shape.errors }}
-                    <div data-other-wrapper="shape" style="display: none; margin-top: 0.45rem;">
-                        <label class="form-label" for="{{ form.shape_other.id_for_label }}">Shape other</label>
-                        {{ form.shape_other }}
-                        {{ form.shape_other.errors }}
+    <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        <div class="if-work">
+            <section class="if-section">
+                <div class="if-section-head">
+                    <h2>What it is</h2>
+                    <span class="if-section-line"></span>
+                </div>
+
+                <div class="if-grid if-grid--halves">
+                    <div class="if-field{% if form.title.errors %} has-error{% endif %}">
+                        <label class="kb-label" for="{{ form.title.id_for_label }}">Title</label>
+                        {{ form.title }}
+                        {{ form.title.errors }}
+                    </div>
+                    <div class="if-field{% if form.description.errors %} has-error{% endif %}">
+                        <label class="kb-label" for="{{ form.description.id_for_label }}">Anything else worth knowing</label>
+                        {{ form.description }}
+                        {{ form.description.errors }}
                     </div>
                 </div>
-                <div>
-                    <label class="form-label" for="{{ form.colors.id_for_label }}">Color(s)</label>
-                    {{ form.colors }}
-                    {{ form.colors.errors }}
-                    <div data-other-wrapper="colors" style="display: none; margin-top: 0.45rem;">
-                        <label class="form-label" for="{{ form.colors_other.id_for_label }}">Color other</label>
-                        {{ form.colors_other }}
-                        {{ form.colors_other.errors }}
+
+                <div class="if-grid if-grid--place">
+                    <div class="if-field{% if form.state.errors %} has-error{% endif %}">
+                        <label class="kb-label" for="{{ form.state.id_for_label }}">Issuing state</label>
+                        {{ form.state }}
+                        {{ form.state.errors }}
+                    </div>
+                    <div class="if-field{% if form.county.errors %} has-error{% endif %}">
+                        <label class="kb-label" id="county-label" for="{{ form.county.id_for_label }}">{{ form.county.label }}</label>
+                        {{ form.county }}
+                        {{ form.county.errors }}
+                    </div>
+                    <div class="if-field{% if form.license_year.errors %} has-error{% endif %}">
+                        <label class="kb-label" for="{{ form.license_year.id_for_label }}">License year</label>
+                        {{ form.license_year }}
+                        {{ form.license_year.errors }}
+                    </div>
+                    <div class="if-field if-field--era{% if form.era_label.errors %} has-error{% endif %}">
+                        <label class="kb-label" for="{{ form.era_label.id_for_label }}">Or roughly</label>
+                        {{ form.era_label }}
+                        {{ form.era_label.errors }}
                     </div>
                 </div>
-            </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.85rem;">
-                <div>
-                    <label class="form-label" for="{{ form.resident_status.id_for_label }}">Resident status</label>
-                    {{ form.resident_status }}
-                    {{ form.resident_status.errors }}
-                </div>
-                <div>
-                    <label class="form-label" for="{{ form.condition_grade.id_for_label }}">Condition grade</label>
+                <div class="if-field{% if form.condition_grade.errors %} has-error{% endif %}">
+                    <span class="kb-label">Condition, as it arrived</span>
                     {{ form.condition_grade }}
+                    <span class="kb-hint">The seller graded it once &mdash; this is your own eye, for your own records.</span>
                     {{ form.condition_grade.errors }}
                 </div>
-            </div>
-            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                <label class="form-label">{{ form.is_public }} Public item</label>
-            </div>
-            {% include 'collections/_trade_block.html' %}
-        </div>
 
-        <hr style="margin: 1.2rem 0; border: 0; border-top: 1px solid var(--color-border);">
-        <h2 style="font-size: 1.2rem; margin-bottom: 0.5rem;">Images</h2>
-        <p style="color: var(--color-muted); font-size: 0.88rem; margin-bottom: 0.75rem;">
-            Listing images will be copied automatically. You can add more below.
-        </p>
-        {{ image_formset.management_form }}
-        <div style="display: grid; gap: 0.7rem;">
-            {% for image_form in image_formset %}
-                <article style="border: 1px solid var(--color-border); border-radius: 8px; padding: 0.7rem;">
-                    {{ image_form.id }}
-                    <div style="display: grid; grid-template-columns: 1fr 140px; gap: 0.7rem; align-items: end;">
-                        <div>
-                            <label class="form-label" for="{{ image_form.image.id_for_label }}">Image</label>
-                            {{ image_form.image }}
-                            {{ image_form.image.errors }}
+                <div class="if-grid if-grid--serial">
+                    <div class="if-field{% if form.serial_number.errors %} has-error{% endif %}">
+                        <label class="kb-label" for="{{ form.serial_number.id_for_label }}">Serial or stub number</label>
+                        {{ form.serial_number }}
+                        {{ form.serial_number.errors }}
+                    </div>
+                </div>
+            </section>
+
+            <details class="if-more" {% if form.errors %}open{% endif %}>
+                <summary>
+                    The finer detail &mdash; residency, scope, duration, material, shape, colours
+                    <span class="if-more-sub">Carried over from the listing; correct anything the seller had wrong</span>
+                </summary>
+                <div class="if-more-body">
+                    <div class="if-grid if-grid--thirds">
+                        {% for field_name, other_name, heading in taxonomy_fields %}
+                            {% with field=form|bound_field:field_name other_field=form|bound_field:other_name %}
+                            <div class="if-field{% if field.errors %} has-error{% endif %}{% if field_name == 'addon_type' %} if-span{% endif %}">
+                                <label class="kb-label" for="{{ field.id_for_label }}">{{ heading }}</label>
+                                {{ field }}
+                                {{ field.errors }}
+                                <div data-other-wrapper="{{ field_name }}" style="display: none;">
+                                    <label class="kb-label" for="{{ other_field.id_for_label }}">{{ heading }} &mdash; in your words</label>
+                                    {{ other_field }}
+                                    {{ other_field.errors }}
+                                </div>
+                            </div>
+                            {% endwith %}
+                        {% endfor %}
+                    </div>
+                    <div class="if-grid if-grid--physical">
+                        <div class="if-field{% if form.shape.errors %} has-error{% endif %}">
+                            <label class="kb-label" for="{{ form.shape.id_for_label }}">Shape</label>
+                            {{ form.shape }}
+                            {{ form.shape.errors }}
+                            <div data-other-wrapper="shape" style="display: none;">
+                                <label class="kb-label" for="{{ form.shape_other.id_for_label }}">Shape &mdash; in your words</label>
+                                {{ form.shape_other }}
+                                {{ form.shape_other.errors }}
+                            </div>
                         </div>
-                        <div>
-                            <label class="form-label" for="{{ image_form.sort_order.id_for_label }}">Sort order</label>
-                            {{ image_form.sort_order }}
+                        <div class="if-field{% if form.colors.errors %} has-error{% endif %}">
+                            <label class="kb-label" for="{{ form.colors.id_for_label }}">Colours</label>
+                            {{ form.colors }}
+                            {{ form.colors.errors }}
+                            <div data-other-wrapper="colors" style="display: none;">
+                                <label class="kb-label" for="{{ form.colors_other.id_for_label }}">Colour &mdash; in your words</label>
+                                {{ form.colors_other }}
+                                {{ form.colors_other.errors }}
+                            </div>
+                        </div>
+                        <div class="if-field{% if form.resident_status.errors %} has-error{% endif %}">
+                            <label class="kb-label" for="{{ form.resident_status.id_for_label }}">Resident status</label>
+                            {{ form.resident_status }}
+                            {{ form.resident_status.errors }}
                         </div>
                     </div>
-                </article>
-            {% endfor %}
-        </div>
+                </div>
+            </details>
 
-        <div style="margin-top: 1.25rem;">
-            <button type="submit" class="btn-primary">Add to my collection</button>
-            <a href="{% url 'orders:detail' order.pk %}" style="margin-left: 0.75rem; color: var(--color-aged-amber);">
-                Cancel
-            </a>
+            <section class="if-section">
+                <div class="if-section-head">
+                    <h2>Where it stands</h2>
+                    <span class="if-section-line"></span>
+                </div>
+                <div class="if-field">
+                    <label class="kb-check" style="justify-content: flex-start;">
+                        {{ form.is_public }} <span>Show it on my profile</span>
+                    </label>
+                </div>
+                {% include 'collections/_trade_block.html' %}
+            </section>
+
+            <section class="if-section">
+                <div class="if-section-head">
+                    <h2>Photographs</h2>
+                    <span class="if-section-line"></span>
+                    <span class="if-section-note">the listing&rsquo;s photographs copy across on their own</span>
+                </div>
+                {{ image_formset.management_form }}
+                <div class="if-grid">
+                    {% for image_form in image_formset %}
+                        <div class="if-photo-row">
+                            {{ image_form.id }}
+                            {{ image_form.sort_order }}
+                            {{ image_form.image_role }}
+                            <span class="if-row-thumb if-row-thumb--empty"></span>
+                            <div class="if-photo-row-body">
+                                <span class="if-photo-role">More, if you took your own</span>
+                                {{ image_form.image }}
+                                {{ image_form.errors }}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <div class="if-foot">
+                <button type="submit" class="if-go">Add it to my collection</button>
+                <a class="if-foot-cancel" href="{% url 'orders:detail' order.pk %}">Back to the order</a>
+                <span class="if-foot-note">It joins your county and year runs the moment it lands.</span>
+            </div>
         </div>
     </form>
 
@@ -161,13 +205,13 @@
     honouring the closing one -- which closed the host form early and
     orphaned the submit button and every field after this point.
     {% endcomment %}
-    <details style="margin-top: 1rem;">
-        <summary style="cursor: pointer; color: var(--color-aged-amber);">Is a value missing?</summary>
-        <div style="margin-top: 0.75rem;">
+    <details class="if-more">
+        <summary>Is a value missing?</summary>
+        <div class="if-more-body">
             {% include 'core/_reference_data_suggestion_form.html' %}
         </div>
     </details>
-</section>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -183,13 +227,37 @@ document.addEventListener('DOMContentLoaded', () => {
         const wrapper = document.querySelector(`[data-other-wrapper="${fieldName}"]`);
         if (!field || !wrapper) return;
         let show = false;
-        if (field.multiple) {
+        if (field.tagName !== 'SELECT') {
+            show = Array.from(field.querySelectorAll('input:checked')).some((input) => {
+                const label = input.closest('label');
+                const text = label ? label.textContent.trim().toLowerCase() : '';
+                return text === 'other' || input.value === 'other';
+            });
+        } else if (field.multiple) {
             show = Array.from(field.selectedOptions).some((o) => o.value === 'other' || o.text.trim().toLowerCase() === 'other');
         } else {
             const selected = field.options[field.selectedIndex];
             show = selected && selected.text.trim().toLowerCase() === 'other';
         }
         wrapper.style.display = show ? '' : 'none';
+    };
+
+    const rebuildChecklist = (container, name, items) => {
+        const checked = Array.from(container.querySelectorAll('input:checked')).map(i => i.value);
+        container.innerHTML = '';
+        items.forEach((item, i) => {
+            const label = document.createElement('label');
+            label.className = 'chip-option';
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.name = name;
+            input.value = item.id;
+            input.id = `id_${name}_${i}`;
+            if (checked.includes(String(item.id))) input.checked = true;
+            label.appendChild(input);
+            label.appendChild(document.createTextNode(' ' + item.name));
+            container.appendChild(label);
+        });
     };
 
     const loadReferenceData = async () => {
@@ -213,15 +281,20 @@ document.addEventListener('DOMContentLoaded', () => {
         taxonomyFields.forEach((fieldName) => {
             const field = document.getElementById(`id_${fieldName}`);
             if (!field) return;
-            const currentValue = field.value;
-            field.innerHTML = `<option value="">Select ${fieldName.replace('_', ' ')}</option>`;
-            (ltData.results[fieldName] || []).forEach((item) => {
-                const opt = document.createElement('option');
-                opt.value = item.id;
-                opt.textContent = item.name;
-                if (String(item.id) === currentValue) opt.selected = true;
-                field.appendChild(opt);
-            });
+            const items = ltData.results[fieldName] || [];
+            if (field.tagName !== 'SELECT') {
+                rebuildChecklist(field, fieldName, items);
+            } else {
+                const currentValue = field.value;
+                field.innerHTML = `<option value="">${fieldName === 'issue_class' ? 'Ordinary issue' : 'Select ' + fieldName.replace('_', ' ')}</option>`;
+                items.forEach((item) => {
+                    const opt = document.createElement('option');
+                    opt.value = item.id;
+                    opt.textContent = item.name;
+                    if (String(item.id) === currentValue) opt.selected = true;
+                    field.appendChild(opt);
+                });
+            }
             updateOtherWrapper(fieldName);
         });
     };

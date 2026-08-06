@@ -394,6 +394,15 @@
             this.dirty = Boolean(this.input.value.trim()) && !cfg.freshTitle;
             this.input.addEventListener('input', () => { this.dirty = true; });
 
+            // Fresh record: the written-for-you panel fronts for the input
+            // (turn 5b). Anybody without JavaScript just gets the input.
+            const panel = el('[data-title-panel]');
+            const field = el('[data-title-field]');
+            if (panel && field && !this.dirty) {
+                panel.hidden = false;
+                field.hidden = true;
+            }
+
             const own = el('[data-title-own]');
             if (own) {
                 own.addEventListener('click', () => {
