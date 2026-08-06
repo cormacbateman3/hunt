@@ -20,7 +20,10 @@
 
 {% block main_class %}kb-order{% endblock %}
 
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/order.css' %}">{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/order.css' %}">
+<link rel="stylesheet" href="{% static 'css/pages/review-card.css' %}">
+{% endblock %}
 
 {% block content %}
 {% comment %}
@@ -209,18 +212,21 @@ package inputs, which were captured on the listing.
 
         {% if can_review %}
             <section class="ord-section">
-                <div class="ord-rule">
-                    <h2 class="ord-rule-title">Say how it went</h2>
-                    <span class="ord-rule-line" aria-hidden="true"></span>
-                </div>
-                <form method="post" action="{% url 'reviews:submit_order' order.pk %}" class="ord-review">
-                    {% csrf_token %}
-                    {{ review_form.as_p }}
-                    <button type="submit" class="kb-btn kb-btn--primary">Leave a review</button>
-                </form>
+                {% if user.id == order.buyer_id %}
+                    {% url 'reviews:submit_order' order.pk as review_action %}
+                    {% include 'reviews/_review_form.html' with form=review_form action=review_action other=order.seller reviewing='seller' next_word='the next buyer' %}
+                {% else %}
+                    {% url 'reviews:submit_order' order.pk as review_action %}
+                    {% include 'reviews/_review_form.html' with form=review_form action=review_action other=order.buyer reviewing='buyer' next_word='the next seller' %}
+                {% endif %}
             </section>
         {% elif existing_review %}
-            <p class="ord-quiet">You left a review on {{ existing_review.created_at|date:"j F" }}.</p>
+            <p class="ord-quiet">
+                You said <strong>{{ existing_review.get_sentiment_display }}</strong>
+                on {{ existing_review.created_at|date:"j F" }}
+                {% if existing_review.body %}&mdash; &ldquo;{{ existing_review.body }}&rdquo;{% endif %}.
+                A review stands as written.
+            </p>
         {% endif %}
     </div>
 

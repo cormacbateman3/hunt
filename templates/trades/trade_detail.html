@@ -3,7 +3,10 @@
 
 {% block title %}Trade with {{ other.profile.get_display_name|default:other.username }} &middot; KeystoneBid{% endblock %}
 
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/trade-board.css' %}">{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/trade-board.css' %}">
+<link rel="stylesheet" href="{% static 'css/pages/review-card.css' %}">
+{% endblock %}
 
 {% block main_class %}kb-composer{% endblock %}
 
@@ -184,31 +187,27 @@ the only thing this page is really for is finding out whose turn it is.
         {% endif %}
 
         {% if trade.status == 'completed' %}
-            <section class="tb-band">
-                <div class="tb-band-said">
-                    <p class="tb-band-who">How was it?</p>
-                    {% if existing_review %}
+            {% if existing_review %}
+                <section class="tb-band">
+                    <div class="tb-band-said">
+                        <p class="tb-band-who">How was it?</p>
                         <p class="tb-band-small">
-                            You said: <strong>{{ existing_review.get_sentiment_display }}</strong>
-                            {% if existing_review.body %}&mdash; {{ existing_review.body }}{% endif %}
+                            You said <strong>{{ existing_review.get_sentiment_display }}</strong>
+                            {% if existing_review.body %}&mdash; &ldquo;{{ existing_review.body }}&rdquo;{% endif %}.
+                            A review stands as written.
                         </p>
+                    </div>
+                </section>
+            {% elif can_review %}
+                <section class="tb-review-ground">
+                    {% url 'reviews:submit_trade' trade.pk as review_action %}
+                    {% if user.id == trade.initiator_id %}
+                        {% include 'reviews/_review_form.html' with form=review_form action=review_action other=trade.counterparty reviewing='trader' next_word='the next trader' %}
+                    {% else %}
+                        {% include 'reviews/_review_form.html' with form=review_form action=review_action other=trade.initiator reviewing='trader' next_word='the next trader' %}
                     {% endif %}
-                </div>
-                {% if existing_review %}
-                {% elif can_review %}
-                    <form method="post" action="{% url 'reviews:submit_trade' trade.pk %}" class="tb-review">
-                        {% csrf_token %}
-                        <div class="tb-review-picks">
-                            {% for value, label in review_form.fields.sentiment.choices %}
-                                <label><input type="radio" name="sentiment" value="{{ value }}" required> {{ label }}</label>
-                            {% endfor %}
-                        </div>
-                        {{ review_form.body.errors }}
-                        {{ review_form.body }}
-                        <button type="submit" class="tb-decide tb-decide--go">Leave the review</button>
-                    </form>
-                {% endif %}
-            </section>
+                </section>
+            {% endif %}
         {% endif %}
     {% include 'trades/_story.html' %}
 </div>

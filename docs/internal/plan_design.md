@@ -780,8 +780,22 @@ Dev plan **10.13**.
   departure, standing: *"write to them instead"*, never "him" — pronouns are not
   guessed here. `django.contrib.humanize` joined the apps for the *yesterday /
   2 hours ago* bylines.
-- **Reviews** ⬜ — each of the three options gets a line describing the deal it fits,
-  and the footer draws the line between a poor review and an actual complaint.
+- **Reviews** ✅ **done 2026-08-06** · 508 tests green (7 added). The three words
+  become **Good / Middling / Poor** at the model (stored keys unchanged — a label
+  migration, so every display site changes at once; the derived *"98% positive"*
+  summaries keep their phrasing). One shared card, `reviews/_review_form.html`,
+  now serves **both** order and trade detail so the two can never drift: title
+  asks about the counterparty by name, each option carries the line describing
+  the deal it fits (role-aware — a seller reviewing a *buyer* reads "Paid on
+  time, easy to deal with", not "packed it well"), the 255-character line has
+  its counter, and the footer says both halves — *you can't change it
+  afterwards* (true: no edit route, second submits turned away) and *a review
+  isn't a complaint*. The **report-it word is deliberately not a link yet** —
+  9c's Report model doesn't exist, and this document does not draw controls
+  over nothing; when it lands, the sentence gains its link. A left review
+  renders as the record it is: *"You said Good — '…'. A review stands as
+  written."* Trade detail's hand-rolled pick row (which rendered a `---------`
+  radio) is gone with its orphaned CSS.
 - **Report / Appeal** ⬜ — both 10.13, neither built. **Blocked on the `Report` model**
   (see Carried-over). When it lands, the Q&A entries' quiet Report word should
   point into it rather than the bare flag toggle.

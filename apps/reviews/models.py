@@ -3,10 +3,13 @@ from django.contrib.auth.models import User
 
 
 class Review(models.Model):
+    # Three bare words named Positive / Neutral / Negative gave no sense of
+    # what the middle meant. The stored keys are unchanged; the words are
+    # turn 9b's, and the form adds a line describing the deal each one fits.
     SENTIMENT_CHOICES = [
-        ('positive', 'Positive'),
-        ('neutral', 'Neutral'),
-        ('negative', 'Negative'),
+        ('positive', 'Good'),
+        ('neutral', 'Middling'),
+        ('negative', 'Poor'),
     ]
 
     MODERATION_CHOICES = [

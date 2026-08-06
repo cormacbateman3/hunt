@@ -1,0 +1,80 @@
+{% comment %}
+The review card — turn 9b. One card, both deal types, so the two never
+drift. Include with:
+
+    form       — the ReviewForm
+    action     — the submit URL
+    other      — the member being reviewed
+    reviewing  — 'seller' | 'buyer' | 'trader' (picks the describing lines)
+    next_word  — who reads this next: "the next buyer" / "the next trader"
+
+Each option carries a line describing the deal it fits, because three bare
+words gave no sense of what the middle meant. The footer draws the line
+between a poor review and an actual complaint — the distinction the
+enforcement system depends on. A review cannot be changed afterwards, and
+the card says so before the button.
+{% endcomment %}
+<div class="rv-card">
+    <h2 class="rv-title">How was {{ other.profile.get_display_name }} to deal with?</h2>
+    <p class="rv-sub">One review per deal, from each side. It goes on their profile with your name on it.</p>
+
+    <form method="post" action="{{ action }}" class="rv-form">
+        {% csrf_token %}
+        <div class="rv-picks">
+            <label class="rv-pick">
+                <input type="radio" name="sentiment" value="positive" required>
+                <span class="rv-pick-title">Good &mdash; I&rsquo;d deal with them again</span>
+                <span class="rv-pick-line">
+                    {% if reviewing == 'buyer' %}Paid on time, easy to deal with
+                    {% else %}Described it right, packed it well, sent it on time{% endif %}
+                </span>
+            </label>
+            <label class="rv-pick">
+                <input type="radio" name="sentiment" value="neutral" required>
+                <span class="rv-pick-title">Middling</span>
+                <span class="rv-pick-line">
+                    {% if reviewing == 'buyer' %}It closed, but something wasn&rsquo;t right
+                    {% else %}It got here, but something wasn&rsquo;t right{% endif %}
+                </span>
+            </label>
+            <label class="rv-pick">
+                <input type="radio" name="sentiment" value="negative" required>
+                <span class="rv-pick-title">Poor</span>
+                <span class="rv-pick-line">I&rsquo;d think twice next time</span>
+            </label>
+        </div>
+        {{ form.sentiment.errors }}
+
+        <div class="rv-line">
+            <div class="rv-line-head">
+                <label class="kb-label" for="{{ form.body.id_for_label }}">A line about it</label>
+                <span class="rv-count" data-rv-count>0 / 255</span>
+            </div>
+            {{ form.body }}
+            <span class="kb-hint">
+                Say what {{ next_word|default:'the next buyer' }} would want to know.
+                Keep people&rsquo;s addresses and prices out of it.
+            </span>
+            {{ form.body.errors }}
+        </div>
+
+        <div class="rv-foot">
+            <button type="submit" class="rv-go">Leave it</button>
+            <p class="rv-warn">
+                You can&rsquo;t change it afterwards, so take a moment. If something
+                actually went wrong, report it &mdash; a review isn&rsquo;t a complaint.
+            </p>
+        </div>
+    </form>
+</div>
+<script>
+(function () {
+    var card = document.currentScript.previousElementSibling;
+    var body = card.querySelector('textarea[name="body"]');
+    var out = card.querySelector('[data-rv-count]');
+    if (!body || !out) return;
+    var say = function () { out.textContent = body.value.length + ' / 255'; };
+    body.addEventListener('input', say);
+    say();
+})();
+</script>

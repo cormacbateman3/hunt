@@ -1,0 +1,157 @@
+/* ==========================================================================
+   The review card — turn 9b, shared by order and trade detail.
+
+   Three options with a line each, so the middle means something. Selected
+   reads as agreement (the live green), not celebration. The button is dark
+   and full width because it is the only decision on the card, and the
+   footnote below it is the last thing read before the click — which is
+   exactly where "you can't change it afterwards" belongs.
+   ========================================================================== */
+
+.rv-card {
+    background: var(--kb-surface);
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-width: 480px;
+}
+
+.rv-title {
+    font-family: var(--kb-font-display);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--kb-forest);
+    margin: 0;
+    line-height: 1.25;
+}
+
+.rv-sub {
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--kb-ink-3);
+    margin: 0 0 10px;
+}
+
+.rv-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.rv-picks {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.rv-pick {
+    border: 1px solid var(--kb-rule-strong);
+    background: var(--kb-surface);
+    border-radius: var(--kb-r-md);
+    padding: 11px 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    cursor: pointer;
+    margin: 0;
+}
+
+.rv-pick input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.rv-pick-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--kb-ink);
+}
+
+.rv-pick-line {
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--kb-ink-3);
+}
+
+.rv-pick:has(input:checked) {
+    border-color: var(--kb-live);
+    background: var(--kb-live-bg, #eef3ea);
+}
+
+.rv-pick:has(input:checked) .rv-pick-title {
+    color: var(--kb-live);
+    font-weight: 700;
+}
+
+.rv-pick:has(input:checked) .rv-pick-line {
+    color: var(--kb-ink-2);
+}
+
+.rv-pick:focus-within {
+    outline: 2px solid var(--kb-forest);
+    outline-offset: 1px;
+}
+
+.rv-line {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.rv-line-head {
+    display: flex;
+    align-items: baseline;
+}
+
+.rv-line-head .kb-label { margin-bottom: 0; }
+
+.rv-count {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--kb-ink-4);
+    font-variant-numeric: tabular-nums;
+}
+
+.rv-foot {
+    border-top: 1px solid var(--kb-rule-soft);
+    padding-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.rv-go {
+    width: 100%;
+    background: var(--kb-forest);
+    color: #fff;
+    border: 0;
+    border-radius: var(--kb-r-md);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    padding: 13px;
+    cursor: pointer;
+    text-align: center;
+}
+
+.rv-go:hover { background: var(--kb-forest-deep, #1c2717); }
+
+.rv-warn {
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--kb-ink-4);
+    text-align: center;
+    margin: 0;
+}
+
+/* On the trade page the card sits on its own ground after the parcels. */
+.tb-review-ground {
+    display: flex;
+    justify-content: center;
+    padding: 4px 0;
+}
