@@ -1329,3 +1329,51 @@ is seed data plus one constant if a better word ever arrives.
 
 
 In the trading block module everything says closes a gap even when it doesn't. Same with What you Came For it just makes one up if you came not through an item link (like just from a collectors page it will just randomlly say one is what you came for).
+
+
+
+
+
+The Almanac. I put it in the nav and drew one entry on the home page, but never the section itself: era guides, county spotlights, the daily three questions.
+
+Smaller, still real: lots listing, writing a review, Q&A on a listing, report/appeal forms, the national map at full size, and the notification emails (seven templates — worth doing, they're most people's main contact with the site).
+
+Deliberately last: mobile, empty states, admin dashboard
+
+
+Home Page Greeting Ideas:
+Late one tonight, huh.
+First light already.
+Welcome back, [name].
+Good to see you, [name].
+Still chasing '37, [name]?
+Sixty-two of sixty-seven.
+One county left in Maryland.
+Small game in two weeks.
+Archery season's close.
+Deer camp weather.
+Last light of the season.
+Good scouting weather out there.
+Back tag weather, if there's such a thing.
+Opening day's closer than you think.
+Zeroed the rifle yet?
+Public land's calling your name.
+Quiet as a Sunday license office.
+Nothing wrong with another look.
+Fair morning for county-chasing.
+Still holds up, this weather.
+You know where the good ones hide.
+You're closer than you think.
+You've earned a look today.
+Something's waiting in the trade box.
+One bid came in overnight.
+A trade offer's on the table.
+Your wanted list got a hit.
+The counties don't fill themselves.
+Kept the bench warm for you.
+Not much moving. Worth a look anyway.
+Album's got room for one more.
+New listing since you left.
+Drawer's not as full as it looks.
+Wind's up. Good day to sit and look.
+Your collection always got room for one more.

@@ -71,7 +71,7 @@ logs/
 Thumbs.db
 
 # Other
-# claude.md
+claude.md
 #docs/internal/
 #utilities/references/
 sandbox/t8_raws.json
