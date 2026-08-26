@@ -41,6 +41,8 @@ The app is striving for genuine authenticity.
 
 The code should be modular - so that it is easy to find and do updates.
 
+If there is a dependency in the development plan that blocks the task do not silently skip. Move the task down the development plan with details on the dependency. Nothing should silently drop unless agreed upon that it will no longer be implemented.
+
 ## Tech stack (do not introduce alternatives without asking)
 
 - **Backend:** Django 5.0, Python

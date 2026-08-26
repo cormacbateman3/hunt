@@ -2,12 +2,12 @@
 Notification services for sending emails
 """
 import logging
-import re
 from datetime import timedelta
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.utils import timezone
+from . import letters
 from .models import Notification
 
 logger = logging.getLogger(__name__)
@@ -23,45 +23,31 @@ CRITICAL_EMAIL_TYPES = {
 }
 
 
-def _extract_first_url(text):
-    match = re.search(r'https?://\S+', text or '')
-    return match.group(0) if match else None
-
-
 def send_notification_email(notification):
-    """Send an email for a notification"""
+    """Send the letter for a notification.
 
-    subject_map = {
-        'outbid': 'You have been outbid',
-        'auction_won': 'Congratulations! You won an auction',
-        'auction_sold': 'Your item sold!',
-        'auction_expired': 'Your auction expired',
-        'payment_received': 'Payment received',
-        'payment_confirmed': 'Payment confirmed',
-    }
-    template_map = {
-        'outbid': 'emails/notifications/outbid.html',
-        'auction_won': 'emails/notifications/auction_won.html',
-        'auction_sold': 'emails/notifications/auction_sold.html',
-        'auction_expired': 'emails/notifications/auction_expired.html',
-        'payment_received': 'emails/notifications/payment_received.html',
-        'payment_confirmed': 'emails/notifications/payment_confirmed.html',
-    }
+    One shell and one builder per letter (see ``letters.py``) rather than a
+    subject map of shouty labels and six near-identical templates. The
+    subject is the letter's own sentence, with no ``[KeystoneBid]`` prefix:
+    the sender name already says who it is from, and the front of a subject
+    line is the most valuable space in an inbox — it should carry the item
+    and the number, not our own name a second time.
+    """
+    site_url = settings.SITE_URL.rstrip('/')
+    letter = letters.build(notification)
 
-    subject = subject_map.get(notification.notification_type, 'KeystoneBid Notification')
-    template_name = template_map.get(notification.notification_type, 'emails/notification.html')
-
-    html_message = render_to_string(template_name, {
+    html_message = render_to_string('emails/letter.html', {
+        'letter': letter,
         'notification': notification,
         'user': notification.user,
-        'action_url': _extract_first_url(notification.message),
-        'site_url': settings.SITE_URL.rstrip('/'),
+        'settings_path': letters.settings_url(),
+        'site_url': site_url,
     })
 
     try:
         send_mail(
-            subject=f'[KeystoneBid] {subject}',
-            message=notification.message,
+            subject=letter['subject'],
+            message=letters.as_text(letter, site_url),
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[notification.user.email],
             html_message=html_message,

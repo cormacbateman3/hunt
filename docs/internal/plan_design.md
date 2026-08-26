@@ -757,12 +757,55 @@ money and nothing there is for sale.
 **Design refs** — turn 9a (emails), 9b (Q&A + reviews), 9c (report + appeal).
 Dev plan **10.13**.
 
-- **One email shell, seven letters** ⬜ — green bar, mark, date, a **serif headline
-  that is a sentence** (not the enum label the generic template prints today), an
-  optional item block, one action, a footer saying why it arrived. 560px, Georgia,
-  nothing depends on an image loading. Two lines worth stealing: *"Replies to this
-  address reach a person, not a machine"* and, on anything with a deadline, the
-  consequence in plain words.
+> **Where it stands:** letters ✅, Q&A ✅, reviews ✅ — **9a and 9b are done**.
+> Only **9c (report + appeal)** is left, and it is blocked rather than
+> unstarted: see the entry at the foot of this pass. Two letters are sent by
+> nobody yet and are in the register with their triggers named.
+
+- **One email shell, seven letters** ✅ **done 2026-08-06** · 535 tests green
+  (27 added) · **six of the seven sent; two more registered, not dropped.**
+
+  The charge was exact, not rhetorical: `templates/emails/notification.html`
+  really did print `{{ notification.get_notification_type_display }}` as its
+  heading with `{{ notification.message }}` pasted under it, closing with
+  *"Please do not reply to this email."*
+
+  **The fix was one level below the templates.** `send_notification_email`
+  passed a letter only the notification, the user, and a URL **scraped out of
+  the message text with a regex** — so no letter *could* say "Your bid was
+  $390. It is now at $402." A prettier wrapper would have changed nothing.
+  `apps/notifications/letters.py` is the missing half: one builder per letter,
+  each resolving the real record (a `Notification` carries no FK to its
+  subject — only a `link_url` like `/orders/12/`) and returning what the shell
+  needs. Every builder fails soft to the plain letter, because these run in a
+  cron job and one bad row must not stop the post.
+
+  | Letter | Says |
+  |---|---|
+  | Outbid | your bid, the new bid, the close time and the countdown; the button is *Bid $412.00 and stay in it* |
+  | Won | won-at, from whom, after how many bids, the total with shipping to your town; brass *Pay $220.40*, and the 24-hour consequence in bold |
+  | Ship-by | who paid and when, the derived date, and the three ways out (label here / own postage / handshake) |
+  | Sale made · Ended unsold · Payment went through | the same shell with their own headline and item block, as the designer says they should be |
+  | Everything else (~30 types) | the shell, honestly filled — the first sentence becomes the headline, and the button borrows the **notification centre's own words** so the letter and the in-app row can't disagree |
+
+  **The shell is tables and inline styles, not flexbox** — the honest
+  translation of a design drawn in a browser, since Outlook and much of the
+  mail estate read neither `display:flex` nor a `<style>` block. Every value
+  is the frame's: 560px, Georgia, `#26331f` bar, `#fdfcf8` ground, the 88×68
+  thumb, the hairlines. Nothing depends on an image loading, and the plain-text
+  alternative is now **the same letter with the markup off** rather than the
+  raw message string. `[KeystoneBid]` is gone from the subject: the sender name
+  already says who it is from, and the front of a subject line should carry the
+  item and the number.
+
+  **Three faults the render caught that the tests did not** — worth recording,
+  because it is the same lesson as the trade board: *"after one bids"*; HTML
+  entities (`you don&#x27;t`) leaking into the plain-text part; and a county
+  count that read **68 counties** for a 67-county state. All three now have
+  tests. The third became a register entry rather than a patch.
+
+  Seven old templates deleted (`emails/notification.html` and the six per-type
+  ones); the `_extract_first_url` regex went with them.
 - **Q&A** ✅ **done 2026-08-06** · commit `961c5e6` · 501 tests green (13 added).
   Answers indent 39px under their questions with the seller marked in brass
   (*"Harold Kreider, the seller"*); an unanswered one is visibly *waiting on an
@@ -796,9 +839,17 @@ Dev plan **10.13**.
   renders as the record it is: *"You said Good — '…'. A review stands as
   written."* Trade detail's hand-rolled pick row (which rendered a `---------`
   radio) is gone with its orphaned CSS.
-- **Report / Appeal** ⬜ — both 10.13, neither built. **Blocked on the `Report` model**
-  (see Carried-over). When it lands, the Q&A entries' quiet Report word should
-  point into it rather than the bare flag toggle.
+- **Report / Appeal** ⬜ **BLOCKED, not skipped** — both 10.13, neither built.
+  **Blocked on:** there is no `Report` model, and the appeal screen needs to
+  bind to a `Strike` with its due date, marked date, expiry and prior-count
+  (`apps/enforcement` has `Strike`, so the appeal is the nearer of the two).
+  The design draws both fully — five report categories, four appeal reasons,
+  the *"a person reads every one of these"* acknowledgement, and the rule that
+  **standing is suspended while an appeal is open**.
+  **Clears when:** the `Report` model lands (10.13 proper).
+  **Then also:** the Q&A entry's quiet *Report* word and the review card's
+  *report it* sentence both currently go nowhere by design — they should point
+  into this flow the day it exists.
 
 ---
 
@@ -1049,6 +1100,9 @@ coming back for it.
 | **Saved hunts** — standing searches that go looking for you | omitted from Saved; marker in `templates/favorites/list.html` | no `SavedHunt` model | **10** | render the strip where the marker sits |
 | **Named sets** on My collection | omitted; marker in `templates/collections/my_collection.html` | no `CollectionSet` model | **13** | render the set strip |
 | **Closing price** on a sold favourite | the row says only that it sold | price history | **12** | print what it made |
+| **The wanted-match letter** — *"A 1916 Cameron has come up. First one in fourteen months."* | **not sent at all**; the shell and builders are ready, so this is one builder plus a trigger | three things, none of them the letter: no `wanted_match` notification type, no matching pass over `WantedItem` when a listing goes live, and no job to run it. The design calls this *"the best letter you can send"* | **10 / 13** (with saved hunts + `WantedItem` work, 10.14) | add the type, a `letters._wanted_match` builder, and fire it from listing publication; the scarcity line ("first one in fourteen months") needs price/listing history |
+| **The seller's payment letter** — *"Your money for the 1938 Warren has arrived"* | **not sent at all**; `payment_received` is a declared notification type that **nothing anywhere creates** | no `create_notification(... 'payment_received')` call in the payment webhook or service — the buyer gets `payment_confirmed`, the seller gets nothing until the ship-by reminder | **later** (a payments change, not a design one) | fire it from the same place `payment_confirmed` is raised; the builder is a four-line sibling of `_payment_confirmed` |
+| **The counted county gap** — *"Sullivan is one of the twenty-six counties you don't have yet"* | the outbid letter says *"That would be your first Sullivan."* instead | no honest denominator: a state's `GeographicUnit` rows include administrative pseudo-units (PA's *Out-of-State*, code 68), so counting them says *68 counties* for a 67-county state | **9 / 10** (with the unit taxonomy the map needs) | count real units once they are distinguishable, and restore the counted sentence |
 
 ---
 
