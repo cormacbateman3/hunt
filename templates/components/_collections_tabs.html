@@ -14,10 +14,10 @@ collects what I collect.
            {% if zone_tab == 'trade' %}aria-current="page"{% endif %}>Trade board</a>
 
         {% comment %}
-        DEFERRED — The map renders an honest placeholder.
-        Blocked on: county geometry (no outlines exist) + GeographicUnit
-        valid_from/valid_to, both Pass 9/10.
-        Register: docs/internal/plan_design.md
+        The map is drawn (Pass 9): county shapes live in static/data and the
+        tab renders the ground-map component. Historical boundaries are
+        still measured against today's map until GeographicUnit
+        valid_from/valid_to lands (register, Pass 10).
         {% endcomment %}
         <a href="{% url 'collectors' %}?tab=map" class="kb-tab"
            {% if zone_tab == 'map' %}aria-current="page"{% endif %}>The map</a>

@@ -61,7 +61,8 @@ def ground_covered(user, *, public_only=True):
 
     rows = list(
         items.filter(state__isnull=False)
-        .values('state_id', 'state__name', 'state__issuance_unit_label',
+        .values('state_id', 'state__name', 'state__code',
+                'state__issuance_unit_label',
                 'county_id', 'county__name', 'license_year')
     )
     if not rows:
@@ -100,6 +101,7 @@ def ground_covered(user, *, public_only=True):
 
     return {
         'state_name': state_name,
+        'state_code': state_rows[0]['state__code'],
         'unit_label': unit_label,
         'unit_label_plural': plural_unit(unit_label),
         'held': len(held),

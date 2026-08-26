@@ -1,26 +1,28 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}The map &middot; Collections &middot; KeystoneBid{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/ground-map.css' %}">
+{% endblock %}
 
 {% block context_band %}{% include 'components/_collections_tabs.html' %}{% endblock %}
 
 {% block content %}
-{% comment %}
-The counties exist as records; their outlines do not. Saying so beats
-drawing a control over nothing.
-{% endcomment %}
-<div class="kb-empty">
-    <h2>The map isn&rsquo;t drawn yet</h2>
+<div class="gm-page-head">
+    <h1>Hunt by ground</h1>
     <p>
-        Every county is in the database; none of them has an outline. Until the
-        geometry lands, the matrix answers the same question in rows and columns
-        &mdash; which counties and which years you hold, and which you never could.
-    </p>
-    <div class="kb-empty-actions">
         {% if user.is_authenticated %}
-            <a href="{% url 'collections:my_collection' %}" class="kb-btn kb-btn--primary">My collection</a>
+            Your collection drawn on the ground it came from. The shade is
+            what you hold; the gold hatching is something for sale on ground
+            you haven&rsquo;t got &mdash; the one thing a collector scans for.
+        {% else %}
+            What&rsquo;s for sale, drawn on the ground it was issued for.
+            Sign in and the same map shows your own collection against it.
         {% endif %}
-        <a href="{% url 'collectors' %}" class="kb-btn kb-btn--secondary">Back to collectors</a>
-    </div>
+    </p>
 </div>
+
+{% include 'components/_ground_map.html' with gm_id='collections-map' %}
 {% endblock %}

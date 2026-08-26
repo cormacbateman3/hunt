@@ -15,6 +15,8 @@ about themselves.
 from django.contrib.auth.models import User
 from django.db.models import Count, Max, Min, Q
 
+from apps.core.geodistance import miles_between
+
 from .matching import (
     MAX_WANTS_MATCHED,
     holdings,
@@ -370,6 +372,24 @@ def collector_rows(viewer, params):
     home_counties = _home_counties(user_ids)
     openers = _propose_targets(user_ids, wants)
 
+    # "38 miles from you" — stated home to stated home, over the county
+    # centroids the map's topology gives us. Nothing prints unless both
+    # sides have said where home is and home has a shape.
+    viewer_fips = None
+    if viewer_id:
+        viewer_profile = getattr(viewer, 'profile', None)
+        if viewer_profile is not None and viewer_profile.home_county_id:
+            viewer_fips = viewer_profile.home_county.fips_code
+    home_fips = {}
+    if viewer_fips:
+        from apps.accounts.models import UserProfile
+
+        home_fips = dict(
+            UserProfile.objects
+            .filter(user_id__in=user_ids, home_county__isnull=False)
+            .values_list('user_id', 'home_county__fips_code')
+        )
+
     rows, featured = [], 0
     for user in users:
         overlap = wants_per_owner.get(user.id, 0)
@@ -384,6 +404,8 @@ def collector_rows(viewer, params):
             'user': user,
             'name': user.profile.get_display_name() if hasattr(user, 'profile') else user.username,
             'place': _place(user, home_counties),
+            'miles': miles_between(viewer_fips, home_fips.get(user.id))
+                     if viewer_fips else None,
             'since': _since(user),
             'bio': (user.profile.bio if hasattr(user, 'profile') else '') or '',
             'item_count': user.item_count,

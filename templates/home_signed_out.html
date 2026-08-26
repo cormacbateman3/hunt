@@ -5,7 +5,8 @@
 
 {% block masthead %}{% include 'components/_masthead.html' %}{% endblock %}
 
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/home.css' %}">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/home.css' %}">
+<link rel="stylesheet" href="{% static 'css/pages/ground-map.css' %}">{% endblock %}
 
 {% block content %}
 
@@ -128,5 +129,17 @@ telling what changed.
             </div>
         </div>
     </div>
+</section>
+
+{% comment %}
+A stranger's first honest look at the goods: the whole country, shaded by
+what is actually for sale today. Click a state and the map opens there.
+{% endcomment %}
+<section class="hm-ground">
+    <div class="hm-ground-head">
+        <h2>Hunt by ground</h2>
+        <a href="{% url 'hunt_map' %}" class="hm-panel-link">Open the map &rarr;</a>
+    </div>
+    {% include 'components/_ground_map.html' with gm_id='home-ground-map' gm_small=True gm_scope='us' gm_lens='listed' gm_height=340 %}
 </section>
 {% endblock %}

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}The map &middot; Hunt | KeystoneBid{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/ground-map.css' %}">
+{% endblock %}
+
+{% block context_band %}{% include 'components/_hunt_tabs.html' %}{% endblock %}
+
+{% block content %}
+<div class="gm-page-head">
+    <h1>The map</h1>
+    <p>
+        What&rsquo;s for sale, drawn on the ground it was issued for. The
+        shade is supply; the brass rule inside a border is ground you
+        already hold &mdash; together they answer where to look for
+        something you haven&rsquo;t got.
+    </p>
+</div>
+
+{% include 'components/_ground_map.html' %}
+{% endblock %}

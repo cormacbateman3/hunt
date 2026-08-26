@@ -20,6 +20,7 @@ urlpatterns = [
     # people and what they own, My Bench is your workspace, The Almanac is
     # what the community knows. Top-level, because they are the navigation.
     path('hunt/', listing_views.HuntView.as_view(), name='hunt'),
+    path('hunt/map/', listing_views.hunt_map, name='hunt_map'),
     path('collections/', collection_views.collections_zone, name='collectors'),
     path('bench/', account_views.bench, name='bench'),
     path('almanac/', core_views.almanac, name='almanac'),

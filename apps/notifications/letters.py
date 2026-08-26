@@ -188,28 +188,48 @@ def _item(listing, extra_facts=None):
 
 
 def _county_gap(user, listing):
-    """'That would be your first Sullivan.'
+    """'Sullivan is one of the 26 counties you don't have yet.'
 
-    The design writes this as *"Sullivan is one of the twenty-six counties
-    you don't have yet"*, which needs a denominator we cannot state
-    honestly: a state's units include administrative pseudo-rows — PA's
-    "Out-of-State", code 68 — so counting them yields *sixty-eight
-    counties* for a state with sixty-seven. Saying what is true of the
-    reader's own shelf needs no denominator at all, and reads warmer.
-
-    DEFERRED — the counted sentence from the drawing.
-    Blocked on: no way to tell a real unit from an administrative one.
-    Register: docs/internal/plan_design.md
+    The drawing's counted sentence, honest at last. The denominator is
+    ``ground.real_units`` — units with a FIPS shape, or real non-county
+    units — which refuses the administrative rows that once made this
+    letter say *sixty-eight counties* about a sixty-seven-county state
+    (PA's "Out-of-State", code 68). Three registers, by how far along the
+    reader is: a first piece in a state gets the warmer uncounted line, a
+    collection under way gets the count, and the one remaining gap gets
+    told it is the last.
     """
     from apps.collections.models import CollectionItem
+    from apps.collections.tracker import plural_unit
+    from apps.core import ground
 
-    if not (listing and listing.county_ref_id):
+    if not (listing and listing.county_ref_id and listing.state_id):
         return ''
-    held = CollectionItem.objects.filter(
+    held_here = CollectionItem.objects.filter(
         owner=user, county_id=listing.county_ref_id).exists()
-    if held:
+    if held_here:
         return ''
-    return f'That would be your first {listing.county_ref.name}.'
+
+    real = ground.real_units(listing.state)
+    if not real.filter(pk=listing.county_ref_id).exists():
+        # An administrative row is not ground; there is no gap to name.
+        return ''
+    held = (
+        CollectionItem.objects
+        .filter(owner=user, state_id=listing.state_id, county__in=real)
+        .values('county_id').distinct().count()
+    )
+    if not held:
+        # A count is for the middle of a collection, not the start of one.
+        return f'That would be your first {listing.county_ref.name}.'
+
+    label = listing.state.issuance_unit_label or 'County'
+    missing = real.count() - held
+    if missing == 1:
+        return (f'{listing.county_ref.name} is the last '
+                f'{label.lower()} you need.')
+    return (f'{listing.county_ref.name} is one of the {_word(missing)} '
+            f"{plural_unit(label).lower()} you don't have yet.")
 
 
 # ── The letters ──────────────────────────────────────────────────────

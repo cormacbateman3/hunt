@@ -181,7 +181,6 @@ class BaseListingListView(ListView):
     listing_type = None
     section_title = 'Browse Listings'
     section_description = 'Explore the marketplace.'
-    show_map_toggle = False
 
     def get_queryset(self):
         queryset = Listing.objects.filter(status='active').select_related(
@@ -293,64 +292,6 @@ class BaseListingListView(ListView):
         query_params.pop('page', None)
         context['query_string'] = query_params.urlencode()
 
-        # View mode: list (default) or map
-        view_mode = self.request.GET.get('view', 'list')
-        context['view_mode'] = view_mode
-        context['show_map_toggle'] = self.show_map_toggle
-
-        if self.show_map_toggle and view_mode == 'map' and selected_state:
-            is_county_state = (selected_state.issuance_unit_type.lower() == 'county')
-            units = GeographicUnit.objects.filter(
-                state=selected_state, is_statewide=False
-            ).order_by('sort_order', 'name')
-
-            # Count listings per unit from the already-filtered queryset
-            count_map = dict(
-                self.get_queryset()
-                .filter(county_ref__isnull=False)
-                .values('county_ref_id')
-                .annotate(_c=Count('id', distinct=True))
-                .values_list('county_ref_id', '_c')
-            )
-
-            def _unit_url(unit_id):
-                p = self.request.GET.copy()
-                p['county_id'] = str(unit_id)
-                p.pop('page', None)
-                return f'?{p.urlencode()}'
-
-            _heat_colors = ['#f0ede6', '#d4e8c2', '#98c97a', '#5a9e33', '#2c5a1e']
-            _max_c = max(count_map.values(), default=1)
-
-            geo_units = [
-                {
-                    'id': u.id,
-                    'name': u.name,
-                    'fips_code': u.fips_code,
-                    'count': count_map.get(u.id, 0),
-                    'url': _unit_url(u.id),
-                    'heat_color': _heat_colors[
-                        min(4, round((count_map.get(u.id, 0) / _max_c) * 4))
-                        if _max_c else 0
-                    ],
-                }
-                for u in units
-            ]
-            context['is_county_state'] = is_county_state
-            context['geo_units'] = geo_units
-            context['geo_units_json'] = json.dumps(geo_units)
-            context['state_fips'] = str(selected_state.fips_code or '').zfill(2)
-
-        # Toggle URL helpers (strip view param so each button sets it cleanly)
-        def _view_url(mode):
-            p = self.request.GET.copy()
-            p['view'] = mode
-            p.pop('page', None)
-            return f'?{p.urlencode()}'
-
-        context['map_url'] = _view_url('map')
-        context['list_url'] = _view_url('list')
-
         return context
 
 
@@ -363,14 +304,12 @@ class AuctionHouseListView(BaseListingListView):
     listing_type = 'auction'
     section_title = 'The Auction House'
     section_description = 'Timed auctions with active bidding.'
-    show_map_toggle = True
 
 
 class GeneralStoreListView(BaseListingListView):
     listing_type = 'buy_now'
     section_title = 'The General Store'
     section_description = 'Fixed-price listings with instant purchase intent.'
-    show_map_toggle = True
 
 
 class TradingBlockListView(BaseListingListView):
@@ -427,7 +366,6 @@ class HuntView(BaseListingListView):
 
     template_name = 'listings/hunt.html'
     section_title = 'Hunt'
-    show_map_toggle = True
 
     def _selected_formats(self):
         valid = {key for key, _ in HUNT_FORMATS}
@@ -1431,3 +1369,38 @@ def flag_question(request, pk, question_id):
     elif question.moderation_state == 'flagged':
         messages.info(request, 'This has already been flagged and is under review.')
     return redirect('listings:detail', pk=pk)
+
+
+def hunt_map(request):
+    """The map as a Hunt tab — the same catalog, drawn on its ground.
+
+    Lands at state depth, not the country: the working view is one state's
+    counties, and a Pennsylvania collector should open onto Pennsylvania.
+    ``?state=NY`` opens elsewhere, ``?state=us`` asks for the whole country,
+    and the component walks between the two depths on its own after that.
+    """
+    state_param = request.GET.get('state', '').strip()
+    state = None
+    if state_param.lower() != 'us':
+        if state_param:
+            state = State.objects.filter(code__iexact=state_param).first()
+        if state is None:
+            profile = getattr(request.user, 'profile', None) \
+                if request.user.is_authenticated else None
+            if profile is not None and profile.home_state_id:
+                state = profile.home_state
+        if state is None:
+            state = (State.objects.filter(is_primary_default=True).first()
+                     or State.objects.order_by('name').first())
+
+    return render(request, 'listings/hunt_map.html', {
+        'hunt_tabs': [
+            {'key': key, 'label': label, 'active': False}
+            for key, label in HUNT_TABS
+        ],
+        'map_tab_active': True,
+        'hunt_query': '',
+        'result_total': Listing.objects.filter(status='active').count(),
+        'gm_scope': 'state' if state else 'us',
+        'gm_state': state.code if state else '',
+    })

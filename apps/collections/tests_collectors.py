@@ -72,10 +72,16 @@ class CollectorsZoneTests(CollectorsBaseTest):
         resp = self.client.get(reverse('collectors'), {'tab': 'owned'})
         self.assertTemplateUsed(resp, 'collections/browse_collections.html')
 
-    def test_the_map_says_it_is_not_drawn_rather_than_drawing_nothing(self):
-        """16b: never render a control over nothing."""
+    def test_the_map_tab_draws_the_ground_map_now(self):
+        """Pass 9 cleared the register row this test used to guard: the tab
+        mounts the component over real county shapes instead of saying it
+        isn't drawn. 16b still holds — the shapes exist, so the control may.
+        """
         resp = self.client.get(reverse('collectors'), {'tab': 'map'})
-        self.assertContains(resp, 'isn&rsquo;t drawn yet')
+        self.assertContains(resp, 'Hunt by ground')
+        self.assertContains(resp, 'ground-map.js')
+        self.assertContains(resp, 'counties-10m.json')
+        self.assertNotContains(resp, 'isn&rsquo;t drawn yet')
 
 
 class OverlapRankingTests(CollectorsBaseTest):
@@ -410,3 +416,37 @@ class TradeBoardTests(CollectorsBaseTest):
         page = self.client.get(reverse('collectors'), {'tab': 'trade'}).context
         self.assertEqual(page['wanted_count'], 0)
         self.assertTrue(page['rows'])
+
+
+class DistanceLineTests(CollectorsBaseTest):
+    def test_miles_from_you_prints_when_both_homes_have_shapes(self):
+        """Pass 9: the browse line regains its distance measure, home
+        county to home county over the map's own centroids."""
+        lycoming = GeographicUnit.objects.create(
+            state=self.pa, name='Lycoming D', unit_type='County',
+            fips_code='42081', slug='pa-lycoming-distance')
+        cameron = GeographicUnit.objects.create(
+            state=self.pa, name='Cameron D', unit_type='County',
+            fips_code='42023', slug='pa-cameron-distance')
+
+        me = User.objects.get(username='co_me')
+        me.profile.home_state = self.pa
+        me.profile.home_county = lycoming
+        me.profile.save()
+        walt = User.objects.get(username='co_walt')
+        walt.profile.home_state = self.pa
+        walt.profile.home_county = cameron
+        walt.profile.save()
+
+        self.client.force_login(me)
+        rows = self.client.get(reverse('collectors')).context['rows']
+        by_name = {row['user'].username: row for row in rows}
+        self.assertTrue(40 <= by_name['co_walt']['miles'] <= 90,
+                        by_name['co_walt']['miles'])
+        # Somebody who hasn't said where home is gets no number at all.
+        self.assertIsNone(by_name['co_dale']['miles'])
+
+    def test_no_distance_for_a_viewer_with_no_stated_home(self):
+        self.client.force_login(User.objects.get(username='co_me'))
+        rows = self.client.get(reverse('collectors')).context['rows']
+        self.assertTrue(all(row['miles'] is None for row in rows))

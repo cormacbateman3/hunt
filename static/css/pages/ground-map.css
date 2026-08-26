@@ -1,0 +1,160 @@
+/* The ground map — flat ink on paper. Everything else on the page is flat;
+ * the map is where that either holds or breaks. The tooltip carries the one
+ * permitted shadow, because it floats by definition. */
+
+.gm { display: flex; flex-direction: column; gap: 12px; }
+
+.hm-ground { margin-top: 34px; }
+.hm-ground-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 12px; margin-bottom: 12px;
+}
+.hm-ground-head h2 {
+    font: 600 20px Petrona, Georgia, serif; color: #26331f; margin: 0;
+}
+
+.gm-page-head { margin-bottom: 18px; max-width: 720px; }
+.gm-page-head h1 {
+    font: 600 27px Petrona, Georgia, serif; color: #26331f; margin: 0 0 4px;
+}
+.gm-page-head p { font-size: 13.5px; line-height: 1.6; color: #4d5245; margin: 0; }
+
+.gm-controls {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.gm-chip {
+    font: 600 11.5px 'Public Sans', system-ui, sans-serif;
+    padding: 5px 11px; border: 1px solid #cfc7b4; border-radius: 2px;
+    background: #fff; color: #4d5245; cursor: pointer; white-space: nowrap;
+}
+.gm-chip--on { background: #26331f; border-color: #26331f; color: #f4f1e8; }
+.gm-controls-hint {
+    margin-left: auto; font-size: 11.5px; color: #8c8f80;
+}
+
+.gm-body { display: grid; grid-template-columns: 1fr 268px; gap: 18px; align-items: start; }
+.gm--small .gm-body { grid-template-columns: 1fr; }
+
+.gm-figure {
+    background: #faf8f3; border: 1px solid #e3ddce; border-radius: 3px;
+    padding: 10px; min-height: 120px;
+}
+.gm--small .gm-figure { padding: 6px; }
+.gm-figure svg { display: block; }
+.gm-figure text {
+    font-family: 'Public Sans', system-ui, sans-serif;
+    font-weight: 700; letter-spacing: 0.08em; pointer-events: none;
+}
+.gm-context-name { font-size: 10px; fill: #b3ad9c; }
+.gm-count {
+    font-family: ui-monospace, Menlo, monospace;
+    font-weight: 400; letter-spacing: 0; font-size: 9px;
+}
+
+.gm-aside { display: flex; flex-direction: column; gap: 14px; }
+
+.gm-lbl {
+    font: 700 10px 'Public Sans', system-ui, sans-serif;
+    letter-spacing: 0.13em; text-transform: uppercase; color: #a07a26;
+}
+.gm-legendcard { display: flex; flex-direction: column; gap: 7px; }
+.gm-legendrow {
+    display: flex; align-items: center; gap: 9px;
+    font-size: 12.5px; color: #4d5245;
+}
+.gm-swatch {
+    width: 18px; height: 12px; border: 1px solid #b0a88a; flex: none;
+}
+.gm-swatch--hatch {
+    background: repeating-linear-gradient(-45deg, #f3ecda 0 2px, #c9a44f 2px 3.4px);
+    box-shadow: inset 0 0 0 1.3px #a07a26;
+}
+
+.gm-card {
+    border: 1px solid #ddd7c8; border-radius: 3px; background: #fff;
+    overflow: hidden;
+}
+.gm-card-h {
+    background: #f7f4ec; border-bottom: 1px solid #ddd7c8;
+    padding: 9px 12px; display: flex; align-items: baseline;
+    justify-content: space-between; gap: 8px;
+}
+.gm-card-h b {
+    font: 600 15px Petrona, Georgia, serif; color: #26331f;
+}
+.gm-card-h span { font-size: 10.5px; color: #8c8f80; }
+.gm-card-r {
+    padding: 7px 12px; display: flex; justify-content: space-between;
+    gap: 8px; font-size: 12px; color: #1c1f18;
+    border-bottom: 1px solid #f0ece1;
+}
+.gm-card-r:last-child { border-bottom: 0; }
+.gm-card-r span { color: #6b6f60; font-variant-numeric: tabular-nums; }
+.gm-card-r--link { cursor: pointer; }
+.gm-card-r--link:hover { background: #faf8f3; }
+
+.gm-card-actions {
+    padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;
+    border-top: 1px solid #f0ece1;
+}
+.gm-btn {
+    display: block; text-align: center; text-decoration: none;
+    font: 700 11px 'Public Sans', system-ui, sans-serif;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 10px; border-radius: 3px;
+}
+.gm-btn--dark { background: #26331f; color: #fff; }
+.gm-btn--dark:hover { background: #1b2416; color: #fff; }
+.gm-cardlink {
+    font-size: 11.5px; color: #a07a26; text-decoration: none; text-align: center;
+}
+.gm-cardlink:hover { text-decoration: underline; }
+
+.gm-hint, .gm-note, .gm-fail {
+    font-size: 11.5px; line-height: 1.55; color: #8c8f80; margin: 0;
+}
+.gm-note:empty { display: none; }
+
+/* A state without shapes becomes a table that behaves like a map —
+ * which is honest. */
+.gm-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 5px;
+}
+.gm-cell {
+    aspect-ratio: 3 / 2; border: 1px solid #b0a88a; border-radius: 0;
+    font: 700 10px 'Public Sans', system-ui, sans-serif;
+    letter-spacing: 0.05em; cursor: pointer; padding: 4px;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center;
+}
+.gm-cell:hover { outline: 2px solid #26331f; outline-offset: -2px; }
+.gm-cell--sale { box-shadow: inset 0 0 0 2px #a07a26; }
+
+/* Dark ground so it reads over any fill; three lines and a prompt. */
+.gm-tip {
+    position: fixed; z-index: 120; pointer-events: none;
+    background: #1b2416; border-radius: 3px; padding: 10px 13px;
+    display: flex; flex-direction: column; gap: 4px; min-width: 150px;
+    max-width: 240px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+.gm-tip b {
+    font: 600 15px Petrona, Georgia, serif; color: #f4f1e8;
+}
+.gm-tip span { font-size: 11.5px; color: rgba(244, 241, 232, 0.75); }
+.gm-tip i {
+    font-style: normal; font-size: 11.5px; color: #b9d6a8;
+    font-variant-numeric: tabular-nums;
+}
+.gm-tip u {
+    text-decoration: none;
+    font: 700 10px 'Public Sans', system-ui, sans-serif;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: rgba(160, 122, 38, 0.95);
+    border-top: 1px solid rgba(244, 241, 232, 0.18);
+    padding-top: 5px; margin-top: 2px;
+}
+
+@media (max-width: 900px) {
+    .gm-body { grid-template-columns: 1fr; }
+}

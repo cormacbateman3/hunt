@@ -1,0 +1,45 @@
+{% comment %}
+The ground map, mounted. One include serves all four surfaces; the page
+sets the lens and the depth:
+
+  gm_id        mount id (default "ground-map"; set when a page has context)
+  gm_lens      "listed" (default) or "owned"
+  gm_both      truthy → both lenses with chips, owned first
+  gm_scope     "us" (default) or "state"
+  gm_state     two-letter state code when gm_scope is "state"
+  gm_collector username whose ground the owned lens describes (their public
+               pieces only, unless they are the viewer)
+  gm_small     truthy → compact figure, no panel, click-through to the map page
+  gm_height    fixed figure height in px (small surfaces)
+
+Everything it draws is served from this house: the county shapes, D3 and
+topojson-client are committed under static/, because the last map died
+waiting on somebody else's CDN.
+{% endcomment %}
+{% load static %}
+<div id="{{ gm_id|default:'ground-map' }}"></div>
+<script src="{% static 'js/vendor/d3.v7.min.js' %}" defer></script>
+<script src="{% static 'js/vendor/topojson-client.min.js' %}" defer></script>
+<script src="{% static 'js/ground-map.js' %}" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    new GroundMap(document.getElementById('{{ gm_id|default:"ground-map" }}'), {
+        api: '{% url "core:map_data_api" %}',
+        topo: '{% static "data/counties-10m.json" %}',
+        lens: '{{ gm_lens|default:"listed" }}',
+        {% if gm_both %}lenses: ['owned', 'listed'],{% endif %}
+        scope: '{{ gm_scope|default:"us" }}',
+        {% if gm_state %}state: '{{ gm_state }}',{% endif %}
+        {% if gm_collector %}collector: '{{ gm_collector|escapejs }}',{% endif %}
+        authed: {{ user.is_authenticated|yesno:'true,false' }},
+        small: {{ gm_small|yesno:'true,false' }},
+        {% if gm_height %}height: {{ gm_height }},{% endif %}
+        links: {
+            hunt: '{% url "hunt" %}',
+            collectors: '{% url "collectors" %}',
+            mapPage: '{% url "hunt_map" %}',
+            {% if user.is_authenticated %}wantedCreate: '{% url "collections:wanted_create" %}',{% endif %}
+        },
+    });
+});
+</script>

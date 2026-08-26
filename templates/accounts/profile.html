@@ -19,7 +19,8 @@
 
 {% block main_class %}kb-profile{% endblock %}
 
-{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/profile.css' %}">{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/profile.css' %}">
+<link rel="stylesheet" href="{% static 'css/pages/ground-map.css' %}">{% endblock %}
 
 {% block content %}
 {% comment %}
@@ -219,10 +220,11 @@ rail is cross-referenced against the viewer's own shelves.
                 </div>
                 <div class="pf-ground">
                     <div class="pf-ground-figure">
-                        <span class="pf-ground-hatch" aria-hidden="true"></span>
+                        {% include 'components/_ground_map.html' with gm_id='profile-ground-map' gm_small=True gm_scope='state' gm_state=ground.state_code gm_lens='owned' gm_collector=profile_user.username gm_height=240 %}
                         <p class="pf-ground-note">
-                            The map isn&rsquo;t drawn yet &mdash; the counties are records, not outlines.
-                            The figures beside it are the same ground, counted.
+                            {{ ground.state_name }}, shaded by what
+                            {% if is_owner %}you hold{% else %}they hold{% endif %}
+                            &mdash; the figures beside it are the same ground, counted.
                         </p>
                     </div>
                     <div class="pf-ground-meters">

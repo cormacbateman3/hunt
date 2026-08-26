@@ -44,9 +44,11 @@ class LetterBase(TestCase):
             defaults={'name': 'Pennsylvania', 'slug': 'pennsylvania',
                       'min_license_year': 1913},
         )
+        # A real county has a FIPS shape — the gap sentence now refuses
+        # county-type rows without one (administrative codes, not ground).
         cls.sullivan = GeographicUnit.objects.create(
             state=cls.pa, name='Sullivan', unit_type='County',
-            slug='pa-sullivan-letters')
+            fips_code='42113', slug='pa-sullivan-letters')
         cls.listing = Listing.objects.create(
             seller=cls.seller, title='1921 Sullivan resident button',
             description='d', state=cls.pa, county_ref=cls.sullivan,
@@ -326,3 +328,64 @@ class TheSentMailTests(LetterBase):
         html = mail.outbox[0].alternatives[0][0]
         self.assertIn('Replies to this address reach a person, not a machine', html)
         self.assertNotIn('do not reply', html.lower())
+
+
+class TheCountedGapTests(LetterBase):
+    """The register's counted sentence, restored with an honest denominator."""
+
+    def _outbid_text(self):
+        letter = letters.build(
+            self._note('outbid', f'/listings/{self.listing.pk}/'))
+        return letters.as_text(letter)
+
+    def _hold_lycoming(self):
+        from apps.collections.models import CollectionItem
+
+        lycoming = GeographicUnit.objects.create(
+            state=self.pa, name='Lycoming', unit_type='County',
+            fips_code='42081', slug='pa-lycoming-letters')
+        CollectionItem.objects.create(
+            owner=self.buyer, title='1920 Lycoming', description='',
+            state=self.pa, county=lycoming, license_year=1920,
+            condition_grade='good')
+
+    def test_the_gap_is_counted_once_the_collection_has_begun(self):
+        from apps.core import ground
+
+        GeographicUnit.objects.create(
+            state=self.pa, name='Tioga', unit_type='County',
+            fips_code='42117', slug='pa-tioga-letters')
+        self._hold_lycoming()
+
+        missing = ground.real_unit_count(self.pa) - 1
+        self.assertGreater(missing, 1)  # otherwise the last-one line fires
+        expected = (f'Sullivan is one of the {letters._word(missing)} '
+                    "counties you don't have yet.")
+        self.assertIn(expected, self._outbid_text())
+
+    def test_the_one_remaining_gap_is_told_it_is_the_last(self):
+        self._hold_lycoming()
+        self.assertIn('Sullivan is the last county you need.',
+                      self._outbid_text())
+
+    def test_an_administrative_row_is_not_a_gap(self):
+        """PA's Out-of-State code 68 is a record, not ground."""
+        from decimal import Decimal
+
+        from django.utils import timezone
+
+        out_of_state = GeographicUnit.objects.create(
+            state=self.pa, name='Out-of-State', unit_type='County',
+            unit_number='68', slug='pa-oos-letters')
+        pseudo = Listing.objects.create(
+            seller=self.seller, title='1935 nonresident tag',
+            description='d', state=self.pa, county_ref=out_of_state,
+            license_year=1935, condition_grade='good',
+            listing_type='auction', starting_price=Decimal('50.00'),
+            current_bid=Decimal('60.00'), bid_increment=Decimal('5.00'),
+            auction_end=timezone.now() + timedelta(hours=4), status='active')
+
+        text = letters.as_text(
+            letters.build(self._note('outbid', f'/listings/{pseudo.pk}/')))
+        self.assertNotIn('your first', text)
+        self.assertNotIn('one of the', text)

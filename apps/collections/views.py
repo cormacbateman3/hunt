@@ -24,6 +24,7 @@ from apps.core.models import GeographicUnit, LicenseType, State
 from apps.orders.models import Order
 
 from . import wants
+from .tracker import ground_covered
 from .board import board
 from .browse import page as browse_page
 from .collectors import collector_rows
@@ -197,9 +198,6 @@ def collections_zone(request):
     Browsing items answers the wrong question first: nobody wants an item
     from a stranger, they want to know who has the rest. So Collectors opens
     the zone and the item browse is its second tab.
-
-    Trade board and The map are not built here yet — see the DEFERRED
-    markers in ``templates/components/_collections_tabs.html``.
     """
     tab = request.GET.get('tab', 'people')
     if tab == 'owned':
@@ -211,8 +209,20 @@ def collections_zone(request):
             **board(request.user, request.GET),
         })
     if tab == 'map':
-        return render(request, 'collections/zone_map.html',
-                      {'zone_tab': 'map'})
+        # The map opens on whichever state this collector mostly collects —
+        # the working view is one state's ground, not the country. A
+        # stranger gets the market lens; a member gets both, theirs first.
+        home_ground = (
+            ground_covered(request.user, public_only=False)
+            if request.user.is_authenticated else None
+        )
+        return render(request, 'collections/zone_map.html', {
+            'zone_tab': 'map',
+            'gm_scope': 'state' if home_ground else 'us',
+            'gm_state': home_ground['state_code'] if home_ground else '',
+            'gm_lens': 'owned' if request.user.is_authenticated else 'listed',
+            'gm_both': request.user.is_authenticated,
+        })
 
     page = collector_rows(request.user, request.GET)
 

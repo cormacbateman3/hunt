@@ -46,6 +46,55 @@ def geo_units_api(request):
     )
 
 
+def map_data_api(request):
+    """Aggregates for the ground map, keyed by FIPS.
+
+    ``?state=PA`` narrows to one state's units; without it the payload is one
+    row per state. ``?collector=<username>`` makes the owned figures describe
+    that member's public pieces instead of the viewer's own — the profile's
+    Ground covered map reads someone else's ground without seeing their
+    private shelf.
+    """
+    from apps.core import ground
+
+    collector = None
+    collector_name = request.GET.get('collector', '')
+    if collector_name:
+        collector = User.objects.filter(
+            username=collector_name, is_active=True
+        ).first()
+        if collector is None:
+            return JsonResponse({'error': 'No such collector.'}, status=404)
+
+    if collector is not None:
+        owner = collector
+        public_only = collector != request.user
+    elif request.user.is_authenticated:
+        owner, public_only = request.user, False
+    else:
+        owner, public_only = None, False
+
+    state_code = request.GET.get('state', '')
+    if state_code:
+        state = State.objects.filter(code__iexact=state_code).first()
+        if state is None:
+            return JsonResponse({'error': 'No such state.'}, status=404)
+        exclude = owner if owner is not None else None
+        payload = ground.state_rows(
+            state, owner=owner, owner_public_only=public_only,
+            exclude_collector=exclude,
+        )
+        payload['scope'] = 'state'
+        payload['collector'] = collector.username if collector else ''
+        return JsonResponse(payload)
+
+    return JsonResponse({
+        'scope': 'us',
+        'collector': collector.username if collector else '',
+        'states': ground.us_rows(owner=owner, owner_public_only=public_only),
+    })
+
+
 def license_types_api(request):
     state = _selected_state_from_code(request.GET.get('state', ''))
     year_param = request.GET.get('year', '')

@@ -299,11 +299,14 @@ of the shell. `/collections/` is one dispatching view (`collections_zone`).
 - **Badges** under the bio are omitted, not faked — no model until Pass 14.
 - **"41 within a hundred miles"** in the header is **N will trade · N selling now**.
   Distance needs geometry we do not have (same reason as the map).
+  *(Regained in Pass 9: the card line prints "N miles from you", stated home
+  county to stated home county over the topology's centroids.)*
 - The **State/County** facet reads *Where they collect*, filtered on their items,
   not on `UserProfile.county` — that field is still free text until Pass 6, and
   filtering people by an unvalidated string would quietly lose collectors.
 - The **map tab** says it isn't drawn rather than drawing a control over nothing
   (16b's rule, and the design's own *"Map — no geometry"* screen).
+  *(Drawn in Pass 9 — the shapes exist now, so the control may.)*
 - **Trade board** leaves the zone for `/hunt/?format=trade` until Pass 7.
 
 ---
@@ -917,30 +920,72 @@ a slot UI that **persists** the roles it shows. The audit notes are corrected in
 
 ---
 
-## Pass 9 — The map ⬜
+## Pass 9 — The map ✅
 
-**Owes the deferred register** — the Collections **map tab** and the profile's
-**Ground covered** panel both draw a placeholder today. The arithmetic already exists
-in `apps/collections/tracker.py`; only the geometry is missing. The header line on the
-collectors browse also regains its **distance** measure.
+> **Status (2026-08-26): DONE.** Six commits on `feature/alpha-p4-pass9-map`.
+> 556 tests green (21 added). Three register rows cleared: the Collections
+> map tab, the profile's Ground covered figure, and the counted county gap in
+> the outbid letter. The collectors browse regained its distance line.
 
+**Design refs** — turn 9e (at size), **9f (the specimen sheet)**, and the
+**Backtag map plates** (`Backtag Map Plates (standalone).html`, same folder —
+note the repo's `Backtag Design Blueprint.html` is a *different* export and
+contains no map). Dev plan **10.17**.
 
-**Design refs** — turn 9e (at size), **9f (the specimen sheet — read this one
-carefully)**. Dev plan **10.17**.
+### What shipped
 
-An **engraved survey map, not a web map**. Flat parchment ground, 0.5px hairline
-borders, five green steps, type that looks set rather than rendered.
+- **The data ships with the house.** us-atlas 3.0.1 `counties-10m.json`
+  (3,231 counties keyed by FIPS, 842KB → 244KB gzipped), d3 7.9.0 and
+  topojson-client 3.1.0 are committed under `static/` and served by
+  WhiteNoise — the old browse map died fetching all three from a CDN at page
+  view, and that failure mode is gone by construction.
+- **`apps/core/ground.py` owns "what is real ground".** A county-type unit is
+  real when it has a FIPS shape; PA's *Out-of-State* (code 68) and the
+  Statewide row are records, not ground; a GMU has no FIPS and is still real.
+  `/api/map/` serves both lenses keyed by FIPS — per-state and per-unit
+  listed/owned/collectors, with statewide and unplaced listings **counted,
+  never silently dropped** — and `?collector=` only ever shows another
+  member's public pieces.
+- **One component, two lenses, three depths** (`static/js/ground-map.js`,
+  vanilla ES6). The 9f/plates reconciliation: they are the same map through
+  opposite lenses. *Listed* lens = 9f (fixed buckets 0/1/2–4/5–9/10–24/25+,
+  brass **inner rule** on held ground, "Only my gaps" toggle). *Owned* lens =
+  the plates (0/1/2–3/4+ per county, 0/1–19/20–99/100+ nationally, gold
+  **hatching + brass ring** for for-sale-on-unowned, nearest-gaps card via
+  `topojson.neighbors` — adjacency free from the topology). Country → state,
+  no third zoom; the panel is the click target; an empty county still opens
+  it. No basemap, no pins, no draw-in, no shadow but the tooltip's.
+- **Four surfaces, one include** (`components/_ground_map.html`): the Hunt
+  tab (`/hunt/map/`, lands at state depth per 9f), the Collections tab
+  (opens on the state the collector mostly collects, lens chips *My
+  collection / For sale now*), the profile's Ground covered (small,
+  collector's own state, public wall respected), and the foot of both home
+  pages (small country, listed lens, click-through — dev plan 10.17).
+- **Distance regained** — `utilities/build_county_centroids.py` distils
+  3,231 centroids from the same topology (verified against real county
+  centers), and the collectors card prints *"N miles from you"*, stated home
+  to stated home, only when both homes have shapes.
+- **The counted county gap restored** in the outbid letter, three registers
+  deep: first piece in a state keeps *"That would be your first Sullivan"*,
+  a collection under way gets *"one of the 26 counties you don't have yet"*
+  (honest denominator at last), and one remaining gap is told it is the
+  last. A pseudo-unit names no gap.
 
-- **Quantise the ramp on fixed counts, never on max.** The current code runs
-  `scaleSequential([0, max], interpolate('#e8f5e2','#1a5c0d'))` — the designer
-  flags this outright: no two counties share a shade and **the legend can never be
-  honest**. Buckets: 0 / 1 / 2–4 / 5–9 / 10–24 / 25+.
-- Fill = what's for sale; **brass inner rule = a county you already hold**. The two
-  together answer the only question a collector brings to a map.
-- Three depths, one component: country → state → county. No third zoom.
-- Non-county states draw as a grid of named blocks in the same shades.
-- Never a dead end: an empty county still opens the panel.
-- Not to do: no basemap, no pins, no animated draw-in, no shadow/radius/gradient.
+### Decisions and departures
+
+- **Lens per surface, not a new drawing per surface** — the plates' chip row
+  is read as a lens switcher over one component, which is what "the same
+  component sits small at the foot of the home page" already demanded.
+- **Selection style** follows 9f's *Chosen* (dark border + outer brass ring)
+  in both lenses, over the plates' rust outline — 9f is the specimen sheet.
+- **Albers at both depths** (geoAlbersUsa / fitted geoAlbers), over the
+  plates' single-state Mercator, so state shapes match the national view.
+- Plates rows **not built and registered instead**: the *"Almanac entry —
+  Written"* card row (no Almanac exists) and the *Open to trade / Resident
+  hunter / year-range* chips (need filter support in the endpoint).
+- Old `?view=map` machinery deleted outright (153 template lines + the whole
+  `show_map_toggle` branch), per dev plan 10.17's "no map on browse pages".
+- The test that guarded the honest placeholder now guards the drawn map.
 
 ---
 
@@ -1089,7 +1134,7 @@ coming back for it.
 | **Display-case captions** | reuses the item `description` | no `display_caption` field on `CollectionItem` | **8** | add the field, fall back to `description` |
 | **The lot route** — a box of several licences | not built; marker in `templates/listings/sell_start.html` | `ListingLotItem` / `inventory_format` (10.15, T13) | **later** | add the second entry beside the three destinations |
 | **The collection terms panel** | the trade half now has a proper block (`templates/collections/_trade_block.html`); public / display case / the private block are still on the old form | nothing — it is scope left, not a blocker | **8** | give the collection destination its own step 3 |
-| **The map** (Collections tab, profile *Ground covered*) | honest placeholder + a hatched panel; the figures beside it are real | county **geometry** does not exist; `GeographicUnit.valid_from`/`valid_to` absent | **9 / 10** | draw the choropleth; the arithmetic in `apps/collections/tracker.py` is already there |
+| ~~**The map** (Collections tab, profile *Ground covered*)~~ | **CLEARED, Pass 9 (2026-08-26)** — both surfaces draw the ground-map component over committed county shapes | geometry landed (`static/data/counties-10m.json`); `valid_from`/`valid_to` still open below — until it lands, coverage is measured against **today's** map | — | done; the boundary-history caveat stays its own row |
 | ~~**Trade board** tab~~ ✅ | local at `/collections/?tab=trade`, built from collection items and sorted by overlap with your wanted list | settled in Pass 7 | — | — |
 | **Distance** — *"41 within a hundred miles"* | reads *N will trade · N selling now* | no geocoding, no geometry | **9 / 10** | add the measure to the header line |
 | **Trade board on 3a's dark table** | built on **2e**'s four columns instead | nothing technical — 3a's rail costs 54px a side we do not have. Product-owner call, `1b34609` holds the 3a build | **later, if ever** | revisit if the page ever gets more than 1224px to work in |
@@ -1102,7 +1147,9 @@ coming back for it.
 | **Closing price** on a sold favourite | the row says only that it sold | price history | **12** | print what it made |
 | **The wanted-match letter** — *"A 1916 Cameron has come up. First one in fourteen months."* | **not sent at all**; the shell and builders are ready, so this is one builder plus a trigger | three things, none of them the letter: no `wanted_match` notification type, no matching pass over `WantedItem` when a listing goes live, and no job to run it. The design calls this *"the best letter you can send"* | **10 / 13** (with saved hunts + `WantedItem` work, 10.14) | add the type, a `letters._wanted_match` builder, and fire it from listing publication; the scarcity line ("first one in fourteen months") needs price/listing history |
 | **The seller's payment letter** — *"Your money for the 1938 Warren has arrived"* | **not sent at all**; `payment_received` is a declared notification type that **nothing anywhere creates** | no `create_notification(... 'payment_received')` call in the payment webhook or service — the buyer gets `payment_confirmed`, the seller gets nothing until the ship-by reminder | **later** (a payments change, not a design one) | fire it from the same place `payment_confirmed` is raised; the builder is a four-line sibling of `_payment_confirmed` |
-| **The counted county gap** — *"Sullivan is one of the twenty-six counties you don't have yet"* | the outbid letter says *"That would be your first Sullivan."* instead | no honest denominator: a state's `GeographicUnit` rows include administrative pseudo-units (PA's *Out-of-State*, code 68), so counting them says *68 counties* for a 67-county state | **9 / 10** (with the unit taxonomy the map needs) | count real units once they are distinguishable, and restore the counted sentence |
+| ~~**The counted county gap**~~ | **CLEARED, Pass 9 (2026-08-26)** — `apps/core/ground.real_units()` gives the honest denominator (a county-type row is real when it has a FIPS shape), and the outbid letter counts: first piece keeps the warm line, a collection under way gets *"one of the 26 counties you don't have yet"*, one gap left is told it's the last | — | — | done |
+| **The plates' Almanac card row** — *"Almanac entry — Written"* on the selected-county card | not drawn; the county card carries owned / earliest / for-sale / held-by-others | the Almanac has no model (Pass 14 in the build order); a row pointing at nothing is a dead end | **14** | add the row with a link into the county's entry once entries exist |
+| **The plates' extra map chips** — *Open to trade · Resident hunter · year range* | only the two lens chips (*My collection / For sale now*) and *Only my gaps* are live | `/api/map/` aggregates aren't filterable yet; a chip that doesn't change the counts would be decoration | with map-filter support (natural alongside 10.11's filter work) | filter the aggregate queries per chip and re-render from the same payload shape |
 
 ---
 
