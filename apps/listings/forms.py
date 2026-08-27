@@ -171,6 +171,9 @@ class ListingForm(forms.ModelForm):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         self.fields['state'].queryset = State.objects.order_by('-is_primary_default', 'name')
+        # 14a: the unit word rides beside each state ("Colorado · GMU"),
+        # so choosing one says what the next field will ask for.
+        self.fields['state'].label_from_instance = lambda state: state.option_label
         self.fields['source_collection_item'].queryset = CollectionItem.objects.none()
         self.fields['featured_image'].required = False
         self.fields['license_year'].required = False

@@ -121,6 +121,9 @@ class CollectionItemForm(forms.ModelForm):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         self.fields['state'].queryset = State.objects.order_by('-is_primary_default', 'name')
+        # 14a: the unit word rides beside each state ("Colorado · GMU"),
+        # so choosing one says what the next field will ask for.
+        self.fields['state'].label_from_instance = lambda state: state.option_label
         # Not required, because a silence must not be read as an answer —
         # see clean_tradeability and clean_disposition.
         self.fields['tradeability'].required = False
@@ -442,6 +445,7 @@ class WantedItemForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['state'].queryset = State.objects.order_by('-is_primary_default', 'name')
+        self.fields['state'].label_from_instance = lambda state: state.option_label
         state = self._resolve_state()
         if state:
             self.fields['state'].initial = state

@@ -109,8 +109,8 @@ Register: docs/internal/plan_design.md
     {% else %}
         <div class="kb-empty">
             <h2>Nothing to measure yet</h2>
-            <p>The matrix needs items with a county and a year on them. Add a few
-               and it will show you the shape of what you have.</p>
+            <p>The matrix needs items with a {{ unit_label|lower }} and a year on
+               them. Add a few and it will show you the shape of what you have.</p>
             <div class="kb-empty-actions">
                 <a href="{% url 'collections:create' %}" class="kb-btn kb-btn--primary">Add an item</a>
             </div>
@@ -193,7 +193,7 @@ Register: docs/internal/plan_design.md
             </div>
 
             <div class="mn-facet">
-                <label class="kb-label" for="mn-county">County</label>
+                <label class="kb-label" for="mn-county">{{ unit_label }}</label>
                 <select name="county_id" id="mn-county" class="kb-select" onchange="this.form.submit()">
                     <option value="">All</option>
                     {% for county in counties %}
@@ -229,7 +229,7 @@ Register: docs/internal/plan_design.md
                 <span class="kb-label">Group by</span>
                 <div class="kb-inline">
                     <a href="?{% if filters.search %}search={{ filters.search }}&amp;{% endif %}group_by=county"
-                       class="kb-chip kb-chip--sm {% if group_by == 'county' %}is-on{% endif %}">County</a>
+                       class="kb-chip kb-chip--sm {% if group_by == 'county' %}is-on{% endif %}">{{ unit_label }}</a>
                     <a href="?{% if filters.search %}search={{ filters.search }}&amp;{% endif %}group_by=decade"
                        class="kb-chip kb-chip--sm {% if group_by == 'decade' %}is-on{% endif %}">Decade</a>
                     {% if group_by %}

@@ -13,10 +13,10 @@ The aggregate builders below feed the map's two lenses — what's listed
 (marketplace supply) and what's owned (a collector's ground) — keyed by
 FIPS so the client can join them straight onto the TopoJSON.
 
-Owned counts follow ``tracker.ground_covered``: every recorded piece counts,
-including departed ones — whether departed pieces belong in coverage is an
-open product question in the deferred register, and the two surfaces should
-move together when it's decided.
+Owned counts follow ``tracker.ground_covered``: held pieces only. The open
+question this note used to carry was decided in Pass 9i — a piece that
+departed (sold, traded, given away) is nobody's ground — and both surfaces
+moved together.
 """
 
 from django.db.models import Count, Max, Min
@@ -27,14 +27,21 @@ from .models import GeographicUnit, State
 def real_units(state):
     """Issuing grounds a collector can actually hold — the honest denominator.
 
-    Excludes the Statewide pseudo-unit and county-type rows with no FIPS
-    shape (administrative codes, never ground). Keeps non-county unit types:
-    a Game Management Unit has no FIPS and is still a real place.
+    Excludes the Statewide pseudo-unit always. A county-type row with no
+    FIPS shape is excluded only when the state's other counties HAVE
+    shapes — there it can only be an administrative code (PA's row 68).
+    In a state with no boundary geometry at all, shapeless counties are
+    simply counties: 14b says the list and the matrix work normally
+    there, so the census must not zero out with the map. Non-county unit
+    types (GMU, WMD) are real places with or without a shape.
     """
-    return (
-        GeographicUnit.objects.filter(state=state, is_statewide=False)
-        .exclude(unit_type__iexact='county', fips_code='')
+    qs = GeographicUnit.objects.filter(state=state, is_statewide=False)
+    counties_have_shapes = (
+        qs.filter(unit_type__iexact='county').exclude(fips_code='').exists()
     )
+    if counties_have_shapes:
+        return qs.exclude(unit_type__iexact='county', fips_code='')
+    return qs
 
 
 def real_unit_count(state):
@@ -50,7 +57,7 @@ def _active_listings():
 def _collection_items(owner, *, public_only):
     from apps.collections.models import CollectionItem
 
-    items = CollectionItem.objects.filter(owner=owner)
+    items = CollectionItem.objects.filter(owner=owner, disposition='held')
     if public_only:
         items = items.filter(is_public=True)
     return items
@@ -128,7 +135,7 @@ def state_rows(state, *, owner=None, owner_public_only=False, exclude_collector=
     from apps.collections.models import CollectionItem
 
     collectors_qs = CollectionItem.objects.filter(
-        state=state, is_public=True, county__isnull=False
+        state=state, is_public=True, disposition='held', county__isnull=False
     )
     if exclude_collector is not None:
         collectors_qs = collectors_qs.exclude(owner=exclude_collector)

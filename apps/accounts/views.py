@@ -96,16 +96,21 @@ def _joining_stats():
     from apps.core.models import GeographicUnit, State
     from apps.listings.models import Listing
 
+    from apps.collections.tracker import plural_unit
+
     default_state = State.objects.filter(is_primary_default=True).first()
     units = (
-        Listing.objects.filter(status='active', county_ref__isnull=False)
+        Listing.objects.filter(status='active', county_ref__isnull=False,
+                               county_ref__is_statewide=False)
         .values('county_ref').distinct().count()
     )
     return {
         'listings': Listing.objects.filter(status='active').count(),
         'units': units,
+        # plural_unit, not f'{label}s' — that spelling printed "Countys".
         'unit_label': (
-            f'{default_state.issuance_unit_label}s' if default_state else 'counties'
+            plural_unit(default_state.issuance_unit_label).lower()
+            if default_state else 'counties'
         ),
         'collectors': User.objects.filter(is_active=True).count(),
     }
@@ -506,11 +511,16 @@ def _collection_progress(user):
     if not state:
         return None
 
+    from apps.core import ground
+
     items = CollectionItem.objects.filter(owner=user, state=state,
                                           disposition='held')
 
-    unit_total = GeographicUnit.objects.filter(state=state, is_statewide=False).count()
-    unit_held = items.filter(county__isnull=False).values('county').distinct().count()
+    # Real issuing grounds only: no Statewide pseudo-unit, no
+    # administrative codes — the "68 counties" family of overcounts.
+    real = ground.real_units(state)
+    unit_total = real.count()
+    unit_held = items.filter(county__in=real).values('county').distinct().count()
 
     first_year = state.licensing_start_year or state.min_license_year
     years = items.filter(license_year__isnull=False)
@@ -518,17 +528,19 @@ def _collection_progress(user):
     last_year = years.aggregate(Max('license_year'))['license_year__max']
     year_total = (last_year - first_year + 1) if (first_year and last_year and last_year >= first_year) else 0
 
-    held_ids = set(items.filter(county__isnull=False).values_list('county_id', flat=True))
+    held_ids = set(items.filter(county__in=real).values_list('county_id', flat=True))
     gaps = list(
-        GeographicUnit.objects.filter(state=state, is_statewide=False)
-        .exclude(id__in=held_ids)
+        real.exclude(id__in=held_ids)
         .order_by('sort_order', 'name')
         .values_list('name', flat=True)[:5]
     )
 
+    from apps.collections.tracker import plural_unit
+
     return {
         'state': state,
-        'unit_label': f'{state.issuance_unit_label}s',
+        # plural_unit, not f'{label}s' — that spelling printed "Countys".
+        'unit_label': plural_unit(state.issuance_unit_label),
         'unit_held': unit_held,
         'unit_total': unit_total,
         'unit_pct': round(unit_held / unit_total * 100) if unit_total else 0,

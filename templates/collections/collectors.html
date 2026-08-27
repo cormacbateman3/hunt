@@ -102,7 +102,7 @@ select reaches back into it with the `form` attribute instead.
                     <select name="state_id" class="kb-select" onchange="this.form.submit()">
                         <option value="">Anywhere</option>
                         {% for state in states %}
-                            <option value="{{ state.id }}" {% if selected_state.id == state.id %}selected{% endif %}>{{ state.name }}</option>
+                            <option value="{{ state.id }}" {% if selected_state.id == state.id %}selected{% endif %}>{{ state.option_label }}</option>
                         {% endfor %}
                     </select>
                     {% if counties %}

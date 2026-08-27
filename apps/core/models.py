@@ -74,6 +74,18 @@ class State(models.Model):
         max_length=60, default='County',
         help_text='Human-readable label for the issuance unit type',
     )
+
+    @property
+    def option_label(self):
+        """14a: 'Colorado · GMU' — the unit word beside the state name, so
+        choosing a state says what the next field will ask for. County
+        states stay bare: County is the house default word. Uses the
+        short display label (GMU, WMD), not the long type name — the
+        seeded convention keeps the word in ``issuance_unit_label``."""
+        unit = (self.issuance_unit_label or '').strip()
+        if unit and unit.lower() != 'county':
+            return f'{self.name} · {unit}'
+        return self.name
     is_primary_default = models.BooleanField(
         default=False,
         help_text='True only for Pennsylvania — the default state in all forms',

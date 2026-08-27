@@ -1562,25 +1562,61 @@ survive conversation deletion via SET_NULL.
 
 ---
 
-## Pass 10 — Empty states, mobile, fifty states ⬜
+## Pass 10 — Empty states, mobile, fifty states 🚧 IN PROGRESS
 
 **Design refs** — turn 16a/16b (empty states), 15a/15b (mobile), 14a/14b (units).
 
-- **Empty states — three shapes.** *Nothing yet* (Petrona sentence naming what will
-  be here, one dark button, a real number from the database). *Nothing matched*
-  (filters as removable chips, each relaxation with its own count, then save it as
-  a want). *Nothing left to do* (**green rule** — a reward, not a failure).
-  Two rules: never render an empty control; never use the words empty, none or zero.
-- **Mobile — six screens, 390pt, 44pt targets.** Two things happen on a phone: you
-  get a letter and bid, or you're at a show with a licence in your hand. Tabs are
-  Hunt / Mine / Bench / Add. The desk work (matrix, sets, settings rooms, Almanac
-  article, dual rosters) becomes one line: *open this on a computer*.
-- **The four unit-label substitutions** (14a) — the cheapest high-value item on the
-  readiness sheet. Every label and every sentence saying "county" reads
-  `issuance_unit_label`; numbered units sort by `unit_number` and print with their
-  type prefix; `is_statewide` renders as **Statewide** wherever a unit name would
-  go; anything drawing a shape checks `geo_data_complete` first and **disables the
-  map toggle with the reason attached rather than hiding it**.
+- **The four unit-label substitutions** (14a/14b) ✅ **done 2026-08-27** ·
+  747 green (8 added) · live sweep clean over the 26 states already seeded.
+  What actually remained after T9 (which had quietly built most of it —
+  `unit_label_plural` matrix headers, hatched never-issued cells,
+  `real_units`, grid degrade, quiet inactive map states with a tooltip
+  reason): the **counting rules**, which were lying in four places.
+  - `tracker.ground_covered` measured "N of M" against ALL of a state's
+    GeographicUnit rows — Statewide pseudo-unit and admin codes included
+    (the "68 counties" family). Now `ground.real_units` is the one
+    denominator, held intersects it, and the deepest run digs only real
+    ground. Same treatment in `_collection_progress` (bench meters).
+  - **`real_units` learned the honest boundary rule**: a shapeless
+    county-type row is an administrative code only in a state whose other
+    counties HAVE shapes; in a state with no geometry at all, counties
+    are counties — 14b's "the list and the matrix work normally" — so
+    the census never zeroes out with the map.
+  - **The matrix gives Statewide its own first row** that fills cells but
+    never moves the unit figure; admin codes left the rows entirely.
+  - Collectors cards: a statewide piece no longer counts as a county
+    (figures, home-county line). Landing band stops counting statewide
+    listings among units. **"Countys" is not a word** — two `f'{label}s'`
+    spellings replaced with `plural_unit`.
+  - **The unit word rides beside each state** everywhere a state is
+    chosen: `State.option_label` ("Colorado · GMU", county states bare)
+    wired into all three item/wanted forms via `label_from_instance` and
+    the four hand-rolled template selects. Mine-view filter label and
+    group chip read the state's word.
+  - The map's owned lens now counts held pieces only — ground.py's old
+    "open question" note replaced by 9i's decision, both surfaces moved
+    together.
+- **Empty states — three shapes** ⬜ NEXT. *Nothing yet* (Petrona sentence
+  naming what will be here, one dark button, a real number from the
+  database). *Nothing matched* (filters as removable chips, each
+  relaxation with its own count, then save it as a want). *Nothing left
+  to do* (**green rule** — a reward, not a failure). Two rules: never
+  render an empty control; never use the words empty, none or zero.
+- **Mobile — six screens, 390pt, 44pt targets** ⬜. Two things happen on a
+  phone: you get a letter and bid, or you're at a show with a licence in
+  your hand. Tabs are Hunt / Mine / Bench / Add. The desk work (matrix,
+  sets, settings rooms, Almanac article, dual rosters) becomes one line:
+  *open this on a computer*.
+
+**Register additions (14b, deferred not dropped):**
+- `GeographicUnit` has no valid-from/valid-to years, so "19 of 185" in a
+  redrawn-boundary state measures against today's map and quietly
+  overstates gaps. Blocked on: unit validity fields + per-state boundary
+  history data (owner gathers state data separately).
+- The collectors card's "counties held" stat label stays the house word
+  even for a GMU-state collector — a per-collector unit word needs a
+  primary-state label annotation on the directory query. Cheap once
+  wanted; noted at `templates/collections/collectors.html` stat label.
 
 ---
 

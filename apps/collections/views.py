@@ -172,6 +172,9 @@ def my_collection(request):
         'counties': counties,
         'license_types': license_types,
         'filters': filters,
+        # The filter bar lists the default state's units, so its label is
+        # that state's own word (14a) — not a hardcoded "County".
+        'unit_label': default_state.issuance_unit_label if default_state else 'County',
     })
 
 
