@@ -174,11 +174,20 @@ class SellerDeskTests(DeskBase):
         self._listing()
         self._listing(status='sold')
         self._listing(status='expired')
+        self._listing(status='draft')
 
         page = self._rows('sold')
         counts = {row['key']: row['count'] for row in page['filters']}
-        self.assertEqual(counts, {'live': 1, 'scheduled': 0, 'sold': 1, 'unsold': 1})
+        self.assertEqual(counts, {'live': 1, 'drafts': 1, 'scheduled': 0,
+                                  'sold': 1, 'unsold': 1})
         self.assertEqual(len(page['rows']), 1)
+
+    def test_a_draft_row_points_at_the_terms(self):
+        draft = self._listing(status='draft')
+        row = self._rows('drafts')['rows'][0]
+        self.assertEqual(row['headline'], 'Still a draft')
+        self.assertEqual(row['action']['label'], 'Finish the terms')
+        self.assertIn(f'/listings/{draft.pk}/terms/', row['action']['url'])
 
     def test_an_unknown_filter_shows_everything(self):
         self._listing()

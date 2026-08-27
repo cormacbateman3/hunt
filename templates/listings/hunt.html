@@ -202,6 +202,39 @@
                     </div>
                 </div>
             {% endif %}
+
+            {% if just_closed %}
+                {% comment %}
+                Below the live grid on purpose — what's still on the clock
+                keeps the room; what just closed is the interesting margin.
+                24 hours, then it's the record's business (13.6).
+                {% endcomment %}
+                <section class="hunt-closed">
+                    <div class="hunt-closed-rule">
+                        <span class="kb-eyebrow">Just closed</span>
+                        <span class="hunt-closed-line" aria-hidden="true"></span>
+                        <span class="kb-faint">the last 24 hours</span>
+                    </div>
+                    <div class="hunt-closed-row">
+                        {% for lot in just_closed %}
+                            <a class="hunt-closed-card" href="{{ lot.get_absolute_url }}">
+                                <span class="hunt-closed-media">
+                                    {% if lot.featured_image %}<img src="{{ lot.featured_image.url }}" alt="" loading="lazy">{% endif %}
+                                </span>
+                                <span class="hunt-closed-title">{{ lot.title|truncatechars:44 }}</span>
+                                <span class="hunt-closed-went{% if lot.status == 'expired' %} hunt-closed-went--quiet{% endif %}">
+                                    {% if lot.status == 'expired' %}
+                                        Didn&rsquo;t sell
+                                    {% else %}
+                                        Went for ${{ lot.current_bid|floatformat:2 }}
+                                    {% endif %}
+                                </span>
+                                <span class="hunt-closed-when">closed {{ lot.auction_end|timesince }} ago</span>
+                            </a>
+                        {% endfor %}
+                    </div>
+                </section>
+            {% endif %}
         </div>
     </div>
 </form>

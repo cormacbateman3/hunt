@@ -12,8 +12,9 @@ function fadeOutMessages() {
 }
 
 function formatDuration(ms) {
+    // "Closing…" while the lazy close lands — never the word EXPIRED.
     if (ms <= 0) {
-        return 'EXPIRED';
+        return 'Closing…';
     }
 
     const totalSeconds = Math.floor(ms / 1000);
@@ -21,18 +22,27 @@ function formatDuration(ms) {
     const hours = Math.floor((totalSeconds % 86400) / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
-    return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+    // Lead with the largest unit that exists — "0d 0h 12m" read like a
+    // malfunction exactly when people were watching hardest.
+    if (days) return `${days}d ${hours}h ${minutes}m`;
+    if (hours) return `${hours}h ${minutes}m ${seconds}s`;
+    if (minutes) return `${minutes}m ${seconds}s`;
+    return `${seconds}s`;
 }
 
 function startCountdown(element) {
-    const endDate = element.dataset.auctionEnd;
-    if (!endDate) {
+    if (!element.dataset.auctionEnd) {
         return;
     }
 
     const tick = () => {
-        const distance = new Date(endDate).getTime() - Date.now();
+        // The poll keeps dataset.auctionEnd fresh (soft close moves it),
+        // and __kbClockOffset corrects for the client's own clock.
+        const offset = window.__kbClockOffset || 0;
+        const distance = new Date(element.dataset.auctionEnd).getTime()
+            - (Date.now() + offset);
         element.textContent = formatDuration(distance);
+        element.classList.toggle('is-critical', distance > 0 && distance <= 120000);
     };
 
     tick();
@@ -156,25 +166,163 @@ function initGallery() {
     }
 }
 
-async function pollJson(endpoint, callback, intervalMs = 10000) {
-    const run = async () => {
+/* ── The live auction panel ─────────────────────────────────────────────
+   One poll loop, pacing itself by the clock: 10s at a distance, 5s inside
+   ten minutes, 2s inside the closing window — and 30s when the tab is
+   hidden. The last five minutes are the whole point: the room feed shows
+   every bid as it lands, an extension announces itself, and when the
+   lot closes the page swaps to the truth instead of a frozen countdown. */
+
+function initAuctionLive() {
+    const host = document.querySelector('[data-poll-url]');
+    if (!host) return;
+    const endpoint = host.dataset.pollUrl;
+    if (!endpoint) return;
+
+    const bidTarget = document.querySelector(host.dataset.bidTarget || '');
+    const countTarget = document.querySelector(host.dataset.bidCountTarget || '');
+    const minTarget = document.querySelector(host.dataset.minBidTarget || '');
+    const endTarget = document.querySelector(host.dataset.auctionEndTarget || '');
+    const room = document.querySelector('[data-room]');
+    const roomFeed = document.querySelector('[data-room-feed]');
+    const roomNote = document.querySelector('[data-room-note]');
+    const standing = document.querySelector('[data-your-standing]');
+    const reduced = window.matchMedia
+        && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    let lastEnd = null;
+    let lastPrice = null;
+    let lastLeading = null;
+    let wasActive = null;
+    let closing = false;
+
+    const secondsLeft = () => {
+        if (!lastEnd) return Infinity;
+        const offset = window.__kbClockOffset || 0;
+        return (new Date(lastEnd).getTime() - (Date.now() + offset)) / 1000;
+    };
+
+    const cadence = () => {
+        if (document.hidden) return 30000;
+        const left = secondsLeft();
+        if (left <= 150) return 2000;
+        if (left <= 600) return 5000;
+        return 10000;
+    };
+
+    const ago = (iso) => {
+        const offset = window.__kbClockOffset || 0;
+        const s = Math.max(0, Math.round((Date.now() + offset - new Date(iso).getTime()) / 1000));
+        if (s < 60) return s + 's ago';
+        if (s < 3600) return Math.floor(s / 60) + 'm ago';
+        return Math.floor(s / 3600) + 'h ago';
+    };
+
+    const flash = (node) => {
+        if (!node || reduced) return;
+        node.classList.remove('lst-flash');
+        void node.offsetWidth;   // restart the animation
+        node.classList.add('lst-flash');
+    };
+
+    const renderFeed = (payload) => {
+        if (!room || !roomFeed) return;
+        const open = payload.is_active;
+        const show = open && secondsLeft() <= 300 && payload.feed && payload.feed.length;
+        room.hidden = !show;
+        if (!show) return;
+        const topKey = payload.feed[0] && payload.feed[0].at + payload.feed[0].amount;
+        const changed = topKey && topKey !== room.dataset.topKey;
+        room.dataset.topKey = topKey || '';
+        roomFeed.innerHTML = payload.feed.slice(0, 5).map((bid, i) =>
+            '<li class="lst-room-row' + (i === 0 && changed && !reduced ? ' is-new' : '') + '">' +
+            '<strong>$' + Number(bid.amount).toFixed(2) + '</strong>' +
+            '<span>' + bid.bidder + (bid.auto ? ' · auto' : '') + '</span>' +
+            '<time>' + ago(bid.at) + '</time></li>'
+        ).join('');
+        if (roomNote) {
+            roomNote.textContent = payload.extensions > 0
+                ? 'extended ×' + payload.extensions : '';
+        }
+    };
+
+    const render = (payload) => {
+        // Correct the countdown for client clock skew.
+        if (payload.server_time) {
+            window.__kbClockOffset = new Date(payload.server_time).getTime() - Date.now();
+        }
+
+        if (bidTarget && payload.current_bid) {
+            if (lastPrice !== null && payload.current_bid !== lastPrice) {
+                flash(bidTarget.closest('.lst-big') || bidTarget);
+            }
+            bidTarget.textContent = payload.current_bid;
+            lastPrice = payload.current_bid;
+        }
+        if (countTarget && typeof payload.bid_count !== 'undefined') {
+            countTarget.textContent = payload.bid_count;
+        }
+        if (minTarget && payload.minimum_bid) {
+            minTarget.textContent = payload.minimum_bid;
+        }
+
+        if (payload.auction_end) {
+            if (endTarget) endTarget.dataset.auctionEnd = payload.auction_end;
+            if (lastEnd && payload.is_active
+                    && new Date(payload.auction_end) > new Date(lastEnd)) {
+                // Soft close: say it where everyone is looking.
+                if (roomNote) {
+                    roomNote.textContent = 'Extended — two more minutes for everyone.';
+                }
+                flash(endTarget);
+            }
+            lastEnd = payload.auction_end;
+        }
+
+        if (standing && typeof payload.is_leading !== 'undefined') {
+            if (lastLeading === true && payload.is_leading === false) {
+                standing.classList.add('is-outbid');
+                const strong = standing.querySelector('strong');
+                standing.innerHTML = 'Your maximum: <strong>'
+                    + (strong ? strong.textContent : '')
+                    + '</strong> · you’ve been outbid — raise it to answer.';
+            }
+            lastLeading = payload.is_leading;
+        }
+
+        renderFeed(payload);
+
+        // The lot closed while we watched: the server has already run the
+        // close (the poll triggers it), so a reload renders the outcome —
+        // the won-panel, the sold line, the works.
+        if (wasActive === true && payload.is_active === false && !closing) {
+            closing = true;
+            setTimeout(() => window.location.reload(), 800);
+        }
+        wasActive = payload.is_active;
+    };
+
+    let timer = null;
+    const tick = async () => {
         try {
             const response = await fetch(endpoint, {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
             });
-            if (!response.ok) {
-                return;
-            }
-            const payload = await response.json();
-            callback(payload);
+            if (response.ok) render(await response.json());
         } catch (error) {
             // Keep polling even when intermittent requests fail.
-            console.error('Polling failed:', error);
         }
+        if (!closing) timer = setTimeout(tick, cadence());
     };
-
-    await run();
-    return setInterval(run, intervalMs);
+    tick();
+    document.addEventListener('visibilitychange', () => {
+        // Coming back to the tab deserves a fresh look right away —
+        // one loop only, so the pending timer dies first.
+        if (!document.hidden && !closing) {
+            clearTimeout(timer);
+            tick();
+        }
+    });
 }
 
 function initNav() {
@@ -242,54 +390,26 @@ function initDashTabs() {
     if (firstTarget) activate(firstTarget);
 }
 
+function initHowBidding() {
+    const btn = document.querySelector('[data-how-toggle]');
+    const panel = document.getElementById('lst-how');
+    if (!btn || !panel) return;
+    btn.addEventListener('click', () => {
+        panel.hidden = !panel.hidden;
+        btn.setAttribute('aria-expanded', panel.hidden ? 'false' : 'true');
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     fadeOutMessages();
     initNav();
     initDashTabs();
     initTabs();
     initQuickBids();
+    initHowBidding();
     document.querySelectorAll('[data-auction-end]').forEach(startCountdown);
     initBidFormValidation();
     initGallery();
 
-    document.querySelectorAll('[data-poll-url]').forEach((element) => {
-        const endpoint = element.dataset.pollUrl;
-        const bidTargetSelector = element.dataset.bidTarget;
-        const countTargetSelector = element.dataset.bidCountTarget;
-        const minBidTargetSelector = element.dataset.minBidTarget;
-        const auctionEndTargetSelector = element.dataset.auctionEndTarget;
-        if (!endpoint) {
-            return;
-        }
-
-        pollJson(endpoint, (payload) => {
-            if (bidTargetSelector) {
-                const bidTarget = document.querySelector(bidTargetSelector);
-                if (bidTarget && payload.current_bid) {
-                    bidTarget.textContent = payload.current_bid;
-                }
-            }
-
-            if (countTargetSelector) {
-                const countTarget = document.querySelector(countTargetSelector);
-                if (countTarget && typeof payload.bid_count !== 'undefined') {
-                    countTarget.textContent = payload.bid_count;
-                }
-            }
-
-            if (minBidTargetSelector) {
-                const minBidTarget = document.querySelector(minBidTargetSelector);
-                if (minBidTarget && payload.minimum_bid) {
-                    minBidTarget.textContent = payload.minimum_bid;
-                }
-            }
-
-            if (auctionEndTargetSelector && payload.auction_end) {
-                const countdownTarget = document.querySelector(auctionEndTargetSelector);
-                if (countdownTarget) {
-                    countdownTarget.dataset.auctionEnd = payload.auction_end;
-                }
-            }
-        });
-    });
+    initAuctionLive();
 });

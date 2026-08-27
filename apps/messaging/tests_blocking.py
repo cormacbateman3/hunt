@@ -15,7 +15,8 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
-from apps.messaging.models import Block
+from apps.messaging import services
+from apps.messaging.models import Block, Conversation
 
 
 class BlockingTests(TestCase):
@@ -64,6 +65,43 @@ class BlockingTests(TestCase):
     def test_a_get_never_blocks_anybody(self):
         self.client.get(reverse('messaging:block_person', args=[self.them.pk]))
         self.assertFalse(Block.objects.exists())
+
+
+class UnblockReopensTests(TestCase):
+    """Blocking closes the pair's thread; lifting the block must give it
+    back. Before this, unblock deleted the Block row and the conversation
+    stayed dead forever — closure with no way back and no explanation."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.me = User.objects.create_user('bl_open_me', password='pw')
+        cls.them = User.objects.create_user('bl_open_them', password='pw')
+        a, b = sorted([cls.me, cls.them], key=lambda u: u.pk)
+        cls.conv = Conversation.objects.create(user_a=a, user_b=b, created_by=cls.me)
+
+    def test_blocking_closes_and_unblocking_reopens(self):
+        services.apply_block(self.me, self.them)
+        self.conv.refresh_from_db()
+        self.assertTrue(self.conv.is_closed)
+
+        self.assertEqual(services.remove_block(self.me, self.them), 'unblocked')
+        self.conv.refresh_from_db()
+        self.assertFalse(self.conv.is_closed)
+
+    def test_the_other_sides_block_keeps_it_closed(self):
+        services.apply_block(self.me, self.them)
+        services.apply_block(self.them, self.me)
+        services.remove_block(self.me, self.them)
+        self.conv.refresh_from_db()
+        self.assertTrue(self.conv.is_closed)
+
+    def test_the_view_route_reopens_too(self):
+        services.apply_block(self.me, self.them)
+        self.client.force_login(self.me)
+        self.client.post(reverse('messaging:unblock_user', args=[self.them.pk]),
+                         {'next': reverse('accounts:profile_edit')})
+        self.conv.refresh_from_db()
+        self.assertFalse(self.conv.is_closed)
 
 
 class SignInLandingTests(TestCase):

@@ -3,28 +3,40 @@ from django.db import models
 
 
 class Conversation(models.Model):
-    CONV_TYPE_CHOICES = [
-        ('auction', 'Auction'),
-        ('buy_now', 'Buy Now'),
-        ('trade', 'Trade'),
-        ('general', 'General'),
-    ]
+    """One thread per pair of people — the 8d drawing's rule.
 
-    conversation_type = models.CharField(max_length=20, choices=CONV_TYPE_CHOICES)
+    If Walt and John are talking, they have ONE conversation and every
+    interaction flows into it. The deal of the moment is *context*, not
+    identity: ``listing``/``trade_offer`` hold the most recent context
+    (refreshed whenever an entry point opens the thread about something
+    new), and the pinned strip works out the currently-live deal between
+    the pair on its own (threads.deal_strip).
+    """
+
     listing = models.ForeignKey(
         'listings.Listing', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='conversations',
+        help_text='Most recent listing context — display only, never identity.',
     )
     trade_offer = models.ForeignKey(
         'trades.TradeOffer', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='conversations',
+        help_text='Most recent trade context — display only, never identity.',
     )
-    # Participants stored in deterministic order (smaller pk = user_a)
+    # A group room: invite-only, named, participants on ConversationMember.
+    # The campfire, not the forum — invisible to non-members, no public
+    # discovery anywhere.
+    is_group = models.BooleanField(default=False)
+    name = models.CharField(max_length=80, blank=True)
+    # 1:1 participants, stored in deterministic order (smaller pk = user_a).
+    # Null on group rooms, whose people live on ConversationMember.
     user_a = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='conversations_as_a',
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        null=True, blank=True, related_name='conversations_as_a',
     )
     user_b = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='conversations_as_b',
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        null=True, blank=True, related_name='conversations_as_b',
     )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='conversations_created',
@@ -38,19 +50,76 @@ class Conversation(models.Model):
         verbose_name_plural = 'Conversations'
         ordering = ['-last_message_at', '-created_at']
         constraints = [
-            # Prevent duplicate listing-tied conversations
             models.UniqueConstraint(
-                fields=['listing', 'user_a', 'user_b', 'conversation_type'],
-                condition=models.Q(listing__isnull=False),
-                name='unique_listing_conversation',
+                fields=['user_a', 'user_b'],
+                condition=models.Q(is_group=False),
+                name='one_thread_per_pair',
             ),
         ]
 
     def __str__(self):
+        if self.is_group:
+            return f"Group #{self.pk} ({self.name})"
         return f"Conversation #{self.pk} ({self.user_a.username} ↔ {self.user_b.username})"
 
     def other_participant(self, user):
+        if self.is_group:
+            return None
         return self.user_b if self.user_a_id == user.pk else self.user_a
+
+    def participant_ids(self):
+        if self.is_group:
+            return set(self.members.values_list('user_id', flat=True))
+        return {self.user_a_id, self.user_b_id}
+
+    def is_participant(self, user):
+        return user.pk in self.participant_ids()
+
+
+class ConversationMember(models.Model):
+    """One person in one group room, and who brought them in."""
+
+    conversation = models.ForeignKey(
+        Conversation, on_delete=models.CASCADE, related_name='members',
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='group_memberships',
+    )
+    added_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='group_members_added',
+    )
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Conversation member'
+        verbose_name_plural = 'Conversation members'
+        unique_together = [('conversation', 'user')]
+
+    def __str__(self):
+        return f"{self.user.username} in group #{self.conversation_id}"
+
+
+class MessagingSettings(models.Model):
+    """Singleton tunables for messaging — the MarketplaceSettings pattern."""
+
+    groups_enabled = models.BooleanField(
+        default=True,
+        help_text='Master switch for private group rooms.',
+    )
+    group_max_members = models.PositiveIntegerField(
+        default=12,
+        help_text='Most people one room can hold, creator included.',
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Messaging settings'
+        verbose_name_plural = 'Messaging settings'
+
+    def __str__(self):
+        return 'Messaging settings'
 
 
 class Message(models.Model):
@@ -65,6 +134,14 @@ class Message(models.Model):
     )
     sender = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='messages_sent',
+    )
+    # What the thread was about when this was said. One thread per pair
+    # means the conversation's context pointer moves — this snapshot is
+    # how "About · 1969 PA License" dividers stay honest when the talk
+    # turns to a second listing.
+    context_listing = models.ForeignKey(
+        'listings.Listing', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='context_messages',
     )
     body = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
@@ -122,10 +199,13 @@ class Block(models.Model):
 
 class MessageReport(models.Model):
     REASON_CHOICES = [
-        ('scam', 'Scam'),
-        ('harassment', 'Harassment'),
+        ('scam', 'Scam or fraud'),
+        ('counterfeit', 'Fake or counterfeit item'),
+        ('harassment', 'Harassment or threats'),
+        ('hate', 'Hate speech'),
+        ('underage', 'Someone may be underage'),
         ('spam', 'Spam'),
-        ('other', 'Other'),
+        ('other', 'Something else'),
     ]
     STATUS_CHOICES = [
         ('open', 'Open'),

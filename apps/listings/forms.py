@@ -27,22 +27,44 @@ def _state_license_type_queryset(state, category):
     return queryset.order_by('name').distinct()
 
 
-class ListingForm(forms.ModelForm):
-    """Form for creating and editing listings across all listing types."""
+def publish_gaps(listing):
+    """What the item still needs before it can be public.
 
-    duration_days = forms.ChoiceField(
-        choices=[
-            (1, '1 day'),
-            (3, '3 days'),
-            (5, '5 days'),
-            (7, '7 days'),
-            (10, '10 days'),
-        ],
-        initial=7,
-        required=False,
-        help_text="How long should the auction run?",
-        widget=forms.Select(attrs={'class': 'kb-select'}),
+    Step 2 saves drafts as thin as a title — required-to-publish fields
+    gate *publishing*, so the checks live here and run on the terms page,
+    the only place a listing goes public. Returned as readable phrases the
+    band can print verbatim.
+    """
+    gaps = []
+    has_image = bool(listing.featured_image) or bool(
+        listing.source_collection_item_id
+        and listing.source_collection_item.images.exists()
     )
+    if not has_image:
+        gaps.append('a front photograph')
+    if not listing.state_id:
+        gaps.append('the issuing state')
+    if not (listing.license_year or listing.era_label):
+        gaps.append('the year, or roughly the era')
+    if not listing.condition_grade:
+        gaps.append('a condition grade')
+    if not (listing.description or '').strip():
+        gaps.append('a line of description')
+    if not (listing.license_types.exists() or listing.shape or listing.colors):
+        gaps.append('one detail collectors filter on — residency, material, shape or colour')
+    return gaps
+
+
+class ListingForm(forms.ModelForm):
+    """Step 2 — the item.
+
+    Only what the thing *is*: photographs, title, place, year, condition and
+    the taxonomy. The terms — prices, duration, shipping — live on
+    :class:`ListingTermsForm`, because each destination carries only its own
+    questions and nothing is public until step 3 is done. A new listing saves
+    as a draft.
+    """
+
     state = forms.ModelChoiceField(
         queryset=State.objects.none(),
         required=True,
@@ -91,28 +113,6 @@ class ListingForm(forms.ModelForm):
         widget=forms.Select(attrs={'class': 'kb-select'}),
         help_text='Prefill safe fields from an item in your collection.',
     )
-    scheduled_at = forms.DateTimeField(
-        required=False,
-        widget=forms.DateTimeInput(attrs={'class': 'kb-input', 'type': 'datetime-local'}),
-        help_text='Leave blank to publish immediately. Max 30 days in the future.',
-        input_formats=['%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M'],
-    )
-    auto_relist = forms.BooleanField(
-        required=False,
-        initial=True,
-        widget=forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
-        help_text='Auto-relist if auction ends without a winner (up to 3 times).',
-    )
-    local_pickup_available = forms.BooleanField(
-        required=False,
-        widget=forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
-        help_text='Offer local pickup as an alternative to shipping.',
-    )
-    local_pickup_location = forms.CharField(
-        required=False,
-        widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'e.g. Lancaster, PA'}),
-        help_text='City or region for local pickup.',
-    )
     serial_number = forms.CharField(
         required=False,
         widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'e.g. A-12345'}),
@@ -123,13 +123,6 @@ class ListingForm(forms.ModelForm):
         required=False,
         widget=forms.Select(attrs={'class': 'kb-select'}),
         help_text='Required when license year is unknown.',
-    )
-    ship_from_address = forms.ModelChoiceField(
-        queryset=Address.objects.none(),
-        required=False,
-        empty_label='Account default address',
-        widget=forms.Select(attrs={'class': 'kb-select'}),
-        help_text='Where this item ships from.',
     )
 
     class Meta:
@@ -154,51 +147,24 @@ class ListingForm(forms.ModelForm):
             'shape',
             'colors',
             'condition_grade',
-            'starting_price',
-            'reserve_price',
-            'buy_now_price',
-            'allow_offers',
-            'minimum_offer',
-            'bid_increment',
-            'trade_notes',
-            'allow_cash',
-            'scheduled_at',
-            'auto_relist',
-            'local_pickup_available',
-            'local_pickup_location',
+            'condition_description',
+            'is_restored',
             'serial_number',
             'era_label',
             'featured_image',
-            'ship_from_address',
-            'package_weight_oz',
-            'package_length_in',
-            'package_width_in',
-            'package_height_in',
-            'shipping_service',
-            'shipping_payer',
         ]
         widgets = {
             'listing_type': forms.Select(attrs={'class': 'kb-select'}),
             'item_kind': forms.RadioSelect(attrs={'class': 'chip-radios'}),
             'addons_attached': TagsStillAttachedSelect(attrs={'class': 'kb-select'}),
+            # Placeholders and box heights are 4a's own: the description a
+            # 44px two-liner, the condition note a 60px one.
             'title': forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Written for you from the answers below — edit freely'}),
-            'description': forms.Textarea(attrs={'class': 'kb-textarea', 'placeholder': 'Where it came from, what stands out, and the flaws said plainly — that last part is the difference between 98% positive and a dispute.', 'rows': 5, 'maxlength': 2000}),
+            'description': forms.Textarea(attrs={'class': 'kb-textarea', 'placeholder': 'Where it came from, what the photographs can’t show.', 'rows': 2, 'maxlength': 2000}),
             'license_year': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '1942 (leave blank if unknown)'}),
             'condition_grade': forms.RadioSelect(attrs={'class': 'chip-radios'}),
-            'starting_price': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '$25.00', 'step': '1', 'min': '1'}),
-            'reserve_price': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '$50.00 (optional)', 'step': '1', 'min': '1'}),
-            'buy_now_price': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '$75.00', 'step': '1', 'min': '1'}),
-            'bid_increment': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '$1', 'step': '1', 'min': '1'}),
-            'trade_notes': forms.Textarea(attrs={'class': 'kb-textarea', 'rows': 4, 'placeholder': 'What are you looking for in return?'}),
-            'allow_cash': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
-            'allow_offers': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
-            'minimum_offer': forms.NumberInput(attrs={'class': 'kb-input', 'step': '0.01', 'min': '1', 'placeholder': 'Leave empty and every offer reaches you'}),
-            'package_weight_oz': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '8.0', 'step': '0.5', 'min': '0.5'}),
-            'package_length_in': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '10', 'step': '0.5', 'min': '1'}),
-            'package_width_in': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '7', 'step': '0.5', 'min': '1'}),
-            'package_height_in': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '1', 'step': '0.5', 'min': '0.5'}),
-            'shipping_service': forms.Select(attrs={'class': 'kb-select'}),
-            'shipping_payer': forms.Select(attrs={'class': 'kb-select'}),
+            'condition_description': forms.Textarea(attrs={'class': 'kb-textarea', 'rows': 2, 'maxlength': 2000, 'placeholder': 'Foxing, tears, tape, a bent pin, any repair — the things a buyer will ask about.'}),
+            'is_restored': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -208,14 +174,20 @@ class ListingForm(forms.ModelForm):
         self.fields['source_collection_item'].queryset = CollectionItem.objects.none()
         self.fields['featured_image'].required = False
         self.fields['license_year'].required = False
+
+        # Step 2 never hard-blocks: a draft can be as thin as a title, and
+        # publish_gaps() gates the terms page instead. Only a listing that
+        # is already public keeps the full requirements as form errors —
+        # an edit must not quietly strip a live listing below publishable.
+        self.require_complete = bool(self.instance.pk and self.instance.status != 'draft')
+        if not self.require_complete:
+            for name in ('description', 'condition_grade', 'state'):
+                self.fields[name].required = False
         # The grade renders as a chip ladder — a "---------" radio is not a
         # rung anybody can stand on.
         self.fields['condition_grade'].choices = [
             choice for choice in self.fields['condition_grade'].choices if choice[0]
         ]
-        # Model defaults cover these — never block a submit on them.
-        for optional_field in ('bid_increment', 'shipping_service', 'shipping_payer'):
-            self.fields[optional_field].required = False
 
         # Trade is not a listing type — trades start from collections;
         # legacy trade rows keep the option only while being edited.
@@ -232,11 +204,6 @@ class ListingForm(forms.ModelForm):
 
         if self.user and self.user.is_authenticated:
             self.fields['source_collection_item'].queryset = CollectionItem.objects.filter(owner=self.user).order_by('-created_at')
-            self.fields['ship_from_address'].queryset = Address.objects.filter(user=self.user)
-            if not self.instance.pk and not self.initial.get('ship_from_address'):
-                profile = getattr(self.user, 'profile', None)
-                if profile and profile.shipping_address_id:
-                    self.fields['ship_from_address'].initial = profile.shipping_address_id
 
         if self.instance and self.instance.pk:
             self.fields['colors'].initial = self.instance.colors
@@ -246,15 +213,6 @@ class ListingForm(forms.ModelForm):
                     self.fields[category].initial = list(selected)
                 elif selected.first():
                     self.fields[category].initial = selected.first()
-        elif self.user and self.user.is_authenticated and not self.is_bound:
-            # New listing: apply the seller's saved listing defaults
-            saved = getattr(getattr(self.user, 'profile', None), 'listing_defaults', None) or {}
-            for field in ('shipping_service', 'shipping_payer', 'package_weight_oz',
-                          'package_length_in', 'package_width_in', 'package_height_in',
-                          'auto_relist', 'bid_increment', 'local_pickup_available',
-                          'local_pickup_location'):
-                if field in saved and not self.initial.get(field):
-                    self.fields[field].initial = saved[field]
 
     def _resolve_state(self):
         state = None
@@ -267,8 +225,8 @@ class ListingForm(forms.ModelForm):
             state = initial_state if isinstance(initial_state, State) else State.objects.filter(pk=initial_state).first()
         if state is None and self.instance and self.instance.pk:
             state = self.instance.state or getattr(self.instance.county_ref, 'state', None)
-        if state is None:
-            state = State.objects.filter(is_primary_default=True).first() or State.objects.order_by('name').first()
+        # No fallback to a default state: a fresh form says "Choose a state"
+        # rather than quietly deciding the item is from Pennsylvania.
         return state
 
     def _set_reference_querysets(self, state):
@@ -288,11 +246,17 @@ class ListingForm(forms.ModelForm):
         max_year = timezone.now().year - 25
         min_year = (state.min_license_year or ABSOLUTE_MIN_LICENSE_YEAR) if state else ABSOLUTE_MIN_LICENSE_YEAR
         self.fields['license_year'].widget.attrs.update({'min': min_year, 'max': max_year})
-        state_label = state.name if state else 'This state'
-        self.fields['license_year'].help_text = (
-            f'{state_label}: {min_year}–{max_year}. Only expired, antique items (25+ years old) '
-            'can be listed — leave blank if the year is unknown.'
-        )
+        if state:
+            self.fields['license_year'].help_text = (
+                f'{state.name}: {min_year}–{max_year}. Only expired, antique items (25+ years old) '
+                'can be listed — leave blank if the year is unknown.'
+            )
+        else:
+            # No state chosen yet — quote no range that isn't its.
+            self.fields['license_year'].help_text = (
+                'Only expired, antique items (25+ years old) can be listed — '
+                'pick the state to see its years, and leave blank if the year is unknown.'
+            )
 
     def clean(self):
         cleaned_data = super().clean()
@@ -304,22 +268,9 @@ class ListingForm(forms.ModelForm):
             for category in ('residency', 'holder_eligibility', 'activity_scope', 'duration'):
                 cleaned_data[category] = None
                 cleaned_data[f'{category}_other'] = ''
-        # Optional-with-model-default fields: blank means "use the default"
-        if not cleaned_data.get('shipping_service'):
-            cleaned_data['shipping_service'] = 'cheapest'
-        if not cleaned_data.get('shipping_payer'):
-            cleaned_data['shipping_payer'] = 'buyer'
-        if not cleaned_data.get('bid_increment'):
-            cleaned_data['bid_increment'] = Decimal('1')
         state = cleaned_data.get('state')
         county_ref = cleaned_data.get('county_ref')
         license_year = cleaned_data.get('license_year')
-        listing_type = cleaned_data.get('listing_type')
-        starting_price = cleaned_data.get('starting_price')
-        reserve_price = cleaned_data.get('reserve_price')
-        buy_now_price = cleaned_data.get('buy_now_price')
-        trade_notes = (cleaned_data.get('trade_notes') or '').strip()
-        duration_days = cleaned_data.get('duration_days')
         source_collection_item = cleaned_data.get('source_collection_item')
         featured_image = cleaned_data.get('featured_image') or getattr(self.instance, 'featured_image', None)
         selected_dimensions = [cleaned_data.get(category) for category in FORM_LICENSE_TYPE_CATEGORIES]
@@ -337,31 +288,22 @@ class ListingForm(forms.ModelForm):
             if license_year > max_year:
                 self.add_error('license_year', f'Only antique licenses (25+ years old) are tradeable — the latest allowed year is {max_year}.')
 
-        # era_label is required when license_year is not provided
-        era_label = cleaned_data.get('era_label')
-        if license_year is None and not era_label:
-            self.add_error('era_label', 'Era is required when license year is unknown.')
+        # Required-to-publish, not required-to-save: on a draft these come
+        # back from publish_gaps() at the terms page instead of blocking
+        # the save here (the old hard block was why the foot buttons looked
+        # dead — an invisible rule with no field to point at).
+        if self.require_complete:
+            era_label = cleaned_data.get('era_label')
+            if license_year is None and not era_label:
+                self.add_error('era_label', 'Era is required when license year is unknown.')
 
-        if listing_type == 'auction':
-            if starting_price is None:
-                self.add_error('starting_price', 'Starting price is required for auctions.')
-            if not duration_days:
-                self.add_error('duration_days', 'Duration is required for auctions.')
-            if reserve_price and starting_price and reserve_price < starting_price:
-                self.add_error('reserve_price', 'Reserve price must be at least the starting price.')
-        elif listing_type == 'buy_now':
-            if buy_now_price is None:
-                self.add_error('buy_now_price', 'Buy now price is required for The General Store listings.')
-        elif listing_type == 'trade' and not trade_notes:
-            self.add_error('trade_notes', 'Trade preferences are required for The Trading Block listings.')
+            if not featured_image:
+                source_has_image = bool(source_collection_item and source_collection_item.images.exists())
+                if not source_has_image:
+                    self.add_error('featured_image', 'Featured image is required unless source collection item has images.')
 
-        if not featured_image:
-            source_has_image = bool(source_collection_item and source_collection_item.images.exists())
-            if not source_has_image:
-                self.add_error('featured_image', 'Featured image is required unless source collection item has images.')
-
-        if not any(selected_dimensions) and not selected_shape and not selected_colors:
-            raise forms.ValidationError('Select at least one taxonomy or physical attribute value to describe the item.')
+            if not any(selected_dimensions) and not selected_shape and not selected_colors:
+                raise forms.ValidationError('Select at least one taxonomy or physical attribute value to describe the item.')
 
         for category in FORM_LICENSE_TYPE_CATEGORIES:
             selected = cleaned_data.get(category)
@@ -378,68 +320,23 @@ class ListingForm(forms.ModelForm):
         if 'other' in selected_colors and not (cleaned_data.get('colors_other') or '').strip():
             self.add_error('colors_other', 'Please describe the missing color.')
 
-        scheduled_at = cleaned_data.get('scheduled_at')
-        if scheduled_at:
-            now = timezone.now()
-            if scheduled_at <= now:
-                self.add_error('scheduled_at', 'Scheduled go-live must be in the future.')
-            elif scheduled_at > now + timedelta(days=30):
-                self.add_error('scheduled_at', 'Scheduled go-live cannot be more than 30 days in the future.')
-
-        local_pickup_available = cleaned_data.get('local_pickup_available')
-        local_pickup_location = (cleaned_data.get('local_pickup_location') or '').strip()
-        if local_pickup_available and not local_pickup_location:
-            self.add_error('local_pickup_location', 'Enter a location for local pickup.')
-
         return cleaned_data
 
     def save(self, commit=True):
         listing = super().save(commit=False)
-        listing.state = self.cleaned_data['state']
+        listing.state = self.cleaned_data.get('state')
         listing.county_ref = self.cleaned_data.get('county_ref')
         listing.county = listing.county_ref.name if listing.county_ref else ''
         listing.is_statewide = bool(listing.county_ref and listing.county_ref.is_statewide)
         listing.shape = self.cleaned_data.get('shape') or ''
         listing.colors = self.cleaned_data.get('colors') or []
-        listing.local_pickup_available = bool(self.cleaned_data.get('local_pickup_available'))
-        listing.local_pickup_location = (self.cleaned_data.get('local_pickup_location') or '').strip()
         listing.serial_number = (self.cleaned_data.get('serial_number') or '').strip()
         listing.era_label = self.cleaned_data.get('era_label') or None
 
-        listing_type = self.cleaned_data['listing_type']
-        duration = self.cleaned_data.get('duration_days')
-        scheduled_at = self.cleaned_data.get('scheduled_at')
-
-        if listing_type == 'auction':
-            listing.auto_relist = bool(self.cleaned_data.get('auto_relist'))
-            go_live = scheduled_at or timezone.now()
-            listing.auction_end = go_live + timedelta(days=int(duration))
-            listing.buy_now_price = None
-            listing.trade_notes = ''
-            listing.allow_cash = False
-            listing.allow_offers = False
-        elif listing_type == 'buy_now':
-            listing.starting_price = None
-            listing.current_bid = None
-            listing.reserve_price = None
-            listing.auction_end = None
-            listing.trade_notes = ''
-            listing.allow_cash = False
-        else:
-            listing.starting_price = None
-            listing.current_bid = None
-            listing.reserve_price = None
-            listing.buy_now_price = None
-            listing.auction_end = None
-            # Offers negotiate a buy-now price; trades have their own offer flow.
-            listing.allow_offers = False
-
-        # Scheduled go-live: only apply on new listings (no pk yet)
-        if not listing.pk and scheduled_at:
-            listing.scheduled_at = scheduled_at
-            listing.status = 'scheduled'
-        elif not listing.pk:
-            listing.status = 'active'
+        # The item is described; the terms aren't set. Publishing — prices,
+        # duration, auction_end, active/scheduled — is ListingTermsForm's job.
+        if not listing.pk:
+            listing.status = 'draft'
 
         if commit:
             listing.save()
@@ -503,6 +400,217 @@ class ListingForm(forms.ModelForm):
             )
 
 
+class ListingTermsForm(forms.ModelForm):
+    """Step 3 — the terms, one panel per destination.
+
+    Carries only the destination's own questions plus the shared getting-it-
+    there strip. Publishing happens here and nowhere else: a draft flips to
+    active (or scheduled) when this form saves with ``publish=True``. On the
+    edit page it saves with ``publish=False`` so touching a live listing's
+    price never resets its clock — and a live auction doesn't offer the
+    duration or go-live fields at all, because the clock has already run.
+    """
+
+    duration_days = forms.ChoiceField(
+        choices=[
+            (1, '1 day'),
+            (3, '3 days'),
+            (5, '5 days'),
+            (7, '7 days'),
+            (10, '10 days'),
+        ],
+        initial=7,
+        required=False,
+        widget=forms.Select(attrs={'class': 'kb-select'}),
+    )
+    scheduled_at = forms.DateTimeField(
+        required=False,
+        widget=forms.DateTimeInput(attrs={'class': 'kb-input', 'type': 'datetime-local'}),
+        help_text='Handy before a show. Max 30 days out; leave blank to go live now.',
+        input_formats=['%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M'],
+    )
+    auto_relist = forms.BooleanField(
+        required=False,
+        initial=True,
+        widget=forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+    )
+    local_pickup_available = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+    )
+    local_pickup_location = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'e.g. Lancaster, PA'}),
+    )
+    ship_from_address = forms.ModelChoiceField(
+        queryset=Address.objects.none(),
+        required=False,
+        empty_label='Account default address',
+        widget=forms.Select(attrs={'class': 'kb-select'}),
+    )
+    # The standing answer lives on the collection item, not the listing —
+    # both the store panel and the collection panel set the same switch.
+    open_to_trade = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+    )
+    trade_wants = forms.CharField(
+        required=False, max_length=250,
+        widget=forms.TextInput(attrs={'class': 'kb-input', 'placeholder': 'Anything pre-1930 from a county I&rsquo;m missing.'}),
+    )
+
+    class Meta:
+        model = Listing
+        fields = [
+            'starting_price',
+            'reserve_price',
+            'bid_increment',
+            'buy_now_price',
+            'allow_offers',
+            'minimum_offer',
+            'local_pickup_available',
+            'local_pickup_location',
+            'ship_from_address',
+            'package_weight_oz',
+            'package_length_in',
+            'package_width_in',
+            'package_height_in',
+            'shipping_service',
+            'shipping_payer',
+        ]
+        widgets = {
+            'starting_price': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '$25.00', 'step': '1', 'min': '1'}),
+            'reserve_price': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '$50.00 (optional)', 'step': '1', 'min': '1'}),
+            'buy_now_price': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '$75.00', 'step': '1', 'min': '1'}),
+            'bid_increment': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '$1', 'step': '1', 'min': '1'}),
+            'allow_offers': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+            'minimum_offer': forms.NumberInput(attrs={'class': 'kb-input', 'step': '0.01', 'min': '1', 'placeholder': 'Leave empty and every offer reaches you'}),
+            'package_weight_oz': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '8.0', 'step': '0.5', 'min': '0.5'}),
+            'package_length_in': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '10', 'step': '0.5', 'min': '1'}),
+            'package_width_in': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '7', 'step': '0.5', 'min': '1'}),
+            'package_height_in': forms.NumberInput(attrs={'class': 'kb-input', 'placeholder': '1', 'step': '0.5', 'min': '0.5'}),
+            'shipping_service': forms.Select(attrs={'class': 'kb-select'}),
+            'shipping_payer': forms.Select(attrs={'class': 'kb-select'}),
+        }
+
+    AUCTION_ONLY = ('starting_price', 'reserve_price', 'bid_increment', 'duration_days', 'auto_relist')
+    STORE_ONLY = ('buy_now_price', 'allow_offers', 'minimum_offer', 'open_to_trade', 'trade_wants')
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        self.listing_type = self.instance.listing_type
+        self.is_live = bool(self.instance.pk) and self.instance.status != 'draft'
+
+        drop = self.STORE_ONLY if self.listing_type == 'auction' else self.AUCTION_ONLY
+        for name in drop:
+            self.fields.pop(name, None)
+        if self.is_live:
+            # The clock question was answered when the lot opened.
+            self.fields.pop('duration_days', None)
+            self.fields.pop('scheduled_at', None)
+
+        for optional_field in ('bid_increment', 'shipping_service', 'shipping_payer'):
+            if optional_field in self.fields:
+                self.fields[optional_field].required = False
+
+        if self.user and self.user.is_authenticated:
+            self.fields['ship_from_address'].queryset = Address.objects.filter(user=self.user)
+            if not self.initial.get('ship_from_address') and not self.instance.ship_from_address_id:
+                profile = getattr(self.user, 'profile', None)
+                if profile and profile.shipping_address_id:
+                    self.fields['ship_from_address'].initial = profile.shipping_address_id
+
+        # A fresh draft starts from the seller's saved selling defaults.
+        if not self.is_bound and not self.is_live:
+            saved = getattr(getattr(self.user, 'profile', None), 'listing_defaults', None) or {}
+            for field in ('shipping_service', 'shipping_payer', 'package_weight_oz',
+                          'package_length_in', 'package_width_in', 'package_height_in',
+                          'auto_relist', 'bid_increment', 'local_pickup_available',
+                          'local_pickup_location'):
+                if field in self.fields and field in saved and not self.initial.get(field):
+                    self.fields[field].initial = saved[field]
+
+        source = self.instance.source_collection_item
+        if source and 'open_to_trade' in self.fields and not self.is_bound:
+            self.fields['open_to_trade'].initial = source.tradeability == 'open'
+            self.fields['trade_wants'].initial = source.trade_wants
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if not cleaned_data.get('shipping_service'):
+            cleaned_data['shipping_service'] = 'cheapest'
+        if not cleaned_data.get('shipping_payer'):
+            cleaned_data['shipping_payer'] = 'buyer'
+
+        if self.listing_type == 'auction':
+            starting_price = cleaned_data.get('starting_price')
+            reserve_price = cleaned_data.get('reserve_price')
+            if not cleaned_data.get('bid_increment'):
+                cleaned_data['bid_increment'] = Decimal('1')
+            if starting_price is None:
+                self.add_error('starting_price', 'Starting price is required for auctions.')
+            if not self.is_live and not cleaned_data.get('duration_days'):
+                self.add_error('duration_days', 'Duration is required for auctions.')
+            if reserve_price and starting_price and reserve_price < starting_price:
+                self.add_error('reserve_price', 'Reserve price must be at least the starting price.')
+        else:
+            if cleaned_data.get('buy_now_price') is None:
+                self.add_error('buy_now_price', 'Your price is required for The General Store.')
+
+        scheduled_at = cleaned_data.get('scheduled_at')
+        if scheduled_at:
+            now = timezone.now()
+            if scheduled_at <= now:
+                self.add_error('scheduled_at', 'Scheduled go-live must be in the future.')
+            elif scheduled_at > now + timedelta(days=30):
+                self.add_error('scheduled_at', 'Scheduled go-live cannot be more than 30 days in the future.')
+
+        if cleaned_data.get('local_pickup_available') and not (cleaned_data.get('local_pickup_location') or '').strip():
+            self.add_error('local_pickup_location', 'Enter a location for local pickup.')
+
+        return cleaned_data
+
+    def save(self, commit=True, publish=False):
+        listing = super().save(commit=False)
+        listing.local_pickup_available = bool(self.cleaned_data.get('local_pickup_available'))
+        listing.local_pickup_location = (self.cleaned_data.get('local_pickup_location') or '').strip()
+
+        if self.listing_type == 'auction':
+            listing.auto_relist = bool(self.cleaned_data.get('auto_relist')) if not self.is_live else listing.auto_relist
+            listing.buy_now_price = None
+            listing.trade_notes = ''
+            listing.allow_cash = False
+            listing.allow_offers = False
+        else:
+            listing.starting_price = None
+            listing.current_bid = None
+            listing.reserve_price = None
+            listing.auction_end = None
+            listing.trade_notes = ''
+            listing.allow_cash = False
+
+        if publish and listing.status == 'draft':
+            scheduled_at = self.cleaned_data.get('scheduled_at')
+            if self.listing_type == 'auction':
+                go_live = scheduled_at or timezone.now()
+                listing.auction_end = go_live + timedelta(days=int(self.cleaned_data['duration_days']))
+            if scheduled_at:
+                listing.scheduled_at = scheduled_at
+                listing.status = 'scheduled'
+            else:
+                listing.status = 'active'
+
+        if commit:
+            listing.save()
+            source = listing.source_collection_item
+            if source and 'open_to_trade' in self.fields:
+                source.tradeability = 'open' if self.cleaned_data.get('open_to_trade') else 'closed'
+                source.trade_wants = (self.cleaned_data.get('trade_wants') or '').strip()
+                source.save(update_fields=['tradeability', 'trade_wants', 'updated_at'])
+        return listing
+
+
 class ListingImageForm(forms.ModelForm):
     """One photograph and what it is of.
 
@@ -517,6 +625,16 @@ class ListingImageForm(forms.ModelForm):
             'sort_order': forms.HiddenInput(),
             'image_role': forms.HiddenInput(),
         }
+
+    def has_changed(self):
+        """A new row with a role but no photograph is an empty slot, not a
+        half-filled form. Counting it as changed made Django demand its
+        image — four invisible errors and a submit that looked dead."""
+        if self.instance.pk:
+            return super().has_changed()
+        if not (self.files.get(self.add_prefix('image')) or self.data.get(self.add_prefix('image'))):
+            return False
+        return super().has_changed()
 
 
 ListingImageFormSet = forms.inlineformset_factory(

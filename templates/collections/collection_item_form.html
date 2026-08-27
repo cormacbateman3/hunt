@@ -6,35 +6,49 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/pages/item-form.css' %}">
+{% if mode == 'create' %}<link rel="stylesheet" href="{% static 'css/pages/sell.css' %}">{% endif %}
+{% endblock %}
+
+{% block context_band %}
+{% if mode == 'create' %}
+<nav class="kb-crumbs" aria-label="Breadcrumb">
+    <div class="kb-band-inner">
+        <a href="{% url 'bench' %}">My Bench</a>
+        <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
+        <a href="{% url 'listings:sell_start' %}">Add an item</a>
+        <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
+        <span class="kb-crumb-current">My collection</span>
+        {% url 'listings:sell_start' as step1_url %}
+        {% include 'listings/_sell_steps.html' with step=sell_step destination=sell_destination step1_url=step1_url %}
+    </div>
+</nav>
+{% endif %}
 {% endblock %}
 
 {% block content %}
 <div class="if-page">
+    {% if mode == 'edit' %}
+    {# The add flow starts straight into the floor (6b/4a); only the edit page keeps a head. #}
     <div class="if-head">
-        <h1>{% if mode == 'create' %}Add an item{% else %}Edit the record{% endif %}</h1>
+        <h1>Edit the record</h1>
         <p class="if-lede">
-            {% if mode == 'create' %}
-                Start with a photograph &mdash; it reads most of this for you.
-                Nothing is public until you choose to show or offer it.
-            {% else %}
-                The record behind the piece. Change anything; the photographs keep their meaning.
-            {% endif %}
+            The record behind the piece. Change anything; the photographs keep their meaning.
         </p>
     </div>
+    {% endif %}
 
-    {% if form.errors or image_formset.non_form_errors %}
+    {% if form.errors or image_formset.total_error_count %}
         <div class="if-errors" role="alert">
-            <strong>
-                {% with n=form.errors|length %}
-                    {{ n }} thing{{ n|pluralize }} to fix before this can be saved
-                {% endwith %}
-            </strong>
+            <strong>Something to fix before this can be saved</strong>
             <ul>
                 {% for field in form %}{% for error in field.errors %}
                     <li>&middot; <a href="#{{ field.id_for_label }}">{{ field.label }}</a> &mdash; {{ error }}</li>
                 {% endfor %}{% endfor %}
                 {% for error in form.non_field_errors %}<li>&middot; {{ error }}</li>{% endfor %}
                 {% for error in image_formset.non_form_errors %}<li>&middot; {{ error }}</li>{% endfor %}
+                {% for img_form in image_formset %}{% for field in img_form %}{% for error in field.errors %}
+                    <li>&middot; Photograph {{ forloop.parentloop.parentloop.counter }} &mdash; {{ error }}</li>
+                {% endfor %}{% endfor %}{% endfor %}
             </ul>
         </div>
     {% endif %}
@@ -42,6 +56,7 @@
     <form method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
         <input type="hidden" name="prefill_job_id" id="prefill-job-id" value="">
+        <input type="hidden" name="discard_kept" id="discard-kept" value="">
 
         <div class="if-floor">
             {# ── The evidence rail ─────────────────────────────────── #}
@@ -50,41 +65,45 @@
                 <section class="if-panel if-panel--photos" data-photo-panel>
                     <div class="if-panel-head">
                         <span class="if-panel-eyebrow">Photographs</span>
-                        <span class="if-panel-meta" data-photo-count>0 of 5</span>
+                        <span class="if-panel-meta" data-photo-count>{{ slot_view.count|default:0 }} of 5</span>
                     </div>
                     <div class="if-photos-body">
                         <div class="if-slots" data-slots-ui hidden>
                         <div class="if-slot-pair">
                             <div class="if-slot-col">
-                                <button type="button" class="if-slot if-slot--front" data-slot="front">
+                                <button type="button" class="if-slot if-slot--front{% if slot_view.front.thumb %} is-filled{% endif %}" data-slot="front"
+                                        {% if slot_view.front.existing %}data-existing="yes"{% endif %}
+                                        {% if slot_view.front.kept %}data-kept="{{ slot_view.front.kept }}"{% endif %}>
+                                    {% if slot_view.front.thumb %}<img src="{{ slot_view.front.thumb }}" alt="">{% endif %}
                                     <span class="if-slot-badge">Front</span>
                                     <span class="if-slot-x" data-slot-x="front" role="button" aria-label="Remove the front photograph">&times;</span>
                                 </button>
                                 <span class="if-slot-cap">The one everyone sees first</span>
                             </div>
                             <div class="if-slot-col">
-                                <button type="button" class="if-slot" data-slot="back">
+                                <button type="button" class="if-slot{% if slot_view.back.thumb %} is-filled{% endif %}" data-slot="back"
+                                        {% if slot_view.back.existing %}data-existing="yes"{% endif %}
+                                        {% if slot_view.back.kept %}data-kept="{{ slot_view.back.kept }}"{% endif %}>
+                                    {% if slot_view.back.thumb %}<img src="{{ slot_view.back.thumb }}" alt="">{% endif %}
                                     <span class="if-slot-badge if-slot-badge--back">Back</span>
                                     <span class="if-slot-x" data-slot-x="back" role="button" aria-label="Remove the back photograph">&times;</span>
                                 </button>
-                                <span class="if-slot-cap">Serial, pin, printing</span>
+                                <span class="if-slot-cap">Pin, printing, stamps</span>
                             </div>
                         </div>
                         <div class="if-details-row">
-                            <button type="button" class="if-slot if-slot--detail" data-slot="detail0">+
-                                <span class="if-slot-x" data-slot-x="detail0" role="button" aria-label="Remove this photograph">&times;</span>
+                            {% for d in slot_view.details %}
+                            <button type="button" class="if-slot if-slot--detail{% if d.thumb %} is-filled{% endif %}" data-slot="detail{{ forloop.counter0 }}"
+                                    {% if d.existing %}data-existing="yes"{% endif %}
+                                    {% if d.kept %}data-kept="{{ d.kept }}"{% endif %}>
+                                {% if d.thumb %}<img src="{{ d.thumb }}" alt="">{% else %}+{% endif %}
+                                <span class="if-slot-x" data-slot-x="detail{{ forloop.counter0 }}" role="button" aria-label="Remove this photograph">&times;</span>
                             </button>
-                            <button type="button" class="if-slot if-slot--detail" data-slot="detail1">+
-                                <span class="if-slot-x" data-slot-x="detail1" role="button" aria-label="Remove this photograph">&times;</span>
-                            </button>
-                            <button type="button" class="if-slot if-slot--detail" data-slot="detail2">+
-                                <span class="if-slot-x" data-slot-x="detail2" role="button" aria-label="Remove this photograph">&times;</span>
-                            </button>
+                            {% endfor %}
                         </div>
+                        {% comment %}Turn 6b's line — the Turn-5 fixed-slots copy is retired.{% endcomment %}
                         <span class="if-photos-note">
-                            Front and back are fixed slots, so reordering can&rsquo;t relabel
-                            them &mdash; and they keep their meaning if the piece is ever
-                            listed for sale.
+                            Close-ups of a flaw, a maker mark, the pin. Drag to reorder these three.
                         </span>
                         </div>
                         <div class="if-native">
@@ -169,8 +188,28 @@
                 </section>
             </div>
 
-            {# ── The work ──────────────────────────────────────────── #}
+            {# ── The work — the same 6b column as the listing form ──── #}
             <div class="if-work">
+                <div class="if-grid if-grid--halves">
+                    <div class="if-field{% if form.title.errors %} has-error{% endif %}" data-title-field>
+                        <div class="if-label-row">
+                            <label class="kb-label" for="{{ form.title.id_for_label }}">Title</label>
+                            {# Hidden until the title has actually been written for them (4a). #}
+                            <span class="if-label-note" data-title-note hidden>written for you &middot; edit freely</span>
+                        </div>
+                        {{ form.title }}
+                        {{ form.title.errors }}
+                    </div>
+                    <div class="if-field{% if form.description.errors %} has-error{% endif %}">
+                        <div class="if-label-row">
+                            <label class="kb-label" for="{{ form.description.id_for_label }}">Description</label>
+                            <span class="if-label-note if-label-note--quiet" data-desc-count>yours to write</span>
+                        </div>
+                        {{ form.description }}
+                        {{ form.description.errors }}
+                    </div>
+                </div>
+
                 <section class="if-section">
                     <div class="if-section-head">
                         <h2>What it is</h2>
@@ -199,13 +238,11 @@
                         <div class="if-field{% if form.license_year.errors %} has-error{% endif %}">
                             <label class="kb-label" for="{{ form.license_year.id_for_label }}">License year</label>
                             {{ form.license_year }}
-                            <span class="kb-hint">{{ form.license_year.help_text }}</span>
+                            <span class="kb-hint" data-year-hint>{{ form.license_year.help_text }}</span>
                             {{ form.license_year.errors }}
                         </div>
                         <div class="if-field if-field--era{% if form.era_label.errors %} has-error{% endif %}" id="era-label-field">
-                            <label class="kb-label" for="{{ form.era_label.id_for_label }}">
-                                Or roughly <span id="era-label-required" style="display: none;">&mdash; needed</span>
-                            </label>
+                            <label class="kb-label" for="{{ form.era_label.id_for_label }}">Era</label>
                             {{ form.era_label }}
                             <span class="kb-hint">Filled in from the year for you.</span>
                             {{ form.era_label.errors }}
@@ -213,116 +250,91 @@
                     </div>
 
                     <div class="if-field{% if form.condition_grade.errors %} has-error{% endif %}">
-                        <span class="kb-label">Condition</span>
-                        {{ form.condition_grade }}
-                        <span class="kb-hint">Pick one, even roughly &mdash; buyers and traders filter on it.</span>
-                        {{ form.condition_grade.errors }}
+                        <div class="if-label-row">
+                            <span class="kb-label">Condition</span>
+                            <span class="if-label-note if-label-note--quiet">yours to grade &mdash; the read never guesses this</span>
+                        </div>
+                        <div class="if-cond-row">
+                            {{ form.condition_grade }}
+                            <span class="if-cond-divider" aria-hidden="true"></span>
+                            <label class="chip-option if-cond-restored">{{ form.is_restored }} Restored</label>
+                        </div>
+                        <span class="kb-hint">Restored sits apart because it isn&rsquo;t a rung &mdash; a
+                            repaired piece can still be Excellent.</span>
+                        {{ form.condition_grade.errors }}{{ form.is_restored.errors }}
                     </div>
 
-                    <div class="if-grid if-grid--serial">
+                    <div class="if-grid if-grid--condwrite">
+                        <div class="if-field{% if form.condition_description.errors %} has-error{% endif %}">
+                            <label class="kb-label" for="{{ form.condition_description.id_for_label }}">Condition description</label>
+                            {{ form.condition_description }}
+                            <span class="kb-hint">The grade is for filtering; this is what stops disputes.</span>
+                            {{ form.condition_description.errors }}
+                        </div>
                         <div class="if-field{% if form.serial_number.errors %} has-error{% endif %}">
-                            <label class="kb-label" for="{{ form.serial_number.id_for_label }}">Serial or stub number</label>
+                            <label class="kb-label" for="{{ form.serial_number.id_for_label }}">Serial or stub</label>
                             {{ form.serial_number }}
                             <span class="kb-hint">Exactly as printed, letters and all.</span>
                             {{ form.serial_number.errors }}
-                        </div>
-                        <div class="if-field{% if form.description.errors %} has-error{% endif %}">
-                            <div class="if-label-row">
-                                <label class="kb-label" for="{{ form.description.id_for_label }}">Anything else worth knowing</label>
-                                <span class="if-label-note if-label-note--quiet" data-desc-count></span>
-                            </div>
-                            {{ form.description }}
-                            <span class="kb-hint">Flaws described plainly are the difference between a fair trade and a dispute.</span>
-                            {{ form.description.errors }}
                         </div>
                     </div>
                 </section>
 
                 <section class="if-section">
                     <div class="if-section-head">
-                        <h2>What it&rsquo;s called</h2>
+                        <h2>The detail collectors filter on</h2>
                         <span class="if-section-line"></span>
+                        <span class="if-section-note">these are the facets in the Hunt rail</span>
                     </div>
-                    <div class="if-called" data-title-panel hidden>
-                        <div class="if-called-text">
-                            <span class="if-called-eyebrow">Written from your answers</span>
-                            <span class="if-called-title" data-title-made>&mdash;</span>
+                    <div class="if-grid if-grid--thirds">
+                        {% for field_name, other_name, heading in taxonomy_fields %}
+                            {% with field=form|bound_field:field_name other_field=form|bound_field:other_name %}
+                            <div class="if-field{% if field.errors %} has-error{% endif %}{% if field_name == 'addon_type' %} if-span{% endif %}{% if field_name == 'material' %} if-field--stay{% endif %}" data-taxonomy-field="{{ field_name }}">
+                                <label class="kb-label" for="{{ field.id_for_label }}" data-taxonomy-label="{{ field_name }}">{{ heading }}</label>
+                                {{ field }}
+                                {% if field_name == 'material' %}
+                                    <span class="kb-hint">Yours &mdash; a photograph can&rsquo;t feel card from celluloid.</span>
+                                {% endif %}
+                                {{ field.errors }}
+                                <div data-other-wrapper="{{ field_name }}" style="display: none;">
+                                    <label class="kb-label" for="{{ other_field.id_for_label }}">{{ heading }} &mdash; in your words</label>
+                                    {{ other_field }}
+                                    {{ other_field.errors }}
+                                </div>
+                            </div>
+                            {% endwith %}
+                        {% endfor %}
+                    </div>
+                    <div class="if-grid if-grid--physical">
+                        <div class="if-field{% if form.shape.errors %} has-error{% endif %}">
+                            <label class="kb-label" for="{{ form.shape.id_for_label }}">Shape</label>
+                            {{ form.shape }}
+                            {{ form.shape.errors }}
+                            <div data-other-wrapper="shape" style="display: none;">
+                                <label class="kb-label" for="{{ form.shape_other.id_for_label }}">Shape &mdash; in your words</label>
+                                {{ form.shape_other }}
+                                {{ form.shape_other.errors }}
+                            </div>
                         </div>
-                        <button type="button" class="kb-btn kb-btn--secondary if-called-own" data-title-own>Write my own</button>
+                        <div class="if-field{% if form.colors.errors %} has-error{% endif %}">
+                            <label class="kb-label" for="{{ form.colors.id_for_label }}">Colours</label>
+                            {{ form.colors }}
+                            {{ form.colors.errors }}
+                            <div data-other-wrapper="colors" style="display: none;">
+                                <label class="kb-label" for="{{ form.colors_other.id_for_label }}">Colour &mdash; in your words</label>
+                                {{ form.colors_other }}
+                                {{ form.colors_other.errors }}
+                            </div>
+                        </div>
+                        <div class="if-field{% if form.addons_attached.errors %} has-error{% endif %}" id="addons-attached-field">
+                            <label class="kb-label" for="{{ form.addons_attached.id_for_label }}">Tags still attached?</label>
+                            {{ form.addons_attached }}
+                            {{ form.addons_attached.errors }}
+                        </div>
                     </div>
-                    <div class="if-field{% if form.title.errors %} has-error{% endif %}" data-title-field>
-                        <label class="kb-label" for="{{ form.title.id_for_label }}">Title</label>
-                        {{ form.title }}
-                        {{ form.title.errors }}
-                    </div>
-                    <span class="kb-hint">
-                        Year, county, residency and anything attached &mdash; in that order,
-                        which is how collectors search. Most people never need to touch it.
-                    </span>
                 </section>
 
-                <details class="if-more" id="taxonomy-details" {% if form.errors %}open{% endif %}>
-                    <summary>
-                        The finer detail &mdash; residency, scope, duration, material, shape, colours
-                        <span class="if-more-sub">Optional, and mostly filled from your photograph already</span>
-                    </summary>
-                    <div class="if-more-body">
-                        <div class="if-grid if-grid--thirds">
-                            {% for field_name, other_name, heading in taxonomy_fields %}
-                                {% with field=form|bound_field:field_name other_field=form|bound_field:other_name %}
-                                <div class="if-field{% if field.errors %} has-error{% endif %}{% if field_name == 'addon_type' %} if-span{% endif %}" data-taxonomy-field="{{ field_name }}">
-                                    <label class="kb-label" for="{{ field.id_for_label }}" data-taxonomy-label="{{ field_name }}">{{ heading }}</label>
-                                    {{ field }}
-                                    {% if field_name == 'material' %}
-                                        <span class="kb-hint">Card, paper, metal, celluloid, cloth. The one thing the photograph can&rsquo;t tell.</span>
-                                    {% endif %}
-                                    {{ field.errors }}
-                                    <div data-other-wrapper="{{ field_name }}" style="display: none;">
-                                        <label class="kb-label" for="{{ other_field.id_for_label }}">{{ heading }} &mdash; in your words</label>
-                                        {{ other_field }}
-                                        {{ other_field.errors }}
-                                    </div>
-                                </div>
-                                {% endwith %}
-                            {% endfor %}
-                        </div>
-                        <div class="if-grid if-grid--physical">
-                            <div class="if-field{% if form.shape.errors %} has-error{% endif %}">
-                                <label class="kb-label" for="{{ form.shape.id_for_label }}">Shape</label>
-                                {{ form.shape }}
-                                {{ form.shape.errors }}
-                                <div data-other-wrapper="shape" style="display: none;">
-                                    <label class="kb-label" for="{{ form.shape_other.id_for_label }}">Shape &mdash; in your words</label>
-                                    {{ form.shape_other }}
-                                    {{ form.shape_other.errors }}
-                                </div>
-                            </div>
-                            <div class="if-field{% if form.colors.errors %} has-error{% endif %}">
-                                <label class="kb-label" for="{{ form.colors.id_for_label }}">Colours</label>
-                                {{ form.colors }}
-                                {{ form.colors.errors }}
-                                <div data-other-wrapper="colors" style="display: none;">
-                                    <label class="kb-label" for="{{ form.colors_other.id_for_label }}">Colour &mdash; in your words</label>
-                                    {{ form.colors_other }}
-                                    {{ form.colors_other.errors }}
-                                </div>
-                            </div>
-                            <div class="if-field{% if form.addons_attached.errors %} has-error{% endif %}" id="addons-attached-field">
-                                <label class="kb-label" for="{{ form.addons_attached.id_for_label }}">Tags still attached?</label>
-                                {{ form.addons_attached }}
-                                {{ form.addons_attached.errors }}
-                            </div>
-                        </div>
-                        <div class="if-grid if-grid--halves">
-                            <div class="if-field{% if form.resident_status.errors %} has-error{% endif %}">
-                                <label class="kb-label" for="{{ form.resident_status.id_for_label }}">Resident status</label>
-                                {{ form.resident_status }}
-                                {{ form.resident_status.errors }}
-                            </div>
-                        </div>
-                    </div>
-                </details>
-
+                {% if mode == 'edit' %}
                 <section class="if-section">
                     <div class="if-section-head">
                         <h2>Where it stands</h2>
@@ -338,19 +350,17 @@
 
                     {% include 'collections/_trade_block.html' %}
 
-                    {% if mode == 'edit' %}
-                        <fieldset class="kb-fieldset">
-                            <legend class="kb-fieldset-legend">Where it is</legend>
-                            <div class="if-field{% if form.disposition.errors %} has-error{% endif %}">
-                                {{ form.disposition }}
-                                <span class="kb-hint">
-                                    Anything but &ldquo;in my hands&rdquo; takes it off the trade
-                                    board and out of offers &mdash; the piece stays on the record.
-                                </span>
-                                {{ form.disposition.errors }}
-                            </div>
-                        </fieldset>
-                    {% endif %}
+                    <fieldset class="kb-fieldset">
+                        <legend class="kb-fieldset-legend">Where it is</legend>
+                        <div class="if-field{% if form.disposition.errors %} has-error{% endif %}">
+                            {{ form.disposition }}
+                            <span class="kb-hint">
+                                Anything but &ldquo;in my hands&rdquo; takes it off the trade
+                                board and out of offers &mdash; the piece stays on the record.
+                            </span>
+                            {{ form.disposition.errors }}
+                        </div>
+                    </fieldset>
 
                     <fieldset class="kb-fieldset">
                         <legend class="kb-fieldset-legend">Only you see these</legend>
@@ -377,13 +387,24 @@
                         </span>
                     </fieldset>
                 </section>
+                {% endif %}
 
                 <div class="if-foot">
-                    <button type="submit" class="if-go">
-                        {% if mode == 'create' %}Put it in the collection{% else %}Save the changes{% endif %}
-                    </button>
-                    <a class="if-foot-cancel" href="{% url 'collections:my_collection' %}">Leave it</a>
-                    <span class="if-foot-note">Offer it for sale or trade any time after &mdash; nothing is committed today.</span>
+                    {% if mode == 'create' %}
+                        {% comment %}
+                        Turn 6: step 2 describes; step 3 (the collection panel)
+                        asks who sees it and what you'd take. Both buttons save
+                        the item — the second just leaves the defaults standing.
+                        {% endcomment %}
+                        <button type="submit" class="if-go">Set the terms</button>
+                        <button type="submit" name="save_draft" value="1" class="if-foot-hold">Save and come back to it</button>
+                        <a class="if-foot-cancel" href="{% url 'listings:sell_start' %}">Cancel</a>
+                        <span class="if-foot-note">It joins your shelf either way &mdash; step 3 is who sees it and what you&rsquo;d take.</span>
+                    {% else %}
+                        <button type="submit" class="if-go">Save the changes</button>
+                        <a class="if-foot-cancel" href="{% url 'collections:my_collection' %}">Leave it</a>
+                        <span class="if-foot-note">Offer it for sale or trade any time after &mdash; nothing is committed today.</span>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -395,7 +416,7 @@
     honouring the closing one -- which closed the host form early and
     orphaned the submit button and every field after this point.
     {% endcomment %}
-    <details class="if-more">
+    <details class="if-more if-more--tucked">
         <summary>Is a value missing?</summary>
         <div class="if-more-body">
             {% include 'core/_reference_data_suggestion_form.html' %}
@@ -409,20 +430,30 @@
 <script src="{% static 'js/item-form.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    {% if mode == 'create' %}
     KBItemForm.init({
         form: '.if-page form[enctype]',
         kind: 'collection',
         freshTitle: {% if form.title.value %}false{% else %}true{% endif %},
-        slots: {
-            front: { input: '#id_images-0-image', role: '#id_images-0-image_role', sort: '#id_images-0-sort_order', del: '#id_images-0-DELETE' },
-            back: { input: '#id_images-1-image', role: '#id_images-1-image_role', sort: '#id_images-1-sort_order', del: '#id_images-1-DELETE' },
-            details: [
-                { input: '#id_images-2-image', role: '#id_images-2-image_role', sort: '#id_images-2-sort_order', del: '#id_images-2-DELETE' },
-                { input: '#id_images-3-image', role: '#id_images-3-image_role', sort: '#id_images-3-sort_order', del: '#id_images-3-DELETE' },
-                { input: '#id_images-4-image', role: '#id_images-4-image_role', sort: '#id_images-4-sort_order', del: '#id_images-4-DELETE' },
-            ],
-        },
+        {% comment %}
+        The slot plan is drawn server-side (apps.core.slot_plan) so a
+        saved record's rows keep their roles — "the back slot" is the row
+        whose role is back, never just row 1.
+        {% endcomment %}
+        slots: {{ slots_cfg_json|safe }},
     });
+    {% else %}
+    KBItemForm.init({
+        form: '.if-page form[enctype]',
+        kind: 'collection',
+        freshTitle: {% if form.title.value %}false{% else %}true{% endif %},
+        slots: { front: null, back: null, details: [] },
+    });
+    {% endif %}
+    {% comment %}
+    Material never rides the read — a photograph can't feel card from
+    celluloid (4a/4e). It counts in the tally's "for you" instead.
+    {% endcomment %}
     KBPrefill.init({
         createUrl: '{% url "prefill:create_job" %}',
         correctionsUrlTemplate: '{% url "prefill:job_corrections" 0 %}',
@@ -432,7 +463,15 @@ document.addEventListener('DOMContentLoaded', () => {
         fileInput: '#{{ image_formset.0.image.id_for_label }}',
         jobIdInput: '#prefill-job-id',
         panel: '#prefill-panel',
+        resume: {{ prefill_resume_json|default:'null'|safe }},
         form: '.if-page form[enctype]',
+        {% if mode == 'create' %}overlayHost: '[data-slot="front"]',{% endif %}
+        lines: {{ ledger_lines_json|safe }},
+        forYou: [
+            { name: 'condition', kind: 'radio', groupName: 'condition_grade' },
+            { name: 'description', kind: 'input', sel: '#{{ form.description.id_for_label }}' },
+            { name: 'material', kind: 'select', sel: '#id_material' },
+        ],
         fields: {
             item_kind: { kind: 'radio', name: 'item_kind' },
             state: { kind: 'select', sel: '#{{ form.state.id_for_label }}' },
@@ -443,7 +482,6 @@ document.addEventListener('DOMContentLoaded', () => {
             holder_eligibility: { kind: 'select', sel: '#id_holder_eligibility' },
             activity_scope: { kind: 'select', sel: '#id_activity_scope' },
             duration: { kind: 'select', sel: '#id_duration' },
-            material: { kind: 'select', sel: '#id_material' },
             addon_type: { kind: 'checklist', name: 'addon_type' },
             shape: { kind: 'select', sel: '#{{ form.shape.id_for_label }}' },
             colors: { kind: 'checklist', name: 'colors' },
@@ -458,17 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const geoSelect = document.getElementById('{{ form.county.id_for_label }}');
     const geoLabel = document.getElementById('county-label');
     const licenseYearInput = document.getElementById('{{ form.license_year.id_for_label }}');
-    const eraRequired = document.getElementById('era-label-required');
     const taxonomyFields = {{ taxonomy_field_names_json|safe }};
-
-    const toggleEraRequired = () => {
-        const yearKnown = licenseYearInput && licenseYearInput.value.trim() !== '';
-        if (eraRequired) eraRequired.style.display = yearKnown ? 'none' : '';
-    };
-    if (licenseYearInput) {
-        licenseYearInput.addEventListener('input', toggleEraRequired);
-        toggleEraRequired();
-    }
 
     const rebuildChecklist = (container, name, items) => {
         const checked = Array.from(container.querySelectorAll('input:checked')).map(i => i.value);
@@ -527,6 +555,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (licenseYearInput) {
             licenseYearInput.min = geoData.min_license_year || 1850;
             if (licenseYearInput.value.trim() !== '') licenseYearInput.reportValidity();
+        }
+        // The hint names the state actually chosen — it used to keep
+        // quoting the server-rendered one after a change.
+        const yearHint = document.querySelector('[data-year-hint]');
+        if (yearHint && licenseYearInput) {
+            const opt = stateSelect.options[stateSelect.selectedIndex];
+            const stateName = opt && stateSelect.value ? opt.text : 'This state';
+            yearHint.textContent = `${stateName}: ${licenseYearInput.min}–${licenseYearInput.max}. `
+                + 'Only expired, antique items (25+ years old) belong here — '
+                + 'leave blank if the year is unknown.';
         }
 
         const licenseTypeResponse = await fetch(`/api/license-types/?state=${encodeURIComponent(stateId)}`);

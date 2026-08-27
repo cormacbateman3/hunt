@@ -116,6 +116,34 @@ def rate_limit_error(user) -> str | None:
     return None
 
 
+def _annotate_checks(payload):
+    """4e's row treatment, decided here where the floors are known.
+
+    A field renders amber (the ✓/× pair) when its match sat at or just
+    above the fuzzy floor, came from the second pass, or was inferred
+    rather than read; high and medium otherwise render green with
+    "change". The client can't know the floors — they live in the
+    prefill config — so the payload carries a plain ``check`` flag.
+    """
+    fuzzy_floor = getattr(core, 'FUZZY_FLOOR', 80)
+    geo_floor = getattr(core, 'GEO_NAME_FLOOR', fuzzy_floor)
+    just_above = 4
+
+    def mark(data, floor):
+        if not isinstance(data, dict) or data.get('value') is None:
+            return
+        near_floor = data.get('score', 100) <= floor + just_above
+        data['check'] = bool(data.get('inferred') or data.get('second_pass') or near_floor)
+
+    for name, data in (payload.get('fields') or {}).items():
+        if name == 'addon_type':
+            for item in (data or {}).get('items', []):
+                mark(item, fuzzy_floor)
+        else:
+            mark(data, geo_floor if name == 'geographic_unit' else fuzzy_floor)
+    return payload
+
+
 def _unmatched(fields) -> list[dict]:
     """Values we read but couldn't match — the suggestion-panel feed."""
     out = []
@@ -173,7 +201,7 @@ def process_job(job: PrefillJob, extractor=None, client=None) -> PrefillJob:
         'context_text': resolution['context_text'],
         'unmatched': _unmatched(resolution['fields']),
     }
-    job.resolved_payload = payload
+    job.resolved_payload = _annotate_checks(payload)
     job.cost_usd = round(result.get('cost_usd', 0) + resolution.get('second_pass_cost_usd', 0), 5)
     job.status = 'complete'
     job.completed_at = timezone.now()
@@ -186,6 +214,28 @@ def job_state(job: PrefillJob) -> dict:
     state = {'job_id': job.pk, 'status': job.status}
     if job.status == 'complete':
         state['payload'] = job.resolved_payload
+        # The few numbers a ledger line is allowed to cite, computed here
+        # once so the copy layer never queries on its own (4e).
+        from apps.prefill.ledger import line_facts
+        state['line_facts'] = line_facts(job)
     if job.status == 'failed':
         state['error'] = job.error
     return state
+
+
+def resume_state_json(request) -> str:
+    """The completed job behind a failed submit, as JSON for the template.
+
+    A validation error reloads the page, but the read already happened —
+    with this in context the ledger settles straight back in, describing
+    the values the form kept, instead of vanishing with the reload.
+    """
+    import json
+
+    job_id = request.POST.get('prefill_job_id', '') if request.method == 'POST' else ''
+    if not job_id.isdigit():
+        return 'null'
+    job = PrefillJob.objects.filter(
+        pk=int(job_id), user=request.user, status='complete',
+    ).first()
+    return json.dumps(job_state(job)) if job else 'null'

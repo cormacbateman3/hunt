@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils import timezone
 
-from .models import Block, Conversation, Message, MessageRead, MessageReport
+from .models import MessagingSettings, ConversationMember, Block, Conversation, Message, MessageRead, MessageReport
 
 
 class MessageInline(admin.TabularInline):
@@ -14,8 +14,8 @@ class MessageInline(admin.TabularInline):
 
 @admin.register(Conversation)
 class ConversationAdmin(admin.ModelAdmin):
-    list_display = ('id', 'conversation_type', 'user_a', 'user_b', 'listing', 'is_closed', 'last_message_at')
-    list_filter = ('conversation_type', 'is_closed', 'created_at')
+    list_display = ('id', 'user_a', 'user_b', 'listing', 'is_closed', 'last_message_at')
+    list_filter = ('is_closed', 'created_at')
     search_fields = ('user_a__username', 'user_b__username', 'listing__title')
     readonly_fields = ('created_at', 'last_message_at')
     inlines = [MessageInline]
@@ -93,3 +93,19 @@ class MessageReportAdmin(admin.ModelAdmin):
     def mark_reviewing(self, request, queryset):
         queryset.update(status='reviewing')
         self.message_user(request, f'{queryset.count()} report(s) marked as reviewing.')
+
+
+@admin.register(MessagingSettings)
+class MessagingSettingsAdmin(admin.ModelAdmin):
+    list_display = ('groups_enabled', 'group_max_members', 'updated_at')
+
+    def has_add_permission(self, request):
+        if MessagingSettings.objects.exists():
+            return False
+        return super().has_add_permission(request)
+
+
+@admin.register(ConversationMember)
+class ConversationMemberAdmin(admin.ModelAdmin):
+    list_display = ('conversation', 'user', 'added_by', 'joined_at')
+    search_fields = ('user__username', 'conversation__name')

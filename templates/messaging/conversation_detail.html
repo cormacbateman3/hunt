@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ other.profile.get_display_name }} &middot; Messages &middot; KeystoneBid{% endblock %}
+{% block title %}{% if conversation.is_group %}{{ conversation.name }}{% else %}{{ other.profile.get_display_name }}{% endif %} &middot; Messages &middot; KeystoneBid{% endblock %}
 
 {% block context_band %}{% include 'components/_bench_tabs.html' %}{% endblock %}
 
@@ -11,13 +11,87 @@
 
 {% block content %}
 {% comment %}
-Two panes. The deal the thread is about stays pinned so neither person has
-to remember which of four deals this is.
+Two panes, the 8d drawing's grammar: bubbles with the time tucked under
+them on the avatar side, date dividers, the deal pinned. Reporting lives
+in ONE place — the header menu — where a report can carry a note and,
+optionally, point at specific messages. No inline buttons: the vast run
+of exchanges is cordial, and the furniture should assume so.
 {% endcomment %}
 <div class="ms-layout">
     {% include 'messaging/_thread_list.html' %}
 
     <div class="ms-pane">
+        {% if conversation.is_group %}
+        <header class="ms-who">
+            <span class="ms-who-mark ms-thread-mark--room">{{ conversation.name|slice:':2'|upper }}</span>
+            <div class="kb-stack">
+                <span class="ms-who-name">{{ conversation.name }}</span>
+                <span class="ms-who-sub">{{ members|length }} of you &middot; private &mdash; members only</span>
+            </div>
+            <div class="ms-who-actions">
+                <div class="ms-menu" data-menu>
+                    <button type="button" class="ms-quiet ms-quiet--chip" data-menu-toggle aria-expanded="false">Members</button>
+                    <div class="ms-menu-panel" hidden>
+                        <div class="ms-menu-head">
+                            <span class="ms-menu-title">In this room</span>
+                            <button type="button" class="ms-menu-x" data-menu-close aria-label="Close">&times;</button>
+                        </div>
+                        {% for member in members %}
+                            <div class="ms-member-row">
+                                <a href="{% url 'accounts:profile' member.user.username %}">{{ member.user.profile.get_display_name }}</a>
+                                {% if member.user_id == conversation.created_by_id %}
+                                    <span class="kb-faint">opened it</span>
+                                {% elif user.id == conversation.created_by_id %}
+                                    <form method="post" action="{% url 'messaging:group_remove_member' conversation.pk member.user_id %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="kb-btn kb-btn--text kb-btn--sm">Remove</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                        <form method="post" action="{% url 'messaging:group_add_member' conversation.pk %}" class="ms-member-add" data-picker-single>
+                            {% csrf_token %}
+                            <label class="kb-sr" for="ms-add-name">Add by name</label>
+                            <div class="ms-picker-anchor">
+                                <input type="text" id="ms-add-name" name="username" class="kb-input"
+                                       placeholder="Start typing a name&hellip;" autocomplete="off"
+                                       data-picker-input data-picker-url="{% url 'messaging:user_search' %}">
+                                <div class="ms-picker-list" data-picker-list hidden></div>
+                            </div>
+                            <button type="submit" class="kb-btn kb-btn--secondary kb-btn--sm">Add</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="ms-menu" data-menu>
+                    <button type="button" class="ms-quiet" data-menu-toggle aria-expanded="false">Report or leave</button>
+                    <div class="ms-menu-panel" hidden>
+                        <div class="ms-menu-head">
+                            <span class="ms-menu-title">Report this room</span>
+                            <button type="button" class="ms-menu-x" data-menu-close aria-label="Close">&times;</button>
+                        </div>
+                        <form method="post" action="{% url 'messaging:report_conversation' conversation.pk %}"
+                              id="ms-report-form" class="ms-menu-form">
+                            {% csrf_token %}
+                            <label class="kb-sr" for="ms-reason-g">Reason</label>
+                            <select name="reason" id="ms-reason-g" class="kb-select">
+                                {% for value, label in report_reasons %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                            <textarea name="notes" class="kb-input" rows="2" maxlength="500"
+                                      placeholder="Anything we should know? (optional)"></textarea>
+                            <button type="button" class="ms-pick-toggle" data-pick-toggle>Point at specific messages</button>
+                            <button type="submit" class="kb-btn kb-btn--secondary kb-btn--sm">Report</button>
+                        </form>
+                        <form method="post" action="{% url 'messaging:group_leave' conversation.pk %}" class="ms-menu-foot">
+                            {% csrf_token %}
+                            <button type="submit" class="kb-btn kb-btn--text kb-btn--sm">Leave the room</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </header>
+        {% else %}
         <header class="ms-who">
             <span class="ms-who-mark">{{ other.username|slice:':2'|upper }}</span>
             <div class="kb-stack">
@@ -29,10 +103,15 @@ to remember which of four deals this is.
             </div>
             <div class="ms-who-actions">
                 <a href="{% url 'accounts:profile' other.username %}" class="ms-quiet">Their profile</a>
-                <details class="ms-report">
-                    <summary class="ms-quiet">Block or report</summary>
-                    <div class="ms-report-panel">
-                        <form method="post" action="{% url 'messaging:report_conversation' conversation.pk %}">
+                <div class="ms-menu" data-menu>
+                    <button type="button" class="ms-quiet" data-menu-toggle aria-expanded="false">Block or report</button>
+                    <div class="ms-menu-panel" hidden>
+                        <div class="ms-menu-head">
+                            <span class="ms-menu-title">Report this conversation</span>
+                            <button type="button" class="ms-menu-x" data-menu-close aria-label="Close">&times;</button>
+                        </div>
+                        <form method="post" action="{% url 'messaging:report_conversation' conversation.pk %}"
+                              id="ms-report-form" class="ms-menu-form">
                             {% csrf_token %}
                             <label class="kb-sr" for="ms-reason">Reason</label>
                             <select name="reason" id="ms-reason" class="kb-select">
@@ -40,23 +119,26 @@ to remember which of four deals this is.
                                     <option value="{{ value }}">{{ label }}</option>
                                 {% endfor %}
                             </select>
+                            <textarea name="notes" class="kb-input" rows="2" maxlength="500"
+                                      placeholder="Anything we should know? (optional)"></textarea>
+                            <button type="button" class="ms-pick-toggle" data-pick-toggle>Point at specific messages</button>
                             <button type="submit" class="kb-btn kb-btn--secondary kb-btn--sm">Report</button>
                         </form>
-                        <form method="post" action="{% url 'messaging:block_user' conversation.pk %}">
-                            {% csrf_token %}
-                            <button type="submit" class="kb-btn kb-btn--text kb-btn--sm">
-                                {% if user_has_blocked_other %}Unblock them{% else %}Block them{% endif %}
-                            </button>
-                        </form>
+                        <div class="ms-menu-foot">
+                            <form method="post" action="{% url 'messaging:block_user' conversation.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="kb-btn kb-btn--text kb-btn--sm">
+                                    {% if user_has_blocked_other %}Unblock them{% else %}Block them{% endif %}
+                                </button>
+                            </form>
+                        </div>
                     </div>
-                </details>
+                </div>
             </div>
         </header>
+        {% endif %}
 
         {% if deal %}
-            {% comment %}
-            The deal, pinned. Amount, your side of it, and the live deadline.
-            {% endcomment %}
             <div class="ms-deal{% if deal.on_you %} ms-deal--on-you{% endif %}">
                 <div class="kb-stack">
                     <span class="ms-deal-title">
@@ -77,40 +159,47 @@ to remember which of four deals this is.
                 {% comment %}
                 Catch the agreement. We do not read the messages — a machine
                 deciding a sentence was an agreement is worse than no feature
-                at all. We notice the deadline is live and offer the link.
+                at all. We notice a live deadline and offer the one link.
                 {% endcomment %}
                 <div class="ms-catch">
                     <p class="ms-catch-copy">
-                        If the two of you have agreed something different here, put it on
-                        the record &mdash; then the
-                        {{ deal.nudge.due_at|date:"l" }} deadline can&rsquo;t count against you.
+                        If the two of you have agreed something different about
+                        {% if deal.nudge.covers == 'shipping' %}shipping{% else %}the hand-off{% endif %},
+                        put it on the record so the deadline doesn&rsquo;t count against anyone.
                     </p>
                     <a href="{{ deal.nudge.url }}" class="kb-btn kb-btn--secondary kb-btn--sm">Offer a handshake</a>
                 </div>
             {% endif %}
         {% endif %}
 
-        <div class="ms-thread-body-scroll" id="message-thread">
-            {% for msg in messages %}
+        <div class="ms-thread-body-scroll" id="message-thread" data-thread>
+            {% for msg in thread_messages %}
+                {% ifchanged msg.created_at|date:"Y-m-d" %}
+                    <div class="ms-divider"><span>{{ msg.created_at|date:"l j F"|upper }}</span></div>
+                {% endifchanged %}
+                {% ifchanged msg.context_listing_id %}
+                    {% if msg.context_listing %}
+                        <div class="ms-divider ms-divider--about">
+                            <span>About &middot; <a href="{{ msg.context_listing.get_absolute_url }}">{{ msg.context_listing.title|truncatechars:48 }}</a></span>
+                        </div>
+                    {% endif %}
+                {% endifchanged %}
                 <div class="ms-msg{% if msg.sender_id == user.id %} ms-msg--mine{% endif %}">
+                    {% if msg.sender_id != user.id %}
+                        <label class="ms-pick" hidden>
+                            <input type="checkbox" form="ms-report-form" name="message_ids"
+                                   value="{{ msg.pk }}" data-pick-box>
+                            <span class="kb-sr">Include this message in the report</span>
+                        </label>
+                    {% endif %}
                     <span class="ms-msg-mark">{{ msg.sender.username|slice:':2'|upper }}</span>
                     <div class="ms-msg-body">
-                        <p class="ms-msg-text">{{ msg.body|linebreaksbr }}</p>
+                        {% if conversation.is_group and msg.sender_id != user.id %}
+                            <span class="ms-msg-sender">{{ msg.sender.profile.get_display_name }}</span>
+                        {% endif %}
+                        <div class="ms-bubble">{{ msg.body|linebreaksbr }}</div>
                         <span class="ms-msg-when">
-                            {{ msg.created_at|date:"j M, g:i a" }}
-                            {% if msg.moderation_state == 'ok' %}
-                                <a href="#" class="ms-msg-flag"
-                                   onclick="this.nextElementSibling.hidden=!this.nextElementSibling.hidden;return false;">Flag</a>
-                                <form method="post" action="{% url 'messaging:report_message' conversation.pk msg.pk %}" hidden class="ms-msg-report">
-                                    {% csrf_token %}
-                                    <select name="reason" class="kb-select">
-                                        {% for value, label in report_reasons %}
-                                            <option value="{{ value }}">{{ label }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <button type="submit" class="kb-btn kb-btn--secondary kb-btn--sm">Report</button>
-                                </form>
-                            {% endif %}
+                            {{ msg.created_at|date:"g:i a" }}{% if msg.sender_id == user.id and other_last_read and msg.created_at <= other_last_read %} &middot; read{% endif %}
                         </span>
                     </div>
                 </div>
@@ -119,13 +208,32 @@ to remember which of four deals this is.
             {% endfor %}
         </div>
 
+        {% if is_new_exchange and not conversation.is_group %}
+            {% comment %}
+            The quiet word, once, at the start of a new exchange — security
+            without a shadow: a machine screens, a person only reads what
+            gets flagged or reported.
+            {% endcomment %}
+            <p class="ms-word">
+                A quick word: exchanges here are screened for safety by machine.
+                A person only reads a conversation if something is flagged or
+                reported. Deal plainly and enjoy.
+            </p>
+        {% endif %}
+
         {% if not conversation.is_closed and not is_blocked %}
             <form method="post" class="ms-write">
                 {% csrf_token %}
                 {% if send_error %}<p class="ms-error" role="alert">{{ send_error }}</p>{% endif %}
-                <label class="kb-sr" for="ms-body">Write to {{ other.profile.get_display_name }}</label>
-                <textarea class="kb-input" name="body" id="ms-body" rows="3" required
-                          placeholder="Write to {{ other.profile.get_display_name }}&hellip;"></textarea>
+                {% if conversation.is_group %}
+                    <label class="kb-sr" for="ms-body">Write to the room</label>
+                    <textarea class="kb-input" name="body" id="ms-body" rows="2" required
+                              placeholder="Write to the room&hellip;"></textarea>
+                {% else %}
+                    <label class="kb-sr" for="ms-body">Write to {{ other.profile.get_display_name }}</label>
+                    <textarea class="kb-input" name="body" id="ms-body" rows="2" required
+                              placeholder="Write to {{ other.profile.get_display_name }}&hellip;"></textarea>
+                {% endif %}
                 <button type="submit" class="kb-btn kb-btn--primary">Send</button>
             </form>
         {% elif conversation.is_closed %}

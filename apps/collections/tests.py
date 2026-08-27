@@ -90,10 +90,20 @@ class TheTradeToggleTests(TestCase):
         return data
 
     def test_the_control_is_actually_on_the_page(self):
+        # Turn 6 moved the standing answer to step 3 (the collection panel)
+        # for a new piece; on an existing piece it stays on the edit page.
         self.client.force_login(self.owner)
-        page = self.client.get(reverse('collections:create'))
-        self.assertContains(page, 'name="tradeability"')
-        self.assertContains(page, 'name="trade_wants"')
+        create = self.client.get(reverse('collections:create'))
+        self.assertNotContains(create, 'name="tradeability"')
+
+        item = CollectionItem.objects.create(owner=self.owner, title='On the shelf')
+        terms = self.client.get(reverse('collections:item_terms', args=[item.pk]))
+        self.assertContains(terms, 'name="open_to_trade"')
+        self.assertContains(terms, 'name="trade_wants"')
+
+        edit = self.client.get(reverse('collections:edit', args=[item.pk]))
+        self.assertContains(edit, 'name="tradeability"')
+        self.assertContains(edit, 'name="trade_wants"')
 
     def test_a_new_piece_is_open_without_being_told_to_be(self):
         form = CollectionItemForm(data=self._data(),

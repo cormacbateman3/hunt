@@ -19,6 +19,17 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.accounts.follows import following_ids
 from apps.core.constants import FORM_TAXONOMY_FIELDS
+from apps.core.slot_plan import photo_slots
+from apps.core.upload_stash import (
+    clear_stash,
+    discard_stashed,
+    kept_discards,
+    restore_missing,
+    stash_uploads,
+    stashed_map,
+)
+from apps.prefill.ledger import line_bank_json
+from apps.prefill.services import resume_state_json
 from apps.core.forms import ReferenceDataSuggestionForm
 from apps.core.models import GeographicUnit, LicenseType, State
 from apps.orders.models import Order
@@ -30,8 +41,13 @@ from .browse import page as browse_page
 from .collectors import collector_rows
 from .tracker import ground_covered, matrix as tracker_matrix
 from .tradeability import trade_block_reason
-from .forms import CollectionItemForm, CollectionItemImageFormSet, WantedItemForm
-from .models import CollectionItem, CollectionItemImage, WantedItem
+from .forms import (
+    CollectionItemForm,
+    CollectionItemImageFormSet,
+    CollectionItemTermsForm,
+    WantedItemForm,
+)
+from .models import MAX_FEATURED, CollectionItem, CollectionItemImage, WantedItem
 
 
 def _link_prefill_job(request, item):
@@ -47,8 +63,6 @@ def _link_prefill_job(request, item):
 # One list, shared with the listing forms — the labels are the turn 6b
 # drawing's, and both forms read the same rows so they can never drift.
 TAXONOMY_FIELDS = FORM_TAXONOMY_FIELDS
-
-MAX_FEATURED = 6
 
 
 def _apply_collection_filters(queryset, params):
@@ -262,33 +276,137 @@ def browse_collections(request):
                   browse_page(request.GET))
 
 
+@login_required
 def collection_item_create(request):
-    image_formset = CollectionItemImageFormSet(request.POST or None, request.FILES or None)
+    """Step 2 of the add flow, wearing the My-collection destination.
+
+    The item saves the moment this form does — a collection item has no
+    draft state to hold. Step 3 (the collection panel) then asks who sees
+    it and what you'd take for it; skipping that step just leaves the
+    model's defaults standing.
+    """
+    # Step 3's questions never render here, and an absent checkbox must not
+    # read as "no" — popping the fields lets the model defaults stand
+    # (public, open to trade) until the collection panel asks properly.
+    def _step2_form(*args, **kwargs):
+        form = CollectionItemForm(*args, **kwargs)
+        for name in ('is_public', 'tradeability', 'trade_wants', 'disposition',
+                     'featured', 'purchase_price', 'acquired_note', 'private_note'):
+            form.fields.pop(name, None)
+        return form
+
+    # Same photograph manners as the listing form: a failed submit keeps
+    # the uploads in their slots for one retry, an × really discards, and
+    # a fresh walk-up starts clean.
     if request.method == 'POST':
-        form = CollectionItemForm(request.POST, user=request.user)
+        discard_stashed(request, kept_discards(request))
+        post_files = restore_missing(request, request.FILES)
+    else:
+        clear_stash(request)
+        post_files = None
+
+    image_formset = CollectionItemImageFormSet(request.POST or None, post_files or None)
+    if request.method == 'POST':
+        form = _step2_form(request.POST, user=request.user)
         if form.is_valid() and image_formset.is_valid():
             form.instance.owner = request.user
             item = form.save()
 
-            image_formset = CollectionItemImageFormSet(request.POST, request.FILES, instance=item)
+            image_formset = CollectionItemImageFormSet(request.POST, post_files, instance=item)
             if image_formset.is_valid():
                 image_formset.save()
                 _link_prefill_job(request, item)
-                messages.success(request, 'Collection item created.')
-                return redirect('collections:my_collection')
+                clear_stash(request)
+                if 'save_draft' in request.POST:
+                    messages.success(request, 'On the shelf. The settings kept their defaults — '
+                                              'edit the piece whenever to change them.')
+                    return redirect('collections:my_collection')
+                return redirect('collections:item_terms', pk=item.pk)
             item.delete()
+            stash_uploads(request, request.FILES)
+        else:
+            stash_uploads(request, request.FILES)
     else:
-        form = CollectionItemForm(user=request.user)
+        form = _step2_form(user=request.user)
 
+    kept = stashed_map(request) if request.method == 'POST' else {}
+    slots_cfg, slot_view = photo_slots(image_formset, kept=kept)
     return render(request, 'collections/collection_item_form.html', {
+        'prefill_resume_json': resume_state_json(request),
         'form': form,
         'image_formset': image_formset,
         'mode': 'create',
+        'sell_step': 2,
+        'sell_destination': {'name': 'My collection'},
         'taxonomy_fields': TAXONOMY_FIELDS,
         'taxonomy_field_names_json': json.dumps([item[0] for item in TAXONOMY_FIELDS]),
+        'slots_cfg_json': json.dumps(slots_cfg),
+        'slot_view': slot_view,
+        'ledger_lines_json': line_bank_json(),
         'suggestion_form': ReferenceDataSuggestionForm(
             initial={'target_model': 'other', 'suggestion_type': 'new_value'}
         ),
+    })
+
+
+def _closes_gap_line(item):
+    """"This closes your Sullivan gap — 42 of 67 counties." — said only
+    when it is true: the county is real ground (it has a FIPS shape) and
+    this piece is the first of that county on the shelf."""
+    county = item.county
+    if not (county and item.state_id) or county.is_statewide or not county.fips_code:
+        return ''
+    others = CollectionItem.objects.filter(
+        owner=item.owner, county=county, disposition='held',
+    ).exclude(pk=item.pk).exists()
+    if others:
+        return ''
+    from apps.core import ground
+    from .tracker import plural_unit
+
+    real = ground.real_units(item.state)
+    if not real.filter(pk=county.pk).exists():
+        return ''
+    held = (
+        CollectionItem.objects
+        .filter(owner=item.owner, state_id=item.state_id,
+                county__in=real, disposition='held')
+        .values('county_id').distinct().count()
+    )
+    label = plural_unit(item.state.issuance_unit_label or 'County').lower()
+    return (f'This closes your {county.name} gap — '
+            f'{held} of {real.count()} {label}.')
+
+
+@login_required
+def collection_item_terms(request, pk):
+    """Step 3 — the collection panel.
+
+    Nothing about money publicly, everything about privacy: show it,
+    case it, trade it, and the only-you block. The folder row waits on
+    CollectionFolder (10.14).
+    """
+    item = get_object_or_404(
+        CollectionItem.objects.select_related('state', 'county'),
+        pk=pk, owner=request.user,
+    )
+    form = CollectionItemTermsForm(
+        request.POST if request.method == 'POST' else None,
+        instance=item,
+    )
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        line = _closes_gap_line(item)
+        messages.success(request, 'On the shelf.' + (f' {line}' if line else ''))
+        return redirect('collections:my_collection')
+
+    return render(request, 'collections/collection_item_terms.html', {
+        'form': form,
+        'item': item,
+        'step': 3,
+        'destination': {'name': 'My collection'},
+        'gap_line': _closes_gap_line(item),
+        'max_featured': MAX_FEATURED,
     })
 
 
@@ -343,6 +461,7 @@ def collection_item_edit(request, pk):
         'item': item,
         'taxonomy_fields': TAXONOMY_FIELDS,
         'taxonomy_field_names_json': json.dumps([item[0] for item in TAXONOMY_FIELDS]),
+        'ledger_lines_json': line_bank_json(),
         'suggestion_form': ReferenceDataSuggestionForm(
             initial={'target_model': 'collection_item', 'target_id': item.id, 'suggestion_type': 'new_value'}
         ),
@@ -454,6 +573,8 @@ def add_from_order(request, order_id):
             'state': listing.state_id,
             'county': listing.county_ref_id,
             'condition_grade': listing.condition_grade,
+            'condition_description': listing.condition_description,
+            'is_restored': listing.is_restored,
             'shape': listing.shape,
             'colors': listing.colors,
             'serial_number': listing.serial_number or '',

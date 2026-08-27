@@ -449,6 +449,26 @@
     aspect-ratio: 4 / 3;
     background: var(--kb-hatch);
     display: block;
+    position: relative;
+}
+
+/* One item, told as one item: the piece with a live lot (or one that has
+   departed — owner view) wears its state on the corner of the grid. */
+.pf-piece-tag {
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: var(--kb-forest);
+    color: var(--kb-cream);
+    font: 700 9px/1.2 var(--kb-font-body);
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    padding: 3px 7px;
+}
+
+.pf-case-flag--state {
+    background: var(--kb-forest);
+    color: var(--kb-cream);
 }
 
 .pf-piece-media img {
@@ -487,6 +507,35 @@
     font-size: 13px;
     line-height: 1.55;
     color: var(--kb-ink-3);
+}
+
+/* ── On the way — the owner's drafts and scheduled lots ──────────────── */
+.pf-unfinished {
+    margin-top: 14px;
+    border: 1px dashed var(--kb-rule);
+    border-radius: var(--kb-r-md);
+    padding: 10px 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.pf-unfinished-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 12.5px;
+    color: var(--kb-ink-1);
+    text-decoration: none;
+}
+
+.pf-unfinished-row:hover .pf-unfinished-state { color: var(--kb-rust); }
+
+.pf-unfinished-state {
+    font-size: 11.5px;
+    color: var(--kb-brass);
+    flex-shrink: 0;
 }
 
 /* ── Rail ────────────────────────────────────────────────────────────── */

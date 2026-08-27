@@ -63,9 +63,18 @@ def shelf(user, query='', limit=SHELF_SIZE):
     Thinning a collection is the common case for a second listing, and a
     duplicate is the piece a collector is most likely to part with. Sorting
     by it is what turns this row from a convenience into the obvious route.
+
+    Anything already in a marketplace — live, scheduled, pending, or a
+    draft on its way there — stays off the shelf entirely. "Start from
+    something you already own" offers what is *available* to sell; showing
+    a piece whose lot is already up reads as an invitation to post a
+    duplicate. (This also hides the quiet shelf records a marketplace
+    listing writes behind the scenes.)
     """
     items = (
-        CollectionItem.objects.filter(owner=user)
+        # Held only: a piece that departed (sold, traded, given away) is
+        # not available to sell, however fondly it is remembered.
+        CollectionItem.objects.filter(owner=user, disposition='held')
         .select_related('county', 'state')
         .prefetch_related('images')
     )
@@ -73,25 +82,28 @@ def shelf(user, query='', limit=SHELF_SIZE):
         items = items.filter(title__icontains=query)
 
     # A duplicate is two items the same county and year. Counted in Python
-    # over the owner's own shelf, which is small by definition.
+    # over the owner's own shelf, which is small by definition — and before
+    # the listed exclusion, because owning two of a thing is true even
+    # while one of them is up for sale.
     seen = {}
     for county_id, year in items.values_list('county_id', 'license_year'):
         seen[(county_id, year)] = seen.get((county_id, year), 0) + 1
 
     listed_ids = set(
-        items.filter(listings__status__in=('active', 'scheduled', 'pending'))
+        items.filter(listings__status__in=('draft', 'active', 'scheduled', 'pending'))
         .values_list('id', flat=True)
     )
 
     rows = []
     for item in items:
+        if item.id in listed_ids:
+            continue
         copies = seen.get((item.county_id, item.license_year), 1)
         if item.county_id is None or item.license_year is None:
             copies = 1
         rows.append({
             'item': item,
             'copies': copies,
-            'already_listed': item.id in listed_ids,
             'note': (
                 f'Duplicate ×{copies}' if copies > 1
                 else ('Not on my profile' if not item.is_public
@@ -100,30 +112,17 @@ def shelf(user, query='', limit=SHELF_SIZE):
         })
 
     rows.sort(key=lambda row: (-row['copies'], row['item'].title))
-    return rows[:limit], items.count()
-
-
-def prepare_from_item(item, destination):
-    """Carry a shelf item's details across into a new listing.
-
-    Everything the seller already recorded — county, year, condition, the
-    taxonomy, the photographs — comes across, which is the whole point of the
-    shelf being the source of truth. The second sale of a duplicate should
-    take under a minute.
-    """
-    initial = {
-        'title': item.title,
-        'description': item.description,
-        'item_kind': item.item_kind,
-        'addons_attached': item.addons_attached,
-        'license_year': item.license_year,
-        'state': item.state_id,
-        'county_ref': item.county_id,
-        'condition_grade': item.condition_grade,
-        'shape': item.shape,
-        'colors': item.colors,
-        'serial_number': item.serial_number or '',
-        'era_label': item.era_label or '',
-        'listing_type': destination,
+    # The numbers the page prints must be the numbers the page means:
+    # "Search my 5 items" over a shelf showing 1 was three listed pieces
+    # counted as available. `eligible` is what this row can offer.
+    counts = {
+        'eligible': len(rows),
+        'listed': len(listed_ids),
+        'total': len(rows) + len(listed_ids),
     }
-    return initial
+    return rows[:limit], counts
+
+
+# Carrying a shelf item's details into a new listing lives in
+# views._prefill_from_collection_item — one implementation, not two that
+# drift. (A second copy used to sit here, never called.)

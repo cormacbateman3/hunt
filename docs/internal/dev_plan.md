@@ -1600,9 +1600,11 @@ Admin Moderation Tools
 Scope Limits
 The following are explicitly out of scope for this task (defer to post-Beta or later):
 •	Real-time chat / WebSockets / typing indicators
-•	Image or file attachments in messages
-•	Group conversations or multi-party threads
-•	Full messaging disable based on account score or automated flagging
+•	Image or file attachments in messages — STILL DEFERRED (registered in plan_design Pass 9f: blocked on the moderation pipeline proving out + an upload model with scan-at-upload)
+•	~~Group conversations or multi-party threads~~ — SUPERSEDED 2026-08-26 (owner approval): private invite-only rooms shipped in plan_design Pass 9f; public channels remain deliberately unbuilt
+•	~~Full messaging disable based on account score or automated flagging~~ — SUPERSEDED 2026-08-26 (owner approval): the apps/moderation three-tier scan shipped in plan_design Pass 9f. It only flags for human review; automated *disable* remains unbuilt on purpose (humans decide)
+
+Post-build amendments (2026-08-26, plan_design Pass 9f): Conversation is now ONE THREAD PER PAIR (the per-listing/type split above is superseded); conversation_type was removed; listing/trade context is display-only and the deal strip reads the pair's live deal.
 
 Acceptance Criteria
 •	Users can start conversations from listing and trade offer pages

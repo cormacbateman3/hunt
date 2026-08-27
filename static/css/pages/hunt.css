@@ -151,3 +151,82 @@
         padding-left: 0;
     }
 }
+
+/* ── Just closed — the last 24 hours, below the live grid ───────────── */
+.hunt-closed {
+    margin-top: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.hunt-closed-rule {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+}
+
+.hunt-closed-line {
+    flex: 1;
+    height: 1px;
+    background: var(--kb-rule);
+}
+
+.hunt-closed-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.hunt-closed-card {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-md);
+    background: var(--kb-surface);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    text-decoration: none;
+    min-width: 0;
+}
+
+.hunt-closed-card:hover { border-color: var(--kb-rule-strong); }
+
+.hunt-closed-media {
+    aspect-ratio: 4 / 3;
+    border-radius: var(--kb-r-chip);
+    background: var(--kb-hatch);
+    overflow: hidden;
+}
+
+.hunt-closed-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.hunt-closed-title {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--kb-ink-1);
+    line-height: 1.35;
+}
+
+.hunt-closed-went {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--kb-live);
+    font-variant-numeric: tabular-nums;
+}
+
+.hunt-closed-went--quiet { color: var(--kb-ink-4); font-weight: 400; }
+
+.hunt-closed-when {
+    font-size: 11px;
+    color: var(--kb-ink-4);
+}
+
+@media (max-width: 900px) {
+    .hunt-closed-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

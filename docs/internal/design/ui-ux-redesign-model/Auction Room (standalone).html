@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KeystoneBid — The Auction Room, as built</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Petrona:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Public+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #f4f1e8; }
+  .doc { padding: 40px 64px 80px; display: flex; flex-direction: column; gap: 40px; font-family: 'Public Sans', system-ui, sans-serif; color: #1c1f18; }
+</style>
+</head>
+<body>
+<div class="doc">
+
+  <!-- ══ Header ══════════════════════════════════════════════════════ -->
+  <div style="max-width: 960px; display: flex; flex-direction: column; gap: 14px;">
+    <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.11em; text-transform: uppercase; color: #6b6f60;">The Auction Room &middot; as-built frames</span>
+    <h1 style="font-family: Petrona, Georgia, serif; font-size: 38px; font-weight: 600; line-height: 1.12; letter-spacing: -0.015em; margin: 0; color: #26331f;">The last five minutes, the one mechanic, and what everyone learns after the close.</h1>
+    <p style="font-size: 15.5px; line-height: 1.65; color: #4d5245; margin: 0; max-width: 810px;">These four pieces were owner-directed and built straight into the house style during the auction-operations pass (plan_design Pass 9e) — the drawings did not exist first, so these frames are the record, drawn from the shipped markup. Proxy bidding is the site&rsquo;s only auction mechanic; the soft close is effectively unbounded (each reset demands new money, so a war converges on its own); everything below is live at <code style="font-family: ui-monospace, Menlo, monospace; font-size: 12.5px;">listing_detail.html</code>, <code style="font-family: ui-monospace, Menlo, monospace; font-size: 12.5px;">my_bids.html</code> and <code style="font-family: ui-monospace, Menlo, monospace; font-size: 12.5px;">hunt.html</code>.</p>
+  </div>
+
+  <!-- ══ A1 — The room ═══════════════════════════════════════════════ -->
+  <div style="display: flex; flex-direction: column; gap: 18px;">
+    <div style="display: flex; align-items: baseline; gap: 12px;">
+      <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; background: #26331f; color: #f4f1e8; padding: 4px 9px; border-radius: 4px;">A1</span>
+      <h2 style="font-family: Petrona, Georgia, serif; font-size: 26px; font-weight: 600; margin: 0; color: #26331f;">The room &mdash; the closing minutes, live</h2>
+      <span style="font-size: 13px; color: #6b6f60;">appears five minutes out; polls every 2s inside the window</span>
+    </div>
+
+    <div style="width: 380px; background: #fff; border: 1px solid #ddd7c8; border-radius: 4px; padding: 18px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;">
+        <div style="display: flex; flex-direction: column; gap: 3px;">
+          <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: #6b6f60;">Current bid</span>
+          <span style="font-family: Petrona, Georgia, serif; font-size: 28px; font-weight: 600; color: #a07a26; font-variant-numeric: tabular-nums;">$775.00</span>
+          <span style="font-size: 11.5px; color: #8c8f80;">7 bids &middot; reserve met</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 3px; text-align: right;">
+          <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: #9c3d1e;">Ends in</span>
+          <span style="font-family: Petrona, Georgia, serif; font-size: 24px; font-weight: 600; color: #9c3d1e; opacity: 0.82; font-variant-numeric: tabular-nums;">1m 43s</span>
+          <span style="font-size: 11px; color: #8c8f80;">Tue Aug 26, 8:00 pm &middot; extended &times;2</span>
+        </div>
+      </div>
+
+      <div style="border-top: 1px solid #ddd7c8; padding-top: 10px; display: flex; flex-direction: column; gap: 7px;">
+        <div style="display: flex; align-items: baseline; gap: 8px;">
+          <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: #9c3d1e;">The room</span>
+          <span style="font-size: 11px; color: #8c8f80; margin-left: auto;">Extended &mdash; two more minutes for everyone.</span>
+        </div>
+        <div style="display: flex; flex-direction: column;">
+          <div style="display: flex; align-items: baseline; gap: 8px; padding: 5px 0; border-bottom: 1px solid #efeade; font-size: 12.5px; background: #fdf6e3;">
+            <strong style="font-variant-numeric: tabular-nums; color: #1c1f18; min-width: 64px;">$775.00</strong>
+            <span style="color: #6b6f60;">cormac</span>
+            <time style="margin-left: auto; font-size: 11px; color: #8c8f80; font-variant-numeric: tabular-nums;">4s ago</time>
+          </div>
+          <div style="display: flex; align-items: baseline; gap: 8px; padding: 5px 0; border-bottom: 1px solid #efeade; font-size: 12.5px;">
+            <strong style="font-variant-numeric: tabular-nums; color: #1c1f18; min-width: 64px;">$770.00</strong>
+            <span style="color: #6b6f60;">h_kreider &middot; auto</span>
+            <time style="margin-left: auto; font-size: 11px; color: #8c8f80; font-variant-numeric: tabular-nums;">31s ago</time>
+          </div>
+          <div style="display: flex; align-items: baseline; gap: 8px; padding: 5px 0; border-bottom: 1px solid #efeade; font-size: 12.5px;">
+            <strong style="font-variant-numeric: tabular-nums; color: #1c1f18; min-width: 64px;">$765.00</strong>
+            <span style="color: #6b6f60;">cormac</span>
+            <time style="margin-left: auto; font-size: 11px; color: #8c8f80; font-variant-numeric: tabular-nums;">31s ago</time>
+          </div>
+          <div style="display: flex; align-items: baseline; gap: 8px; padding: 5px 0; font-size: 12.5px;">
+            <strong style="font-variant-numeric: tabular-nums; color: #1c1f18; min-width: 64px;">$740.00</strong>
+            <span style="color: #6b6f60;">j_bower &middot; auto</span>
+            <time style="margin-left: auto; font-size: 11px; color: #8c8f80; font-variant-numeric: tabular-nums;">1m ago</time>
+          </div>
+        </div>
+      </div>
+
+      <div style="border-top: 1px solid #ddd7c8; padding-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: baseline;">
+          <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #6b6f60; display: inline-flex; align-items: center; gap: 6px;">
+            Your maximum bid
+            <span style="width: 15px; height: 15px; border: 1px solid #cfc7b4; border-radius: 999px; font-size: 9px; display: inline-flex; align-items: center; justify-content: center; color: #8c8f80;">?</span>
+          </span>
+          <span style="font-size: 11.5px; color: #8c8f80; margin-left: auto;">Minimum $780.00</span>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <span style="flex: 1; border: 1px solid #cfc7b4; border-radius: 3px; background: #fff; padding: 10px 12px; font-size: 13px; color: #b9b19c;">The most you&rsquo;d pay</span>
+          <span style="background: #a07a26; color: #1b2416; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 10px 16px; border-radius: 3px; white-space: nowrap;">Place bid</span>
+        </div>
+        <span style="font-size: 12px; color: #4d5245;">Your maximum: <strong>$800.00</strong> &middot; you&rsquo;re the high bidder</span>
+      </div>
+    </div>
+
+    <div style="width: 960px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; background: #fdf6e3; border-left: 3px solid #a07a26; border-radius: 0 4px 4px 0; padding: 18px 22px;">
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #a07a26;">Why a feed, not a number</span>
+        <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #5c5540;">Most bids land in the last minute, and a lone price that silently changes reads as a broken page. Five minutes out the room opens: every bid lands as a row (newest first, five at most), proxy answers say <em>&middot; auto</em>, the price pulses when it moves, and the countdown breathes rust under two minutes. Reduced motion stills all of it.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #a07a26;">The extension announces itself</span>
+        <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #5c5540;">A bid inside the final two minutes resets the clock to two minutes — losing volleys included, because the answer deserves the same window. Said three ways: the bidder&rsquo;s toast (&ldquo;The clock reset — two more minutes&rdquo;), the room&rsquo;s note, and the clock line&rsquo;s &ldquo;extended &times;2&rdquo;. Effectively unbounded; a 100-reset backstop guards pathology only.</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #a07a26;">When it closes under your eyes</span>
+        <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #5c5540;">The poll that notices the clock ran out is the same request that closes the lot server-side (the lazy close). The page then swaps to the outcome — the won-panel, the sold line — instead of freezing on a dead countdown. &ldquo;EXPIRED&rdquo; is retired; the beat between end and truth reads &ldquo;Closing&hellip;&rdquo;.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ A2 — The popout ═════════════════════════════════════════════ -->
+  <div style="display: flex; flex-direction: column; gap: 18px;">
+    <div style="display: flex; align-items: baseline; gap: 12px;">
+      <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; background: #26331f; color: #f4f1e8; padding: 4px 9px; border-radius: 4px;">A2</span>
+      <h2 style="font-family: Petrona, Georgia, serif; font-size: 26px; font-weight: 600; margin: 0; color: #26331f;">How bidding works here</h2>
+      <span style="font-size: 13px; color: #6b6f60;">the ? beside the bid label, open</span>
+    </div>
+
+    <div style="width: 380px; background: #fdf6e3; border: 1px solid #f0e6c8; border-left: 3px solid #a07a26; border-radius: 0 3px 3px 0; padding: 11px 13px; display: flex; flex-direction: column; gap: 6px;">
+      <strong style="font-size: 12.5px; color: #1c1f18;">We bid for you.</strong>
+      <p style="margin: 0; font-size: 12px; line-height: 1.55; color: #4d5245;">Enter the most you&rsquo;d pay. The price only climbs when somebody pushes it &mdash; your standing maximum answers one increment at a time, up to your number and never past it. Nobody ever sees your maximum.</p>
+      <p style="margin: 0; font-size: 12px; line-height: 1.55; color: #4d5245;">If two maximums tie, the earlier one keeps the lead. You pay the price on the board at the close, not your maximum. Already ahead? Entering a higher number just raises your ceiling.</p>
+      <p style="margin: 0; font-size: 12px; line-height: 1.55; color: #8c8f80;">Bids are binding, and a bid in the closing minutes gives everyone a little more time.</p>
+    </div>
+
+    <div style="width: 960px; background: #fdf6e3; border-left: 3px solid #a07a26; border-radius: 0 4px 4px 0; padding: 18px 22px; display: flex; flex-direction: column; gap: 6px; max-width: 960px;">
+      <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #a07a26;">One mechanic, said once</span>
+      <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #5c5540; max-width: 800px;">Proxy is the site&rsquo;s only auction type (owner&rsquo;s call — the eBay model, per the charter), so there is no per-lot badge taxonomy to learn. This popout is the whole education, one tap from the box it explains. The losing-volley toast is a <em>warning</em>, not a celebration: &ldquo;The high bidder&rsquo;s maximum covers $X — raise your maximum to take it.&rdquo;</p>
+    </div>
+  </div>
+
+  <!-- ══ A3 — The outcomes ═══════════════════════════════════════════ -->
+  <div style="display: flex; flex-direction: column; gap: 18px;">
+    <div style="display: flex; align-items: baseline; gap: 12px;">
+      <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; background: #26331f; color: #f4f1e8; padding: 4px 9px; border-radius: 4px;">A3</span>
+      <h2 style="font-family: Petrona, Georgia, serif; font-size: 26px; font-weight: 600; margin: 0; color: #26331f;">After the close, on the lot page</h2>
+      <span style="font-size: 13px; color: #6b6f60;">one partial, every viewer &mdash; signed out included</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, 320px); gap: 16px;">
+      <div style="background: #fff; border: 1px solid #ddd7c8; border-radius: 4px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+        <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: #2f6b34;">The winner</span>
+        <p style="margin: 0; font-size: 13.5px; line-height: 1.55; color: #1c1f18;">You won this auction at <strong>$775.00</strong>.</p>
+        <span style="background: #a07a26; color: #1b2416; font-size: 11.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 11px; border-radius: 3px; text-align: center;">Review &amp; pay</span>
+      </div>
+      <div style="background: #fff; border: 1px solid #ddd7c8; border-radius: 4px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+        <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: #6b6f60;">Everyone else</span>
+        <p style="margin: 0; font-size: 13px; line-height: 1.55; color: #4d5245;">Sold for <strong>$775.00</strong> &middot; awaiting the winner&rsquo;s payment.</p>
+        <p style="margin: 0; font-size: 11.5px; line-height: 1.5; color: #8c8f80;">Paid: &ldquo;Sold for $775.00 &middot; closed Aug 26.&rdquo; The signed-out see this too &mdash; a closed lot never shows a login wall.</p>
+      </div>
+      <div style="background: #fff; border: 1px solid #ddd7c8; border-radius: 4px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+        <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: #6b6f60;">No sale</span>
+        <p style="margin: 0; font-size: 13px; line-height: 1.55; color: #4d5245;">Closed Aug 26 &mdash; bidding reached $140.00, but the reserve wasn&rsquo;t met.</p>
+        <p style="margin: 0; font-size: 13px; line-height: 1.55; color: #4d5245;">Closed Aug 26 without selling.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ A4 — Settled ════════════════════════════════════════════════ -->
+  <div style="display: flex; flex-direction: column; gap: 18px;">
+    <div style="display: flex; align-items: baseline; gap: 12px;">
+      <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; background: #26331f; color: #f4f1e8; padding: 4px 9px; border-radius: 4px;">A4</span>
+      <h2 style="font-family: Petrona, Georgia, serif; font-size: 26px; font-weight: 600; margin: 0; color: #26331f;">Settled &mdash; &ldquo;did I win?&rdquo;, answered where a bidder looks</h2>
+      <span style="font-size: 13px; color: #6b6f60;">Bids &amp; offers, below Chasing; held seven days</span>
+    </div>
+
+    <div style="width: 960px; background: #fff; border: 1px solid #ddd7c8; border-radius: 4px; overflow: hidden;">
+      <div style="display: grid; grid-template-columns: 1fr 130px 130px 200px 120px; gap: 14px; align-items: center; padding: 13px 18px; border-bottom: 1px solid #efeade; background: #f7fbf4;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="width: 44px; height: 34px; background: repeating-linear-gradient(45deg, #ece7db 0 7px, #e3ddce 7px 14px); border-radius: 3px;"></span>
+          <div style="display: flex; flex-direction: column;"><strong style="font-size: 13px; color: #26331f;">1921 Sullivan resident button</strong><span style="font-size: 11.5px; color: #8c8f80;">Auction &middot; Harold Kreider</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column;"><span style="font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #8c8f80;">You bid</span><span style="font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;">$800.00</span></div>
+        <div style="display: flex; flex-direction: column;"><span style="font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #8c8f80;">Went for</span><span style="font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;">$775.00</span></div>
+        <div style="display: flex; flex-direction: column;"><strong style="font-size: 13px; color: #2f6b34;">You won it</strong><span style="font-size: 11.5px; color: #8c8f80;">Pay to make it yours &mdash; unpaid wins are released after a day.</span></div>
+        <span style="background: #a07a26; color: #1b2416; font-size: 10.5px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; padding: 8px 10px; border-radius: 3px; text-align: center;">Review &amp; pay</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 130px 130px 200px 120px; gap: 14px; align-items: center; padding: 13px 18px; border-bottom: 1px solid #efeade;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="width: 44px; height: 34px; background: repeating-linear-gradient(45deg, #ece7db 0 7px, #e3ddce 7px 14px); border-radius: 3px;"></span>
+          <div style="display: flex; flex-direction: column;"><strong style="font-size: 13px; color: #26331f;">1939 Statewide Nonresident</strong><span style="font-size: 11.5px; color: #8c8f80;">Auction &middot; J. Bower</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column;"><span style="font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #8c8f80;">You bid</span><span style="font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;">$120.00</span></div>
+        <div style="display: flex; flex-direction: column;"><span style="font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #8c8f80;">Went for</span><span style="font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;">$145.00</span></div>
+        <div style="display: flex; flex-direction: column;"><strong style="font-size: 13px; color: #4d5245;">Went to someone else</strong><span style="font-size: 11.5px; color: #8c8f80;">Your $120 wasn&rsquo;t the last word.</span></div>
+        <span style="font-size: 11.5px; color: #a07a26; text-align: center;">See how it ended</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 130px 130px 200px 120px; gap: 14px; align-items: center; padding: 13px 18px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="width: 44px; height: 34px; background: repeating-linear-gradient(45deg, #ece7db 0 7px, #e3ddce 7px 14px); border-radius: 3px;"></span>
+          <div style="display: flex; flex-direction: column;"><strong style="font-size: 13px; color: #26331f;">1926 Elk resident button</strong><span style="font-size: 11.5px; color: #8c8f80;">Auction &middot; D. Stackhouse</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column;"><span style="font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #8c8f80;">You bid</span><span style="font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;">$140.00</span></div>
+        <div style="display: flex; flex-direction: column;"><span style="font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #8c8f80;">Went for</span><span style="font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums;">$140.00</span></div>
+        <div style="display: flex; flex-direction: column;"><strong style="font-size: 13px; color: #4d5245;">Reserve wasn&rsquo;t met</strong><span style="font-size: 11.5px; color: #8c8f80;">Nobody got it &mdash; the floor was never reached.</span></div>
+        <span style="font-size: 11.5px; color: #a07a26; text-align: center;">Look</span>
+      </div>
+    </div>
+
+    <div style="width: 960px; background: #fdf6e3; border-left: 3px solid #a07a26; border-radius: 0 4px 4px 0; padding: 18px 22px; display: flex; flex-direction: column; gap: 6px;">
+      <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #a07a26;">The six states</span>
+      <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #5c5540; max-width: 800px;">You won it (pay) &middot; You won it (paid &mdash; View order) &middot; Went to someone else &middot; Reserve wasn&rsquo;t met &middot; Didn&rsquo;t sell &middot; The win lapsed (payment never arrived; rust). Same three-column ledger row as Chasing, so the page reads as one language. After seven days the letters and the orders are the record.</p>
+    </div>
+  </div>
+
+  <!-- ══ A5 — Just closed ════════════════════════════════════════════ -->
+  <div style="display: flex; flex-direction: column; gap: 18px;">
+    <div style="display: flex; align-items: baseline; gap: 12px;">
+      <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; background: #26331f; color: #f4f1e8; padding: 4px 9px; border-radius: 4px;">A5</span>
+      <h2 style="font-family: Petrona, Georgia, serif; font-size: 26px; font-weight: 600; margin: 0; color: #26331f;">Just closed &mdash; the last 24 hours of the Auction House</h2>
+      <span style="font-size: 13px; color: #6b6f60;">below the live grid, so what&rsquo;s on the clock keeps the room</span>
+    </div>
+
+    <div style="width: 960px; display: flex; flex-direction: column; gap: 12px;">
+      <div style="display: flex; align-items: baseline; gap: 12px;">
+        <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: #a07a26;">Just closed</span>
+        <span style="flex: 1; height: 1px; background: #ddd7c8;"></span>
+        <span style="font-size: 11.5px; color: #8c8f80;">the last 24 hours</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+        <div style="border: 1px solid #ddd7c8; border-radius: 3px; background: #fff; padding: 10px; display: flex; flex-direction: column; gap: 5px;">
+          <span style="aspect-ratio: 4/3; border-radius: 2px; background: repeating-linear-gradient(45deg, #ece7db 0 7px, #e3ddce 7px 14px);"></span>
+          <span style="font-size: 12.5px; font-weight: 600; color: #26331f;">1921 Sullivan resident button</span>
+          <span style="font-size: 12px; font-weight: 600; color: #2f6b34; font-variant-numeric: tabular-nums;">Went for $775.00</span>
+          <span style="font-size: 11px; color: #8c8f80;">closed 2 hours ago</span>
+        </div>
+        <div style="border: 1px solid #ddd7c8; border-radius: 3px; background: #fff; padding: 10px; display: flex; flex-direction: column; gap: 5px;">
+          <span style="aspect-ratio: 4/3; border-radius: 2px; background: repeating-linear-gradient(45deg, #ece7db 0 7px, #e3ddce 7px 14px);"></span>
+          <span style="font-size: 12.5px; font-weight: 600; color: #26331f;">1946 Tioga back tag</span>
+          <span style="font-size: 12px; font-weight: 600; color: #2f6b34; font-variant-numeric: tabular-nums;">Went for $145.00</span>
+          <span style="font-size: 11px; color: #8c8f80;">closed 6 hours ago</span>
+        </div>
+        <div style="border: 1px solid #ddd7c8; border-radius: 3px; background: #fff; padding: 10px; display: flex; flex-direction: column; gap: 5px;">
+          <span style="aspect-ratio: 4/3; border-radius: 2px; background: repeating-linear-gradient(45deg, #ece7db 0 7px, #e3ddce 7px 14px);"></span>
+          <span style="font-size: 12.5px; font-weight: 600; color: #26331f;">1926 Elk resident button</span>
+          <span style="font-size: 12px; color: #8c8f80;">Didn&rsquo;t sell</span>
+          <span style="font-size: 11px; color: #8c8f80;">closed 14 hours ago</span>
+        </div>
+        <div style="border: 1px solid #ddd7c8; border-radius: 3px; background: #fff; padding: 10px; display: flex; flex-direction: column; gap: 5px;">
+          <span style="aspect-ratio: 4/3; border-radius: 2px; background: repeating-linear-gradient(45deg, #ece7db 0 7px, #e3ddce 7px 14px);"></span>
+          <span style="font-size: 12.5px; font-weight: 600; color: #26331f;">1918 Federal duck stamp</span>
+          <span style="font-size: 12px; font-weight: 600; color: #2f6b34; font-variant-numeric: tabular-nums;">Went for $1,210.00</span>
+          <span style="font-size: 11px; color: #8c8f80;">closed 21 hours ago</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="width: 960px; background: #fdf6e3; border-left: 3px solid #a07a26; border-radius: 0 4px 4px 0; padding: 18px 22px; display: flex; flex-direction: column; gap: 6px;">
+      <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #a07a26;">24 hours, then it&rsquo;s the record&rsquo;s business</span>
+      <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #5c5540; max-width: 800px;">Shown only when the Auction House format is on, and only below the live grid — results are interesting browsing and they advertise that things sell, but they never crowd what&rsquo;s still on the clock. A permanent &ldquo;what things went for&rdquo; view belongs to Price History (13.6), not this strip.</p>
+    </div>
+  </div>
+
+  <!-- ══ For the build ═══════════════════════════════════════════════ -->
+  <div style="display: flex; flex-direction: column; gap: 18px;">
+    <div style="display: flex; align-items: baseline; gap: 12px;">
+      <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; background: #26331f; color: #f4f1e8; padding: 4px 9px; border-radius: 4px;">A6</span>
+      <h2 style="font-family: Petrona, Georgia, serif; font-size: 26px; font-weight: 600; margin: 0; color: #26331f;">For the build</h2>
+      <span style="font-size: 13px; color: #6b6f60;">where it all lives &mdash; this doc records shipped code</span>
+    </div>
+
+    <div style="width: 960px; display: grid; grid-template-columns: 1fr 1fr; gap: 22px; background: #fdf6e3; border-left: 3px solid #a07a26; border-radius: 0 4px 4px 0; padding: 18px 22px; font-size: 13px; line-height: 1.6; color: #5c5540;">
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div>
+          <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #a07a26;">One payload for the room</span>
+          <p style="margin: 4px 0 0;"><code style="font-family: ui-monospace, Menlo, monospace; font-size: 11.5px;">bid_status</code> carries: price, count, minimum, end, <code style="font-family: ui-monospace, Menlo, monospace; font-size: 11.5px;">server_time</code> (client clocks corrected), <code style="font-family: ui-monospace, Menlo, monospace; font-size: 11.5px;">extensions</code>, <code style="font-family: ui-monospace, Menlo, monospace; font-size: 11.5px;">reserve_met</code>, the last-8 <code style="font-family: ui-monospace, Menlo, monospace; font-size: 11.5px;">feed</code> (amount, bidder, auto, at), per-viewer <code style="font-family: ui-monospace, Menlo, monospace; font-size: 11.5px;">is_leading</code>/<code style="font-family: ui-monospace, Menlo, monospace; font-size: 11.5px;">your_max</code>, and <code style="font-family: ui-monospace, Menlo, monospace; font-size: 11.5px;">outcome</code> once closed. The poll also runs the lazy close.</p>
+        </div>
+        <div>
+          <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #a07a26;">Cadence</span>
+          <p style="margin: 4px 0 0;">10s at a distance &middot; 5s inside ten minutes &middot; 2s inside the closing window &middot; 30s when the tab is hidden &middot; instant re-poll on tab return. Plain polling on purpose — server-rendered Django on a t3.micro; no sockets at this scale.</p>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div>
+          <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #a07a26;">The constants</span>
+          <p style="margin: 4px 0 0;"><code style="font-family: ui-monospace, Menlo, monospace; font-size: 11.5px;">SOFT_CLOSE_WINDOW = 2 min</code>, <code style="font-family: ui-monospace, Menlo, monospace; font-size: 11.5px;">SOFT_CLOSE_CAP = 100</code> (backstop, not policy) — both in <code style="font-family: ui-monospace, Menlo, monospace; font-size: 11.5px;">apps/bids/services.py</code>, beside <code style="font-family: ui-monospace, Menlo, monospace; font-size: 11.5px;">place_bid</code> (proxy resolution) and <code style="font-family: ui-monospace, Menlo, monospace; font-size: 11.5px;">close_auction</code> (the one close, lazy everywhere, cron-swept).</p>
+        </div>
+        <div>
+          <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #a07a26;">Deliberately out</span>
+          <p style="margin: 4px 0 0;">Second-chance offers to the runner-up (10.9&rsquo;s note stands) &middot; per-lot auction types (one mechanic, one education) &middot; a permanent closed-lot browse (13.6&rsquo;s business).</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

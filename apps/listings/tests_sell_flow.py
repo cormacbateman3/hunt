@@ -83,25 +83,45 @@ class ShelfTests(SellFlowBase):
         self._item(title='Dup A', license_year=1931)
         self._item(title='Dup B', license_year=1931)
 
-        rows, total = sell_flow.shelf(self.seller)
-        self.assertEqual(total, 3)
+        rows, counts = sell_flow.shelf(self.seller)
+        self.assertEqual(counts, {'eligible': 3, 'listed': 0, 'total': 3})
         self.assertEqual(rows[0]['copies'], 2)
         self.assertIn('Duplicate', rows[0]['note'])
 
-    def test_something_already_listed_is_not_offered_again(self):
-        item = self._item()
+    def test_something_already_listed_never_reaches_the_shelf(self):
+        """Offering a piece whose lot is already up reads as an invitation
+        to post a duplicate — so it simply isn't offered. Drafts count:
+        their home is My Listings, not the shelf. And the counts say what
+        the page means: the owner's "Search my 5 items" over a shelf
+        showing one was three listed pieces counted as available."""
+        listed = self._item(title='Up already')
+        drafted = self._item(title='Half way there', license_year=1950)
+        free = self._item(title='Still mine', license_year=1960)
         Listing.objects.create(
-            seller=self.seller, source_collection_item=item, title='Up for sale',
+            seller=self.seller, source_collection_item=listed, title='Up for sale',
             description='d', state=self.pa, condition_grade='good', status='active',
             listing_type='buy_now', buy_now_price=Decimal('50'))
+        Listing.objects.create(
+            seller=self.seller, source_collection_item=drafted, title='A draft',
+            description='d', condition_grade='good', status='draft',
+            listing_type='buy_now')
 
-        rows, _ = sell_flow.shelf(self.seller)
-        self.assertTrue(rows[0]['already_listed'])
+        rows, counts = sell_flow.shelf(self.seller)
+        self.assertEqual([row['item'] for row in rows], [free])
+        self.assertEqual(counts, {'eligible': 1, 'listed': 2, 'total': 3})
+
+    def test_a_departed_piece_is_not_available_to_sell(self):
+        self._item(title='Sold on the platform', disposition='sold')
+        self._item(title='Gone to a grandson', disposition='given_away')
+        kept = self._item(title='Still here', license_year=1960)
+        rows, counts = sell_flow.shelf(self.seller)
+        self.assertEqual([row['item'] for row in rows], [kept])
+        self.assertEqual(counts['total'], 1)
 
     def test_only_your_own_shelf(self):
         self._item(owner=self.buyer, title='Theirs')
-        rows, total = sell_flow.shelf(self.seller)
-        self.assertEqual(total, 0)
+        rows, counts = sell_flow.shelf(self.seller)
+        self.assertEqual(counts['total'], 0)
         self.assertEqual(rows, [])
 
     def test_an_item_with_no_county_is_never_called_a_duplicate(self):
@@ -111,13 +131,22 @@ class ShelfTests(SellFlowBase):
         rows, _ = sell_flow.shelf(self.seller)
         self.assertTrue(all(row['copies'] == 1 for row in rows))
 
-    def test_starting_from_the_shelf_carries_the_details_across(self):
+    def test_starting_from_the_shelf_lands_on_step_two_filled_in(self):
+        # The shelf route writes the draft server-side, then lands on the
+        # step-2 page bound to it — a look-over, not a retype. (6a drew a
+        # skip to the terms; the owner's call was to see step 2 first.)
         item = self._item(title='1931 Cameron')
         self.client.force_login(self.seller)
         resp = self.client.get(
             reverse('listings:create'), {'to': 'buy_now', 'from_item': item.pk})
-        self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, '1931 Cameron')
+        self.assertRedirects(
+            resp,
+            reverse('listings:sell_from', args=[item.pk]) + '?to=buy_now',
+            target_status_code=302,
+        )
+        draft = Listing.objects.get(source_collection_item=item)
+        self.assertEqual(draft.title, '1931 Cameron')
+        self.assertEqual(draft.status, 'draft')
 
 
 class ImageRoleTests(SellFlowBase):

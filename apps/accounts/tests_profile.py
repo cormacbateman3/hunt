@@ -179,3 +179,75 @@ class FollowTests(TestCase):
         resp = self.client.get(reverse('accounts:profile', args=[self.b.username]))
         self.assertEqual(resp.context['follower_count'], 1)
         self.assertContains(resp, '1 follower')
+
+
+class OneItemToldAsOneTests(TestCase):
+    """A piece with a live lot wears a tag instead of reading as a second
+    thing; a sold piece is the owner's memory, not the visitor's census;
+    and drafts/scheduled lots stop being invisible to their own seller."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from decimal import Decimal
+
+        from apps.listings.models import Listing
+
+        cls.pa, _ = State.objects.get_or_create(
+            code='PA',
+            defaults={'name': 'Pennsylvania', 'slug': 'pennsylvania',
+                      'is_primary_default': True},
+        )
+        cls.owner = User.objects.create_user('pf_one_owner', password='pw')
+        cls.visitor = User.objects.create_user('pf_one_visitor', password='pw')
+
+        cls.kept = CollectionItem.objects.create(
+            owner=cls.owner, title='1940 Kept Statewide', state=cls.pa,
+            license_year=1940, is_public=True, condition_grade='good')
+        cls.listed_item = CollectionItem.objects.create(
+            owner=cls.owner, title='1969 Listed PA', state=cls.pa,
+            license_year=1969, is_public=True, condition_grade='good')
+        cls.live_lot = Listing.objects.create(
+            seller=cls.owner, source_collection_item=cls.listed_item,
+            title='1969 Listed PA', description='d', state=cls.pa,
+            condition_grade='good', status='active', listing_type='buy_now',
+            buy_now_price=Decimal('75'))
+        cls.sold_item = CollectionItem.objects.create(
+            owner=cls.owner, title='1964 Departed WMD', state=cls.pa,
+            license_year=1964, is_public=True, condition_grade='good',
+            disposition='sold')
+
+    def _url(self):
+        return reverse('accounts:profile', args=[self.owner.username])
+
+    def test_a_live_lot_tags_the_piece_in_the_grid(self):
+        self.client.force_login(self.visitor)
+        resp = self.client.get(self._url())
+        self.assertContains(resp, 'pf-piece-tag">Selling now')
+
+    def test_a_sold_piece_is_the_owners_memory_not_the_visitors(self):
+        self.client.force_login(self.visitor)
+        resp = self.client.get(self._url())
+        self.assertNotContains(resp, '1964 Departed WMD')
+        self.assertEqual(resp.context['collection_total'], 2)
+
+        self.client.force_login(self.owner)
+        resp = self.client.get(self._url())
+        self.assertContains(resp, '1964 Departed WMD')
+        self.assertContains(resp, 'pf-piece-tag">Sold here')
+
+    def test_scheduled_and_drafts_surface_only_to_their_owner(self):
+        from apps.listings.models import Listing
+
+        Listing.objects.create(
+            seller=self.owner, source_collection_item=self.kept,
+            title='1940 Kept Statewide', description='d', state=self.pa,
+            condition_grade='good', status='scheduled', listing_type='auction')
+
+        self.client.force_login(self.owner)
+        resp = self.client.get(self._url())
+        self.assertContains(resp, 'only you see these')
+        self.assertContains(resp, 'finish it')
+
+        self.client.force_login(self.visitor)
+        resp = self.client.get(self._url())
+        self.assertNotContains(resp, 'only you see these')

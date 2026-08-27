@@ -9,7 +9,10 @@ def messaging_nav(request):
 
     user = request.user
     conv_ids = list(
-        Conversation.objects.filter(Q(user_a=user) | Q(user_b=user))
+        Conversation.objects.filter(
+            Q(user_a=user) | Q(user_b=user) | Q(members__user=user)
+        )
+        .distinct()
         .values_list('id', flat=True)
     )
     if not conv_ids:

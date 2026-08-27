@@ -5,6 +5,11 @@ from apps.core.constants import COLOR_CHOICES, CONDITION_CHOICES, FORM_LICENSE_T
 from apps.listings.models import ERA_LABEL_CHOICES, IMAGE_ROLE_CHOICES, _year_to_era
 
 
+# The display case holds six at most — enough to say who you are, few
+# enough that choosing means something.
+MAX_FEATURED = 6
+
+
 class CollectionItem(models.Model):
     """An item in a user's personal collection"""
 
@@ -51,6 +56,13 @@ class CollectionItem(models.Model):
     shape = models.CharField(max_length=30, choices=SHAPE_CHOICES, blank=True)
     colors = models.JSONField(default=list, blank=True)
     condition_grade = models.CharField(max_length=20, choices=CONDITION_CHOICES, blank=True)
+    # Mirrors Listing: the grade filters, the writing stops disputes, and
+    # Restored is a fact beside the ladder rather than a rung on it.
+    condition_description = models.TextField(
+        blank=True, max_length=2000,
+        help_text='The flaws said plainly — foxing, the pin, tears, tape.',
+    )
+    is_restored = models.BooleanField(default=False)
     is_public = models.BooleanField(default=True, help_text="Visible on public profile")
     # Recorded, so open — a collection is a shelf of things other collectors
     # might want, and the owner closes the ones that are not going anywhere.
@@ -70,10 +82,12 @@ class CollectionItem(models.Model):
     # Where the physical object is. Ownership transfer between accounts does
     # not exist yet, so a piece that left — sold at a show, given to a
     # grandson, posted to a trade partner — sat in the collection being
-    # offered to people. `traded` is set by the trade lifecycle; the other
+    # offered to people. `traded` is set by the trade lifecycle and `sold`
+    # by the sale lifecycle (paid order; a refund hands it back); the other
     # departures are the owner's own record.
     DISPOSITION_CHOICES = [
         ('held', 'In my hands'),
+        ('sold', 'Sold here'),
         ('traded', 'Traded away here'),
         ('sold_elsewhere', 'Sold elsewhere'),
         ('given_away', 'Given away'),

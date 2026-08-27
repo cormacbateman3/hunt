@@ -8,31 +8,46 @@
 <link rel="stylesheet" href="{% static 'css/pages/item-form.css' %}">
 {% endblock %}
 
-{% block content %}
-<div class="if-page">
-    {% include 'listings/_sell_steps.html' with step=2 destination=destination %}
-
-    <div class="if-head">
-        <h1>The item</h1>
-        <p class="if-lede">
-            Going to {{ config_listing_type_label|default:'the block' }}. A photograph
-            reads most of this for you &mdash; start with one.
-        </p>
+{% block context_band %}
+<nav class="kb-crumbs" aria-label="Breadcrumb">
+    <div class="kb-band-inner">
+        <a href="{% url 'bench' %}">My Bench</a>
+        <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
+        <a href="{% url 'listings:sell_start' %}">Add an item</a>
+        <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
+        <span class="kb-crumb-current">{{ destination.name|default:'The item' }}</span>
+        {% url 'listings:sell_start' as step1_url %}
+        {% if mode == 'item_edit' %}{% url 'listings:terms' listing.pk as step3_url %}{% endif %}
+        {% include 'listings/_sell_steps.html' with step=2 destination=destination step1_url=step1_url step3_url=step3_url %}
     </div>
+</nav>
+{% endblock %}
 
-    {% if form.errors or image_formset.non_form_errors %}
+{% block content %}
+{% comment %}
+No page title here — 6b/4a start straight into the two-column floor after
+the breadcrumb band. The h1 + lede this page used to carry were invented,
+and they were a good part of why the ledger sat below the fold.
+{% endcomment %}
+<div class="if-page">
+
+    {% if form.errors or image_formset.total_error_count %}
         <div class="if-errors" role="alert">
-            <strong>
-                {% with n=form.errors|length %}
-                    {{ n }} thing{{ n|pluralize }} to fix before this can be put up
-                {% endwith %}
-            </strong>
+            <strong>Something to fix before this can be saved</strong>
             <ul>
                 {% for field in form %}{% for error in field.errors %}
                     <li>&middot; <a href="#{{ field.id_for_label }}">{{ field.label }}</a> &mdash; {{ error }}</li>
                 {% endfor %}{% endfor %}
                 {% for error in form.non_field_errors %}<li>&middot; {{ error }}</li>{% endfor %}
                 {% for error in image_formset.non_form_errors %}<li>&middot; {{ error }}</li>{% endfor %}
+                {% comment %}
+                Per-row photograph errors used to render only inside the
+                hidden native inputs — a submit could fail with nothing
+                visible anywhere on the page.
+                {% endcomment %}
+                {% for img_form in image_formset %}{% for field in img_form %}{% for error in field.errors %}
+                    <li>&middot; Photograph {{ forloop.parentloop.parentloop.counter }} &mdash; {{ error }}</li>
+                {% endfor %}{% endfor %}{% endfor %}
             </ul>
         </div>
     {% endif %}
@@ -46,6 +61,7 @@
         {% endcomment %}
         <div style="display: none;">{{ form.listing_type }}{{ form.source_collection_item }}</div>
         <input type="hidden" name="prefill_job_id" id="prefill-job-id" value="">
+        <input type="hidden" name="discard_kept" id="discard-kept" value="">
 
         <div class="if-floor">
             {# ── The evidence rail ─────────────────────────────────── #}
@@ -53,55 +69,52 @@
                 <section class="if-panel if-panel--photos" data-photo-panel>
                     <div class="if-panel-head">
                         <span class="if-panel-eyebrow">Photographs</span>
-                        <span class="if-panel-meta" data-photo-count>0 of 5</span>
+                        <span class="if-panel-meta" data-photo-count>{{ slot_view.count|default:0 }} of 5</span>
                     </div>
                     <div class="if-photos-body">
-                        {% if retained_uploads %}
-                            <div class="if-kept">
-                                <p class="if-photos-note">
-                                    Your {{ retained_uploads|length }} upload{{ retained_uploads|pluralize }}
-                                    {{ retained_uploads|pluralize:"was,were" }} kept through the error above
-                                    &mdash; pick new files only to replace {{ retained_uploads|pluralize:"it,them" }}.
-                                </p>
-                                <div class="if-kept-row">
-                                    {% for field, name, url in retained_uploads %}
-                                        <img src="{{ url }}" alt="{{ name }}" title="{{ name }}">
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        {% endif %}
+                        {% comment %}
+                        A photograph held through a failed submit hangs back in
+                        its slot (data-kept) — the slot showing it *is* the
+                        announcement; there is no notice box. The × on a kept
+                        slot writes the field into #discard-kept so the server
+                        actually lets go of it.
+                        {% endcomment %}
                         <div class="if-slots" data-slots-ui hidden>
                         <div class="if-slot-pair">
                             <div class="if-slot-col">
-                                <button type="button" class="if-slot if-slot--front" data-slot="front">
+                                <button type="button" class="if-slot if-slot--front{% if slot_view.front.thumb %} is-filled{% endif %}" data-slot="front"
+                                        {% if slot_view.front.existing %}data-existing="yes"{% endif %}
+                                        {% if slot_view.front.kept %}data-kept="{{ slot_view.front.kept }}"{% endif %}>
+                                    {% if slot_view.front.thumb %}<img src="{{ slot_view.front.thumb }}" alt="">{% endif %}
                                     <span class="if-slot-badge">Featured &middot; front</span>
                                     <span class="if-slot-x" data-slot-x="front" role="button" aria-label="Remove the front photograph">&times;</span>
                                 </button>
                                 <span class="if-slot-cap">The one buyers see first</span>
                             </div>
                             <div class="if-slot-col">
-                                <button type="button" class="if-slot" data-slot="back">
+                                <button type="button" class="if-slot{% if slot_view.back.thumb %} is-filled{% endif %}" data-slot="back"
+                                        {% if slot_view.back.existing %}data-existing="yes"{% endif %}
+                                        {% if slot_view.back.kept %}data-kept="{{ slot_view.back.kept }}"{% endif %}>
+                                    {% if slot_view.back.thumb %}<img src="{{ slot_view.back.thumb }}" alt="">{% endif %}
                                     <span class="if-slot-badge if-slot-badge--back">Back</span>
                                     <span class="if-slot-x" data-slot-x="back" role="button" aria-label="Remove the back photograph">&times;</span>
                                 </button>
-                                <span class="if-slot-cap">Serial, pin, printing</span>
+                                <span class="if-slot-cap">Pin, printing, stamps</span>
                             </div>
                         </div>
                         <div class="if-details-row">
-                            <button type="button" class="if-slot if-slot--detail" data-slot="detail0">+
-                                <span class="if-slot-x" data-slot-x="detail0" role="button" aria-label="Remove this photograph">&times;</span>
+                            {% for d in slot_view.details %}
+                            <button type="button" class="if-slot if-slot--detail{% if d.thumb %} is-filled{% endif %}" data-slot="detail{{ forloop.counter0 }}"
+                                    {% if d.existing %}data-existing="yes"{% endif %}
+                                    {% if d.kept %}data-kept="{{ d.kept }}"{% endif %}>
+                                {% if d.thumb %}<img src="{{ d.thumb }}" alt="">{% else %}+{% endif %}
+                                <span class="if-slot-x" data-slot-x="detail{{ forloop.counter0 }}" role="button" aria-label="Remove this photograph">&times;</span>
                             </button>
-                            <button type="button" class="if-slot if-slot--detail" data-slot="detail1">+
-                                <span class="if-slot-x" data-slot-x="detail1" role="button" aria-label="Remove this photograph">&times;</span>
-                            </button>
-                            <button type="button" class="if-slot if-slot--detail" data-slot="detail2">+
-                                <span class="if-slot-x" data-slot-x="detail2" role="button" aria-label="Remove this photograph">&times;</span>
-                            </button>
+                            {% endfor %}
                         </div>
+                        {% comment %}Turn 6b's line — the Turn-5 fixed-slots copy is retired.{% endcomment %}
                         <span class="if-photos-note">
-                            Front and back are fixed slots, so reordering can&rsquo;t relabel
-                            them. Drag the details into whatever order you like &mdash; a flaw,
-                            a maker mark, the pin.
+                            Close-ups of a flaw, a maker mark, the pin. Drag to reorder these three.
                         </span>
                         </div>
                         {# The slots stage into these; without JavaScript they are the form. #}
@@ -164,7 +177,8 @@
                     <div class="if-field{% if form.title.errors %} has-error{% endif %}" data-title-field>
                         <div class="if-label-row">
                             <label class="kb-label" for="{{ form.title.id_for_label }}">Title</label>
-                            <span class="if-label-note">written for you &middot; edit freely</span>
+                            {# Hidden until the title has actually been written for them (4a). #}
+                            <span class="if-label-note" data-title-note hidden>written for you &middot; edit freely</span>
                         </div>
                         {{ form.title }}
                         {{ form.title.errors }}
@@ -172,7 +186,7 @@
                     <div class="if-field{% if form.description.errors %} has-error{% endif %}">
                         <div class="if-label-row">
                             <label class="kb-label" for="{{ form.description.id_for_label }}">Description</label>
-                            <span class="if-label-note if-label-note--quiet" data-desc-count></span>
+                            <span class="if-label-note if-label-note--quiet" data-desc-count>yours to write</span>
                         </div>
                         {{ form.description }}
                         {{ form.description.errors }}
@@ -207,13 +221,11 @@
                         <div class="if-field{% if form.license_year.errors %} has-error{% endif %}">
                             <label class="kb-label" for="{{ form.license_year.id_for_label }}">License year</label>
                             {{ form.license_year }}
-                            <span class="kb-hint">{{ form.license_year.help_text }}</span>
+                            <span class="kb-hint" data-year-hint>{{ form.license_year.help_text }}</span>
                             {{ form.license_year.errors }}
                         </div>
                         <div class="if-field if-field--era{% if form.era_label.errors %} has-error{% endif %}" id="era-label-field">
-                            <label class="kb-label" for="{{ form.era_label.id_for_label }}">
-                                Or roughly <span id="era-label-required" style="display: none;">&mdash; needed</span>
-                            </label>
+                            <label class="kb-label" for="{{ form.era_label.id_for_label }}">Era</label>
                             {{ form.era_label }}
                             <span class="kb-hint">Filled in from the year for you.</span>
                             {{ form.era_label.errors }}
@@ -221,13 +233,28 @@
                     </div>
 
                     <div class="if-field{% if form.condition_grade.errors %} has-error{% endif %}">
-                        <span class="kb-label">Condition</span>
-                        {{ form.condition_grade }}
-                        <span class="kb-hint">Pick one, even roughly &mdash; buyers filter on it.</span>
-                        {{ form.condition_grade.errors }}
+                        <div class="if-label-row">
+                            <span class="kb-label">Condition</span>
+                            <span class="if-label-note if-label-note--quiet">yours to grade &mdash; the read never guesses this</span>
+                        </div>
+                        <div class="if-cond-row">
+                            {{ form.condition_grade }}
+                            <span class="if-cond-divider" aria-hidden="true"></span>
+                            <label class="chip-option if-cond-restored">{{ form.is_restored }} Restored</label>
+                        </div>
+                        <span class="kb-hint">Restored sits apart from the ladder because it isn&rsquo;t a rung
+                            &mdash; a repaired item can still be Excellent, and buyers who won&rsquo;t touch
+                            restored work need to be able to filter it out.</span>
+                        {{ form.condition_grade.errors }}{{ form.is_restored.errors }}
                     </div>
 
-                    <div class="if-grid if-grid--serial">
+                    <div class="if-grid if-grid--condwrite">
+                        <div class="if-field{% if form.condition_description.errors %} has-error{% endif %}">
+                            <label class="kb-label" for="{{ form.condition_description.id_for_label }}">Condition description</label>
+                            {{ form.condition_description }}
+                            <span class="kb-hint">The grade is for filtering; this is what stops disputes.</span>
+                            {{ form.condition_description.errors }}
+                        </div>
                         <div class="if-field{% if form.serial_number.errors %} has-error{% endif %}">
                             <label class="kb-label" for="{{ form.serial_number.id_for_label }}">Serial or stub</label>
                             {{ form.serial_number }}
@@ -246,11 +273,11 @@
                     <div class="if-grid if-grid--thirds">
                         {% for field_name, other_name, heading in taxonomy_fields %}
                             {% with field=form|bound_field:field_name other_field=form|bound_field:other_name %}
-                            <div class="if-field{% if field.errors %} has-error{% endif %}{% if field_name == 'addon_type' %} if-span{% endif %}" data-taxonomy-field="{{ field_name }}">
+                            <div class="if-field{% if field.errors %} has-error{% endif %}{% if field_name == 'addon_type' %} if-span{% endif %}{% if field_name == 'material' %} if-field--stay{% endif %}" data-taxonomy-field="{{ field_name }}">
                                 <label class="kb-label" for="{{ field.id_for_label }}" data-taxonomy-label="{{ field_name }}">{{ heading }}</label>
                                 {{ field }}
                                 {% if field_name == 'material' %}
-                                    <span class="kb-hint">Card, paper, metal, celluloid, cloth. The one thing the photograph can&rsquo;t tell.</span>
+                                    <span class="kb-hint">Yours &mdash; a photograph can&rsquo;t feel card from celluloid.</span>
                                 {% endif %}
                                 {{ field.errors }}
                                 <div data-other-wrapper="{{ field_name }}" style="display: none;">
@@ -292,114 +319,19 @@
                 </section>
 
                 {% comment %}
-                Step 3 — the terms. One panel per destination, carrying only its
-                own fields. Nothing is public until the button at the foot.
+                The terms are step 3's page, not a section of this one — each
+                destination carries only its own questions there. Both buttons
+                save the draft; only step 3's foot ever publishes.
                 {% endcomment %}
-                <div class="sl-terms">
-                    <hr class="sl-terms-rule">
-                    <h2 class="sl-terms-title">
-                        {% if config_listing_type == 'auction' %}The terms &mdash; The Auction House
-                        {% else %}The terms &mdash; The General Store{% endif %}
-                    </h2>
-
-                    {% if config_listing_type == 'auction' %}
-                        <div class="sl-terms-grid">
-                            <div class="if-field{% if form.starting_price.errors %} has-error{% endif %}">
-                                <label class="kb-label" for="{{ form.starting_price.id_for_label }}">Starting price</label>
-                                {{ form.starting_price }}
-                                {{ form.starting_price.errors }}
-                            </div>
-                            <div class="if-field{% if form.reserve_price.errors %} has-error{% endif %}">
-                                <label class="kb-label" for="{{ form.reserve_price.id_for_label }}">Reserve</label>
-                                {{ form.reserve_price }}
-                                <span class="kb-hint">A floor you won&rsquo;t go under. Bidders see that there is one, never the figure.</span>
-                                {{ form.reserve_price.errors }}
-                            </div>
-                            <div class="if-field{% if form.duration_days.errors %} has-error{% endif %}">
-                                <label class="kb-label" for="{{ form.duration_days.id_for_label }}">Runs for</label>
-                                {{ form.duration_days }}
-                                {{ form.duration_days.errors }}
-                            </div>
-                            <div class="if-field{% if form.bid_increment.errors %} has-error{% endif %}">
-                                <label class="kb-label" for="{{ form.bid_increment.id_for_label }}">Smallest raise</label>
-                                {{ form.bid_increment }}
-                                <span class="kb-hint">Each new bid must beat the current one by at least this much.</span>
-                                {{ form.bid_increment.errors }}
-                            </div>
-                        </div>
-                        <p class="sl-local">Sunday evenings draw the most bidders on here.</p>
-                        <p class="sl-cost">You can cancel a lot until the first bid is in.</p>
-
-                    {% else %}
-                        <div class="sl-terms-grid">
-                            <div class="if-field{% if form.buy_now_price.errors %} has-error{% endif %}">
-                                <label class="kb-label" for="{{ form.buy_now_price.id_for_label }}">Your price</label>
-                                {{ form.buy_now_price }}
-                                {{ form.buy_now_price.errors }}
-                            </div>
-                            <div class="if-field{% if form.minimum_offer.errors %} has-error{% endif %}">
-                                <label class="kb-label" for="{{ form.minimum_offer.id_for_label }}">Nothing under</label>
-                                {{ form.minimum_offer }}
-                                <span class="kb-hint">Offers below this are turned away for you, and the buyer is
-                                    told the figure so they can try again. Leave it empty and every offer reaches you.</span>
-                                {{ form.minimum_offer.errors }}
-                            </div>
-                        </div>
-                        <label class="sl-check">
-                            {{ form.allow_offers }}
-                            <span>
-                                <strong>I&rsquo;ll consider offers</strong>
-                                <small class="sl-hint">Binding if you accept. Buyers open, you counter.</small>
-                            </span>
-                        </label>
-                        {{ form.allow_offers.errors }}
-                        <p class="sl-cost">Change the price or take it down whenever.</p>
-                    {% endif %}
-                </div>
-
-                <details class="if-more" {% if form.scheduled_at.errors or form.local_pickup_location.errors %}open{% endif %}>
-                    <summary>Timing and pickup</summary>
-                    <div class="if-more-body">
-                        <div data-listing-panel="auction" data-listing-panel-also="buy_now" class="if-field{% if form.scheduled_at.errors %} has-error{% endif %}">
-                            <label class="kb-label" for="{{ form.scheduled_at.id_for_label }}">Schedule go-live</label>
-                            {{ form.scheduled_at }}
-                            {% if form.scheduled_at.help_text %}<span class="kb-hint">{{ form.scheduled_at.help_text }}</span>{% endif %}
-                            {{ form.scheduled_at.errors }}
-                        </div>
-                        <div data-listing-panel="auction">
-                            <label class="kb-check" style="justify-content: flex-start;">
-                                {{ form.auto_relist }} <span>Auto-relist if unsold</span>
-                            </label>
-                            {% if form.auto_relist.help_text %}<span class="kb-hint">{{ form.auto_relist.help_text }}</span>{% endif %}
-                            {{ form.auto_relist.errors }}
-                        </div>
-                        <div>
-                            <label class="kb-check" style="justify-content: flex-start;">
-                                {{ form.local_pickup_available }} <span>Offer local pickup</span>
-                            </label>
-                            {{ form.local_pickup_available.errors }}
-                            <div id="local-pickup-location-wrapper" class="if-field" style="margin-top: 8px; display: none;">
-                                <label class="kb-label" for="{{ form.local_pickup_location.id_for_label }}">Pickup location</label>
-                                {{ form.local_pickup_location }}
-                                {{ form.local_pickup_location.errors }}
-                            </div>
-                        </div>
-                    </div>
-                </details>
-
-                <details class="if-more" {% if form.ship_from_address.errors or form.package_weight_oz.errors or form.package_length_in.errors or form.package_width_in.errors or form.package_height_in.errors or form.shipping_service.errors or form.shipping_payer.errors %}open{% endif %}>
-                    <summary>Shipping</summary>
-                    <div class="if-more-body">
-                        {% include 'listings/_shipping_section.html' %}
-                    </div>
-                </details>
-
                 <div class="if-foot">
-                    <button type="submit" class="if-go">
-                        {% if config_listing_type == 'auction' %}Put it up for auction{% else %}Put it on the shelf{% endif %}
-                    </button>
-                    <a class="if-foot-cancel" href="{% url 'listings:sell_start' %}">Back a step</a>
-                    <span class="if-foot-note">Nothing is public until this button.</span>
+                    <button type="submit" class="if-go">Set the terms</button>
+                    <button type="submit" name="save_draft" value="1" class="if-foot-hold">Save and come back to it</button>
+                    {% if mode == 'item_edit' %}
+                        <a class="if-foot-cancel" href="{% url 'listings:my_listings' %}">Leave it &mdash; it stays a draft</a>
+                    {% else %}
+                        <a class="if-foot-cancel" href="{% url 'listings:sell_start' %}">Cancel</a>
+                    {% endif %}
+                    <span class="if-foot-note">Nothing is public until step 3 is done.</span>
                 </div>
             </div>
         </div>
@@ -411,7 +343,7 @@
     honouring the closing one -- which closed the host form early and
     orphaned the submit button and every field after this point.
     {% endcomment %}
-    <details class="if-more">
+    <details class="if-more if-more--tucked">
         <summary>Is a value missing?</summary>
         <div class="if-more-body">
             {% include 'core/_reference_data_suggestion_form.html' %}
@@ -429,25 +361,36 @@ document.addEventListener('DOMContentLoaded', () => {
         form: 'form[enctype]',
         kind: 'listing',
         freshTitle: {% if form.title.value %}false{% else %}true{% endif %},
-        slots: {
-            front: { input: '#{{ form.featured_image.id_for_label }}' },
-            back: { input: '#id_images-0-image', role: '#id_images-0-image_role', sort: '#id_images-0-sort_order', del: '#id_images-0-DELETE' },
-            details: [
-                { input: '#id_images-1-image', role: '#id_images-1-image_role', sort: '#id_images-1-sort_order', del: '#id_images-1-DELETE' },
-                { input: '#id_images-2-image', role: '#id_images-2-image_role', sort: '#id_images-2-sort_order', del: '#id_images-2-DELETE' },
-                { input: '#id_images-3-image', role: '#id_images-3-image_role', sort: '#id_images-3-sort_order', del: '#id_images-3-DELETE' },
-            ],
-        },
+        {% comment %}
+        The slot plan is drawn server-side (_photo_slots): on a draft the
+        formset rows arrive in model order regardless of role, so "the back
+        slot" has to mean "the row whose role is back", not "row 0".
+        {% endcomment %}
+        slots: {{ slots_cfg_json|safe }},
     });
+    {% comment %}
+    Material is off the read's target list on purpose — a photograph can't
+    feel card from celluloid, so the read never guesses it (4a/4e). It sits
+    in forYou instead, counted in the tally's "for you".
+    {% endcomment %}
     KBPrefill.init({
         createUrl: '{% url "prefill:create_job" %}',
         correctionsUrlTemplate: '{% url "prefill:job_corrections" 0 %}',
         suggestionUrl: '{% url "core:suggestion_create" %}',
         source: 'listing',
+        {% if mode == 'item_edit' %}protectInitial: true,{% endif %}
         fileInput: '#{{ form.featured_image.id_for_label }}',
         jobIdInput: '#prefill-job-id',
         panel: '#prefill-panel',
+        resume: {{ prefill_resume_json|default:'null'|safe }},
         form: 'form[enctype]',
+        overlayHost: '[data-slot="front"]',
+        lines: {{ ledger_lines_json|safe }},
+        forYou: [
+            { name: 'condition', kind: 'radio', groupName: 'condition_grade' },
+            { name: 'description', kind: 'input', sel: '#{{ form.description.id_for_label }}' },
+            { name: 'material', kind: 'select', sel: '#id_material' },
+        ],
         fields: {
             item_kind: { kind: 'radio', name: 'item_kind' },
             state: { kind: 'select', sel: '#{{ form.state.id_for_label }}' },
@@ -458,7 +401,6 @@ document.addEventListener('DOMContentLoaded', () => {
             holder_eligibility: { kind: 'select', sel: '#id_holder_eligibility' },
             activity_scope: { kind: 'select', sel: '#id_activity_scope' },
             duration: { kind: 'select', sel: '#id_duration' },
-            material: { kind: 'select', sel: '#id_material' },
             addon_type: { kind: 'checklist', name: 'addon_type' },
             shape: { kind: 'select', sel: '#{{ form.shape.id_for_label }}' },
             colors: { kind: 'checklist', name: 'colors' },
@@ -469,8 +411,6 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    /* ── Listing type panels ── */
-    const listingType = document.getElementById('{{ form.listing_type.id_for_label }}');
     const stateSelect = document.getElementById('{{ form.state.id_for_label }}');
     const geoSelect = document.getElementById('{{ form.county_ref.id_for_label }}');
     const geoLabel = document.getElementById('county-ref-label');
@@ -516,22 +456,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     kindRadios.forEach(r => r.addEventListener('change', applyKind));
     applyKind();
-
-    const togglePanels = () => {
-        const value = listingType.value;
-        document.querySelectorAll('[data-listing-panel]').forEach((panel) => {
-            const also = (panel.dataset.listingPanelAlso || '').split(',').map(s => s.trim());
-            panel.style.display = (panel.dataset.listingPanel === value || also.includes(value)) ? '' : 'none';
-        });
-    };
-
-    const pickupCheckbox = document.getElementById('{{ form.local_pickup_available.id_for_label }}');
-    const pickupWrapper = document.getElementById('local-pickup-location-wrapper');
-    if (pickupCheckbox && pickupWrapper) {
-        const togglePickup = () => { pickupWrapper.style.display = pickupCheckbox.checked ? '' : 'none'; };
-        pickupCheckbox.addEventListener('change', togglePickup);
-        togglePickup();
-    }
 
     const updateOtherWrapper = (fieldName) => {
         const field = document.getElementById(`id_${fieldName}`);
@@ -589,10 +513,20 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         geoLabel.textContent = geoData.issuance_unit_label || 'Geographic Unit';
 
-        // Sync the year floor to the newly chosen state (max stays server-set).
+        // Sync the year floor to the newly chosen state (max stays server-set),
+        // and rewrite the hint so it names the state actually chosen — it
+        // used to keep quoting the server-rendered state after a change.
         if (licenseYearInput) {
             licenseYearInput.min = geoData.min_license_year || 1850;
             if (licenseYearInput.value.trim() !== '') licenseYearInput.reportValidity();
+        }
+        const yearHint = document.querySelector('[data-year-hint]');
+        if (yearHint && licenseYearInput) {
+            const opt = stateSelect.options[stateSelect.selectedIndex];
+            const stateName = opt && stateSelect.value ? opt.text : 'This state';
+            yearHint.textContent = `${stateName}: ${licenseYearInput.min}–${licenseYearInput.max}. `
+                + 'Only expired, antique items (25+ years old) can be listed — '
+                + 'leave blank if the year is unknown.';
         }
 
         const licenseTypeResponse = await fetch(`/api/license-types/?state=${encodeURIComponent(stateId)}`);
@@ -618,9 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    listingType.addEventListener('change', togglePanels);
     stateSelect.addEventListener('change', loadReferenceData);
-    togglePanels();
     taxonomyFields.concat(['shape', 'colors']).forEach((fieldName) => {
         const field = document.getElementById(`id_${fieldName}`);
         if (field) {

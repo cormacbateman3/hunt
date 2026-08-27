@@ -79,7 +79,7 @@ class StabilityPassTests(TestCase):
         self.client.force_login(self.buyer)
         resp = self.client.post(
             reverse('messaging:start'),
-            {'recipient_id': self.seller.pk, 'listing_id': listing.pk, 'conversation_type': 'auction'},
+            {'recipient_id': self.seller.pk, 'listing_id': listing.pk},
             follow=True,
         )
         self.assertEqual(resp.status_code, 200)

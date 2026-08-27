@@ -45,13 +45,15 @@ class TheStepTwoDrawingTests(ItemFormBase):
         self.assertContains(resp, 'if-work')
 
     def test_the_named_slots_are_named(self):
+        # Captions are 4a's (the newer refinement of 6b's card); the detail
+        # caption is 6b's own line. The Turn-5 "fixed slots" copy is retired.
         resp = self._page()
         self.assertContains(resp, 'Featured &middot; front')
         self.assertContains(resp, 'The one buyers see first')
-        self.assertContains(resp, 'Serial, pin, printing')
-        # Three detail slots, and the promise the names can't be shuffled.
+        self.assertContains(resp, 'Pin, printing, stamps')
         self.assertContains(resp, 'data-slot="detail2"')
-        self.assertContains(resp, 'Front and back are fixed slots')
+        self.assertContains(resp, 'Drag to reorder these three')
+        self.assertNotContains(resp, 'Front and back are fixed slots')
 
     def test_the_three_rail_panels_carry_their_eyebrows(self):
         resp = self._page()
@@ -80,13 +82,27 @@ class TheStepTwoDrawingTests(ItemFormBase):
         self.assertContains(resp, 'Yes, uncut')
         self.assertContains(resp, 'Not sure')
 
-    def test_the_footer_names_the_destination_and_the_promise(self):
-        auction = self._page('auction')
-        self.assertContains(auction, 'Put it up for auction')
-        store = self._page('buy_now')
-        self.assertContains(store, 'Put it on the shelf')
-        self.assertContains(store, 'Nothing is public until this button.')
+    def test_the_footer_offers_the_terms_and_the_draft(self):
+        # Turn 6b: step 2 never publishes. Its foot points at step 3 and
+        # offers the way out — the publish CTA lives on the terms page.
+        for to in ('auction', 'buy_now'):
+            resp = self._page(to)
+            self.assertContains(resp, 'Set the terms')
+            self.assertContains(resp, 'Save and come back to it')
+            self.assertContains(resp, 'Nothing is public until step 3 is done.')
+            self.assertNotContains(resp, 'Put it up for auction')
+            self.assertNotContains(resp, 'Starting price')
 
     def test_material_carries_the_one_hint_the_photograph_cannot_give(self):
         resp = self._page()
-        self.assertContains(resp, 'The one thing the photograph can&rsquo;t tell.')
+        self.assertContains(resp, 'a photograph can&rsquo;t feel card from celluloid')
+
+    def test_condition_writes_as_well_as_grades(self):
+        # Turn 6b: the grade filters; the written description stops
+        # disputes; Restored sits apart from the ladder, not on it.
+        resp = self._page()
+        self.assertContains(resp, 'Condition description')
+        self.assertContains(resp, 'name="condition_description"')
+        self.assertContains(resp, 'if-cond-divider')
+        self.assertContains(resp, 'name="is_restored"')
+        self.assertContains(resp, 'isn&rsquo;t a rung')

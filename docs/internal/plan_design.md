@@ -914,9 +914,9 @@ a slot UI that **persists** the roles it shows. The audit notes are corrected in
 
 | The frame draws | Built instead | Why |
 |---|---|---|
-| A **Restored** chip beyond a divider on the condition row | The eight-rung ladder only | The designer's own note says restored *isn't a rung* — "a repaired item can still be Excellent". That's a separate boolean wanting its own filter (10.11), card badge, and `WantedItem.repairs_ok` — one family, in the register. |
-| *"Save and come back to it"* secondary button | Omitted | There is no draft feature. Never draw a control over nothing (16b's rule). Register, with lots/drafts work. |
-| A separate **Condition description** box beside Serial | One Description field, placed per each frame | The model has one text field. Splitting it is a schema call nobody has made. |
+| A **Restored** chip beyond a divider on the condition row | The eight-rung ladder only | The designer's own note says restored *isn't a rung* — "a repaired item can still be Excellent". That's a separate boolean wanting its own filter (10.11), card badge, and `WantedItem.repairs_ok` — one family, in the register. **CLEARED (Pass 9b)** — `is_restored` on both models, the divider drawn, the detail page prints it; the Hunt filter + card badge + `repairs_ok` stay with 10.11. |
+| *"Save and come back to it"* secondary button | Omitted | There is no draft feature. Never draw a control over nothing (16b's rule). Register, with lots/drafts work. **CLEARED (Pass 9b)** — `Listing.status='draft'` exists; both step-2 buttons save one. |
+| A separate **Condition description** box beside Serial | One Description field, placed per each frame | The model has one text field. Splitting it is a schema call nobody has made. **CLEARED (Pass 9b)** — the call got made: `condition_description` on both models. |
 
 ---
 
@@ -986,6 +986,579 @@ contains no map). Dev plan **10.17**.
 - Old `?view=map` machinery deleted outright (153 template lines + the whole
   `show_map_toggle` branch), per dev plan 10.17's "no map on browse pages".
 - The test that guarded the honest placeholder now guards the drawn map.
+
+---
+
+## Pass 9b — The add flow, straightened ✅
+
+> **Status (2026-08-26): DONE.** Eight commits on
+> `feature/alpha-p4-update-add-item`. 594 tests green (38 added). Opened by a
+> screenshot of step 1 rendering as one giant uppercase brass button; closed
+> with turn 6 built as drawn end-to-end plus the **Add Item Ideas** ledger
+> (`Add Item Ideas (standalone).html`, committed beside the plates file).
+
+**Design refs** — turn **6a/6b/6c** (the three steps), **Add Item Ideas
+turns 4a–4e** (the ledger, the animations, the line bank, the build mapping).
+Dev plan 10.8/10.9/T13.
+
+### The bugs the review found (all fixed)
+
+- **`.kb-sell` named two things** — the topbar's gold button (shell.css) *and*
+  step 1's `<main>` (sell.css). The whole page inherited uppercase, brass,
+  letterspacing and `nowrap`, and `display:none` under 900px hid it entirely on
+  mobile. The page container is `.sl-page` now.
+- **The "My collection" card was a dead loop** — `listings:create` only knew
+  `auction`/`buy_now` and bounced `?to=collection` back to step 1. **"Sell
+  this" was a loop too** — no destination, so it bounced to step 1 with the
+  title in the search box.
+- **The photo slots staged files into thin air** — the formset prefix is
+  `additional_images`, the slot config said `#id_images-…`; back and detail
+  uploads never bound.
+- `listing_create` had no `@login_required` (and `sell_start` had two);
+  error re-renders dropped `step`/`destination`; `trade_notes`/`allow_cash`
+  sat in the form unrendered; editing a live auction silently recomputed
+  `auction_end` (every edit reset the clock); `sell_flow.prepare_from_item`
+  was a second, dead copy of the carry logic.
+
+### What shipped
+
+- **Step 3 is a page** (`/listings/<pk>/terms/`). Step 2 saves a **draft**
+  (new status; browse never sees one, detail 404s strangers and walks the
+  owner to the terms, My Listings grew a *Drafts* chip with *Finish the
+  terms*) and its foot reads *Set the terms* / *Save and come back to it* /
+  *Nothing is public until step 3 is done.* The terms page carries one
+  destination's panel — auction: starting price, brass-ruled reserve,
+  runs-for, smallest raise, a computed closes-line, relist + later-start
+  switches; store: your price beside a computed **You'd keep**, offers with a
+  floor, **Open to trade offers too** writing `tradeability`/`trade_wants`
+  onto the piece — then the shared *Getting it there* strip, *What the books
+  say* (the wanted-list count works today; comparable sales stay with 13.6),
+  and the only publishing button on the site.
+- **The third door opens** — the collection card lands on the collection item
+  form wearing the flow's clothes (rail, breadcrumb, no selling gate), and
+  its step 3 is the collection panel: profile, display case (six, enforced),
+  trading, and the only-you block — fields the model already had. Step 2
+  pops those fields so absent checkboxes can't read as "no". The CTA line
+  says *"This closes your Sullivan gap — 42 of 67 counties"* only when the
+  FIPS-real ground says it's true.
+- **Condition, in two parts** — `condition_description` and `is_restored` on
+  both models, the divider drawn, carried across every copy path, printed on
+  the detail page. Grade labels dropped to sentence case per the frames.
+- **The ledger** (Add Item Ideas 4a–4e) — four panel states off
+  `PrefillJob.status`; typed Petrona lines from the reviewed bank
+  (`prefill/config/ledger_lines.json` + `era_facts.json`; the red winks stay
+  held); 4×1.5s with the early-cut, 8s hold and 12s plain-words rules; the
+  tally (*N filled | M to check | K for you*, no "0 to check"); ✓/× per
+  flagged row writing `PrefillCorrection` on click with five seconds of undo;
+  the lock that never touches condition or material and never blocks Save;
+  loupe/scan/sleeve on the front slot by job id, a still *READING* for
+  reduced motion. **Material came off the read** — a photograph can't feel
+  card from celluloid, so it counts among the "for you" blanks instead.
+  `job_state` gained `line_facts` (unit vocabulary + two precomputed counts)
+  so no line ever queries on its own.
+- **The shelf skip** — *Sell this* lands on the short review (the item in
+  two lines, the two selling doors); choosing one writes the draft straight
+  from the shelf record and walks to the terms. Coming back resumes the
+  draft; a live lot turns you back at the door. The terms page opens with
+  the same two-line summary so terms are never set blind.
+
+### Decisions and departures
+
+- Items born from a *selling* draft start `is_public=False` and step into
+  the light when the lot opens — an abandoned half-description must not sit
+  on a public profile (6a's "created unpublished", applied).
+- A live auction's edit page no longer offers *Runs for* or a go-live date —
+  the clock question was answered when the lot opened.
+- The step-1 shelf keeps its four-column grid and "All N items" as a link
+  rather than a fifth tile; the lot line stays deferred with the lot route.
+- **New register rows**: the store panel's *Cash either way / Items only*
+  chips (need a home on the trade-offer flow, not `trade_wants` prose); the
+  Restored **Hunt filter + card badge** and `WantedItem.repairs_ok` (10.11
+  family); the auction panel's *"What the books say"* sales sentences
+  (13.6, drawn with its own deferral note).
+
+---
+
+## Pass 9c — The add flow, made usable ✅
+
+> **Status 2026-08-26** · 8 commits on `feature/alpha-p4-update-add-item`
+> (stacked on Pass 9b) · full suite **617 green** (23 added) · 14-probe
+> render-and-flow sweep on dev data clean. Driven by the owner's field
+> report of the built flow — a dozen-plus bugs and design divergences,
+> checked line-by-line against 6a/6b/6c and the Add Item Ideas standalone.
+
+### The bugs the field report found (all fixed)
+
+1. **The foot buttons looked dead.** An invisible non-field rule ("select
+   at least one taxonomy attribute") rejected every step-2 save with
+   nothing to point at. Drafts now save as thin as a title; the full
+   requirements moved to `publish_gaps()` at the terms page — the only
+   button that publishes ("required-to-publish fields gate publishing").
+2. **The kept-upload notice loop.** A failed submit showed an ugly notice
+   box with the thumbnail *outside* the slots ("0 of 5"), and the session
+   stash never expired, so it haunted every later walk-up. Kept uploads
+   now hang back **in their slots** (`data-kept`), the × really discards
+   (`discard_kept`), a fresh GET clears the stash, and the retry POST
+   re-attaches the file server-side. Collections create gained the same
+   stash (its failed submits used to drop the photos silently).
+3. **Reordering a photo duplicated it.** Slot thumbnails were natively
+   draggable; Chrome synthesizes a File from a dragged `<img>`, and the
+   panel's drop handler re-added it as a new upload. Thumbnails no longer
+   drag natively and the panel ignores drops mid-reorder.
+4. **Drag-and-drop dead on slots 3–5.** The detail slots' drop handler
+   only understood internal reorders and swallowed OS files. Every slot
+   now takes a file aimed at it, front and back included.
+5. **The shelf offered items already up for sale** — including the quiet
+   shelf records a marketplace listing writes behind the scenes. Anything
+   with a draft/live/scheduled/pending listing stays off the shelf; its
+   home is My Listings.
+6. **The year hint quoted the wrong state** ("Pennsylvania: 1913–2001"
+   under a Maryland item) and **PA arrived pre-chosen**. No default state
+   ("Choose a state"); the hint names only the chosen state and rewrites
+   client-side on change.
+7. **"written for you · edit freely" before anything was written.** The
+   note now appears only once the title has actually been machine-written
+   (4a's own demo script does exactly this) and leaves when edited.
+8. **The hint wall.** 6b's note verbatim: "the hint appears on the field
+   you're in and nowhere else." Hints hide by default; focus-within,
+   errors, flagged reads, and the two marked --stay (material, Restored
+   explainer) show theirs. The vertical sprawl came mostly from this.
+9. **Collections step 2 was still the Turn-5 drawing** — title in its own
+   panel, taxonomy in a drawer, and a *required Resident status hidden
+   inside the drawer* (the same invisible-rule trap as #1). Rebuilt to
+   the 6b column; `resident_status` retired from the form.
+10. **No navigation, no way out.** The 1·2·3 rail is links now; step 2
+    has Cancel/Leave-it; the terms page moves a draft between the Auction
+    House and the Store, walks it back to "Keep it in my collection", or
+    discards it — a discard parks the described item on the shelf.
+
+### The ledger, re-checked against 4a/4c/4e
+
+- **Rows arrive one at a time** under the typed line while the read runs
+  (4c: "the panel grows to the size of the answer") — they used to appear
+  all at once at settle. Fields still fill together with the flash.
+- **4e's tier treatment corrected**: high AND medium render green with
+  *change*; amber (✓/×) is only near-floor matches, second-pass rescues,
+  and inferences. The server computes a per-field `check` flag in
+  `resolved_payload` (it alone knows `FUZZY_FLOOR`/`GEO_NAME_FLOOR`).
+- **Never overwrites your hand**: a dirty field that disagrees with the
+  read becomes a ○ *Use it* row instead of being overwritten — the answer
+  to "what if there are user-entered fields?".
+- **A changed front photograph re-reads** (token-guarded, one live run);
+  removing it mid-read aborts back to state 1 (no photograph → no panel).
+  The settled foot carries 4a's "Clearing a line empties the field." +
+  **Read again**, so a re-read never waits for a failure.
+- The ledger scrolls into view when a read starts — it was below the fold
+  at exactly the moment it had something to say.
+
+### Decisions and departures
+
+- **Owner's call (2026-08-26), supersedes 6a's note**: selling from the
+  shelf no longer skips to the terms. The door-picker writes the draft
+  server-side as before but lands on **step 2 filled in** for a look-over
+  ("what if the user wants to change something").
+- The Turn-5 photographs copy ("Front and back are fixed slots…") was
+  retired everywhere — it had been lifted from the superseded 5b frame;
+  6b/4a's lines ("Pin, printing, stamps", "Drag to reorder these three")
+  stand in its place.
+- Loose records: the at-least-one-attribute and era-when-yearless rules
+  are gone from the collections form entirely (a shelf record is the
+  collector's own catalogue) and gate only *publishing* for listings.
+- Small known limit: on a saved draft, the reorder gesture moves freshly
+  staged detail photos; already-saved details hold their order (server
+  `sort_order` — same as the edit page).
+
+---
+
+## Pass 9d — The field report, round two ✅
+
+> **Status 2026-08-26** · 7 commits on `feature/alpha-p4-update-add-item`
+> (stacked on 9c) · full suite **622 green** (5 added) · the owner's
+> second field report, item by item, this time reproducing each failure
+> with the exact requests a browser sends before fixing it.
+
+### The dead button, found for real
+
+`Slots.sync()` wrote `image_role` + `sort_order` into **every** formset
+row whether or not a file was staged. Django counted those rows as
+changed, demanded their required image, and rendered the four errors
+only inside the hidden native inputs — so *Set the terms* reloaded the
+page with nothing visible anywhere. (9c's loose-drafts fix had removed a
+*different* blocker; this one survived because the pass never submitted
+a browser-shaped POST.) Fixed at three layers: sync() marks only
+occupied slots; the image forms' `has_changed()` reads a role without a
+photograph as an empty slot; the error band prints per-row photograph
+errors. Pinned by `TheBrowserShapedPostTests`. Drafts' home is now named
+in the save message (My Listings → Drafts).
+
+### LOOK AT THE DESIGN — the items taken verbatim this round
+
+- **The 1·2·3 rail moved into the breadcrumb band, right-aligned** —
+  4a/6a/6b draw it there ("1 · The Auction House ✓ — 2 · The item — 3 ·
+  The terms"), not as its own row. The invented step-2 h1 + lede ("The
+  item / Going to…") is gone: the frames start straight into the
+  two-column floor. Both were why the ledger sat below the fold.
+- **4a's microcopy exactly**: Description says *yours to write* (turning
+  into the character count only once there is something to count) with
+  4a's placeholder; Condition says *yours to grade — the read never
+  guesses this*; the condition note's placeholder is the
+  foxing-and-pins line; Material's hint is *Yours — a photograph can't
+  feel card from celluloid*; the era select is labelled **Era**. Both
+  textareas at the frame's two-line height. No paraphrase survived.
+- **One instrument per run**: the scan overlay no longer switches
+  variants when the job id lands mid-read (loupe→scan mid-look read as
+  a glitch). The attempt seed varies it between runs, which is what
+  "picked by job id, so a retry shows a different one" was for — noted
+  as a mechanism departure (the local backend only knows the job id
+  when the read is already over).
+- **Cancel on the collections create** foot, same as the marketplaces.
+- **"Is a value missing?"** is a quiet brass line opening into a bounded
+  card, not a page-wide band.
+
+### The ledger's remaining rough edges
+
+- **Reordering was stuck**: the 9c fix (`img.draggable=false`) stopped
+  native image drags but also blocked drag *initiation* from filled
+  slots. The thumbnail is pointer-inert now (`pointer-events: none`), so
+  drags start from the slot button — reorder works, duplicates stay
+  dead.
+- **"Suggest it" where "Use it" belonged**: a read the backend couldn't
+  match may still name something that exists in the form's own options
+  ("Nonresident" beside Non-Resident, "Statewide" beside the statewide
+  row). Those recover into ○ *Use it* rows at settle; *Suggest it*
+  remains for the genuinely unknown (its rows do work — they write a
+  ReferenceDataSuggestion and flip to *Sent ✓*). `resolve_geo` also
+  reads "Statewide" written as the unit *name* as the statewide answer.
+- **A failed submit no longer erases the ledger**: the server hands the
+  completed job back (`resume_state_json`, owner-checked) and the panel
+  settles straight in describing the values the form kept; flagged rows
+  return accepted, because submitting was the confirmation.
+
+---
+
+## Pass 9e — The Auction House runs itself ✅
+
+> **Status 2026-08-26** · 5 commits on `feature/alpha-p4-update-add-item`
+> · full suite **660 green** (38 added) · live-flow sweep on dev data:
+> bid → extend → lazy close → winner panel → Settled row → Just-closed
+> strip → anon outcome, all clean. Driven by the owner's field report of
+> a won auction that never closed, and their sign-off on three calls:
+> **proxy as the single mechanic**, **soft close**, **Just closed at 24h**.
+
+### What the review found (and this pass fixed)
+
+1. **Nothing closed in dev, and the close was cron-only.** The pipeline
+   existed (winner, reserve, order, letters, relist) but only cron ran
+   it. Now `close_auction()` is a service — row-locked, idempotent — and
+   the detail page, the `bid_status` poll, and Bids & offers all close
+   **lazily** the moment somebody looks. Cron (`close_auctions`) sweeps
+   the unwatched; `manage.py run_jobs [--loop 60]` is the dev stand-in.
+2. **A stale order could steal the win.** `Order.listing` is OneToOne
+   and the close did `get_or_create(listing=…)` — a leftover paid order
+   (from a T8 render-probe fixture that didn't clean up) would have been
+   silently adopted as the sale of a $775 win. The close now refuses any
+   order that isn't the winner's own pending one, logs loudly, and
+   leaves the lot for a human. Probe fixtures deleted; probes must clean
+   up after themselves (memory noted).
+3. **Self-outbidding.** Dissolved by the mechanic change below.
+
+### Proxy bidding — the one mechanic (owner's call)
+
+`ProxyMax` holds each bidder's private standing maximum; visible `Bid`
+rows stay what the room heard, with `is_proxy` marking automatic answers
+("· auto" in the history). Resolution is eBay's: price moves one
+increment at a time, ties keep the earlier hand, a maximum covering the
+reserve jumps the price to it, the winner pays the standing price. The
+leader entering a higher number just raises their ceiling. The bid box
+reads **Your maximum bid** with a ?-popout explaining the mechanic; the
+losing-volley toast is a *warning*, not a celebration. (dev_plan's
+"Proxy Bidding — auto-bidding up to max" future item: **done**.)
+
+### The last five minutes (owner: "state of the art")
+
+- **Soft close**: any bid inside the final **2 minutes** resets the clock
+  to 2 minutes (losing volleys included). Effectively **unbounded** —
+  owner's call 2026-08-26: each reset demands new money on a binding
+  bid, so a war converges on its own; `SOFT_CLOSE_CAP = 100` remains as
+  a backstop against pathology only (~3 hours of continuous bidding,
+  which no honest lot will see). Announced three ways: the bidder's
+  toast, the page's "Extended — two more minutes for everyone", and the
+  clock line's "extended ×N".
+- **The room**: `bid_status` carries server time, the recent-bid feed,
+  extensions, the viewer's standing, and the outcome in one payload.
+  Polling paces itself — 10s far out, 5s inside ten minutes, **2s inside
+  the window**, 30s when the tab is hidden. Five minutes out a live feed
+  panel appears; the price pulses on movement; the countdown breathes
+  rust under two minutes; on close the page swaps to the truth.
+  "EXPIRED" retired for "Closing…".
+
+### After the close
+
+- **Settled** in Bids & offers: the last week of closed lots, one
+  outcome row each — Review & pay / View order / Went to someone else /
+  Reserve wasn't met / Didn't sell / The win lapsed.
+- The detail page tells **everyone** the outcome (the signed-out used to
+  get a login wall on a closed lot); one `_auction_outcome.html` partial.
+- **Just closed** strip in the Auction House (Hunt, auction format): the
+  last 24 hours, below the live grid so live lots keep the room.
+
+### Register
+
+- ~~No drawn frame exists for the room feed / Just-closed strip /
+  ?-popout / non-winner outcome~~ — **RESOLVED**: as-built frames
+  A1–A6 in `design/ui-ux-redesign-model/Auction Room (standalone).html`,
+  drawn from the shipped markup so the design folder stays the source
+  of truth.
+- Soft close is effectively **unbounded** (owner's call, 2026-08-26):
+  each reset demands new money on a binding bid, so a war converges on
+  its own; `SOFT_CLOSE_CAP = 100` stays as a pathology backstop only.
+- Second-chance offers to the runner-up: still deliberately out of
+  scope (10.9's note stands).
+
+---
+
+## Pass 9f — Messages: one thread, a quiet watcher, and rooms ✅
+
+> **Status 2026-08-26** · 4 commits on `feature/alpha-p4-update-add-item`
+> · full suite **700 green** (40 added) · live sweep on dev data clean
+> (pair dedupe, room open/render, watcher flags a grooming pattern as
+> urgent with zero API keys configured). Owner approved all three in
+> order; house rules applied — modular apps, admin-portal tunables,
+> nothing hardcoded that an admin might want to turn.
+
+### ① One thread per pair (8d honored)
+
+The old model kept a conversation per (listing, pair, type) and the five
+entry points passed four different combinations — a thread per
+interaction. Now `Conversation` is unique per pair; `conversation_type`
+is gone; listing/trade context is display-only, refreshed when an entry
+point walks in about something new; a data migration folded every
+pair's scattered threads into their earliest one. The deal strip and
+the left-pane context line read the pair's LIVE deal ("Sale · {title}",
+"Purchase · … — finished", "Trade · offer from {name}", "About ·",
+"Nothing outstanding"). Resuming your one thread is never rate-limited.
+The seller card's button says "Message {name}" — "Ask a question" was
+the public Q&A tab two inches away. `send_message` gained the
+email-verified bar. Fixed along the way: the thread page's `messages`
+context key had been shadowing Django's messages framework — no toast
+ever rendered there.
+
+### ② The quiet watcher (apps/moderation)
+
+Three tiers, each nearly free; the system only FINDS, humans DECIDE:
+
+1. **WatchTerm** — admin-editable patterns (seeded minimal: minor-safety
+   and explicit-threat signals). A hit flags; it never punishes.
+2. **Free classifier** — OpenAI's moderation endpoint scores every
+   message asynchronously (`OPENAI_API_KEY` optional in `.env`; without
+   it scans record `skipped`, never silently clean).
+3. **Claude escalation** — flagged threads read IN CONTEXT (prompt in
+   `apps/moderation/config/escalation_prompt.md`); banter clears, malice
+   surfaces with a one-line rationale. Claude can clear low-severity
+   noise but can never veto an urgent hit.
+
+Heated threads (both sides flagged within the window) surface once.
+`ModerationEvent` is the queue (admin: resolve/dismiss/hide-message);
+urgent findings page every staff account in-app. Every tunable —
+thresholds, category lists, model, window, batch, master switch — lives
+on the `ModerationSettings` singleton in the admin. `scan_messages`
+runs in the `run_jobs` sweep; the absence of a `MessageScan` row IS the
+queue (no signals; messaging untouched). The scanner reviews after
+delivery — never in the send path. Profanity between friends, haggling,
+and off-platform talk are explicitly nobody's business (tested).
+
+**Ops notes for launch** (not code): put an explicit 18+ line in the
+ToS; read 18 U.S.C. § 2258A (NCMEC reporting duty for apparent CSAM)
+before going live; if fronted by Cloudflare, switch on their free CSAM
+scanning tool for uploaded media.
+
+### ③ Rooms (private group chats)
+
+The campfire, not the forum: invite-only, invisible to non-members, no
+directory anywhere. Any member adds; anyone leaves; only the opener
+removes (the one power that fixes a bad add without staff). Tunables
+(`groups_enabled`, `group_max_members`) on the `MessagingSettings`
+singleton. The watcher reads room messages exactly like DMs; reports
+work from inside a room. Public channels deliberately unbuilt.
+
+### Register
+
+- **Image attachments in rooms** — deferred, not dropped. Blocked on:
+  the moderation pipeline proving out in production + an upload model
+  with scan-at-upload. The messages surface stays text-only (8d's own
+  rule) until then.
+- **Staff-desk dressing** of the moderation queue + reports — Pass 11
+  (the desk is drawn; the admin queue serves until then).
+- No drawn frames existed for rooms or the watcher — as-built frames in
+  `design/ui-ux-redesign-model/Rooms and the Watcher (standalone).html`.
+- dev_plan §9.x scope limits ("no group conversations", "no automated
+  flagging") — superseded with owner approval, noted there.
+
+---
+
+## Pass 9g — The thread, made worth reading ✅
+
+> **Status 2026-08-27** · 1 commit on `feature/alpha-p4-update-add-item`
+> · full suite **712 green** (12 added) · live sweep on dev data clean.
+> The owner's field report on the shipped messages UI, item by item.
+
+### Reporting: one place, two clicks, optional depth
+
+The inline per-message Report dropdown + button (and the redundant
+"Flag" link) are gone — they were bigger than the messages, sat beside
+your OWN messages, and begged for accidental clicks. Reporting lives in
+the header menu alone: reason → Report is two clicks; an optional note
+("Anything we should know?") and an optional "Point at specific
+messages" mode (checkboxes appear beside THEIR messages, multi-select,
+riding the same form via the `form=` attribute) add depth without
+steps. One action = one report = one rate-limit tick; pointed-at
+messages are flagged for the reviewer; your own messages can't be
+pointed at. New reasons: Scam or fraud · Fake or counterfeit item ·
+Harassment or threats · Hate speech · Someone may be underage · Spam ·
+Something else. Toasts now say "We'll look at it."
+
+### The thread, to the 8d grammar
+
+Bubbles (mine forest-on-cream — "the green side of the conversation" —
+theirs parchment), the time tucked under the bubble on the avatar side
+with "· read" from the real read record, date dividers ("FRIDAY 1
+AUGUST"), and **context dividers**: `Message.context_listing` snapshots
+what the thread was about at send time, so "About · {listing}" markers
+keep one-thread-per-pair honest when the talk turns to a second listing
+(the owner's screenshot-seven complaint — the old repointing erased the
+first reference).
+
+### The furniture
+
+- The header menus (Block-or-report, Members, Report-or-leave) are real
+  popovers now: title, small ×, click-away and Esc both close.
+- The module takes the viewport: dead band above it trimmed, panes
+  scroll internally.
+- The left pane is identical everywhere (search + chips ride into open
+  threads), sorted freshest-first via Coalesce, with a **Rooms** chip.
+- The inbox auto-opens the freshest thread — the dead "Pick a
+  conversation" pane survives only for a genuinely empty inbox, compact.
+- "+ New room · a private group thread" sits above the search.
+- Member pickers are real typeahead (`messaging:user_search`, login-
+  gated, never returns yourself): pills on the open-a-room form, verified
+  fill-in on the add box. Free-typed names still work without JS.
+- The quiet word on brand-new exchanges only: "…screened for safety by
+  machine. A person only reads a conversation if something is flagged or
+  reported." (FAQ draft added to docs/internal/FAQs.md.)
+
+### The watcher, answering the owner's question
+
+One-sided hostility was never unwatched — every flagged message makes
+its own event — but the thread-level rollup now covers both shapes:
+"a genuine fight" (both sides flagged in the window) and "sustained
+hostility" (one sender, same window). One open rollup per thread.
+`ANTHROPIC_MODERATION_API_KEY` is supported as a dedicated key for the
+escalation reads (falls back to `ANTHROPIC_API_KEY`), per
+one-key-per-workload practice.
+
+---
+
+## Pass 9h — The popovers close, the pickers behave ✅
+
+> **Status 2026-08-27** · 1 commit on `feature/alpha-p4-update-add-item`
+> · full suite **720 green** (8 added) · live sweep on dev data clean.
+> The owner's style report on 9g, plus one real bug it uncovered.
+
+- **The unclosable popovers** (the round's real bug): `.ms-menu-panel`
+  sets `display: flex`, which beats the `hidden` attribute's own
+  `display: none` — so every panel sat open on page load and no click
+  could close it. One explicit rule (`.ms-menu-panel[hidden]`) puts
+  `hidden` back in charge, and a test now reads the stylesheet to pin
+  it, since Django tests can't compute CSS.
+- **Typeahead dropdowns anchored**: the results list was absolutely
+  positioned with no `top`/`left`, so it landed over the input it
+  served. Both pickers (open-a-room, add-a-member) now wrap the input
+  in `.ms-picker-anchor` and hang the list below it.
+- **Room form polish**: pills get daylight above the input; hint says
+  "any **room** member can"; name placeholder is now
+  "e.g. Maryland Waterfowl Collector Crew" (as-built doc updated).
+- **Left pane glances**: a small brass ROOM tag beside room names, an
+  unread dot beside the date plus bolder title/snippet on unread rows
+  (the brass edge stays). The gray current-thread highlight stays.
+- **Header buttons**: `.ms-quiet` never stripped native button chrome,
+  so Report-or-leave/Block-or-report rendered as heavy gray UA buttons.
+  Reset — report controls are quiet text (present, never the main
+  show), and Members wears a soft chip so the two stop being twins.
+- **Unblock now reopens the thread**: blocking closes the pair's
+  conversation, but unblock only deleted the Block row — the thread
+  stayed dead forever (the owner's mystery-closed demo thread).
+  `services.remove_block` reopens unless a block still stands the
+  other way; migration 0006 healed the stranded threads.
+
+### The watcher's first live run (same day) — suite now 723
+
+The owner put real keys in `.env`, sent a slur, and found zero scans.
+Two causes, one real gap:
+
+1. **Nothing runs the scanner in dev** — by design it sweeps after
+   delivery via cron (`scan_messages`, included in `run_jobs`); dev has
+   no cron, same shape as the auction that never closed. Local testing:
+   `python manage.py run_jobs --loop 60` in a second terminal.
+2. **OpenAI answered 429 on every call** — account-level (API billing
+   not activated), not code. The Anthropic key was verified live: a
+   real Claude verdict (urgent/threat, sound rationale) on a synthetic
+   transcript. Providers now log the error BODY, not just the status.
+3. **The gap**: a `skipped` scan was never retried — a transient
+   provider failure let a message escape review forever. Now skipped
+   means "not yet", never "never": `scan_pending` requeues skipped
+   scans BEHIND the never-scanned (nulls-first ordering), so an outage
+   backlog can never starve a fresh message of its first watch-term
+   pass. Redone in place, one row per message; clean/flagged are
+   settled and never rescanned. Three tests pin it.
+
+Also cleaned: one orphaned urgent event (+ its staff page) left by an
+earlier live probe whose conversation was probe-cleaned — events
+survive conversation deletion via SET_NULL.
+
+---
+
+## Pass 9i — One item, told as one item ✅
+
+> **Status 2026-08-27** · 1 commit on `feature/alpha-p4-update-add-item`
+> · full suite **739 green** (19 added) · live sweep clean. The owner's
+> four "regressions" — none caused by the messages work; one real code
+> defect, one real design gap, one data wound, one invisible listing.
+
+- **Collectors flattened** (the "detail is gone" report): the two-tier
+  card design was fine — the featured tier had a blind spot. A wanted
+  list that matches *nobody* ranked nobody, so every card fell to the
+  compact tier. Now zero overlap falls back to biggest-cases-lead, same
+  as no wants: the page keeps its shape. Also: the compact line used the
+  "5 counties held" place-fallback beside its own counts ("…· 5 items ·
+  5 counties" — a stammer); compact cards now say "Whereabouts unsaid".
+- **Sold pieces now leave the collection** — the missing half of 8b's
+  `disposition`. New `sold` ("Sold here") stamped by the sale lifecycle:
+  paid order → sold (webhook + `transition_order`), refund/cancel →
+  held again; never overwrites another story (traded, given away). Not
+  a form choice, mirrors `traded`. Every census asks `disposition=
+  'held'` now: profile grid (visitor), tracker/runs, decade chips,
+  collectors figures/facets/case strips, want-matchers both directions,
+  the shelf, ground counts. The owner still sees departed pieces in
+  their own grid wearing their label — the catalogue keeps its history.
+- **One item, told as one item**: a collection piece with a live lot
+  wears a corner tag in the profile grid ("Selling now" / "Scheduled to
+  sell" / "Sale pending") instead of reading as a second thing beside
+  the Selling-now card.
+- **Drafts and scheduled lots stop being invisible to their own
+  seller**: an owner-only "On the way — only you see these" strip under
+  Selling now links each one to its terms page. (The "missing" F3 was
+  a scheduled auction created 26 Aug, visible nowhere.)
+- **Shelf counts tell the truth**: "Search my 5 items" over a shelf
+  showing one was three listed pieces counted as available. `shelf()`
+  returns eligible/listed/total; the page says "1 available · 4 already
+  on the market".
+- **The alt-text-on-stripes cards** were data, not template: two image
+  fields pointed at files gone from media/. #15 restored from the
+  seeded original; #17's dead field cleared (that upload is lost — re-
+  upload whenever). Truly imageless cards render clean stripes.
+- **Probe purge**: five pre-cleanup-rule probe users deleted with all
+  they owned (the QA render lot listing, a collection item, two
+  conversations, an order, three listing questions).
 
 ---
 
@@ -1424,3 +1997,16 @@ New listing since you left.
 Drawer's not as full as it looks.
 Wind's up. Good day to sit and look.
 Your collection always got room for one more.
+
+Item provinance
+
+For a listing, require at least one image (Front - we might want to require back too - image slots 3-5 are always optional though).
+
+In the add item move the steps to the top right nav (see docs\internal\design\ui-ux-redesign-model\Backtag Design Blueprint.html for example).
+
+Need to look at accessibility options - a lot of the user base will be older. One simple idea - in the top right a little popout button with a slider for text size. Need to research best practices.
+
+Need to add a section somewhere on the site for like system information (probably in the top right dropdown). Need platform/system info, application version, release notes, and platform/system how-to's/FAQ's.
+Will also probably need a like help button too - mainly so there is an easy point to submit something to admins. FAQs could possibly go there too.
+
+In messages module. Add option to delete a thread - only deletes for user, system still stores the messages. Or maybe user can just archive.

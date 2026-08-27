@@ -255,7 +255,7 @@ select reaches back into it with the `form` attribute instead.
                             {% endif %}
                             <div class="co-card-who">
                                 <a href="{% url 'accounts:profile' row.user.username %}" class="co-name co-name--sm">{{ row.name }}</a>
-                                <span class="co-where">{{ row.place }}{% if row.miles is not None %} &middot; {{ row.miles }} mile{{ row.miles|pluralize }} from you{% endif %} &middot; {{ row.item_count }} item{{ row.item_count|pluralize }} &middot; {{ row.county_count }} count{{ row.county_count|pluralize:'y,ies' }}</span>
+                                <span class="co-where">{{ row.mini_place }}{% if row.miles is not None %} &middot; {{ row.miles }} mile{{ row.miles|pluralize }} from you{% endif %} &middot; {{ row.item_count }} item{{ row.item_count|pluralize }} &middot; {{ row.county_count }} count{{ row.county_count|pluralize:'y,ies' }}</span>
                             </div>
                             <span class="co-mini-overlap">
                                 {% if row.of_your_wants %}{{ row.of_your_wants }} of your wants{% else %}none of your wants{% endif %}

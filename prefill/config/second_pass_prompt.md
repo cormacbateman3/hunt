@@ -1,4 +1,4 @@
-These add-on texts were read from an antique US hunting license but did not match our taxonomy.{year_note}
+These add-on texts were read from an antique US hunting or fishing license but did not match our taxonomy.{year_note}
 
 Texts:
 {texts}

@@ -90,6 +90,39 @@ def stashed_files(request):
     return out
 
 
+def stashed_map(request):
+    """{field: url} — for hanging a kept upload back in its photo slot.
+
+    The slot showing the image is the whole announcement; there is no
+    separate notice box, because a photograph sitting in its slot needs
+    no explaining.
+    """
+    return {field: url for field, _name, url in stashed_files(request)}
+
+
+def kept_discards(request):
+    """Field names whose kept uploads the user removed from their slots —
+    the template's #discard-kept input, comma-joined by the slot ×."""
+    raw = request.POST.get('discard_kept', '')
+    return [field for field in raw.split(',') if field]
+
+
+def discard_stashed(request, fields):
+    """Drop the named fields from the stash — the user clicked the slot's ×.
+
+    Without this, restore_missing would quietly re-attach a file the user
+    had visibly removed.
+    """
+    bucket = _bucket(request)
+    changed = False
+    for field in fields:
+        if field in bucket:
+            _delete_path(bucket.pop(field).get('path'))
+            changed = True
+    if changed:
+        _save_bucket(request, bucket)
+
+
 def _delete_path(path):
     if path and default_storage.exists(path):
         try:

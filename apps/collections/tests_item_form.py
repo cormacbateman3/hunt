@@ -1,4 +1,5 @@
-"""The collection add/edit form against the turn 5b frame."""
+"""The collection add/edit form — the same 6b column as the listing form,
+so the three destinations share one step 2."""
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -31,16 +32,34 @@ class CollectionFormBase(TestCase):
 
 
 class TheAddItemDrawingTests(CollectionFormBase):
-    def test_the_written_for_you_title_panel_with_its_escape(self):
+    def test_title_and_description_lead_like_the_listing_form(self):
+        # Turn 6b: plain names, first thing on the page, side by side —
+        # the Turn-5 "What it's called" panel and its escape hatch are gone.
         resp = self.client.get(reverse('collections:create'))
-        self.assertContains(resp, 'What it&rsquo;s called')
-        self.assertContains(resp, 'Written from your answers')
-        self.assertContains(resp, 'Write my own')
+        self.assertContains(resp, 'data-title-note')
+        self.assertNotContains(resp, 'What it&rsquo;s called')
+        self.assertNotContains(resp, 'Write my own')
 
-    def test_the_finer_detail_stays_in_one_drawer_here(self):
+    def test_the_taxonomy_is_out_of_the_drawer_here_too(self):
+        # "Taxonomy, out of the drawer" (6b) applies to every destination's
+        # step 2 — the collections form kept a <details> drawer for a pass
+        # too long.
         resp = self.client.get(reverse('collections:create'))
-        self.assertContains(resp, 'The finer detail')
-        self.assertContains(resp, 'mostly filled from your photograph already')
+        self.assertContains(resp, 'The detail collectors filter on')
+        self.assertNotContains(resp, 'The finer detail')
+
+    def test_a_record_can_be_as_thin_as_the_collector_likes(self):
+        # No at-least-one-attribute rule on a shelf record — that rule
+        # gates *publishing*, and this is the collector's own catalogue.
+        resp = self.client.post(reverse('collections:create'), {
+            'item_kind': 'license', 'title': 'A thin record',
+            'state': str(self.pa.id),
+            'images-TOTAL_FORMS': '0', 'images-INITIAL_FORMS': '0',
+            'images-MIN_NUM_FORMS': '0', 'images-MAX_NUM_FORMS': '12',
+        })
+        item = CollectionItem.objects.get(title='A thin record')
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(item.license_types.count(), 0)
 
     def test_five_photograph_slots(self):
         resp = self.client.get(reverse('collections:create'))
@@ -48,11 +67,21 @@ class TheAddItemDrawingTests(CollectionFormBase):
         self.assertContains(
             resp, 'name="images-TOTAL_FORMS" value="5"')
 
-    def test_the_private_block_is_finally_on_the_form(self):
-        resp = self.client.get(reverse('collections:create'))
-        self.assertContains(resp, 'Only you see these')
-        self.assertContains(resp, 'What you paid')
-        self.assertContains(resp, 'name="purchase_price"')
+    def test_the_private_block_moved_to_the_collection_panel(self):
+        # Turn 6: step 2 describes the item; the only-you block is a step-3
+        # question. It stays inline on the edit page.
+        create = self.client.get(reverse('collections:create'))
+        self.assertNotContains(create, 'name="purchase_price"')
+
+        item = self._item()
+        terms = self.client.get(reverse('collections:item_terms', args=[item.pk]))
+        self.assertContains(terms, 'Only you ever see this')
+        self.assertContains(terms, 'What you paid')
+        self.assertContains(terms, 'name="purchase_price"')
+
+        edit = self.client.get(reverse('collections:edit', args=[item.pk]))
+        self.assertContains(edit, 'Only you see these')
+        self.assertContains(edit, 'name="purchase_price"')
 
     def test_a_new_piece_is_not_asked_where_it_is(self):
         """Disposition is an edit-time fact — a piece being added is in hand."""

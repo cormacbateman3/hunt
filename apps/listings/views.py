@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Count, Q
+from django.http import Http404
 from django.urls import reverse
 from django.views.generic import ListView
 from django.utils import timezone
@@ -13,10 +14,15 @@ from . import sell_flow, seller_desk
 from django import forms
 from . import qa
 from .models import ERA_LABEL_CHOICES, IMAGE_ROLE_CHOICES, Listing, ListingQuestion
-from .forms import ListingForm, ListingImageFormSet
+from .forms import ListingForm, ListingImageFormSet, ListingTermsForm, publish_gaps
 from apps.bids.forms import BidForm
-from apps.bids.services import get_user_bid_on_listing, get_winning_bid, minimum_bid_for
-from apps.collections.models import CollectionItem
+from apps.bids.services import (
+    get_user_bid_on_listing,
+    get_winning_bid,
+    lazily_close,
+    minimum_bid_for,
+)
+from apps.collections.models import CollectionItem, WantedItem
 from apps.collections.tradeability import is_open_to_trade
 from apps.core.models import GeographicUnit, LicenseType, State
 from apps.core.constants import (
@@ -25,10 +31,20 @@ from apps.core.constants import (
     LICENSE_TYPE_CATEGORY_CHOICES,
 )
 from apps.core.forms import ReferenceDataSuggestionForm
-from apps.core.upload_stash import clear_stash, restore_missing, stash_uploads, stashed_files
+from apps.core.slot_plan import photo_slots
+from apps.core.upload_stash import (
+    clear_stash,
+    discard_stashed,
+    kept_discards,
+    restore_missing,
+    stash_uploads,
+    stashed_map,
+)
 from apps.offers.services import active_offers, can_offer_on, reserving_offer
 from apps.orders.models import Order
-from apps.orders.services import calculate_platform_fee
+from apps.orders.services import calculate_platform_fee, get_platform_fee_percent
+from apps.prefill.ledger import line_bank_json
+from apps.prefill.services import resume_state_json
 from apps.shipping.services import estimate_listing_shipping
 from apps.payments.models import PaymentTransaction
 from apps.trades.models import TradeOffer
@@ -56,32 +72,8 @@ def _taxonomy_has_errors(form):
     return any(name in form.errors for name in names)
 
 
-def _prefill_from_collection_item(collection_item):
-    initial = {
-        'source_collection_item': collection_item.pk,
-        'title': collection_item.title,
-        'description': collection_item.description,
-        'item_kind': collection_item.item_kind,
-        'addons_attached': collection_item.addons_attached,
-        'license_year': collection_item.license_year,
-        'state': collection_item.state_id or getattr(collection_item.county, 'state_id', None),
-        'county_ref': collection_item.county_id,
-        'resident_status': collection_item.resident_status or 'unknown',
-        'condition_grade': collection_item.condition_grade or '',
-        'shape': collection_item.shape or '',
-        'colors': collection_item.colors,
-        'serial_number': collection_item.serial_number or '',
-        'era_label': collection_item.era_label or '',
-    }
-    for category in ('residency', 'holder_eligibility', 'activity_scope', 'duration', 'material'):
-        selected = collection_item.license_types.filter(category=category).order_by('name').first()
-        if selected:
-            initial[category] = selected.id
-    # addon_type is multi-valued — .first() would silently drop the rest
-    initial['addon_type'] = list(
-        collection_item.license_types.filter(category='addon_type').values_list('id', flat=True)
-    )
-    return initial
+# Carrying a shelf item into a sale lives in _draft_from_item — the skip
+# writes the draft directly, so there is no form to prefill any more.
 
 
 def _copy_collection_images_to_listing(listing, uploaded_any=False):
@@ -496,6 +488,21 @@ class HuntView(BaseListingListView):
         context['applied_filters'] = self._applied_filters(context)
         context['hunt_title'] = self._hunt_title(context)
 
+        # Just closed — the last 24 hours of the Auction House, below the
+        # live grid so it never crowds what's still on the clock. Results
+        # are interesting browsing, and they advertise that things sell.
+        if 'auction' in self._selected_formats():
+            from datetime import timedelta
+            context['just_closed'] = (
+                Listing.objects.filter(
+                    listing_type='auction',
+                    status__in=('pending', 'sold', 'expired'),
+                    auction_end__gte=timezone.now() - timedelta(hours=24),
+                )
+                .select_related('seller')
+                .order_by('-auction_end')[:8]
+            )
+
         # Query string minus the sub-tab, so tab links preserve filters.
         tab_params = request.GET.copy()
         tab_params.pop('tab', None)
@@ -651,7 +658,21 @@ def listing_detail(request, pk):
         pk=pk
     )
 
+    # A draft is step 2 without step 3 — it has no public face. The seller
+    # lands on the terms; anybody else gets the same 404 as a wrong pk.
+    if listing.status == 'draft':
+        if request.user.id != listing.seller_id:
+            raise Http404('No listing matches the given query.')
+        return redirect('listings:terms', pk=listing.pk)
+
     is_auction = listing.listing_type == 'auction'
+
+    # An ended auction closes the moment somebody looks at it — cron only
+    # sweeps the lots nobody is watching. Without this, dev (no cron) and
+    # the minute between cron runs both showed a limbo state.
+    if is_auction:
+        lazily_close(listing)
+
     winning_bid = None
     bid_count = 0
     recent_bids = []
@@ -665,6 +686,8 @@ def listing_detail(request, pk):
         recent_bids = listing.bids.select_related('bidder').order_by('-placed_at')[:10]
         minimum_bid = minimum_bid_for(listing)
 
+    user_max = None
+    viewer_leading = False
     if is_auction and request.user.is_authenticated:
         user_bid = get_user_bid_on_listing(request.user, listing)
         bid_form = BidForm(
@@ -672,6 +695,10 @@ def listing_detail(request, pk):
             bidder=request.user,
             initial={'amount': minimum_bid},
         )
+        from apps.bids.models import ProxyMax
+        standing = ProxyMax.objects.filter(listing=listing, bidder=request.user).first()
+        user_max = standing.max_amount if standing else (user_bid.amount if user_bid else None)
+        viewer_leading = bool(winning_bid and winning_bid.bidder_id == request.user.id)
 
     seller_review_summary = Review.summary_for_user(listing.seller)
     seller_completed_sales = listing.seller.orders_as_seller.filter(status='completed').count()
@@ -735,11 +762,19 @@ def listing_detail(request, pk):
         'more_from_seller': more_from_seller,
         'viewer_gap': _viewer_gap(request.user, listing),
         'quick_bids': _quick_bids(minimum_bid) if is_auction else [],
+        'user_max': user_max,
+        'viewer_leading': viewer_leading,
     }
     if listing.listing_type == 'auction':
         # Winner CTA + "auction ended" state (10.9). Without this the bid form
         # rendered on closed auctions and the winner had no route to payment.
-        auction_order = Order.objects.filter(listing=listing).first()
+        # A cancelled order is history, not the sale — reading it as the sale
+        # is how a stale fixture once told the whole page the wrong winner.
+        auction_order = (
+            Order.objects.filter(listing=listing)
+            .exclude(status='cancelled')
+            .first()
+        )
         context.update({
             'auction_order': auction_order,
             'auction_open': listing.status == 'active' and listing.is_active(),
@@ -837,7 +872,6 @@ def listing_detail(request, pk):
 
 
 @login_required
-@login_required
 def sell_start(request):
     """Step 1 — where is it going?
 
@@ -846,19 +880,77 @@ def sell_start(request):
     carry only the fields that destination needs.
     """
     query = request.GET.get('q', '').strip()
-    rows, total = sell_flow.shelf(request.user, query)
+    rows, counts = sell_flow.shelf(request.user, query)
 
     return render(request, 'listings/sell_start.html', {
         'destinations': sell_flow.DESTINATIONS,
         'shelf': rows,
-        'shelf_total': total,
+        'shelf_counts': counts,
         'query': query,
         'step': 1,
     })
 
 
+def _photo_slots(form, image_formset, kept=None):
+    """The listing flavour of the shared slot plan (apps.core.slot_plan):
+    the front is the form's own ``featured_image`` field, everything else
+    rides the formset. "Existing" means committed on the record — a bound
+    form's unsaved instance already carries the uploaded file object,
+    which is not that."""
+    front_existing = bool(form.instance.pk and getattr(form.instance, 'featured_image', None))
+    return photo_slots(
+        image_formset,
+        kept=kept,
+        front_input_id=form['featured_image'].id_for_label,
+        front_existing_url=form.instance.featured_image.url if front_existing else None,
+    )
+
+
+def _create_context(request, form, image_formset, **extra):
+    """The step-2 template's context, built one way for every render path.
+
+    The error re-renders used to hand-roll their own dicts and dropped
+    ``step`` and ``destination`` — after a failed submit the steps rail went
+    blank and the preview badge fell back to Auction on a store listing.
+    """
+    config_listing_type = (
+        form.data.get('listing_type') if form.is_bound else form.initial.get('listing_type')
+    ) or (form.instance.listing_type if form.instance.pk else '') or ''
+    kept = stashed_map(request) if request.method == 'POST' else {}
+    slots_cfg, slot_view = _photo_slots(form, image_formset, kept)
+    context = {
+        'form': form,
+        'image_formset': image_formset,
+        'config_listing_type': config_listing_type,
+        'config_listing_type_label': dict(Listing.LISTING_TYPE_CHOICES).get(config_listing_type, ''),
+        'destination': sell_flow.BY_KEY.get(config_listing_type),
+        'step': 2,
+        'mode': 'create',
+        'taxonomy_fields': TAXONOMY_FIELDS,
+        'taxonomy_has_errors': _taxonomy_has_errors(form),
+        'taxonomy_field_names_json': json.dumps([item[0] for item in TAXONOMY_FIELDS]),
+        'slots_cfg_json': json.dumps(slots_cfg),
+        'slot_view': slot_view,
+        'ledger_lines_json': line_bank_json(),
+        'prefill_resume_json': resume_state_json(request),
+        'suggestion_form': ReferenceDataSuggestionForm(
+            initial={'target_model': 'other', 'suggestion_type': 'new_value'}
+        ),
+    }
+    context.update(extra)
+    return context
+
+
+@login_required
 def listing_create(request):
     """Create a new listing"""
+    # The My-collection destination has its own step 2 — the collection item
+    # form. Send it there before any selling gate: recording a piece for
+    # yourself needs no capability and no shipping address. (This used to
+    # bounce back to step 1, which made the card a dead loop.)
+    if request.method == 'GET' and request.GET.get('to') == 'collection':
+        return redirect('collections:create')
+
     allowed, reason = enforce_capability(request.user, 'sell')
     if not allowed:
         messages.error(request, reason)
@@ -873,7 +965,10 @@ def listing_create(request):
 
     # Re-attach anything the user uploaded on a previous, failed attempt: a
     # browser cannot refill a file input, so without this a validation error
-    # silently drops the images and makes them pick every file again.
+    # silently drops the images and makes them pick every file again. A slot
+    # whose × was clicked is dropped first, so removal actually removes.
+    if request.method == 'POST':
+        discard_stashed(request, kept_discards(request))
     post_files = restore_missing(request, request.FILES) if request.method == 'POST' else None
 
     image_formset = ListingImageFormSet(request.POST or None, post_files or None)
@@ -901,21 +996,15 @@ def listing_create(request):
                         'This item already has an active or scheduled listing. '
                         'Close or cancel the existing listing before creating a new one.',
                     )
-                    return render(
-                        request,
-                        'listings/listing_create.html',
-                        {'form': form, 'image_formset': image_formset,
-                         'taxonomy_fields': TAXONOMY_FIELDS,
-                         'taxonomy_has_errors': _taxonomy_has_errors(form),
-                         'taxonomy_field_names_json': json.dumps([item[0] for item in TAXONOMY_FIELDS]),
-                         'suggestion_form': ReferenceDataSuggestionForm(
-                             initial={'target_model': 'other', 'suggestion_type': 'new_value'}
-                         )},
-                    )
+                    stash_uploads(request, request.FILES)
+                    return render(request, 'listings/listing_create.html',
+                                  _create_context(request, form, image_formset))
 
             listing = form.save()
 
-            # 4e: Auto-create CollectionItem if none linked
+            # 4e: Auto-create CollectionItem if none linked. Born quiet —
+            # the draft may be abandoned, and a half-described piece must
+            # not sit on the public profile. Publishing flips it public.
             if not listing.source_collection_item:
                 collection_item = CollectionItem.objects.create(
                     owner=request.user,
@@ -929,11 +1018,13 @@ def listing_create(request):
                     county=listing.county_ref,
                     resident_status=listing.resident_status,
                     condition_grade=listing.condition_grade,
+                    condition_description=listing.condition_description,
+                    is_restored=listing.is_restored,
                     shape=listing.shape,
                     colors=listing.colors,
                     serial_number=listing.serial_number,
                     era_label=listing.era_label,
-                    is_public=True,
+                    is_public=False,
                 )
                 collection_item.license_types.set(listing.license_types.all())
                 _copy_listing_images_to_collection_item(listing, collection_item)
@@ -959,77 +1050,315 @@ def listing_create(request):
             else:
                 listing.delete()
                 stash_uploads(request, request.FILES)
-                return render(request, 'listings/listing_create.html', {
-                    'form': form,
-                    'image_formset': image_formset,
-                    'taxonomy_fields': TAXONOMY_FIELDS,
-                    'taxonomy_has_errors': _taxonomy_has_errors(form),
-                    'taxonomy_field_names_json': json.dumps([item[0] for item in TAXONOMY_FIELDS]),
-                    'retained_uploads': stashed_files(request),
-                    'suggestion_form': ReferenceDataSuggestionForm(
-                        initial={'target_model': 'other', 'suggestion_type': 'new_value'}
-                    ),
-                })
+                return render(request, 'listings/listing_create.html',
+                              _create_context(request, form, image_formset))
 
-            if listing.status == 'scheduled':
-                messages.success(request, f'Listing scheduled to go live on {listing.scheduled_at:%b %-d, %Y at %-I:%M %p}.')
-            else:
-                messages.success(request, 'Listing created successfully!')
-            return redirect('listings:detail', pk=listing.pk)
+            # The item exists on the shelf; nothing is public until step 3.
+            if 'save_draft' in request.POST:
+                messages.success(
+                    request,
+                    'Saved as a draft — find it under My Listings → Drafts whenever you want to finish the terms.',
+                )
+                return redirect('listings:my_listings')
+            return redirect('listings:terms', pk=listing.pk)
     else:
         # Step 2 of the three-step flow. The destination arrives from step 1
         # as `?to=`; the config page that used to ask for it with two radio
         # buttons and no consequences shown is gone.
         config_type = request.GET.get('to') or request.GET.get('listing_type', '')
 
-        # Starting from your own shelf carries everything across and skips
-        # this step's work — the details are already recorded.
+        # Starting from your own shelf skips this step entirely — the
+        # details are already recorded, so the short review (sell_from)
+        # writes the draft and walks straight to the terms.
         source_id = request.GET.get('from_item') or request.GET.get('from_collection', '')
-        source_item = None
         if source_id and source_id.isdigit():
-            source_item = get_object_or_404(
-                request.user.collection_items.select_related('state', 'county').prefetch_related('license_types'),
-                pk=int(source_id),
-            )
+            target = reverse('listings:sell_from', args=[int(source_id)])
+            if config_type in ('auction', 'buy_now'):
+                target += f'?to={config_type}'
+            return redirect(target)
 
         if config_type not in ('auction', 'buy_now'):
             # No destination yet: that is step 1's question, not this page's.
-            back = reverse('listings:sell_start')
-            if source_item:
-                back += f'?q={source_item.title}'
-            return redirect(back)
+            return redirect('listings:sell_start')
 
-        if source_item:
-            initial = _prefill_from_collection_item(source_item)
-            initial['listing_type'] = config_type
-            form = ListingForm(initial=initial, user=request.user)
-        else:
-            form = ListingForm(initial={'listing_type': config_type}, user=request.user)
+        # A fresh walk-up starts clean. The stash exists to survive one
+        # failed submit, not to haunt next week's listing with last week's
+        # photograph.
+        clear_stash(request)
+        form = ListingForm(initial={'listing_type': config_type}, user=request.user)
 
     if request.method == 'POST':
         # Reached only when the form failed — hold the upload for the retry.
         stash_uploads(request, request.FILES)
 
-    config_listing_type = (
-        form.data.get('listing_type') if form.is_bound else form.initial.get('listing_type')
-    ) or ''
-    context = {
-        'form': form,
-        'image_formset': image_formset,
-        'config_listing_type': config_listing_type,
-        'config_listing_type_label': dict(Listing.LISTING_TYPE_CHOICES).get(config_listing_type, ''),
-        'destination': sell_flow.BY_KEY.get(config_listing_type),
-        'step': 2,
-        'taxonomy_fields': TAXONOMY_FIELDS,
-        'taxonomy_has_errors': _taxonomy_has_errors(form),
-        'taxonomy_field_names_json': json.dumps([item[0] for item in TAXONOMY_FIELDS]),
-        'retained_uploads': stashed_files(request) if request.method == 'POST' else [],
-        'suggestion_form': ReferenceDataSuggestionForm(
-            initial={'target_model': 'other', 'suggestion_type': 'new_value'}
-        ),
-    }
+    return render(request, 'listings/listing_create.html',
+                  _create_context(request, form, image_formset))
 
-    return render(request, 'listings/listing_create.html', context)
+
+@login_required
+def listing_item_edit(request, pk):
+    """Step 2, revisited — the item half of a draft, on the step-2 page.
+
+    "Change the item" from the terms, the shelf skip, and the rail's 2 all
+    land here: the same page as step 2, bound to the draft, photographs in
+    their slots. A listing that is already live edits on listing_edit
+    instead, where the full requirements apply.
+    """
+    listing = get_object_or_404(
+        Listing.objects.select_related('state', 'county_ref', 'source_collection_item'),
+        pk=pk, seller=request.user,
+    )
+    if listing.status != 'draft':
+        return redirect('listings:edit', pk=listing.pk)
+
+    if request.method == 'POST':
+        discard_stashed(request, kept_discards(request))
+        post_files = restore_missing(request, request.FILES)
+        form = ListingForm(request.POST, post_files, instance=listing, user=request.user)
+        image_formset = ListingImageFormSet(request.POST, post_files, instance=listing)
+        if form.is_valid() and image_formset.is_valid():
+            form.save()
+            image_formset.save()
+            _normalize_listing_image_sort_order(listing)
+            _link_prefill_job(request, listing)
+            clear_stash(request)
+            if 'save_draft' in request.POST:
+                messages.success(
+                    request,
+                    'Saved as a draft — find it under My Listings → Drafts whenever you want to finish the terms.',
+                )
+                return redirect('listings:my_listings')
+            return redirect('listings:terms', pk=listing.pk)
+        stash_uploads(request, request.FILES)
+    else:
+        clear_stash(request)
+        form = ListingForm(instance=listing, user=request.user)
+        image_formset = ListingImageFormSet(instance=listing)
+
+    return render(request, 'listings/listing_create.html',
+                  _create_context(request, form, image_formset,
+                                  listing=listing, mode='item_edit'))
+
+
+def _draft_from_item(user, item, destination):
+    """The shelf is the source of truth — a second sale skips step 2.
+
+    Everything the collector already recorded comes across: the fields,
+    the taxonomy, the photographs with their roles. The result is an
+    ordinary draft, one terms page away from being public.
+    """
+    state = item.state or (item.county.state if item.county_id else None)
+    listing = Listing.objects.create(
+        seller=user,
+        listing_type=destination,
+        status='draft',
+        source_collection_item=item,
+        title=item.title,
+        description=item.description or '',
+        category=item.category,
+        item_kind=item.item_kind,
+        addons_attached=item.addons_attached,
+        license_year=item.license_year,
+        state=state,
+        county_ref=item.county,
+        county=item.county.name if item.county_id else '',
+        is_statewide=bool(item.county_id and item.county.is_statewide),
+        resident_status=item.resident_status or 'unknown',
+        condition_grade=item.condition_grade or '',
+        condition_description=item.condition_description,
+        is_restored=item.is_restored,
+        shape=item.shape or '',
+        colors=item.colors or [],
+        serial_number=item.serial_number or '',
+        era_label=item.era_label or None,
+    )
+    listing.license_types.set(item.license_types.all())
+    _copy_collection_images_to_listing(listing)
+    return listing
+
+
+@login_required
+def sell_from(request, pk):
+    """The door-picker between the shelf and step 2.
+
+    Pick an item in step 1 and you land here: the item in two lines, and
+    the two selling destinations. Choosing one writes the draft from the
+    shelf record and lands on step 2 with everything filled in — a quick
+    look-over before the terms, because the carried-across details are
+    the seller's to check, not to retype. (6a drew this as a skip straight
+    to the terms; the owner's call, 2026-08-26, was that the seller should
+    see step 2 filled in first.)
+    """
+    item = get_object_or_404(
+        request.user.collection_items.select_related('state', 'county'),
+        pk=pk,
+    )
+
+    blocking = Listing.objects.filter(
+        source_collection_item=item,
+        status__in=('active', 'scheduled', 'pending'),
+    ).first()
+    if blocking:
+        messages.error(request, 'This item already has a live listing. '
+                                'Close it before putting it up again.')
+        return redirect('listings:sell_start')
+
+    destination = request.GET.get('to', '')
+    if destination in ('auction', 'buy_now'):
+        allowed, reason = enforce_capability(request.user, 'sell')
+        if not allowed:
+            messages.error(request, reason)
+            return redirect('accounts:dashboard')
+        if not request.user.profile.shipping_address:
+            messages.error(
+                request,
+                'To create a listing, you need a saved shipping address. '
+                f'<a href="{reverse("accounts:address_add")}">Add address &rarr;</a>'
+            )
+            return redirect('accounts:dashboard')
+        # One draft per item and destination — coming back resumes it.
+        draft = Listing.objects.filter(
+            source_collection_item=item, seller=request.user,
+            status='draft', listing_type=destination,
+        ).first()
+        if draft is None:
+            draft = _draft_from_item(request.user, item, destination)
+        return redirect('listings:item_edit', pk=draft.pk)
+
+    facts = [
+        item.county.name if item.county_id else (item.state.code if item.state_id else ''),
+        str(item.license_year or item.effective_era or ''),
+        item.get_condition_grade_display() or '',
+    ]
+    return render(request, 'listings/sell_from.html', {
+        'item': item,
+        'facts': ' · '.join(part for part in facts if part),
+        'destinations': [d for d in sell_flow.DESTINATIONS if d['key'] != 'collection'],
+        'step': 1,
+    })
+
+
+def _wanted_count(listing):
+    """How many other collectors want this ground and year.
+
+    The one line of "what the books say" that works today — comparable
+    sales need Price History (13.6, registered).
+    """
+    if not listing.state_id:
+        return 0
+    wants = WantedItem.objects.filter(state=listing.state).exclude(user=listing.seller)
+    if listing.county_ref and not listing.county_ref.is_statewide:
+        wants = wants.filter(Q(county=listing.county_ref) | Q(county__isnull=True))
+    if listing.license_year:
+        wants = wants.filter(
+            Q(year_min__isnull=True) | Q(year_min__lte=listing.license_year),
+            Q(year_max__isnull=True) | Q(year_max__gte=listing.license_year),
+        )
+    return wants.values('user').distinct().count()
+
+
+@login_required
+def listing_terms(request, pk):
+    """Step 3 — the terms, one panel per destination.
+
+    Only the destination's own questions, the shared getting-it-there strip,
+    one line of local knowledge, and the cost of changing your mind. The
+    button at the foot is the only thing on the site that makes a listing
+    public.
+    """
+    listing = get_object_or_404(
+        Listing.objects.select_related('state', 'county_ref', 'source_collection_item'),
+        pk=pk, seller=request.user,
+    )
+    if listing.status != 'draft':
+        # A live listing's terms are edited on the edit page.
+        return redirect('listings:edit', pk=listing.pk)
+
+    # "You can move an item between all three later" (6a) — and a draft
+    # can move *now*, before anything is public. These act before the
+    # terms form ever binds, because they aren't answers to its questions.
+    if request.method == 'POST' and request.POST.get('switch_to') in ('auction', 'buy_now'):
+        other = request.POST['switch_to']
+        if other != listing.listing_type:
+            listing.listing_type = other
+            listing.save(update_fields=['listing_type', 'updated_at'])
+            messages.success(
+                request,
+                f'Moved. It will go up in {sell_flow.BY_KEY[other]["name"]} instead.',
+            )
+        return redirect('listings:terms', pk=listing.pk)
+
+    if request.method == 'POST' and 'to_collection' in request.POST:
+        source = listing.source_collection_item
+        title = listing.title
+        listing.delete()
+        messages.success(request, f'Kept. “{title}” stays in your collection, unsold.')
+        if source:
+            return redirect('collections:item_terms', pk=source.pk)
+        return redirect('collections:my_collection')
+
+    if request.method == 'POST' and 'discard' in request.POST:
+        title = listing.title
+        listing.delete()
+        # The shelf record survives — the described item is theirs whether
+        # or not this sale happens, so the work is parked, not lost.
+        messages.success(
+            request,
+            f'Draft discarded. “{title}” is still on your shelf, ready whenever.',
+        )
+        return redirect('listings:sell_start')
+
+    # Bind on the method, not on `request.POST or None` — an empty POST is a
+    # falsy QueryDict, and an unbound form would swallow its own errors.
+    form = ListingTermsForm(
+        request.POST if request.method == 'POST' else None,
+        instance=listing, user=request.user,
+    )
+
+    # Required-to-publish fields gate publishing — here, at the only button
+    # that publishes. Step 2 saved a draft however thin; this page names
+    # what's still missing and holds the door until it's filled.
+    item_gaps = publish_gaps(listing)
+
+    if request.method == 'POST' and item_gaps:
+        messages.error(
+            request,
+            'The item needs a little more before it can go up — see the note above the panel.',
+        )
+    elif request.method == 'POST' and form.is_valid():
+        form.save(publish=True)
+        # The piece steps into the light with its lot.
+        source = listing.source_collection_item
+        if source and not source.is_public:
+            source.is_public = True
+            source.save(update_fields=['is_public', 'updated_at'])
+        if listing.status == 'scheduled':
+            when = timezone.localtime(listing.scheduled_at)
+            messages.success(
+                request,
+                f'Scheduled — it goes live {when:%A %d %B} at {when:%I:%M %p}.'.replace(' 0', ' '),
+            )
+        elif listing.listing_type == 'auction':
+            closes = timezone.localtime(listing.auction_end)
+            messages.success(
+                request,
+                f'The lot is open. It closes {closes:%A %d %B} at {closes:%I:%M %p}.'.replace(' 0', ' '),
+            )
+        else:
+            messages.success(request, 'On the shelf in The General Store. '
+                                      'Change the price or take it down whenever.')
+        return redirect('listings:detail', pk=listing.pk)
+
+    return render(request, 'listings/listing_terms.html', {
+        'form': form,
+        'listing': listing,
+        'step': 3,
+        'config_listing_type': listing.listing_type,
+        'destination': sell_flow.BY_KEY.get(listing.listing_type),
+        'wanted_count': _wanted_count(listing),
+        'fee_percent': get_platform_fee_percent(),
+        'item_gaps': item_gaps,
+    })
 
 
 @login_required
@@ -1039,17 +1368,25 @@ def listing_edit(request, pk):
 
     if request.method == 'POST':
         form = ListingForm(request.POST, request.FILES, instance=listing, user=request.user)
+        terms_form = ListingTermsForm(request.POST, instance=listing, user=request.user)
         image_formset = ListingImageFormSet(request.POST, request.FILES, instance=listing)
 
-        if form.is_valid() and image_formset.is_valid():
+        if form.is_valid() and terms_form.is_valid() and image_formset.is_valid():
             form.save()
+            # publish=False: editing a live listing never resets its clock,
+            # and editing a draft here leaves it a draft — the terms page's
+            # foot button is the only publisher.
+            terms_form.save(publish=False)
             image_formset.save()
             _copy_collection_images_to_listing(listing)
             _normalize_listing_image_sort_order(listing)
             messages.success(request, 'Listing updated successfully!')
+            if listing.status == 'draft':
+                return redirect('listings:terms', pk=listing.pk)
             return redirect('listings:detail', pk=listing.pk)
     else:
         form = ListingForm(instance=listing, user=request.user)
+        terms_form = ListingTermsForm(instance=listing, user=request.user)
         image_formset = ListingImageFormSet(instance=listing)
 
     # On edit the role is a visible choice rather than something the upload
@@ -1061,11 +1398,14 @@ def listing_edit(request, pk):
 
     context = {
         'form': form,
+        'terms_form': terms_form,
         'image_formset': image_formset,
         'listing': listing,
+        'config_listing_type': listing.listing_type,
         'taxonomy_fields': TAXONOMY_FIELDS,
         'taxonomy_has_errors': _taxonomy_has_errors(form),
         'taxonomy_field_names_json': json.dumps([item[0] for item in TAXONOMY_FIELDS]),
+        'ledger_lines_json': line_bank_json(),
         'suggestion_form': ReferenceDataSuggestionForm(
             initial={'target_model': 'listing', 'target_id': listing.id, 'suggestion_type': 'new_value'}
         ),

@@ -107,8 +107,7 @@ rail is cross-referenced against the viewer's own shelves.
                     <form method="post" action="{% url 'messaging:start' %}">
                         {% csrf_token %}
                         <input type="hidden" name="recipient_id" value="{{ profile_user.pk }}">
-                        <input type="hidden" name="conversation_type" value="general">
-                        <button type="submit" class="kb-btn kb-btn--secondary kb-btn--sm">Mail</button>
+                                                <button type="submit" class="kb-btn kb-btn--secondary kb-btn--sm">Mail</button>
                     </form>
                     {% comment %}
                     The only way to block anybody used to be from inside a
@@ -165,7 +164,8 @@ rail is cross-referenced against the viewer's own shelves.
                                 {% if item.images.all %}
                                     <img src="{{ item.images.all.0.image.url }}" alt="" loading="lazy">
                                 {% endif %}
-                                {% if item.open_to_trade %}<span class="pf-case-flag">Open to trade</span>{% endif %}
+                                {% if item.grid_tag %}<span class="pf-case-flag pf-case-flag--state">{{ item.grid_tag }}</span>
+                                {% elif item.open_to_trade %}<span class="pf-case-flag">Open to trade</span>{% endif %}
                             </span>
                             <span class="pf-case-body">
                                 <span class="pf-case-title">{{ item.title }}</span>
@@ -291,6 +291,7 @@ rail is cross-referenced against the viewer's own shelves.
                                 {% if item.images.all %}
                                     <img src="{{ item.images.all.0.image.url }}" alt="" loading="lazy">
                                 {% endif %}
+                                {% if item.grid_tag %}<span class="pf-piece-tag">{{ item.grid_tag }}</span>{% endif %}
                             </span>
                             <span class="pf-piece-body">
                                 <span class="pf-piece-title">{{ item.license_year|default:item.effective_era }} {{ item.county.name|default:item.state.code|default:"" }}</span>
@@ -330,6 +331,23 @@ rail is cross-referenced against the viewer's own shelves.
                 </div>
             {% else %}
                 <p class="pf-quiet">Nothing listed at the moment.</p>
+            {% endif %}
+
+            {% if unfinished_listings %}
+                {% comment %}
+                Owner only. A draft or a scheduled lot was invisible
+                everywhere — off the shelf, off this page — which is how a
+                piece quietly disappears from its own seller.
+                {% endcomment %}
+                <div class="pf-unfinished">
+                    <span class="kb-eyebrow">On the way &mdash; only you see these</span>
+                    {% for listing in unfinished_listings %}
+                        <a href="{% url 'listings:terms' listing.pk %}" class="pf-unfinished-row">
+                            <span>{{ listing.title|truncatechars:44 }}</span>
+                            <span class="pf-unfinished-state">{{ listing.get_status_display|lower }} &mdash; finish it &rarr;</span>
+                        </a>
+                    {% endfor %}
+                </div>
             {% endif %}
         </section>
     </div>

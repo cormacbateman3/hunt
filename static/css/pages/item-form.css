@@ -166,6 +166,12 @@
     height: 100%;
     object-fit: cover;
     display: block;
+    /* The thumbnail must not eat the pointer: with it inert, a drag
+       starts from the slot button (our reorder), never as a native image
+       drag — and clicks still reach the button underneath. Making the
+       img draggable=false alone BLOCKED dragging filled slots entirely,
+       which is why reordering felt stuck. */
+    pointer-events: none;
 }
 
 .if-slot-badge {
@@ -249,31 +255,6 @@
     font-size: 11.5px;
     line-height: 1.5;
     color: var(--kb-ink-4);
-}
-
-/* Uploads the server held onto through a failed submit. */
-.if-kept {
-    border: 1px solid var(--kb-note-border, #f0e6c8);
-    background: var(--kb-note-bg, #fdf6e3);
-    border-radius: var(--kb-r-md);
-    padding: 9px 11px;
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-}
-
-.if-kept-row {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-}
-
-.if-kept-row img {
-    width: 44px;
-    height: 34px;
-    object-fit: cover;
-    border-radius: var(--kb-r-chip);
-    border: 1px solid var(--kb-rule);
 }
 
 /* The whole panel takes a drop. */
@@ -364,14 +345,31 @@
     cursor: default;
 }
 
-.pf-foot {
+/* 4a's settled foot: the caveat left, the retry right, on a cream strip. */
+.pf-footbar {
     border-top: 1px solid var(--kb-rule-soft);
     background: var(--kb-cream);
-    padding: 11px 15px;
-    font-size: 11.5px;
-    line-height: 1.5;
-    color: var(--kb-ink-2);
+    padding: 9px 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--kb-ink-4);
 }
+
+.pf-reread {
+    border: 0;
+    background: none;
+    padding: 0;
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--kb-brass);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.pf-reread:hover { text-decoration: underline; }
 
 .pf-lot {
     padding: 9px 15px;
@@ -382,40 +380,260 @@
     background: var(--kb-note-bg, #fdf6e3);
 }
 
-/* Working shimmer, while the read runs. */
-.pf-busy {
+/* ── The ledger's voice — the typed line and its caret (4a/4d) ──────── */
+.pf-line {
     padding: 12px 15px;
-    font-size: 12.5px;
-    color: var(--kb-ink-3);
+    background: var(--kb-page);
+    border-bottom: 1px solid var(--kb-rule-soft);
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+    min-height: 44px;
 }
 
-.prefill-shimmer {
-    animation: pf-pulse 1.2s ease-in-out infinite;
+.pf-line-text {
+    font-family: var(--kb-font-display, Petrona, Georgia, serif);
+    font-style: italic;
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--kb-forest);
 }
 
-@keyframes pf-pulse {
+.pf-caret {
+    width: 7px;
+    height: 15px;
+    background: var(--kb-brass);
+    flex-shrink: 0;
+    align-self: center;
+    animation: pf-caret 0.9s steps(1) infinite;
+}
+
+@keyframes pf-caret {
     0%, 100% { opacity: 1; }
-    50% { opacity: 0.45; }
+    50% { opacity: 0; }
 }
 
-/* The ✨ badge prefill pins beside a field it half-trusts. */
-.prefill-badge {
-    display: inline-flex;
-    align-items: center;
+/* ── The tally (4a/4e): filled | to check | for you ─────────────────── */
+.pf-tally {
+    padding: 10px 15px;
+    background: var(--kb-page);
+    border-bottom: 1px solid var(--kb-rule-soft);
+    display: flex;
+    flex-direction: column;
     gap: 4px;
+}
+
+.pf-tally-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.pf-tally-filled { color: var(--kb-live); }
+.pf-tally-check { color: var(--kb-brass); }
+.pf-tally-you { color: var(--kb-ink-3); }
+
+.pf-tally-sep {
+    width: 1px;
+    height: 11px;
+    background: var(--kb-rule);
+}
+
+.pf-tally-blanks {
+    font-size: 10.5px;
+    color: var(--kb-ink-4);
+}
+
+/* ── The ✓ / × pair on a flagged row, and the quiet change link ─────── */
+.pf-pair {
+    margin-left: auto;
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.pf-yes,
+.pf-no {
+    width: 21px;
+    height: 19px;
+    border-radius: var(--kb-r-chip);
+    font-size: 10.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--kb-surface);
+    cursor: pointer;
+    padding: 0;
+}
+
+.pf-yes {
+    border: 1px solid var(--kb-live);
+    color: var(--kb-live);
+}
+
+.pf-no {
+    border: 1px solid var(--kb-rule-strong);
+    color: var(--kb-ink-4);
+}
+
+.pf-yes:hover { background: var(--kb-live); color: #fff; }
+.pf-no:hover { border-color: var(--kb-rust, #9c3d1e); color: var(--kb-rust, #9c3d1e); }
+
+.pf-change {
+    margin-left: auto;
+    border: 0;
+    background: none;
     font-size: 10.5px;
     font-weight: 600;
     color: var(--kb-brass);
-    margin-top: 3px;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
 }
 
-.prefill-badge button {
-    border: 0;
-    background: none;
-    color: var(--kb-ink-4);
-    font-size: 12px;
+.pf-undo {
+    margin-left: auto;
+    border: 1px solid var(--kb-rule-strong);
+    background: var(--kb-surface);
+    border-radius: var(--kb-r-chip);
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--kb-ink-2);
     cursor: pointer;
-    padding: 0 2px;
+    padding: 3px 9px;
+    flex-shrink: 0;
+}
+
+/* ── Couldn't read this one (4c state 4) ────────────────────────────── */
+.pf-failed {
+    padding: 12px 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.pf-failed strong {
+    font-size: 12.5px;
+    color: var(--kb-rust, #9c3d1e);
+}
+
+.pf-failed span {
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--kb-ink-4);
+}
+
+.pf-failed-why { font-family: var(--kb-font-mono); font-size: 10.5px; }
+
+.pf-failed .pf-act { align-self: flex-start; }
+
+/* ── The lock, and the settle flash (4e) ────────────────────────────── */
+.if-field.is-reading .kb-input,
+.if-field.is-reading .kb-select,
+.if-field.is-reading .kb-textarea,
+.if-field.is-reading .chip-radios label,
+.if-field.is-reading .chip-checkboxes label {
+    background: var(--kb-parchment, #f2eee4);
+}
+
+.if-field.is-settled .kb-input,
+.if-field.is-settled .kb-select,
+.if-field.is-settled .kb-textarea {
+    background: #fbf3dd;
+    border-color: #c9a44f;
+    transition: background-color 1.2s ease, border-color 1.2s ease;
+}
+
+/* ── The scan on the front slot (4b): loupe, grid, sleeve ───────────── */
+.pf-scan {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.pf-scan-tick {
+    position: absolute;
+    width: 11px;
+    height: 11px;
+}
+
+.pf-scan-tick--tl { top: 5px; left: 5px; border-top: 1px solid var(--kb-brass); border-left: 1px solid var(--kb-brass); }
+.pf-scan-tick--br { bottom: 5px; right: 5px; border-bottom: 1px solid var(--kb-brass); border-right: 1px solid var(--kb-brass); }
+
+.pf-loupe {
+    position: absolute;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 3px solid #7d5d17;
+    box-shadow: 0 2px 5px rgba(28, 31, 24, 0.35), inset 0 0 0 1px rgba(255, 247, 224, 0.6);
+    background: rgba(243, 239, 228, 0.25);
+    animation: pf-loupe 7s ease-in-out infinite;
+}
+
+@keyframes pf-loupe {
+    0%, 100% { top: 8%; left: 6%; }
+    30% { top: 12%; left: 55%; }
+    55% { top: 52%; left: 40%; }
+    80% { top: 45%; left: 8%; }
+}
+
+.pf-scan-sheet {
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(rgba(38, 51, 31, 0.09) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(38, 51, 31, 0.09) 1px, transparent 1px);
+    background-size: 14px 14px;
+}
+
+.pf-scan-sweep {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 26px;
+    top: -10%;
+    background: linear-gradient(180deg, rgba(201, 164, 79, 0), rgba(255, 247, 224, 0.75) 46%,
+        rgba(160, 122, 38, 0.9) 52%, rgba(201, 164, 79, 0));
+    animation: pf-sweep 1.9s linear infinite;
+}
+
+@keyframes pf-sweep {
+    from { top: -10%; }
+    to { top: 105%; }
+}
+
+.pf-scan-word {
+    position: absolute;
+    bottom: 4px;
+    right: 5px;
+    font-family: var(--kb-font-mono);
+    font-size: 8px;
+    letter-spacing: 0.14em;
+    color: var(--kb-forest);
+    background: rgba(250, 248, 243, 0.8);
+    padding: 1px 4px;
+}
+
+.pf-sleeve {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(247, 244, 236, 0.9), rgba(240, 237, 228, 0.82));
+    border-bottom: 2px solid rgba(160, 122, 38, 0.55);
+    box-shadow: 0 3px 10px rgba(28, 31, 24, 0.18);
+    animation: pf-sleeve 4.2s ease-in-out infinite;
+}
+
+@keyframes pf-sleeve {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-86%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pf-loupe, .pf-scan-sweep, .pf-sleeve, .pf-caret { animation: none; }
 }
 
 /* ── How buyers will see it ─────────────────────────────────────────── */
@@ -581,6 +799,31 @@
 .if-grid--physical { grid-template-columns: 190px minmax(0, 1fr) 200px; }
 .if-grid--serial { grid-template-columns: 220px minmax(0, 1fr); }
 
+/* Condition description beside the serial — the writing gets the room. */
+.if-grid--condwrite { grid-template-columns: minmax(0, 1fr) 220px; }
+
+/* The ladder, a divider, and Restored apart from it (turn 6b). */
+.if-cond-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+}
+
+.if-cond-divider {
+    width: 1px;
+    height: 22px;
+    background: var(--kb-rule);
+    margin: 0 6px;
+    flex-shrink: 0;
+}
+
+.if-cond-restored input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
 .if-field {
     display: flex;
     flex-direction: column;
@@ -589,6 +832,20 @@
 }
 
 .if-field .kb-hint { margin-top: 0; }
+
+/* Hints only where you are (6b): every field had a line of grey text
+   under it, which is why the page read as a wall. The hint now appears on
+   the field you're in and nowhere else — plus the fields that carry one
+   permanently: anything flagged by the read, anything with an error, and
+   the few marked --stay (material, which the photograph can never tell,
+   and the condition ladder's Restored explainer). */
+.if-page .if-field .kb-hint { display: none; }
+
+.if-page .if-field:focus-within .kb-hint,
+.if-page .if-field.has-error .kb-hint,
+.if-page .if-field.is-flagged .kb-hint,
+.if-page .if-field--check .kb-hint,
+.if-page .if-field--stay .kb-hint { display: block; }
 
 .if-label-row {
     display: flex;
@@ -909,6 +1166,36 @@
     margin-top: 14px;
 }
 
+/* The suggestion drawer, tucked: a quiet line, not a page-wide band.
+   It opens into a bounded card where it stands. */
+.if-more--tucked {
+    border: 0;
+    background: none;
+    padding: 0;
+    max-width: 400px;
+    align-self: flex-start;
+}
+
+.if-more--tucked summary {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--kb-brass);
+    list-style: none;
+}
+
+.if-more--tucked summary::-webkit-details-marker { display: none; }
+.if-more--tucked summary::after { content: ' \2192'; }
+.if-more--tucked[open] summary::after { content: ''; }
+.if-more--tucked summary:hover { text-decoration: underline; }
+
+.if-more--tucked .if-more-body {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    padding: 14px 16px;
+    margin-top: 8px;
+}
+
 /* ── Add-from-order: no rail, one column, the purchase up top ────────── */
 .if-page--narrow { max-width: 880px; }
 
@@ -971,5 +1258,6 @@
     .if-grid--thirds,
     .if-grid--physical,
     .if-grid--serial { grid-template-columns: 1fr; }
+    .if-grid--condwrite { grid-template-columns: 1fr; }
     .if-called { flex-direction: column; align-items: flex-start; }
 }

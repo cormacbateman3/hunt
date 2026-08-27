@@ -203,11 +203,21 @@
 
                     <div class="if-field{% if form.condition_grade.errors %} has-error{% endif %}">
                         <span class="kb-label">Condition</span>
-                        {{ form.condition_grade }}
-                        {{ form.condition_grade.errors }}
+                        <div class="if-cond-row">
+                            {{ form.condition_grade }}
+                            <span class="if-cond-divider" aria-hidden="true"></span>
+                            <label class="chip-option if-cond-restored">{{ form.is_restored }} Restored</label>
+                        </div>
+                        {{ form.condition_grade.errors }}{{ form.is_restored.errors }}
                     </div>
 
-                    <div class="if-grid if-grid--serial">
+                    <div class="if-grid if-grid--condwrite">
+                        <div class="if-field{% if form.condition_description.errors %} has-error{% endif %}">
+                            <label class="kb-label" for="{{ form.condition_description.id_for_label }}">Condition description</label>
+                            {{ form.condition_description }}
+                            <span class="kb-hint">The grade is for filtering; this is what stops disputes.</span>
+                            {{ form.condition_description.errors }}
+                        </div>
                         <div class="if-field{% if form.serial_number.errors %} has-error{% endif %}">
                             <label class="kb-label" for="{{ form.serial_number.id_for_label }}">Serial or stub</label>
                             {{ form.serial_number }}
@@ -283,93 +293,114 @@
 
                     {% if listing.listing_type == 'auction' %}
                         <div class="sl-terms-grid">
-                            <div class="if-field{% if form.starting_price.errors %} has-error{% endif %}">
-                                <label class="kb-label" for="{{ form.starting_price.id_for_label }}">Starting price</label>
-                                {{ form.starting_price }}
-                                {{ form.starting_price.errors }}
+                            <div class="if-field{% if terms_form.starting_price.errors %} has-error{% endif %}">
+                                <label class="kb-label" for="{{ terms_form.starting_price.id_for_label }}">Starting price</label>
+                                {{ terms_form.starting_price }}
+                                {{ terms_form.starting_price.errors }}
                             </div>
-                            <div class="if-field{% if form.reserve_price.errors %} has-error{% endif %}">
-                                <label class="kb-label" for="{{ form.reserve_price.id_for_label }}">Reserve</label>
-                                {{ form.reserve_price }}
+                            <div class="if-field{% if terms_form.reserve_price.errors %} has-error{% endif %}">
+                                <label class="kb-label" for="{{ terms_form.reserve_price.id_for_label }}">Reserve</label>
+                                {{ terms_form.reserve_price }}
                                 <span class="kb-hint">A floor you won&rsquo;t go under. Bidders see that there is one, never the figure.</span>
-                                {{ form.reserve_price.errors }}
+                                {{ terms_form.reserve_price.errors }}
                             </div>
-                            <div class="if-field{% if form.duration_days.errors %} has-error{% endif %}">
-                                <label class="kb-label" for="{{ form.duration_days.id_for_label }}">Runs for</label>
-                                {{ form.duration_days }}
-                                {{ form.duration_days.errors }}
-                            </div>
-                            <div class="if-field{% if form.bid_increment.errors %} has-error{% endif %}">
-                                <label class="kb-label" for="{{ form.bid_increment.id_for_label }}">Smallest raise</label>
-                                {{ form.bid_increment }}
-                                {{ form.bid_increment.errors }}
+                            {% if terms_form.duration_days %}
+                                <div class="if-field{% if terms_form.duration_days.errors %} has-error{% endif %}">
+                                    <label class="kb-label" for="{{ terms_form.duration_days.id_for_label }}">Runs for</label>
+                                    {{ terms_form.duration_days }}
+                                    {{ terms_form.duration_days.errors }}
+                                </div>
+                            {% endif %}
+                            <div class="if-field{% if terms_form.bid_increment.errors %} has-error{% endif %}">
+                                <label class="kb-label" for="{{ terms_form.bid_increment.id_for_label }}">Smallest raise</label>
+                                {{ terms_form.bid_increment }}
+                                {{ terms_form.bid_increment.errors }}
                             </div>
                         </div>
                         <p class="sl-cost">
-                            {% if listing.bids.exists %}
+                            {% if listing.status == 'draft' %}
+                                Still a draft &mdash; the clock starts when you open the lot
+                                from the terms page, not here.
+                            {% elif listing.bids.exists %}
                                 This lot has bids on it. You can&rsquo;t cancel it now, and changing
                                 the terms under people who have already bid is how disputes start.
                             {% else %}
                                 No bids yet, so you can still cancel it or change anything here.
+                                The clock keeps its end time either way.
                             {% endif %}
                         </p>
 
                     {% else %}
                         <div class="sl-terms-grid">
-                            <div class="if-field{% if form.buy_now_price.errors %} has-error{% endif %}">
-                                <label class="kb-label" for="{{ form.buy_now_price.id_for_label }}">Your price</label>
-                                {{ form.buy_now_price }}
-                                {{ form.buy_now_price.errors }}
+                            <div class="if-field{% if terms_form.buy_now_price.errors %} has-error{% endif %}">
+                                <label class="kb-label" for="{{ terms_form.buy_now_price.id_for_label }}">Your price</label>
+                                {{ terms_form.buy_now_price }}
+                                {{ terms_form.buy_now_price.errors }}
                             </div>
-                            <div class="if-field{% if form.minimum_offer.errors %} has-error{% endif %}">
-                                <label class="kb-label" for="{{ form.minimum_offer.id_for_label }}">Nothing under</label>
-                                {{ form.minimum_offer }}
+                            <div class="if-field{% if terms_form.minimum_offer.errors %} has-error{% endif %}">
+                                <label class="kb-label" for="{{ terms_form.minimum_offer.id_for_label }}">Nothing under</label>
+                                {{ terms_form.minimum_offer }}
                                 <span class="kb-hint">Offers below this are turned away for you, and the
                                     buyer is told the figure. Leave it empty and every offer reaches you.</span>
-                                {{ form.minimum_offer.errors }}
+                                {{ terms_form.minimum_offer.errors }}
                             </div>
                         </div>
                         <label class="sl-check">
-                            {{ form.allow_offers }}
+                            {{ terms_form.allow_offers }}
                             <span>
                                 <strong>I&rsquo;ll consider offers</strong>
                                 <small class="sl-hint">Binding if you accept. Buyers open, you counter.</small>
                             </span>
                         </label>
-                        {{ form.allow_offers.errors }}
+                        {{ terms_form.allow_offers.errors }}
+                        <label class="sl-check">
+                            {{ terms_form.open_to_trade }}
+                            <span>
+                                <strong>Open to trade offers too</strong>
+                                <small class="sl-hint">Other collectors can put something of theirs against it.
+                                    You still say yes or no every time.</small>
+                            </span>
+                        </label>
+                        <div class="if-field{% if terms_form.trade_wants.errors %} has-error{% endif %}">
+                            <label class="kb-label" for="{{ terms_form.trade_wants.id_for_label }}">What you&rsquo;d want back</label>
+                            {{ terms_form.trade_wants }}
+                            {{ terms_form.trade_wants.errors }}
+                        </div>
                         <p class="sl-cost">Change the price or take it down whenever. Offers already
                             open keep the terms they were made under.</p>
                     {% endif %}
                 </div>
 
-                <details class="if-more" {% if form.auto_relist.errors or form.local_pickup_location.errors %}open{% endif %}>
+                <details class="if-more" {% if terms_form.auto_relist.errors or terms_form.local_pickup_location.errors %}open{% endif %}>
                     <summary>Timing and pickup</summary>
                     <div class="if-more-body">
-                        <div data-listing-panel="auction">
-                            <label class="kb-check" style="justify-content: flex-start;">
-                                {{ form.auto_relist }} <span>Auto-relist if unsold</span>
-                            </label>
-                            {% if form.auto_relist.help_text %}<span class="kb-hint">{{ form.auto_relist.help_text }}</span>{% endif %}
-                            {{ form.auto_relist.errors }}
-                        </div>
+                        {% if listing.listing_type == 'auction' %}
+                            <div>
+                                <label class="kb-check" style="justify-content: flex-start;">
+                                    {{ terms_form.auto_relist }} <span>Auto-relist if unsold</span>
+                                </label>
+                                <span class="kb-hint">Up to three times, then it stops and tells you.</span>
+                                {{ terms_form.auto_relist.errors }}
+                            </div>
+                        {% endif %}
                         <div>
                             <label class="kb-check" style="justify-content: flex-start;">
-                                {{ form.local_pickup_available }} <span>Offer local pickup</span>
+                                {{ terms_form.local_pickup_available }} <span>Offer local pickup</span>
                             </label>
-                            {{ form.local_pickup_available.errors }}
+                            {{ terms_form.local_pickup_available.errors }}
                             <div id="local-pickup-location-wrapper" class="if-field" style="margin-top: 8px; display: none;">
-                                <label class="kb-label" for="{{ form.local_pickup_location.id_for_label }}">Pickup location</label>
-                                {{ form.local_pickup_location }}
-                                {{ form.local_pickup_location.errors }}
+                                <label class="kb-label" for="{{ terms_form.local_pickup_location.id_for_label }}">Pickup location</label>
+                                {{ terms_form.local_pickup_location }}
+                                {{ terms_form.local_pickup_location.errors }}
                             </div>
                         </div>
                     </div>
                 </details>
 
-                <details class="if-more" {% if form.ship_from_address.errors or form.package_weight_oz.errors or form.package_length_in.errors or form.package_width_in.errors or form.package_height_in.errors or form.shipping_service.errors or form.shipping_payer.errors %}open{% endif %}>
+                <details class="if-more" {% if terms_form.ship_from_address.errors or terms_form.package_weight_oz.errors or terms_form.package_length_in.errors or terms_form.package_width_in.errors or terms_form.package_height_in.errors or terms_form.shipping_service.errors or terms_form.shipping_payer.errors %}open{% endif %}>
                     <summary>Shipping</summary>
                     <div class="if-more-body">
-                        {% include 'listings/_shipping_section.html' %}
+                        {% include 'listings/_shipping_section.html' with form=terms_form %}
                     </div>
                 </details>
 
@@ -417,6 +448,12 @@ document.addEventListener('DOMContentLoaded', () => {
         jobIdInput: '#prefill-job-id',
         panel: '#prefill-panel',
         form: 'form[enctype]',
+        lines: {{ ledger_lines_json|safe }},
+        forYou: [
+            { name: 'condition', kind: 'radio', groupName: 'condition_grade' },
+            { name: 'description', kind: 'input', sel: '#{{ form.description.id_for_label }}' },
+            { name: 'material', kind: 'select', sel: '#id_material' },
+        ],
         fields: {
             item_kind: { kind: 'radio', name: 'item_kind' },
             state: { kind: 'select', sel: '#{{ form.state.id_for_label }}' },
@@ -427,7 +464,6 @@ document.addEventListener('DOMContentLoaded', () => {
             holder_eligibility: { kind: 'select', sel: '#id_holder_eligibility' },
             activity_scope: { kind: 'select', sel: '#id_activity_scope' },
             duration: { kind: 'select', sel: '#id_duration' },
-            material: { kind: 'select', sel: '#id_material' },
             addon_type: { kind: 'checklist', name: 'addon_type' },
             shape: { kind: 'select', sel: '#{{ form.shape.id_for_label }}' },
             colors: { kind: 'checklist', name: 'colors' },
@@ -438,7 +474,6 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const listingType = document.getElementById('{{ form.listing_type.id_for_label }}');
     const stateSelect = document.getElementById('{{ form.state.id_for_label }}');
     const geoSelect = document.getElementById('{{ form.county_ref.id_for_label }}');
     const geoLabel = document.getElementById('county-ref-label');
@@ -455,15 +490,7 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleEraRequired();
     }
 
-    const togglePanels = () => {
-        const value = listingType.value;
-        document.querySelectorAll('[data-listing-panel]').forEach((panel) => {
-            const also = (panel.dataset.listingPanelAlso || '').split(',').map(s => s.trim());
-            panel.style.display = (panel.dataset.listingPanel === value || also.includes(value)) ? '' : 'none';
-        });
-    };
-
-    const pickupCheckbox = document.getElementById('{{ form.local_pickup_available.id_for_label }}');
+    const pickupCheckbox = document.getElementById('{{ terms_form.local_pickup_available.id_for_label }}');
     const pickupWrapper = document.getElementById('local-pickup-location-wrapper');
     if (pickupCheckbox && pickupWrapper) {
         const togglePickup = () => { pickupWrapper.style.display = pickupCheckbox.checked ? '' : 'none'; };
@@ -553,9 +580,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    listingType.addEventListener('change', togglePanels);
     stateSelect.addEventListener('change', loadReferenceData);
-    togglePanels();
     taxonomyFields.concat(['shape', 'colors']).forEach((fieldName) => {
         const field = document.getElementById(`id_${fieldName}`);
         if (field) {

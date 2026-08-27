@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'apps.messaging',
     'apps.reviews',
     'apps.prefill',
+    'apps.moderation',
 ]
 
 # Address autocomplete (10.7): Google Places, loaded only on the address form
@@ -180,3 +181,9 @@ SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = 'DENY'
+
+# Free moderation classifier (tier 2 of the message scan).
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+# Dedicated key for the moderation escalation reads (one key per
+# workload); falls back to ANTHROPIC_API_KEY when only one exists.
+ANTHROPIC_MODERATION_API_KEY = os.getenv('ANTHROPIC_MODERATION_API_KEY', '')

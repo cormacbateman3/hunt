@@ -1,0 +1,350 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Add an item &mdash; the terms | KeystoneBid{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/item-form.css' %}">
+<link rel="stylesheet" href="{% static 'css/pages/sell.css' %}">
+{% endblock %}
+
+{% block main_class %}sl-page{% endblock %}
+
+{% block context_band %}
+<nav class="kb-crumbs" aria-label="Breadcrumb">
+    <div class="kb-band-inner">
+        <a href="{% url 'bench' %}">My Bench</a>
+        <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
+        <a href="{% url 'listings:sell_start' %}">Add an item</a>
+        <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
+        <span class="kb-crumb-current">{{ destination.name }}</span>
+        {% url 'listings:sell_start' as step1_url %}
+        {% url 'listings:item_edit' listing.pk as step2_url %}
+        {% include 'listings/_sell_steps.html' with step=3 destination=destination step1_url=step1_url step2_url=step2_url %}
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+
+{% if form.errors %}
+    <div class="if-errors sl-terms-errors" role="alert">
+        <strong>
+            {% with n=form.errors|length %}{{ n }} thing{{ n|pluralize }} to settle before it goes up{% endwith %}
+        </strong>
+        <ul>
+            {% for field in form %}{% for error in field.errors %}
+                <li>&middot; <a href="#{{ field.id_for_label }}">{{ field.label }}</a> &mdash; {{ error }}</li>
+            {% endfor %}{% endfor %}
+            {% for error in form.non_field_errors %}<li>&middot; {{ error }}</li>{% endfor %}
+        </ul>
+    </div>
+{% endif %}
+
+{% if item_gaps %}
+    {% comment %}
+    Required-to-publish gates publishing, here at the only publishing
+    button — step 2 saves drafts however thin, so this band is where a
+    thin one learns what it still needs.
+    {% endcomment %}
+    <div class="sl-gaps" role="status">
+        <strong>Before it can go up, the item still needs:</strong>
+        <ul>
+            {% for gap in item_gaps %}<li>&middot; {{ gap }}</li>{% endfor %}
+        </ul>
+        <a href="{% url 'listings:item_edit' listing.pk %}">Finish the item &rarr;</a>
+    </div>
+{% endif %}
+
+<form method="post" novalidate class="sl-terms-floor">
+    {% csrf_token %}
+
+    {# The item in two lines, so the terms are never set blind. #}
+    <div class="sl-review sl-review--terms">
+        <span class="sl-review-media">
+            {% if listing.featured_image %}<img src="{{ listing.featured_image.url }}" alt="">{% endif %}
+        </span>
+        <span class="sl-review-body">
+            <span class="sl-review-title">{{ listing.title }}</span>
+            <span class="sl-review-facts">
+                {% if listing.county %}{{ listing.county }} &middot; {% endif %}
+                {% if listing.license_year %}{{ listing.license_year }}{% else %}{{ listing.era_label|default:'' }}{% endif %}
+                {% if listing.condition_grade %} &middot; {{ listing.get_condition_grade_display }}{% endif %}
+                {% if listing.is_restored %} &middot; Restored{% endif %}
+            </span>
+        </span>
+        {# A draft's item edits on the step-2 page, not the live-listing edit page. #}
+        <a class="sl-review-edit" href="{% url 'listings:item_edit' listing.pk %}">Change the item</a>
+    </div>
+
+    <section class="sl-panel sl-panel--{{ config_listing_type }}">
+        <div class="sl-panel-bar" aria-hidden="true"></div>
+        <header class="sl-panel-head">
+            <span class="kb-eyebrow kb-eyebrow--brass">Step 3</span>
+            <h1>{{ destination.name }}</h1>
+        </header>
+        <div class="sl-panel-body">
+
+            {% if config_listing_type == 'auction' %}
+                <div class="sl-terms-grid">
+                    <div class="if-field{% if form.starting_price.errors %} has-error{% endif %}">
+                        <label class="kb-label" for="{{ form.starting_price.id_for_label }}">Starting price</label>
+                        {{ form.starting_price }}
+                        {{ form.starting_price.errors }}
+                    </div>
+                    <div class="if-field if-field--check{% if form.reserve_price.errors %} has-error{% endif %}">
+                        <label class="kb-label kb-label--brass" for="{{ form.reserve_price.id_for_label }}">Reserve</label>
+                        {{ form.reserve_price }}
+                        <span class="kb-hint kb-hint--brass">A floor you won&rsquo;t go under. Bidders see that there is one, never the figure.</span>
+                        {{ form.reserve_price.errors }}
+                    </div>
+                    <div class="if-field{% if form.duration_days.errors %} has-error{% endif %}">
+                        <label class="kb-label" for="{{ form.duration_days.id_for_label }}">Runs for</label>
+                        {{ form.duration_days }}
+                        {{ form.duration_days.errors }}
+                    </div>
+                    <div class="if-field{% if form.bid_increment.errors %} has-error{% endif %}">
+                        <label class="kb-label" for="{{ form.bid_increment.id_for_label }}">Smallest raise</label>
+                        {{ form.bid_increment }}
+                        {{ form.bid_increment.errors }}
+                    </div>
+                </div>
+
+                <div class="sl-closes" data-closes hidden>
+                    <span>Closes <strong data-closes-when></strong></span>
+                    <small>Sunday evenings draw the most bidders on here.</small>
+                </div>
+
+                <div class="sl-switches">
+                    <label class="sl-check">
+                        {{ form.auto_relist }}
+                        <span>
+                            <strong>Relist it if it doesn&rsquo;t sell</strong>
+                            <small class="sl-hint">Up to three times, then it stops and tells you.</small>
+                        </span>
+                    </label>
+                    {{ form.auto_relist.errors }}
+                    <label class="sl-check">
+                        <input type="checkbox" data-later-toggle
+                               {% if form.scheduled_at.value or form.scheduled_at.errors %}checked{% endif %}>
+                        <span>
+                            <strong>Start it on a later date</strong>
+                            <small class="sl-hint">Handy before a show.</small>
+                        </span>
+                    </label>
+                    <div class="if-field{% if form.scheduled_at.errors %} has-error{% endif %}" data-later-field
+                         {% if not form.scheduled_at.value and not form.scheduled_at.errors %}hidden{% endif %}>
+                        <label class="kb-label" for="{{ form.scheduled_at.id_for_label }}">Goes live</label>
+                        {{ form.scheduled_at }}
+                        <span class="kb-hint">{{ form.scheduled_at.help_text }}</span>
+                        {{ form.scheduled_at.errors }}
+                    </div>
+                </div>
+
+            {% else %}
+                <div class="sl-terms-grid">
+                    <div class="if-field{% if form.buy_now_price.errors %} has-error{% endif %}">
+                        <label class="kb-label" for="{{ form.buy_now_price.id_for_label }}">Your price</label>
+                        {{ form.buy_now_price }}
+                        {{ form.buy_now_price.errors }}
+                    </div>
+                    <div class="if-field">
+                        <span class="kb-label">You&rsquo;d keep</span>
+                        <span class="sl-keep" data-keep data-fee-percent="{{ fee_percent }}">&mdash;</span>
+                        <span class="kb-hint">After the {{ fee_percent }}% platform fee. Shipping is on top, not out of this.</span>
+                    </div>
+                </div>
+
+                <div class="sl-switches">
+                    <label class="sl-check">
+                        {{ form.allow_offers }}
+                        <span>
+                            <strong>I&rsquo;ll consider offers</strong>
+                            <small class="sl-hint">Binding if you accept. Buyers open, you counter.</small>
+                        </span>
+                    </label>
+                    {{ form.allow_offers.errors }}
+                    <div class="if-field sl-under{% if form.minimum_offer.errors %} has-error{% endif %}" data-offers-field>
+                        <span class="sl-under-lead">Nothing under</span>
+                        {{ form.minimum_offer }}
+                        {{ form.minimum_offer.errors }}
+                    </div>
+                    <span class="kb-hint sl-under-hint">Offers below this are turned away for you, and the buyer is told
+                        the figure so they can try again. Leave it empty and every offer reaches you.</span>
+
+                    <label class="sl-check">
+                        {{ form.open_to_trade }}
+                        <span>
+                            <strong>Open to trade offers too</strong>
+                            <small class="sl-hint">Other collectors can put something of theirs against it. You still say yes or no every time.</small>
+                        </span>
+                    </label>
+                    <div class="if-field{% if form.trade_wants.errors %} has-error{% endif %}" data-trade-field>
+                        <label class="kb-label" for="{{ form.trade_wants.id_for_label }}">What you&rsquo;d want back</label>
+                        {{ form.trade_wants }}
+                        {{ form.trade_wants.errors }}
+                    </div>
+                </div>
+            {% endif %}
+
+            {% if wanted_count %}
+                <div class="sl-books">
+                    <span class="kb-eyebrow kb-eyebrow--brass">What the books say</span>
+                    <p>
+                        {% if wanted_count == 1 %}One collector has{% else %}{{ wanted_count }} collectors have{% endif %}
+                        this ground and year on their wanted list{{ wanted_count|pluralize }}.
+                    </p>
+                    {% comment %}
+                    DEFERRED — the comparable-sales sentences ("Three like this
+                    sold between $240 and $310"). Blocked on: Price History,
+                    dev plan 13.6. Register: docs/internal/plan_design.md
+                    {% endcomment %}
+                </div>
+            {% endif %}
+
+            <div class="sl-panel-foot">
+                <button type="submit" class="if-go">
+                    {% if config_listing_type == 'auction' %}Open the lot{% else %}Put it in the Store{% endif %}
+                </button>
+                <span class="sl-cost">
+                    {% if config_listing_type == 'auction' %}
+                        You can cancel a lot until the first bid is in.
+                    {% else %}
+                        Change the price or take it down whenever.
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </section>
+
+    {% comment %}
+    "You can move an item between all three later" (6a) — for a draft,
+    later is also now. These act before the terms form binds, so nothing
+    typed above has to survive validation to use them.
+    {% endcomment %}
+    <p class="sl-swap">
+        {% if config_listing_type == 'auction' %}
+            <button type="submit" name="switch_to" value="buy_now" formnovalidate>Sell it in The General Store instead</button>
+        {% else %}
+            <button type="submit" name="switch_to" value="auction" formnovalidate>Let it run in The Auction House instead</button>
+        {% endif %}
+        <span aria-hidden="true">&middot;</span>
+        <button type="submit" name="to_collection" value="1" formnovalidate>Keep it in my collection</button>
+        <span aria-hidden="true">&middot;</span>
+        <button type="submit" name="discard" value="1" formnovalidate>Discard this draft</button>
+    </p>
+
+    <section class="sl-strip">
+        <header class="sl-strip-head">
+            <span class="kb-eyebrow kb-eyebrow--brass">Getting it there</span>
+            <span class="sl-strip-note">Filled from your selling defaults &mdash; change any of it for this one item.</span>
+        </header>
+        <div class="sl-strip-grid">
+            <div class="if-field{% if form.ship_from_address.errors %} has-error{% endif %}">
+                <label class="kb-label" for="{{ form.ship_from_address.id_for_label }}">Ships from</label>
+                {{ form.ship_from_address }}
+                {{ form.ship_from_address.errors }}
+            </div>
+            <div class="if-field{% if form.shipping_service.errors %} has-error{% endif %}">
+                <label class="kb-label" for="{{ form.shipping_service.id_for_label }}">Service</label>
+                {{ form.shipping_service }}
+                {{ form.shipping_service.errors }}
+            </div>
+            <div class="if-field{% if form.shipping_payer.errors %} has-error{% endif %}">
+                <label class="kb-label" for="{{ form.shipping_payer.id_for_label }}">Who pays</label>
+                {{ form.shipping_payer }}
+                {{ form.shipping_payer.errors }}
+            </div>
+            <div class="if-field sl-parcel{% if form.package_weight_oz.errors or form.package_length_in.errors or form.package_width_in.errors or form.package_height_in.errors %} has-error{% endif %}">
+                <span class="kb-label">Parcel</span>
+                <div class="sl-parcel-row">
+                    {{ form.package_weight_oz }}<span class="sl-parcel-unit">oz</span>
+                    {{ form.package_length_in }}<span class="sl-parcel-unit">&times;</span>
+                    {{ form.package_width_in }}<span class="sl-parcel-unit">&times;</span>
+                    {{ form.package_height_in }}<span class="sl-parcel-unit">in</span>
+                </div>
+                {{ form.package_weight_oz.errors }}{{ form.package_length_in.errors }}
+                {{ form.package_width_in.errors }}{{ form.package_height_in.errors }}
+            </div>
+            <div class="sl-strip-pickup">
+                <label class="sl-check">
+                    {{ form.local_pickup_available }}
+                    <span><strong>Local pickup too</strong></span>
+                </label>
+                <div class="if-field{% if form.local_pickup_location.errors %} has-error{% endif %}" data-pickup-field>
+                    {{ form.local_pickup_location }}
+                    {{ form.local_pickup_location.errors }}
+                </div>
+            </div>
+        </div>
+    </section>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    /* Reveal-on-toggle rows: pickup location, scheduled go-live, offers floor,
+       trade wants. Each follows its checkbox; none of it blocks a submit. */
+    const follow = (box, target, clearOnHide) => {
+        if (!box || !target) return;
+        const apply = () => {
+            target.hidden = !box.checked;
+            if (!box.checked && clearOnHide) {
+                target.querySelectorAll('input').forEach(i => { i.value = ''; });
+            }
+        };
+        box.addEventListener('change', apply);
+        apply();
+    };
+
+    follow(document.querySelector('#{{ form.local_pickup_available.id_for_label }}'),
+           document.querySelector('[data-pickup-field]'));
+    {% if config_listing_type == 'auction' %}
+    follow(document.querySelector('[data-later-toggle]'),
+           document.querySelector('[data-later-field]'), true);
+
+    /* The closes line: duration (and go-live, if set) → a plain sentence. */
+    const durationSel = document.querySelector('#{{ form.duration_days.id_for_label }}');
+    const laterInput = document.querySelector('#{{ form.scheduled_at.id_for_label }}');
+    const closesBox = document.querySelector('[data-closes]');
+    const closesWhen = document.querySelector('[data-closes-when]');
+    const sayCloses = () => {
+        if (!durationSel || !closesBox) return;
+        const days = parseInt(durationSel.value, 10);
+        if (!days) { closesBox.hidden = true; return; }
+        let start = new Date();
+        if (laterInput && laterInput.value) {
+            const picked = new Date(laterInput.value);
+            if (!isNaN(picked)) start = picked;
+        }
+        const end = new Date(start.getTime() + days * 86400000);
+        closesWhen.textContent = end.toLocaleDateString(undefined,
+            { weekday: 'long', day: 'numeric', month: 'long' }) + ', ' +
+            end.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+        closesBox.hidden = false;
+    };
+    if (durationSel) durationSel.addEventListener('change', sayCloses);
+    if (laterInput) laterInput.addEventListener('input', sayCloses);
+    sayCloses();
+    {% else %}
+    follow(document.querySelector('#{{ form.allow_offers.id_for_label }}'),
+           document.querySelector('[data-offers-field]'));
+    follow(document.querySelector('#{{ form.open_to_trade.id_for_label }}'),
+           document.querySelector('[data-trade-field]'));
+
+    /* You'd keep: price minus the platform fee, said as a figure. */
+    const priceInput = document.querySelector('#{{ form.buy_now_price.id_for_label }}');
+    const keepBox = document.querySelector('[data-keep]');
+    const sayKeep = () => {
+        if (!priceInput || !keepBox) return;
+        const price = parseFloat(priceInput.value);
+        const pct = parseFloat(keepBox.dataset.feePercent) || 0;
+        if (!price || price <= 0) { keepBox.textContent = '—'; return; }
+        keepBox.textContent = '$' + (price * (1 - pct / 100)).toFixed(2);
+    };
+    if (priceInput) { priceInput.addEventListener('input', sayKeep); sayKeep(); }
+    {% endif %}
+});
+</script>
+{% endblock %}

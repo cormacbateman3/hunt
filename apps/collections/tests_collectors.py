@@ -54,6 +54,55 @@ class CollectorsBaseTest(TestCase):
         )
 
 
+class FeaturedFallbackTests(CollectorsBaseTest):
+    def test_a_want_matching_nobody_still_leads_with_big_cards(self):
+        """The owner's page went flat: one want, zero holders — every card
+        fell to the compact tier and 'all the detail was gone'. A wanted
+        list that ranks nobody ranks like no wanted list: biggest cases
+        lead, and the page keeps its shape."""
+        loner = User.objects.create_user('co_loner', password='pw')
+        nobody_holds = GeographicUnit.objects.create(
+            state=self.pa, name='Potter', slug='pa-potter-fallback')
+        WantedItem.objects.create(user=loner, state=self.pa, county=nobody_holds)
+
+        self.client.force_login(loner)
+        html = self.client.get(reverse('collectors')).content.decode()
+        self.assertIn('<article class="co-card ', html)
+
+    def test_overlap_still_outranks_size_when_it_exists(self):
+        self.client.force_login(self.me)
+        rows = self.client.get(reverse('collectors')).context['rows']
+        big = {row['user'].username for row in rows if row['big']}
+        self.assertIn('co_walt', big)      # holds what I want
+        self.assertNotIn('co_dale', big)   # holds more, none of it mine
+
+    def test_the_compact_line_never_stammers_counties_twice(self):
+        """'5 counties held · 5 items · 5 counties' — the place fallback
+        colliding with the compact card's own counts."""
+        from django.http import QueryDict
+
+        from apps.collections.collectors import collector_rows
+
+        # Dale in a second county: no single home, no stated place.
+        self._item(self.dale, county=self.cameron, year=1961)
+        data = collector_rows(None, QueryDict(''))
+        row = next(r for r in data['rows'] if r['user'].username == 'co_dale')
+        self.assertIn('counties held', row['place'])
+        self.assertEqual(row['mini_place'], 'Whereabouts unsaid')
+
+    def test_a_sold_piece_drops_out_of_the_card_figures(self):
+        from django.http import QueryDict
+
+        from apps.collections.collectors import collector_rows
+
+        gone = CollectionItem.objects.filter(owner=self.dale).first()
+        gone.disposition = 'sold'
+        gone.save(update_fields=['disposition'])
+        data = collector_rows(None, QueryDict(''))
+        counts = {r['user'].username: r['item_count'] for r in data['rows']}
+        self.assertEqual(counts['co_dale'], 9)
+
+
 class CollectorsZoneTests(CollectorsBaseTest):
     def test_the_zone_opens_on_people_not_items(self):
         """13a: 'Browse Collections browses items. Nobody wants an item from

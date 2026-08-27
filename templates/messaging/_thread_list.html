@@ -3,6 +3,9 @@ The left pane. Unread keeps its brass edge — that part was already right.
 {% endcomment %}
 <aside class="ms-list" aria-label="Conversations">
     <div class="ms-list-head">
+        <a href="{% url 'messaging:group_new' %}" class="ms-newgroup">
+            + New room <span class="ms-newgroup-sub">a private group thread</span>
+        </a>
         <label class="kb-sr" for="ms-search">Search names and messages</label>
         <input type="search" id="ms-search" class="kb-input ms-search"
                placeholder="Search names and messages" data-thread-search>
@@ -19,24 +22,23 @@ The left pane. Unread keeps its brass edge — that part was already right.
 
     <div class="ms-threads">
         {% for row in conv_rows %}
-            {% if not which or which == 'unread' and row.has_unread or which == 'deals' and row.open_deal %}
+            {% if not which or which == 'unread' and row.has_unread or which == 'deals' and row.open_deal or which == 'rooms' and row.is_group %}
                 <a href="{% url 'messaging:conversation_detail' row.conversation.pk %}"
                    class="ms-thread{% if row.has_unread %} ms-thread--unread{% endif %}{% if conversation.pk == row.conversation.pk %} ms-thread--open{% endif %}"
                    data-thread-row>
-                    <span class="ms-thread-mark">{{ row.other.username|slice:':2'|upper }}</span>
+                    <span class="ms-thread-mark{% if row.is_group %} ms-thread-mark--room{% endif %}">
+                        {% if row.is_group %}{{ row.conversation.name|slice:':2'|upper }}{% else %}{{ row.other.username|slice:':2'|upper }}{% endif %}
+                    </span>
                     <span class="ms-thread-body">
                         <span class="ms-thread-top">
-                            <span class="ms-thread-who">{{ row.other.profile.get_display_name }}</span>
-                            <span class="ms-thread-when">{{ row.conversation.last_message_at|default:row.conversation.created_at|date:"j M" }}</span>
-                        </span>
-                        {% if row.conversation.listing %}
-                            <span class="ms-thread-deal">
-                                {% if row.open_deal %}Deal{% else %}About{% endif %}
-                                &mdash; {{ row.conversation.listing.title|truncatechars:34 }}
+                            <span class="ms-thread-who">
+                                {% if row.is_group %}{{ row.conversation.name }}<span class="ms-thread-roomtag">room</span>{% else %}{{ row.other.profile.get_display_name }}{% endif %}
                             </span>
-                        {% else %}
-                            <span class="ms-thread-deal">General</span>
-                        {% endif %}
+                            <span class="ms-thread-when">{{ row.conversation.last_message_at|default:row.conversation.created_at|date:"j M" }}{% if row.has_unread %}<span class="ms-thread-dot" aria-hidden="true"></span>{% endif %}</span>
+                        </span>
+                        <span class="ms-thread-deal{% if row.context.live %} ms-thread-deal--live{% endif %}">
+                            {{ row.context.label|truncatechars:44 }}
+                        </span>
                         <span class="ms-thread-snip">
                             {% if row.snippet %}
                                 {% if row.snippet.sender_id == user.id %}You: {% endif %}{{ row.snippet.body|truncatechars:52 }}

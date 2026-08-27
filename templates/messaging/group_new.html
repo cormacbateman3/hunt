@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}New room &middot; Messages &middot; KeystoneBid{% endblock %}
+
+{% block context_band %}{% include 'components/_bench_tabs.html' %}{% endblock %}
+
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/messages.css' %}">{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/messages.js' %}"></script>{% endblock %}
+
+{% block content %}
+{% comment %}
+The campfire, not the forum: a private room a collector opens for his
+collecting buddies. Invite-only, invisible to everyone else, no public
+directory anywhere. Any member can add people; only the opener can
+remove one.
+{% endcomment %}
+<div class="ms-groupnew">
+    <header class="kb-stack">
+        <h1 class="kb-page-title">Open a room</h1>
+        <p class="kb-page-lede">
+            A private thread for a few of you &mdash; show plans, finds, the
+            usual talk. Only members ever see it, and anyone in it can bring
+            somebody else in. Holds {{ max_members }} at most.
+        </p>
+    </header>
+
+    <form method="post" class="ms-groupnew-form">
+        {% csrf_token %}
+        <div class="kb-stack">
+            <label class="kb-label" for="gn-name">What&rsquo;s it called</label>
+            <input type="text" id="gn-name" name="name" class="kb-input" maxlength="80" required
+                   placeholder="e.g. Maryland Waterfowl Collector Crew">
+        </div>
+        <div class="kb-stack" data-picker-multi data-picker-scope>
+            <label class="kb-label" for="gn-members">Who&rsquo;s in it</label>
+            <div class="ms-pills" data-picker-pills></div>
+            <div class="ms-picker-anchor">
+                <input type="text" id="gn-members" class="kb-input" autocomplete="off"
+                       placeholder="Start typing a name&hellip;"
+                       data-picker-input data-picker-url="{% url 'messaging:user_search' %}">
+                <div class="ms-picker-list" data-picker-list hidden></div>
+            </div>
+            {% comment %}
+            Picks become pills; pills become this field, which the server
+            reads the same whether JavaScript helped or not.
+            {% endcomment %}
+            <input type="hidden" name="members" value="" data-picker-value>
+            <span class="kb-hint">Pick from the list &mdash; you can add people later too; any room member can.</span>
+        </div>
+        <div class="kb-inline">
+            <button type="submit" class="kb-btn kb-btn--primary">Open the room</button>
+            <a href="{% url 'messaging:inbox' %}" class="kb-btn kb-btn--text">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

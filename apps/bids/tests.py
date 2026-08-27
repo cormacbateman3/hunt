@@ -172,11 +172,12 @@ class AuctionWinToPayTests(TestCase):
         self.assertNotContains(resp, 'Submit bid')
 
     def test_closed_auction_hides_the_bid_form_from_everyone_else(self):
+        # The closed panel now says the outcome, not just "ended".
         listing, order = self._closed_auction_with_winner()
         client = Client()
         client.force_login(self.other)
         resp = client.get(reverse('listings:detail', args=[listing.pk]))
-        self.assertContains(resp, 'This auction has ended')
+        self.assertContains(resp, 'Sold for')
         self.assertNotContains(resp, 'Submit bid')
 
     def test_unpaid_win_is_released_and_listing_leaves_pending(self):

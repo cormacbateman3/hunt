@@ -37,6 +37,7 @@ CLOSING_SOON_HOURS = 2
 
 FILTERS = [
     ('live', 'Live', ('active',)),
+    ('drafts', 'Drafts', ('draft',)),
     ('scheduled', 'Waiting to start', ('scheduled', 'pending')),
     ('sold', 'Sold', ('sold',)),
     ('unsold', 'Ended unsold', ('expired', 'closed', 'cancelled')),
@@ -129,6 +130,9 @@ def _stands(listing, now):
                 f'{listing.unanswered_count} question{"s" if listing.unanswered_count != 1 else ""}')
         return 'People waiting on you', ' and '.join(parts) + ' unanswered', 'brass'
 
+    if listing.status == 'draft':
+        return 'Still a draft', 'The item is described; the terms are not set', 'brass'
+
     if listing.status == 'scheduled' and listing.scheduled_at:
         # %-d is not portable to Windows; build the day number by hand.
         up = timezone.localtime(listing.scheduled_at)
@@ -201,6 +205,9 @@ def _quiet_note(listing, age_days):
 
 def _action(listing, now):
     """One action per row. The filled button is reserved for what's waiting."""
+    if listing.status == 'draft':
+        return {'label': 'Finish the terms', 'url': reverse('listings:terms', args=[listing.pk]),
+                'style': 'primary'}
     if listing.open_offer_count:
         return {'label': 'See offers', 'url': reverse('bids:my_bids') + '#on-my-things',
                 'style': 'primary'}

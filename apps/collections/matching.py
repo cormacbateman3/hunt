@@ -79,7 +79,7 @@ def holdings(user):
         return []
 
     items = list(
-        CollectionItem.objects.filter(owner=user)
+        CollectionItem.objects.filter(owner=user, disposition='held')
         .select_related('county')
         .values('id', 'title', 'state_id', 'county_id', 'license_year',
                 'condition_grade', 'county__name')

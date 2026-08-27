@@ -4,9 +4,14 @@
    The destination cards each end with the questions they will ask, so the
    choice is informed rather than a guess. That is the whole reason step 1
    earns its own page.
+
+   The page container is .sl-page, NOT .kb-sell — that name belongs to the
+   topbar's gold button in shell.css, and sharing it painted this whole
+   page as one giant uppercase brass button (and display:none'd it on
+   mobile, where the topbar hides the button).
    ========================================================================== */
 
-.kb-sell {
+.sl-page {
     max-width: 1080px;
     margin: 0 auto;
     padding: var(--kb-6) var(--kb-gutter) var(--kb-8);
@@ -15,58 +20,40 @@
     gap: var(--kb-5);
 }
 
-/* ── The three steps ─────────────────────────────────────────────────── */
-.sl-steps {
-    list-style: none;
-    margin: 0;
-    padding: 0;
+/* ── The three steps — in the breadcrumb band, right side (4a/6a/6b) ── */
+.sl-bandsteps {
+    margin-left: auto;
     display: flex;
     align-items: center;
-    gap: var(--kb-5);
-    border-bottom: 1px solid var(--kb-rule);
-    padding-bottom: var(--kb-3);
+    gap: 10px;
+    white-space: nowrap;
 }
 
-.sl-step {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12.5px;
-    color: var(--kb-ink-4);
-}
-
-.sl-step-no {
-    width: 20px;
-    height: 20px;
-    border-radius: var(--kb-r-pill);
-    border: 1px solid var(--kb-rule-strong);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.sl-bandsteps .sl-bstep {
     font-size: 11px;
     font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--kb-rule-strong);
+    text-decoration: none;
+    font-variant-numeric: tabular-nums;
+}
+
+.sl-bandsteps .sl-bstep--here { color: var(--kb-forest); }
+.sl-bandsteps .sl-bstep--done { color: var(--kb-live); }
+.sl-bandsteps a.sl-bstep:hover .sl-bstep-name { text-decoration: underline; }
+
+.sl-bstep-rule {
+    width: 22px;
+    height: 1px;
+    background: var(--kb-rule);
     flex-shrink: 0;
 }
 
-.sl-step--here {
-    color: var(--kb-forest);
-    font-weight: 600;
-}
-
-.sl-step--here .sl-step-no {
-    background: var(--kb-forest);
-    border-color: var(--kb-forest);
-    color: var(--kb-cream);
-}
-
-.sl-step--done {
-    color: var(--kb-live);
-}
-
-.sl-step--done .sl-step-no {
-    background: var(--kb-live);
-    border-color: var(--kb-live);
-    color: var(--kb-surface);
+@media (max-width: 820px) {
+    /* Numbers survive; names step aside for the crumbs. */
+    .sl-bandsteps .sl-bstep-name { display: none; }
+    .sl-bstep-rule { width: 12px; }
 }
 
 .sl-head {
@@ -243,6 +230,72 @@
     align-self: flex-start;
 }
 
+/* ── The short review between the shelf and the terms ────────────────── */
+.sl-destinations--two {
+    grid-template-columns: repeat(2, 1fr);
+    max-width: 720px;
+}
+
+.sl-review {
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    background: var(--kb-surface);
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    max-width: 720px;
+}
+
+.sl-review--terms {
+    width: 100%;
+    max-width: 560px;
+}
+
+.sl-review-media {
+    width: 72px;
+    height: 54px;
+    border-radius: var(--kb-r-chip);
+    background: var(--kb-hatch);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.sl-review-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.sl-review-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.sl-review-title {
+    font: var(--kb-text-card-title, 600 14.5px/1.28 var(--kb-font-display));
+    font-family: var(--kb-font-display);
+    color: var(--kb-forest);
+}
+
+.sl-review-facts {
+    font-size: 11.5px;
+    color: var(--kb-ink-3);
+}
+
+.sl-review-edit {
+    margin-left: auto;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--kb-brass);
+    text-decoration: none;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
 @media (max-width: 900px) {
     .sl-destinations { grid-template-columns: 1fr; }
     .sl-shelf-grid { grid-template-columns: repeat(2, 1fr); }
@@ -253,24 +306,320 @@
     .sl-shelf-grid { grid-template-columns: 1fr; }
 }
 
-/* ── Step 3, inside the item form ────────────────────────────────────── */
-.sl-terms {
-    margin-top: var(--kb-5);
-    display: grid;
-    gap: 12px;
+/* ── Step 3 — the terms, one panel per destination (turn 6c) ─────────── */
+.sl-terms-floor {
+    display: flex;
+    flex-direction: column;
+    gap: var(--kb-4);
+    align-items: center;
 }
 
-.sl-terms-rule {
+.sl-terms-errors {
+    width: 100%;
+    max-width: 560px;
+    align-self: center;
+}
+
+/* What the item still needs before the publish button will move —
+   a note in the margin, not an alarm: nothing is wrong, just unfinished. */
+.sl-gaps {
+    width: 100%;
+    max-width: 560px;
+    align-self: center;
+    background: var(--kb-note-bg, #fdf6e3);
+    border: 1px solid var(--kb-note-border, #f0e6c8);
+    border-left: 3px solid var(--kb-brass);
+    border-radius: 0 var(--kb-r-md) var(--kb-r-md) 0;
+    padding: 12px 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sl-gaps strong {
+    font-size: 12.5px;
+    color: var(--kb-ink-1);
+}
+
+.sl-gaps ul {
     margin: 0;
-    border: 0;
-    border-top: 1px solid var(--kb-rule);
+    padding: 0;
+    list-style: none;
 }
 
-.sl-terms-title {
+.sl-gaps li {
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--kb-ink-2);
+}
+
+.sl-gaps a {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--kb-brass);
+    text-decoration: none;
+    margin-top: 2px;
+}
+
+.sl-gaps a:hover { text-decoration: underline; }
+
+/* The quiet line of ways out under a panel — destination moves, keep,
+   discard. Links, not buttons: nothing here is the main event. */
+.sl-swap {
+    margin: 0;
+    width: 100%;
+    max-width: 560px;
+    align-self: center;
+    text-align: center;
+    font-size: 12px;
+    color: var(--kb-ink-4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.sl-swap button,
+.sl-swap a {
+    border: 0;
+    background: none;
+    padding: 0;
+    font-size: 12px;
+    color: var(--kb-ink-3);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+
+.sl-swap button:hover,
+.sl-swap a:hover { color: var(--kb-forest); }
+
+.sl-panel {
+    width: 100%;
+    max-width: 560px;
+    background: var(--kb-surface);
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    overflow: hidden;
+}
+
+/* The destination's own colour, carried from its step-1 card. */
+.sl-panel-bar { height: 4px; background: var(--kb-forest); }
+.sl-panel--buy_now .sl-panel-bar { background: var(--kb-brass); }
+.sl-panel--collection .sl-panel-bar { background: var(--kb-ink-3); }
+
+/* The collection CTA is forest, not brass — nothing is being sold. */
+.if-go--forest {
+    background: var(--kb-forest);
+    color: #fff;
+    box-shadow: none;
+}
+
+.if-go--forest:hover { background: var(--kb-forest-deep, #1b2416); }
+
+.sl-switches--first {
+    border-top: 0;
+    padding-top: 0;
+}
+
+.sl-panel-head {
+    background: var(--kb-parchment);
+    border-bottom: 1px solid var(--kb-rule);
+    padding: 13px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sl-panel-head h1 {
     font: var(--kb-text-h2);
     color: var(--kb-forest);
     margin: 0;
 }
+
+.sl-panel-body {
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 17px;
+}
+
+.kb-label--brass { color: var(--kb-brass); }
+.kb-hint--brass { color: var(--kb-brass); }
+
+/* The one field worth a second look gets the brass border (turn 6b/6c). */
+.if-field--check .kb-input,
+.if-field--check .kb-select {
+    border: 2px solid var(--kb-brass);
+}
+
+.sl-closes {
+    background: var(--kb-parchment);
+    border: 1px solid var(--kb-rule-soft);
+    border-radius: var(--kb-r-chip);
+    padding: 11px 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 12.5px;
+    color: var(--kb-ink);
+}
+
+.sl-closes small {
+    font-size: 11.5px;
+    color: var(--kb-ink-4);
+}
+
+.sl-switches {
+    border-top: 1px solid var(--kb-rule-soft);
+    padding-top: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* You'd keep — the figure beside the price, never an input. */
+.sl-keep {
+    display: block;
+    border: 1px solid var(--kb-rule-soft);
+    background: var(--kb-parchment);
+    border-radius: var(--kb-r-chip);
+    padding: 10px 12px;
+    font-family: var(--kb-font-display, Petrona, Georgia, serif);
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--kb-forest);
+    font-variant-numeric: tabular-nums;
+}
+
+.sl-under {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 44px;
+}
+
+.sl-under-lead {
+    font-size: 11.5px;
+    color: var(--kb-ink-2);
+    white-space: nowrap;
+}
+
+.sl-under .kb-input { max-width: 140px; }
+
+.sl-under-hint { margin-left: 44px; }
+
+.sl-books {
+    background: var(--kb-cream);
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-chip);
+    padding: 12px 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sl-books p {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--kb-ink-2);
+}
+
+.sl-panel-foot {
+    border-top: 1px solid var(--kb-rule-soft);
+    padding-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sl-panel-foot .if-go { width: 100%; }
+
+.sl-panel-foot .sl-cost { text-align: center; }
+
+/* ── The shared getting-it-there strip ───────────────────────────────── */
+.sl-strip {
+    width: 100%;
+    background: var(--kb-surface);
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    overflow: hidden;
+}
+
+.sl-strip-head {
+    background: var(--kb-parchment);
+    border-bottom: 1px solid var(--kb-rule);
+    padding: 11px 22px;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+}
+
+.sl-strip-note {
+    font-size: 11.5px;
+    color: var(--kb-ink-4);
+}
+
+.sl-strip-grid {
+    padding: 18px 22px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1.3fr auto;
+    gap: 16px;
+    align-items: start;
+}
+
+.sl-parcel-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.sl-parcel-row .kb-input {
+    min-width: 0;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+.sl-parcel-unit {
+    font-size: 11px;
+    color: var(--kb-ink-4);
+    flex-shrink: 0;
+}
+
+.sl-strip-pickup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 22px;
+}
+
+.sl-strip-pickup .kb-input { max-width: 180px; }
+
+@media (max-width: 900px) {
+    .sl-strip-grid { grid-template-columns: 1fr 1fr; }
+    .sl-strip-pickup { padding-top: 0; }
+}
+
+@media (max-width: 560px) {
+    .sl-strip-grid { grid-template-columns: 1fr; }
+}
+
+/* Step 2's quiet second door. */
+.if-foot-hold {
+    border: 1px solid var(--kb-rule-strong);
+    background: var(--kb-surface);
+    color: var(--kb-forest);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 14px 20px;
+    border-radius: var(--kb-r-chip);
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.if-foot-hold:hover { border-color: var(--kb-forest); }
 
 .sl-terms-grid {
     display: grid;

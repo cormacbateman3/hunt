@@ -9,11 +9,12 @@
         <a href="{% url 'bench' %}">My Bench</a>
         <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
         <span class="kb-crumb-current">Add an item</span>
+        {% include 'listings/_sell_steps.html' with step=1 %}
     </div>
 </nav>
 {% endblock %}
 
-{% block main_class %}kb-sell{% endblock %}
+{% block main_class %}sl-page{% endblock %}
 
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/sell.css' %}">{% endblock %}
 
@@ -23,8 +24,6 @@ The destination is the first question because it is the thing a seller
 already knows when they walk up. Every card ends with the questions it will
 ask, so the choice is informed rather than a guess.
 {% endcomment %}
-
-{% include 'listings/_sell_steps.html' with step=1 %}
 
 <header class="sl-head">
     <h1 class="kb-page-title">What are you adding?</h1>
@@ -36,7 +35,8 @@ ask, so the choice is informed rather than a guess.
 
 <div class="sl-destinations">
     {% for destination in destinations %}
-        <a href="{% url 'listings:create' %}?to={{ destination.key }}" class="sl-dest">
+        <a href="{% if destination.key == 'collection' %}{% url 'collections:create' %}{% else %}{% url 'listings:create' %}?to={{ destination.key }}{% endif %}"
+           class="sl-dest">
             <span class="sl-dest-name">{{ destination.name }}</span>
             <span class="sl-dest-blurb">{{ destination.blurb }}</span>
             <span class="sl-dest-asks">
@@ -48,15 +48,19 @@ ask, so the choice is informed rather than a guess.
 </div>
 
 {% comment %}
-The second way in. Selling a duplicate should take under a minute, so it
-skips step 2 entirely — everything comes across already filled in.
+The second way in. Selling a duplicate should take under a minute —
+everything comes across already filled in, so step 2 is a look-over
+rather than a form to fill. Anything already up in a marketplace (or
+drafted toward one) is not offered here; its home is My Listings.
 {% endcomment %}
 <section class="sl-shelf">
     <div class="sl-shelf-rule">
         <span class="kb-eyebrow">Or start from something you already own</span>
         <span class="sl-shelf-line" aria-hidden="true"></span>
-        {% if shelf_total %}
-            <span class="sl-shelf-note">Duplicates first &middot; {{ shelf_total }} on your shelf</span>
+        {% if shelf_counts.eligible %}
+            <span class="sl-shelf-note">Duplicates first &middot; {{ shelf_counts.eligible }} available{% if shelf_counts.listed %} &middot; {{ shelf_counts.listed }} already on the market{% endif %}</span>
+        {% elif shelf_counts.listed %}
+            <span class="sl-shelf-note">All {{ shelf_counts.listed }} already on the market</span>
         {% endif %}
     </div>
 
@@ -64,7 +68,7 @@ skips step 2 entirely — everything comes across already filled in.
         <form method="get" class="sl-shelf-search">
             <label class="kb-sr" for="sl-q">Search my collection</label>
             <input type="search" id="sl-q" name="q" value="{{ query }}" class="kb-input"
-                   placeholder="Search my {{ shelf_total }}&hellip;">
+                   placeholder="Search my {{ shelf_counts.eligible }} available item{{ shelf_counts.eligible|pluralize }}&hellip;">
             <button type="submit" class="kb-btn kb-btn--secondary kb-btn--sm">Find</button>
         </form>
     {% endif %}
@@ -72,7 +76,7 @@ skips step 2 entirely — everything comes across already filled in.
     {% if shelf %}
         <p class="sl-shelf-copy">
             Everything comes across already filled in &mdash; photographs, county, year,
-            condition. You go straight to the terms.
+            condition. You look it over, then set the terms.
         </p>
         <div class="sl-shelf-grid">
             {% for row in shelf %}
@@ -89,17 +93,13 @@ skips step 2 entirely — everything comes across already filled in.
                         </span>
                         <span class="sl-piece-note{% if row.copies > 1 %} sl-piece-note--dup{% endif %}">{{ row.note }}</span>
                     </span>
-                    {% if row.already_listed %}
-                        <span class="sl-piece-shut">Already listed</span>
-                    {% else %}
-                        <a href="{% url 'listings:create' %}?from_item={{ row.item.pk }}"
-                           class="kb-btn kb-btn--secondary kb-btn--sm">Sell this</a>
-                    {% endif %}
+                    <a href="{% url 'listings:sell_from' row.item.pk %}"
+                       class="kb-btn kb-btn--secondary kb-btn--sm">Sell this</a>
                 </article>
             {% endfor %}
         </div>
-        {% if shelf_total > shelf|length %}
-            <a href="{% url 'collections:my_collection' %}" class="sl-shelf-all">All {{ shelf_total }} items &rarr;</a>
+        {% if shelf_counts.eligible > shelf|length %}
+            <a href="{% url 'collections:my_collection' %}" class="sl-shelf-all">All {{ shelf_counts.eligible }} available &rarr;</a>
         {% endif %}
     {% elif query %}
         <p class="sl-shelf-copy">Nothing on your shelf matches &ldquo;{{ query }}&rdquo;.</p>

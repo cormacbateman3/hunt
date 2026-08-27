@@ -107,6 +107,84 @@ class TradeLifecycleTests(DispositionBase):
         self.assertFalse(is_open_to_trade(mine))
 
 
+class SaleLifecycleTests(DispositionBase):
+    """The missing half of 8b: a KeystoneBid sale writes the departure the
+    moment the money lands, and a refund hands the piece back. Before
+    this, a sold piece sat in its seller's collection forever — on the
+    profile, in the runs, offered to want-matchers."""
+
+    def _sale(self):
+        from decimal import Decimal
+
+        from apps.listings.models import Listing
+        from apps.orders.models import Order
+
+        buyer = User.objects.create_user(f'disp_buyer_{Order.objects.count()}')
+        item = self._item(title='On the block')
+        listing = Listing.objects.create(
+            seller=self.owner, source_collection_item=item, title='Lot',
+            description='d', state=self.pa, condition_grade='good',
+            status='pending', listing_type='buy_now', buy_now_price=Decimal('40'))
+        order = Order.objects.create(
+            listing=listing, buyer=buyer, seller=self.owner,
+            order_type='buy_now', status='pending_payment',
+            item_amount=Decimal('40'), total_amount=Decimal('40'))
+        return item, order
+
+    def test_paid_marks_the_piece_sold(self):
+        from apps.orders.services import transition_order
+
+        item, order = self._sale()
+        ok, _ = transition_order(order, 'paid')
+        self.assertTrue(ok)
+        item.refresh_from_db()
+        self.assertEqual(item.disposition, 'sold')
+        self.assertFalse(is_open_to_trade(item))
+
+    def test_a_refund_hands_it_back(self):
+        from apps.orders.services import transition_order
+
+        item, order = self._sale()
+        transition_order(order, 'paid')
+        transition_order(order, 'refunded')
+        item.refresh_from_db()
+        self.assertEqual(item.disposition, 'held')
+
+    def test_an_order_event_never_overwrites_another_story(self):
+        from apps.orders.services import transition_order
+
+        item, order = self._sale()
+        item.disposition = 'given_away'
+        item.save(update_fields=['disposition'])
+        transition_order(order, 'paid')
+        item.refresh_from_db()
+        self.assertEqual(item.disposition, 'given_away')
+        # And a cancel does not "return" what a sale never took.
+        transition_order(order, 'cancelled')
+        item.refresh_from_db()
+        self.assertEqual(item.disposition, 'given_away')
+
+    def test_the_webhook_path_writes_it_too(self):
+        from apps.collections.disposition import piece_sold
+
+        item, order = self._sale()
+        self.assertTrue(piece_sold(order.listing))
+        item.refresh_from_db()
+        self.assertEqual(item.disposition, 'sold')
+        # Idempotent — the webhook retries.
+        self.assertFalse(piece_sold(order.listing))
+
+    def test_a_sold_piece_leaves_the_matchers(self):
+        from apps.collections.matching import holdings
+
+        item, order = self._sale()
+        self.assertIn(item.pk, {row['id'] for row in holdings(self.owner)})
+        from apps.orders.services import transition_order
+
+        transition_order(order, 'paid')
+        self.assertNotIn(item.pk, {row['id'] for row in holdings(self.owner)})
+
+
 class DispositionOnTheFormTests(DispositionBase):
     def _post(self, item=None, **extra):
         data = {
@@ -142,3 +220,18 @@ class DispositionOnTheFormTests(DispositionBase):
         form = self._post(item=item, disposition='traded')
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.save().disposition, 'traded')
+
+    def test_sold_is_the_sale_lifecycles_word_not_a_form_choice(self):
+        form = self._post(disposition='sold')
+        self.assertFalse(form.is_valid())
+        self.assertIn('disposition', form.errors)
+
+    def test_sold_survives_an_edit_of_a_sold_piece(self):
+        item = self._item(disposition='sold')
+        form = self._post(item=item, disposition='sold')
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.save().disposition, 'sold')
+
+    def test_a_traded_piece_is_never_offered_sold(self):
+        form = self._post(item=self._item(disposition='traded'), disposition='sold')
+        self.assertFalse(form.is_valid())

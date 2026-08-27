@@ -296,8 +296,7 @@ package inputs, which were captured on the listing.
                 <form method="post" action="{% url 'messaging:start' %}">
                     {% csrf_token %}
                     <input type="hidden" name="recipient_id" value="{{ other_party.pk }}">
-                    <input type="hidden" name="conversation_type" value="general">
-                    <button type="submit" class="kb-btn kb-btn--secondary kb-btn--sm">Write to them</button>
+                                        <button type="submit" class="kb-btn kb-btn--secondary kb-btn--sm">Write to them</button>
                 </form>
             </div>
         </section>

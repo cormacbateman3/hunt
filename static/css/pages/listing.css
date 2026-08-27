@@ -294,6 +294,160 @@
 .lst-bid-label {
     margin: 0;
     letter-spacing: 0.08em;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* "How bidding works here" — the proxy explainer, one tap from the box
+   it explains. */
+.lst-how-btn {
+    width: 16px;
+    height: 16px;
+    border: 1px solid var(--kb-rule-strong);
+    border-radius: var(--kb-r-pill);
+    background: var(--kb-surface);
+    color: var(--kb-ink-3);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.lst-how-btn:hover,
+.lst-how-btn[aria-expanded="true"] {
+    border-color: var(--kb-brass);
+    color: var(--kb-brass);
+}
+
+.lst-how {
+    background: var(--kb-note-bg, #fdf6e3);
+    border: 1px solid var(--kb-note-border, #f0e6c8);
+    border-left: 3px solid var(--kb-brass);
+    border-radius: 0 var(--kb-r-md) var(--kb-r-md) 0;
+    padding: 11px 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.lst-how strong {
+    font-size: 12.5px;
+    color: var(--kb-ink-1);
+}
+
+.lst-how p {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--kb-ink-2);
+}
+
+.lst-how-note { color: var(--kb-ink-4) !important; }
+
+.lst-bid-auto { font-size: 11px; }
+
+/* ── The room — the closing minutes, live ───────────────────────────── */
+.lst-room {
+    border-top: 1px solid var(--kb-rule);
+    padding-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.lst-room-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.lst-room-head [data-room-note] {
+    margin-left: auto;
+    font-size: 11px;
+}
+
+.lst-room-feed {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.lst-room-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--kb-rule-soft);
+    font-size: 12.5px;
+}
+
+.lst-room-row:last-child { border-bottom: 0; }
+
+.lst-room-row strong {
+    font-variant-numeric: tabular-nums;
+    color: var(--kb-ink-1);
+    min-width: 64px;
+}
+
+.lst-room-row span {
+    color: var(--kb-ink-3);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lst-room-row time {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--kb-ink-4);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+}
+
+.lst-room-row.is-new {
+    animation: lst-land 0.45s ease-out;
+}
+
+@keyframes lst-land {
+    from { opacity: 0; transform: translateY(-6px); background: var(--kb-note-bg, #fdf6e3); }
+    to { opacity: 1; transform: none; }
+}
+
+/* The price and the clock, when they move or matter. */
+.lst-flash {
+    animation: lst-pulse 0.9s ease-out;
+}
+
+@keyframes lst-pulse {
+    0% { color: var(--kb-brass); }
+    100% { color: inherit; }
+}
+
+.lst-countdown.is-critical {
+    color: var(--kb-rust);
+    animation: lst-breathe 1s ease-in-out infinite;
+}
+
+.lst-note.is-outbid { color: var(--kb-rust); }
+
+@keyframes lst-breathe {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.65; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lst-room-row.is-new,
+    .lst-flash,
+    .lst-countdown.is-critical { animation: none; }
 }
 
 .lst-bid-row {

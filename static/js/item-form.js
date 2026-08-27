@@ -81,6 +81,11 @@
             this.panel.addEventListener('drop', (e) => {
                 e.preventDefault();
                 this.panel.classList.remove('is-over');
+                // A reorder drag that misses its target must die quietly.
+                // Chrome synthesizes a File from a dragged <img>, so without
+                // this guard dropping a thumbnail on the panel re-added the
+                // same photograph as a new upload.
+                if (this.dragFrom !== null) return;
                 const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
                 if (files.length) this.take(files);
             });
@@ -129,15 +134,33 @@
             this.sync();
         }
 
-        /* An edit form's slot can already hold a saved photograph. */
+        /* An edit form's slot can already hold a saved photograph (existing),
+           or one the server kept through a failed submit (kept). */
         has(name) {
             if (!this.panel) return false;
             const node = this.panel.querySelector(`[data-slot="${name}"]`);
-            return node && node.dataset.existing === 'yes' && !node.dataset.deleted;
+            if (!node || node.dataset.deleted) return false;
+            return node.dataset.existing === 'yes' || Boolean(node.dataset.kept);
         }
 
         async remove(name) {
             const node = this.panel.querySelector(`[data-slot="${name}"]`);
+            if (node && node.dataset.kept) {
+                // A kept upload: tell the server to let go of it, or
+                // restore_missing would quietly re-attach what the user
+                // just watched disappear.
+                const discard = el('#discard-kept');
+                if (discard) {
+                    discard.value = discard.value
+                        ? discard.value + ',' + node.dataset.kept
+                        : node.dataset.kept;
+                }
+                delete node.dataset.kept;
+                const img = node.querySelector('img');
+                if (img) img.remove();
+                this.sync();
+                return;
+            }
             if (node && node.dataset.existing === 'yes' && !node.dataset.deleted) {
                 if (!await kbConfirm('Remove this photograph from the record?')) return;
                 const spec = this.spec(name);
@@ -172,24 +195,28 @@
                 if (file) dt.items.add(file);
                 input.files = dt.files;
             };
+            // Role and sort are written ONLY for occupied slots. Writing
+            // them unconditionally made Django treat every empty row as a
+            // filled one missing its image — the invisible error that made
+            // the submit buttons look dead.
+            const occupied = (name, staged) => Boolean(staged) || this.has(name);
+            const mark = (spec, on, role, sort) => {
+                if (!spec) return;
+                const roleInput = el(spec.role);
+                if (roleInput) roleInput.value = on ? role : '';
+                const sortInput = el(spec.sort);
+                if (sortInput) sortInput.value = on ? sort : '';
+            };
             write(this.cfg.slots.front, this.front);
             write(this.cfg.slots.back, this.back);
             this.cfg.slots.details.forEach((spec, i) => {
                 write(spec, this.details[i] || null);
-                const role = el(spec.role);
-                if (role) role.value = 'detail';
-                const sort = el(spec.sort);
-                if (sort) sort.value = String((this.cfg.kind === 'collection' ? 2 : 1) + i);
+                mark(spec, occupied('detail' + i, this.details[i]),
+                     'detail', String((this.cfg.kind === 'collection' ? 2 : 1) + i));
             });
-            const backSpec = this.cfg.slots.back;
-            const backRole = backSpec && el(backSpec.role);
-            if (backRole) backRole.value = 'back';
-            const backSort = backSpec && el(backSpec.sort);
-            if (backSort) backSort.value = this.cfg.kind === 'collection' ? '1' : '0';
-            const frontRole = this.cfg.slots.front && el(this.cfg.slots.front.role);
-            if (frontRole) frontRole.value = 'front';
-            const frontSort = this.cfg.slots.front && el(this.cfg.slots.front.sort);
-            if (frontSort) frontSort.value = '0';
+            mark(this.cfg.slots.back, occupied('back', this.back),
+                 'back', this.cfg.kind === 'collection' ? '1' : '0');
+            mark(this.cfg.slots.front, occupied('front', this.front), 'front', '0');
 
             // Programmatic .files assignment fires no event — the prefill
             // machinery watches the front input.
@@ -215,8 +242,13 @@
                 if (name === 'any') return;
                 const url = this.thumb(name);
                 const existing = node.dataset.existing === 'yes' && !node.dataset.deleted;
+                const kept = Boolean(node.dataset.kept);
                 const img = node.querySelector('img');
                 if (url) {
+                    // A freshly staged file supersedes a kept one — the new
+                    // upload replaces it server-side too (restore_missing
+                    // only restores fields the user did not re-send).
+                    delete node.dataset.kept;
                     if (img) img.src = url;
                     else {
                         const pic = document.createElement('img');
@@ -225,23 +257,54 @@
                         node.prepend(pic);
                     }
                     node.classList.add('is-filled');
-                } else if (existing) {
+                } else if (existing || kept) {
                     node.classList.add('is-filled');
                 } else {
-                    if (img && !existing) img.remove();
+                    if (img) img.remove();
                     node.classList.remove('is-filled');
                 }
-                if (url || existing) count += 1;
+                if (url || existing || kept) count += 1;
                 if (node.dataset.deleted && img) img.remove();
             });
             const counter = this.panel.querySelector('[data-photo-count]');
             if (counter) counter.textContent = count + ' of ' + (2 + this.cfg.slots.details.length);
 
+            // Thumbnails must not start native image drags — that is what
+            // turned every attempted reorder into a duplicate upload.
+            this.panel.querySelectorAll('.if-slot img').forEach((img) => { img.draggable = false; });
+
+            // A file dropped ON a named slot goes in that slot, not wherever
+            // reading order would put it.
+            ['front', 'back'].forEach((name) => {
+                const node = this.panel.querySelector(`[data-slot="${name}"]`);
+                if (!node) return;
+                node.ondragover = (e) => { e.preventDefault(); node.classList.add('is-target'); };
+                node.ondragleave = () => node.classList.remove('is-target');
+                node.ondrop = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    node.classList.remove('is-target');
+                    if (this.dragFrom !== null) return;   // details don't move here
+                    const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
+                    if (!file) return;
+                    this[name] = file;
+                    this.sync();
+                };
+            });
+
             // Details drag among themselves; the named slots hold still.
             this.panel.querySelectorAll('[data-slot^="detail"]').forEach((node) => {
                 const i = Number(node.dataset.slot.slice(6));
                 node.draggable = Boolean(this.details[i]);
-                node.ondragstart = () => { this.dragFrom = i; node.classList.add('is-dragging'); };
+                node.ondragstart = (e) => {
+                    this.dragFrom = i;
+                    node.classList.add('is-dragging');
+                    // Firefox refuses to start a drag with an empty payload.
+                    if (e.dataTransfer) {
+                        e.dataTransfer.setData('text/plain', 'kb-slot-' + i);
+                        e.dataTransfer.effectAllowed = 'move';
+                    }
+                };
                 node.ondragend = () => { this.dragFrom = null; node.classList.remove('is-dragging'); };
                 node.ondragover = (e) => { e.preventDefault(); node.classList.add('is-target'); };
                 node.ondragleave = () => node.classList.remove('is-target');
@@ -249,9 +312,19 @@
                     e.preventDefault();
                     e.stopPropagation();
                     node.classList.remove('is-target');
-                    if (this.dragFrom === null || this.dragFrom === i) return;
-                    const [moved] = this.details.splice(this.dragFrom, 1);
-                    this.details.splice(Math.min(i, this.details.length), 0, moved);
+                    if (this.dragFrom !== null) {
+                        if (this.dragFrom === i) return;
+                        const [moved] = this.details.splice(this.dragFrom, 1);
+                        this.details.splice(Math.min(i, this.details.length), 0, moved);
+                        this.sync();
+                        return;
+                    }
+                    // No internal drag: this is a file from the desktop,
+                    // aimed at this slot in particular.
+                    const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
+                    if (!file) return;
+                    if (i < this.details.length) this.details[i] = file;
+                    else this.details.push(file);
                     this.sync();
                 };
             });
@@ -391,8 +464,15 @@
             this.input = el('#id_title');
             if (!this.input) return;
             this.form = el(cfg.form);
+            // "written for you · edit freely" is only true once something
+            // HAS been written — the note stays hidden until write() fires,
+            // and leaves again the moment the title becomes theirs.
+            this.note = el('[data-title-note]');
             this.dirty = Boolean(this.input.value.trim()) && !cfg.freshTitle;
-            this.input.addEventListener('input', () => { this.dirty = true; });
+            this.input.addEventListener('input', () => {
+                this.dirty = true;
+                if (this.note) this.note.hidden = true;
+            });
 
             // Fresh record: the written-for-you panel fronts for the input
             // (turn 5b). Anybody without JavaScript just gets the input.
@@ -440,6 +520,7 @@
             const made = this.compose();
             if (!made) return;
             this.input.value = made;
+            if (this.note) this.note.hidden = false;
             const shown = el('[data-title-made]');
             if (shown) shown.textContent = made;
             this.input.dispatchEvent(new Event('kb-titled'));
@@ -453,7 +534,12 @@
         const out = el('[data-desc-count]');
         if (!node || !out) return;
         const max = node.getAttribute('maxlength') || 2000;
-        const say = () => { out.textContent = node.value.length + ' / ' + max; };
+        // 4a's note until there is something to count, then the count.
+        const say = () => {
+            out.textContent = node.value.length
+                ? node.value.length + ' / ' + max
+                : 'yours to write';
+        };
         node.addEventListener('input', say);
         say();
     }

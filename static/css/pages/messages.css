@@ -9,7 +9,9 @@
 .kb-messages {
     max-width: var(--kb-page-max);
     margin: 0 auto;
-    padding: var(--kb-5) var(--kb-gutter) var(--kb-7);
+    /* Tight on purpose: the dead band between the tabs and the module
+       was the single biggest waste of thread height. */
+    padding: var(--kb-3) var(--kb-gutter) var(--kb-3);
 }
 
 .ms-layout {
@@ -17,9 +19,10 @@
     grid-template-columns: 320px 1fr;
     gap: var(--kb-4);
     align-items: start;
-    /* Both panes scroll inside themselves so the page never does. */
-    height: calc(100vh - var(--kb-topbar-h) - var(--kb-band-h) - 90px);
-    min-height: 480px;
+    /* Both panes scroll inside themselves so the page never does — and
+       the module takes every vertical inch the viewport will give it. */
+    height: calc(100vh - var(--kb-topbar-h) - var(--kb-band-h) - 34px);
+    min-height: 520px;
 }
 
 /* ── Left pane ───────────────────────────────────────────────────────── */
@@ -34,8 +37,11 @@
 }
 
 .ms-list-head {
-    padding: 12px;
+    padding: 10px 12px 12px;
     border-bottom: 1px solid var(--kb-rule-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .ms-search {
@@ -119,6 +125,35 @@
     flex-shrink: 0;
 }
 
+/* A room says so — one small word, not a second style of row. */
+.ms-thread-roomtag {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--kb-brass);
+    margin-left: 5px;
+}
+
+/* Unread: the brass edge was already there; the dot and the bolder
+   line are the part you can read at arm's length. */
+.ms-thread-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--kb-brass);
+    margin-left: 6px;
+    vertical-align: 1px;
+}
+
+.ms-thread--unread .ms-thread-who { font-weight: 700; }
+
+.ms-thread--unread .ms-thread-snip {
+    color: var(--kb-ink-1);
+    font-weight: 600;
+}
+
 .ms-thread-deal {
     font-size: 11.5px;
     color: var(--kb-brass);
@@ -198,7 +233,14 @@
     flex-shrink: 0;
 }
 
+/* Necessary, not fun: report and block stay visibly present but never
+   the main show. The bare button chrome the browser paints was doing
+   the opposite, so strip it and speak quietly on purpose. */
 .ms-quiet {
+    border: 0;
+    background: none;
+    padding: 0;
+    font-family: inherit;
     font-size: 11.5px;
     color: var(--kb-ink-4);
     text-decoration: none;
@@ -210,29 +252,102 @@
     color: var(--kb-rust);
 }
 
-.ms-report {
+/* Members is the one worth reaching for — a soft chip sets it apart
+   from the report control without shouting either. */
+.ms-quiet--chip {
+    border: 1px solid var(--kb-rule);
+    border-radius: 999px;
+    padding: 4px 11px;
+    background: var(--kb-surface);
+    color: var(--kb-ink-3);
+}
+
+.ms-quiet--chip:hover {
+    background: var(--kb-parchment);
+    color: var(--kb-ink-1);
+}
+
+/* ── The one menu — report, block, members. Clean, closable, calm. ── */
+.ms-menu {
     position: relative;
 }
 
-.ms-report-panel {
+.ms-menu-panel {
     position: absolute;
-    top: calc(100% + 6px);
+    top: calc(100% + 8px);
     right: 0;
     z-index: 20;
-    min-width: 220px;
+    width: 264px;
     background: var(--kb-surface);
     border: 1px solid var(--kb-rule-strong);
-    border-radius: var(--kb-r-sm);
+    border-radius: var(--kb-r-md);
     box-shadow: var(--kb-shadow-panel);
-    padding: 12px;
+    padding: 12px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* `display: flex` above beats the hidden attribute's own display: none,
+   so closed must be said explicitly or the panels sit open forever. */
+.ms-menu-panel[hidden] { display: none; }
+
+.ms-menu-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--kb-rule-soft);
+    padding-bottom: 8px;
+}
+
+.ms-menu-title {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--kb-brass);
+}
+
+.ms-menu-x {
+    margin-left: auto;
+    border: 0;
+    background: none;
+    padding: 0 2px;
+    font-size: 15px;
+    line-height: 1;
+    color: var(--kb-ink-4);
+    cursor: pointer;
+}
+
+.ms-menu-x:hover { color: var(--kb-ink-1); }
+
+.ms-menu-form {
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
 
-.ms-report-panel .kb-select {
-    width: 100%;
+.ms-menu-form .kb-select,
+.ms-menu-form .kb-input { width: 100%; }
+
+.ms-menu-foot {
+    border-top: 1px solid var(--kb-rule-soft);
+    padding-top: 8px;
 }
+
+.ms-pick-toggle {
+    border: 0;
+    background: none;
+    padding: 0;
+    text-align: left;
+    font-size: 11.5px;
+    color: var(--kb-brass);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+
+.ms-pick-toggle:hover { color: var(--kb-brass-deep, #7d5d17); }
 
 /* ── The pinned deal ─────────────────────────────────────────────────── */
 .ms-deal {
@@ -333,38 +448,85 @@
     min-width: 0;
 }
 
-.ms-msg-text {
-    margin: 0;
-    font-size: 13px;
+.ms-bubble {
+    background: var(--kb-parchment-soft, #f7f4ec);
+    border: 1px solid var(--kb-rule-soft, #efeade);
+    border-radius: var(--kb-r-md);
+    padding: 10px 13px;
+    font-size: 13.5px;
     line-height: 1.55;
     color: var(--kb-ink);
+    width: fit-content;
+    max-width: 100%;
 }
+
+/* Yours read as yours — the green side of the conversation. */
+.ms-msg--mine .ms-bubble {
+    background: var(--kb-forest);
+    border-color: var(--kb-forest);
+    color: var(--kb-cream);
+    margin-left: auto;
+}
+
+.ms-msg--mine .ms-msg-body { align-items: flex-end; }
 
 .ms-msg-when {
     font-size: 11px;
     color: var(--kb-ink-5);
-    display: flex;
-    align-items: center;
-    gap: 8px;
 }
 
-.ms-msg--mine .ms-msg-when {
-    justify-content: flex-end;
+/* ── Dividers: the date, and what the talk turned to ────────────────── */
+.ms-divider {
+    text-align: center;
+    padding: 2px 0;
 }
 
-.ms-msg-flag {
+.ms-divider span {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
     color: var(--kb-ink-5);
+}
+
+.ms-divider--about span {
+    text-transform: none;
+    letter-spacing: 0.02em;
+    font-weight: 600;
+    color: var(--kb-brass);
+}
+
+.ms-divider--about a {
+    color: inherit;
     text-decoration: none;
 }
 
-.ms-msg-flag:hover {
-    color: var(--kb-rust);
+.ms-divider--about a:hover { text-decoration: underline; }
+
+/* ── Pointing at messages (report mode) ─────────────────────────────── */
+.ms-pick {
+    align-self: center;
+    flex-shrink: 0;
 }
 
-.ms-msg-report {
-    display: flex;
-    gap: 6px;
-    align-items: center;
+.is-picking .ms-pick { display: block !important; }
+
+.ms-pick input {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--kb-brass);
+    cursor: pointer;
+}
+
+/* ── The quiet word on a brand-new exchange ─────────────────────────── */
+.ms-word {
+    margin: 0;
+    border-top: 1px solid var(--kb-note-border, #f0e6c8);
+    background: var(--kb-note-bg, #fdf6e3);
+    padding: 9px 18px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--kb-note-ink, #5c5540);
 }
 
 /* ── Writing ─────────────────────────────────────────────────────────── */
@@ -414,4 +576,163 @@
     .ms-pane--empty .kb-empty {
         padding: var(--kb-6) var(--kb-4);
     }
+}
+
+/* ── Rooms — the campfire, not the forum ────────────────────────────── */
+.ms-newgroup {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--kb-brass);
+    text-decoration: none;
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+}
+
+.ms-newgroup:hover { text-decoration: underline; }
+
+.ms-newgroup-sub {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--kb-ink-4);
+}
+
+/* ── The member picker — names you can verify, not names you hope ──── */
+.ms-picker-anchor {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+}
+
+.ms-picker-anchor .kb-input { width: 100%; }
+
+/* The list hangs off the input it serves — below it, never over it. */
+.ms-picker-list {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 25;
+    background: var(--kb-surface);
+    border: 1px solid var(--kb-rule-strong);
+    border-radius: var(--kb-r-sm);
+    box-shadow: var(--kb-shadow-panel);
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.ms-picker-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: 0;
+    background: none;
+    padding: 8px 11px;
+    font-size: 12.5px;
+    color: var(--kb-ink-1);
+    cursor: pointer;
+}
+
+.ms-picker-item:hover { background: var(--kb-page); }
+
+.ms-picker-item small {
+    color: var(--kb-ink-4);
+    margin-left: 6px;
+}
+
+.ms-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    /* Daylight between the picked names and the input beneath them. */
+    margin: 4px 0 8px;
+}
+
+.ms-pills:empty { display: none; }
+
+.ms-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--kb-parchment);
+    border: 1px solid var(--kb-rule);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 12px;
+    color: var(--kb-ink-1);
+}
+
+.ms-pill button {
+    border: 0;
+    background: none;
+    padding: 0;
+    font-size: 12px;
+    color: var(--kb-ink-4);
+    cursor: pointer;
+}
+
+.ms-pill button:hover { color: var(--kb-rust); }
+
+.ms-pane--empty .kb-empty { max-width: 380px; }
+
+.ms-thread-mark--room {
+    background: var(--kb-brass);
+    color: #fff;
+}
+
+.ms-msg-sender {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--kb-brass);
+}
+
+.ms-members {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 240px;
+}
+
+.ms-member-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 12.5px;
+}
+
+.ms-member-row a {
+    color: var(--kb-ink-1);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.ms-member-row a:hover { text-decoration: underline; }
+.ms-member-row form { margin-left: auto; }
+.ms-member-row .kb-faint { margin-left: auto; font-size: 11px; }
+
+.ms-member-add {
+    display: flex;
+    gap: 6px;
+    border-top: 1px solid var(--kb-rule);
+    padding-top: 8px;
+    position: relative;
+}
+
+.ms-groupnew {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: var(--kb-5) var(--kb-gutter) var(--kb-8);
+    display: flex;
+    flex-direction: column;
+    gap: var(--kb-4);
+}
+
+.ms-groupnew-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: var(--kb-surface);
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+    padding: 20px;
 }

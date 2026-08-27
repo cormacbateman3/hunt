@@ -79,7 +79,10 @@ def _band_range_q(field, low, high):
 
 
 def _public_items():
-    return Q(collection_items__is_public=True)
+    # On public show AND still in their hands — a piece that departed
+    # (sold, traded, given away) is nobody's holding to count.
+    return Q(collection_items__is_public=True,
+             collection_items__disposition='held')
 
 
 def base_queryset():
@@ -163,9 +166,11 @@ def _apply_filters(qs, params, *, viewer_wants_owners, wants_mine_ids,
     else:
         if state_id.isdigit():
             qs = qs.filter(collection_items__is_public=True,
+                           collection_items__disposition='held',
                            collection_items__state_id=state_id)
         if county_id.isdigit():
             qs = qs.filter(collection_items__is_public=True,
+                           collection_items__disposition='held',
                            collection_items__county_id=county_id)
 
     if skip != 'era':
@@ -223,7 +228,8 @@ def _case_strips(user_ids):
     if not user_ids:
         return {}
     items = (
-        CollectionItem.objects.filter(is_public=True, owner_id__in=user_ids)
+        CollectionItem.objects.filter(
+            is_public=True, disposition='held', owner_id__in=user_ids)
         .select_related('county')
         .prefetch_related('images')
         .order_by('-featured', '-created_at')
@@ -290,7 +296,8 @@ def _home_counties(user_ids):
         return {}
     rows = (
         CollectionItem.objects
-        .filter(is_public=True, owner_id__in=user_ids, county__isnull=False)
+        .filter(is_public=True, disposition='held',
+                owner_id__in=user_ids, county__isnull=False)
         .values_list('owner_id', 'county__name', 'county__state__code')
         .distinct()
     )
@@ -303,9 +310,14 @@ def _home_counties(user_ids):
     return {k: v for k, v in seen.items() if v}
 
 
-def _place(user, home_counties):
+def _place(user, home_counties, counted=True):
     """Where they are if they've said, else where they collect. Never blank —
-    county and size are the two things always known about a collector."""
+    county and size are the two things always known about a collector.
+
+    ``counted=False`` skips the counties-held fallback: the compact card
+    prints its own counts on the same line, and "5 counties held · 5
+    items · 5 counties" reads like a stammer.
+    """
     profile = getattr(user, 'profile', None)
     if profile and profile.place:
         return profile.place
@@ -313,7 +325,7 @@ def _place(user, home_counties):
     if home:
         return home
     counties = getattr(user, 'county_count', 0)
-    if counties:
+    if counted and counties:
         return f'{counties} counties held'
     return 'Whereabouts unsaid'
 
@@ -390,12 +402,18 @@ def collector_rows(viewer, params):
             .values_list('user_id', 'home_county__fips_code')
         )
 
+    # With no wanted list there is no overlap to rank by — and a wanted
+    # list that matches NOBODY leaves nothing to rank by either. In both
+    # cases the biggest cases lead instead of nobody: a page of nothing
+    # but compact cards read as "all the detail is gone".
+    rank_by_overlap = bool(wants) and any(
+        wants_per_owner.get(user.id, 0) for user in users
+    )
+
     rows, featured = [], 0
     for user in users:
         overlap = wants_per_owner.get(user.id, 0)
-        # With no wanted list there is no overlap to rank by, so the biggest
-        # cases lead instead. The page keeps its shape either way.
-        big = (overlap > 0) if wants else (featured < FEATURED_LIMIT)
+        big = (overlap > 0) if rank_by_overlap else (featured < FEATURED_LIMIT)
         if big and featured < FEATURED_LIMIT:
             featured += 1
         else:
@@ -404,6 +422,7 @@ def collector_rows(viewer, params):
             'user': user,
             'name': user.profile.get_display_name() if hasattr(user, 'profile') else user.username,
             'place': _place(user, home_counties),
+            'mini_place': _place(user, home_counties, counted=False),
             'miles': miles_between(viewer_fips, home_fips.get(user.id))
                      if viewer_fips else None,
             'since': _since(user),

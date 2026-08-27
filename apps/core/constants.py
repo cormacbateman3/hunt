@@ -134,9 +134,9 @@ CONDITION_CHOICES = [
     ('poor', 'Poor'),
     ('fair', 'Fair'),
     ('good', 'Good'),
-    ('very_good', 'Very Good'),
+    ('very_good', 'Very good'),
     ('excellent', 'Excellent'),
-    ('near_mint', 'Near Mint'),
+    ('near_mint', 'Near mint'),
     ('mint', 'Mint'),
 ]
 

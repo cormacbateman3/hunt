@@ -266,6 +266,120 @@ def _pieces(items):
     return f'{count} licence{"" if count == 1 else "s"}'
 
 
+def _settled_rows(user, now):
+    """The last week of closed lots you bid on — the answer to "did I
+    win?" for the collector who logged back on an hour too late.
+
+    One row per lot, in the same three-column shape as everything else:
+    what you bid, what it went for, and where that leaves you. Held for
+    seven days; after that the letters and the orders are the record.
+    """
+    from datetime import timedelta
+
+    from apps.orders.models import Order
+
+    week_ago = now - timedelta(days=7)
+    mine = (
+        Bid.objects.filter(bidder=user, listing__listing_type='auction',
+                           listing__auction_end__gte=week_ago)
+        .exclude(listing__status__in=('active', 'draft', 'scheduled'))
+        .values('listing_id')
+        .annotate(mine=Max('amount'))
+    )
+    by_listing = {row['listing_id']: row['mine'] for row in mine}
+    if not by_listing:
+        return []
+
+    listings = {
+        listing.pk: listing
+        for listing in Listing.objects.filter(pk__in=by_listing)
+        .select_related('seller__profile')
+    }
+    won_ids = set(
+        Bid.objects.filter(bidder=user, is_winning=True,
+                           listing_id__in=by_listing)
+        .values_list('listing_id', flat=True)
+    )
+    orders = {
+        order.listing_id: order
+        for order in Order.objects.filter(listing_id__in=by_listing)
+        .exclude(status='cancelled')
+    }
+
+    rows = []
+    for listing_id, my_high in by_listing.items():
+        listing = listings.get(listing_id)
+        if not listing:
+            continue
+        order = orders.get(listing_id)
+        final = listing.current_bid or my_high
+        base = {
+            'listing': listing, 'thumb': _thumb(listing),
+            'title': listing.title, 'url': listing.get_absolute_url(),
+            'context': f'Auction · {listing.seller.profile.get_display_name()}',
+            'mine_label': 'You bid', 'mine': my_high,
+            'theirs_label': 'Went for', 'theirs': final, 'theirs_tone': 'plain',
+            'at': listing.auction_end,
+            'sort': 1,
+        }
+
+        if order and order.buyer_id == user.id:
+            if order.status == 'pending_payment':
+                rows.append({
+                    **base,
+                    'headline': 'You won it', 'tone': 'live',
+                    'note': 'Pay to make it yours — unpaid wins are released after a day.',
+                    'action': {'label': 'Review & pay',
+                               'url': reverse('listings:auction_win_review', args=[listing.pk]),
+                               'style': 'primary'},
+                    'sort': 0,
+                })
+            else:
+                rows.append({
+                    **base,
+                    'headline': 'You won it', 'tone': 'live',
+                    'note': 'Paid — the order carries it from here.',
+                    'action': {'label': 'View order',
+                               'url': reverse('orders:detail', args=[order.pk]),
+                               'style': 'secondary'},
+                })
+        elif listing_id in won_ids and listing.status == 'expired':
+            rows.append({
+                **base,
+                'headline': 'The win lapsed', 'tone': 'rust',
+                'note': 'Payment never arrived, and the lot was released.',
+                'action': {'label': 'Look', 'url': listing.get_absolute_url(),
+                           'style': 'text'},
+            })
+        elif listing.status in ('pending', 'sold'):
+            rows.append({
+                **base,
+                'headline': 'Went to someone else', 'tone': 'plain',
+                'note': f'Your ${my_high:,.0f} wasn’t the last word.',
+                'action': {'label': 'See how it ended',
+                           'url': listing.get_absolute_url(), 'style': 'text'},
+            })
+        elif listing.reserve_price and final and final < listing.reserve_price:
+            rows.append({
+                **base,
+                'headline': 'Reserve wasn’t met', 'tone': 'plain',
+                'note': 'Nobody got it — the floor was never reached.',
+                'action': {'label': 'Look', 'url': listing.get_absolute_url(),
+                           'style': 'text'},
+            })
+        else:
+            rows.append({
+                **base,
+                'headline': 'Didn’t sell', 'tone': 'plain',
+                'note': '',
+                'action': {'label': 'Look', 'url': listing.get_absolute_url(),
+                           'style': 'text'},
+            })
+
+    rows.sort(key=lambda row: (row['sort'], -(row['at'] or now).timestamp()))
+    return rows
+
+
 def ledger(user):
     """Both directions, each already sorted by what needs deciding first."""
     from apps.trades.models import TradeOffer
@@ -312,6 +426,7 @@ def ledger(user):
         'chasing_note': _count_note(chasing, 'Auction', 'lot', 'offer out'),
         'on_my_things': on_my_things,
         'waiting_on_you': sum(1 for row in on_my_things if row['tone'] == 'brass'),
+        'settled': _settled_rows(user, now),
     }
 
 

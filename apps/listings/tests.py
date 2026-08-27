@@ -23,7 +23,6 @@ from apps.collections.models import CollectionItem
 from apps.core.models import LicenseType, State
 from apps.listings.forms import ListingForm
 from apps.listings.models import Listing
-from apps.listings.views import _prefill_from_collection_item
 from apps.orders.models import Order
 from apps.shipping.services import estimate_listing_shipping
 
@@ -80,21 +79,28 @@ class ListingFormOverhaulTests(TestCase):
         self.assertFalse(bound.is_valid())
 
     def test_bid_increment_enforced(self):
-        bidder = User.objects.create_user('bidder', password='pw')
-        bidder_profile = bidder.profile
-        bidder_profile.email_verified = True
-        bidder_profile.save(update_fields=['email_verified'])
+        def verified(name):
+            user = User.objects.create_user(name, password='pw')
+            profile = user.profile
+            profile.email_verified = True
+            profile.save(update_fields=['email_verified'])
+            return user
+
+        first, rival = verified('bidder'), verified('rival')
         listing = Listing.objects.create(
             seller=self.seller, listing_type='auction', title='Auction', description='x',
             condition_grade='good', status='active', starting_price=Decimal('20'),
             bid_increment=Decimal('5'), auction_end=timezone.now() + timedelta(days=3),
         )
-        ok, msg = place_bid(listing, bidder, Decimal('20'))
+        ok, msg, _ = place_bid(listing, first, Decimal('20'))
         self.assertTrue(ok, msg)
-        ok, msg = place_bid(listing, bidder, Decimal('24'))
+        listing.refresh_from_db()
+        # A challenger must clear current + increment; the leader raising
+        # their own number is a maximum change, not a bid (proxy mechanic).
+        ok, msg, _ = place_bid(listing, rival, Decimal('24'))
         self.assertFalse(ok)
         self.assertIn('25.00', msg)
-        ok, msg = place_bid(listing, bidder, Decimal('25'))
+        ok, msg, _ = place_bid(listing, rival, Decimal('25'))
         self.assertTrue(ok, msg)
 
     def test_year_below_state_minimum_rejected(self):
@@ -134,33 +140,46 @@ class ListingFormOverhaulTests(TestCase):
             listing.full_clean()
 
     def test_first_bid_message_names_starting_price_not_increment(self):
-        bidder = User.objects.create_user('firstbidder', password='pw')
-        p = bidder.profile
-        p.email_verified = True
-        p.save(update_fields=['email_verified'])
+        def verified(name):
+            user = User.objects.create_user(name, password='pw')
+            profile = user.profile
+            profile.email_verified = True
+            profile.save(update_fields=['email_verified'])
+            return user
+
+        bidder, rival = verified('firstbidder'), verified('firstrival')
         listing = Listing.objects.create(
             seller=self.seller, listing_type='auction', title='A', description='x',
             condition_grade='good', status='active', starting_price=Decimal('20'),
             bid_increment=Decimal('5'), auction_end=timezone.now() + timedelta(days=3))
-        ok, msg = place_bid(listing, bidder, Decimal('10'))
+        ok, msg, _ = place_bid(listing, bidder, Decimal('10'))
         self.assertFalse(ok)
         self.assertIn('starting price', msg)
         self.assertNotIn('increment', msg)
-        # First valid bid, then the next-bid message names the increment arithmetic.
+        # First valid bid, then a challenger's too-low maximum names the
+        # increment arithmetic.
         place_bid(listing, bidder, Decimal('20'))
-        ok, msg = place_bid(listing, bidder, Decimal('22'))
+        listing.refresh_from_db()
+        ok, msg, _ = place_bid(listing, rival, Decimal('22'))
         self.assertFalse(ok)
         self.assertIn('increment', msg)
 
-    def test_prefill_from_collection_preserves_kind_and_all_addons(self):
+    def test_a_shelf_draft_preserves_kind_and_all_addons(self):
+        # The shelf skip writes a draft directly — the carry must keep the
+        # item kind and every add-on, not just the first.
+        from apps.listings.views import _draft_from_item
+
         item = CollectionItem.objects.create(
             owner=self.seller, title='Two-stamp addon', item_kind='addon',
             addons_attached=None, state=self.pa)
         item.license_types.add(self.turkey, self.big_game)
-        initial = _prefill_from_collection_item(item)
-        self.assertEqual(initial['item_kind'], 'addon')
-        self.assertIn('addons_attached', initial)
-        self.assertEqual(set(initial['addon_type']), {self.turkey.pk, self.big_game.pk})
+        draft = _draft_from_item(self.seller, item, 'buy_now')
+        self.assertEqual(draft.status, 'draft')
+        self.assertEqual(draft.item_kind, 'addon')
+        self.assertEqual(draft.source_collection_item, item)
+        self.assertEqual(
+            set(draft.license_types.filter(category='addon_type')),
+            {self.turkey, self.big_game})
 
     def test_completeness_is_kind_aware(self):
         addon_item = Listing.objects.create(
@@ -347,59 +366,48 @@ class UploadRetentionTests(TestCase):
         self.client.force_login(self.user)
 
     def test_failed_submit_keeps_the_image_and_a_retry_without_it_succeeds(self):
-        state = State.objects.get(code='PA')
-        residency = LicenseType.objects.filter(category='residency').first() or (
-            LicenseType.objects.create(name='Resident', category='residency', slug='res-x')
-        )
-
-        # First attempt: image supplied, but 'state' omitted -> invalid.
+        # First attempt: image supplied, but no title -> invalid. (Title is
+        # the one thing even a thin draft needs — everything else waits for
+        # the publish gate.)
         first = self.client.post(
             reverse('listings:create'),
-            self._payload(featured_image=png_upload('kept.png')),
+            self._payload(title='', featured_image=png_upload('kept.png')),
         )
         self.assertEqual(first.status_code, 200)
         self.assertFalse(Listing.objects.filter(title='Retained Upload').exists())
-        # The user is told the upload survived.
-        self.assertContains(first, 'kept')
+        # The kept upload hangs back in its slot — no notice box.
+        self.assertContains(first, 'data-kept="featured_image"')
 
         # Retry fixing only the error, WITHOUT re-picking the file.
-        second = self.client.post(
-            reverse('listings:create'),
-            self._payload(state=str(state.id), residency=str(residency.id)),
-        )
+        second = self.client.post(reverse('listings:create'), self._payload())
         self.assertEqual(second.status_code, 302)
         listing = Listing.objects.get(title='Retained Upload')
         self.assertTrue(listing.featured_image)
 
     def test_a_new_upload_replaces_the_retained_one(self):
+        from apps.core.upload_stash import SESSION_KEY
+
         self.client.post(
             reverse('listings:create'),
-            self._payload(featured_image=png_upload('first.png')),
+            self._payload(title='', featured_image=png_upload('first.png')),
         )
-        resp = self.client.post(
+        self.client.post(
             reverse('listings:create'),
-            self._payload(featured_image=png_upload('second.png')),
+            self._payload(title='', featured_image=png_upload('second.png')),
         )
-        self.assertContains(resp, 'second.png')
-        self.assertNotContains(resp, 'first.png')
+        stash = self.client.session[SESSION_KEY]
+        self.assertEqual(stash['featured_image']['name'], 'second.png')
 
     def test_stash_is_cleared_once_the_listing_saves(self):
         from apps.core.upload_stash import SESSION_KEY
 
-        state = State.objects.get(code='PA')
-        residency = LicenseType.objects.filter(category='residency').first() or (
-            LicenseType.objects.create(name='Resident', category='residency', slug='res-y')
-        )
         self.client.post(
             reverse('listings:create'),
-            self._payload(featured_image=png_upload('once.png')),
+            self._payload(title='', featured_image=png_upload('once.png')),
         )
         self.assertIn(SESSION_KEY, self.client.session)
 
-        self.client.post(
-            reverse('listings:create'),
-            self._payload(state=str(state.id), residency=str(residency.id)),
-        )
+        self.client.post(reverse('listings:create'), self._payload())
         self.assertNotIn(SESSION_KEY, self.client.session)
 
 

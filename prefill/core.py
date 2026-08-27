@@ -312,6 +312,14 @@ def resolve_geo(raw: dict, abbrev: str, ref: ReferenceData) -> dict:
         rec = ref.geo_statewide[abbrev]
         return {"value": rec["id"], "name": rec["name"], "source_text": geo_text or "Statewide",
                 "score": 100, "conf": sc, "tier": tier_for(sc, 100), "inferred": False}
+    # The model sometimes writes "Statewide" into the unit name without
+    # setting the flag — that text IS the statewide answer, not a county
+    # to fuzzy-match (it used to fall below the floor and land as a miss).
+    if geo_text and _norm(str(geo_text)).replace(" ", "") == "statewide" and abbrev in ref.geo_statewide:
+        c = max(conf, 0.7)
+        rec = ref.geo_statewide[abbrev]
+        return {"value": rec["id"], "name": rec["name"], "source_text": geo_text,
+                "score": 100, "conf": c, "tier": tier_for(c, 100), "inferred": False}
     if not abbrev:
         return _blank(geo_text, conf)
     # 1. county number — from the geo field, else scan the raw transcription

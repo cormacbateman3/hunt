@@ -36,7 +36,7 @@ def _holders(want, exclude_user_id):
     if clause is None:
         return 0, 0
     items = (
-        CollectionItem.objects.filter(is_public=True)
+        CollectionItem.objects.filter(is_public=True, disposition='held')
         .filter(clause)
         .exclude(owner_id=exclude_user_id)
     )

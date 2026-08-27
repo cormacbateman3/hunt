@@ -246,7 +246,10 @@ def profile_view(request, username):
         .order_by('-created_at')
     )
     if not is_owner:
-        collection_qs = collection_qs.filter(is_public=True)
+        # A visitor sees what they hold. The owner also sees departed
+        # pieces (sold, traded, given away) wearing their labels — the
+        # catalogue keeps its history even when the shelf lets go.
+        collection_qs = collection_qs.filter(is_public=True, disposition='held')
 
     featured_items = list(collection_qs.filter(featured=True).order_by('-created_at')[:4])
     # One query for the whole case rather than a lot lookup per piece.
@@ -271,6 +274,24 @@ def profile_view(request, username):
             license_year__gte=decade, license_year__lte=decade + 9)
     shown_items = list(collection_items[:10])
 
+    # One item, told as one item: a piece whose lot is live wears a small
+    # tag in the grid instead of reading as a second, unrelated thing —
+    # and a departed piece (owner view only) says where it went.
+    grid_items = shown_items + featured_items
+    on_market = dict(
+        Listing.objects.filter(
+            source_collection_item__in=[item.pk for item in grid_items],
+            status__in=('active', 'scheduled', 'pending'),
+        ).values_list('source_collection_item_id', 'status')
+    )
+    market_labels = {'active': 'Selling now', 'scheduled': 'Scheduled to sell',
+                     'pending': 'Sale pending'}
+    for item in grid_items:
+        if item.disposition != 'held':
+            item.grid_tag = item.get_disposition_display()
+        else:
+            item.grid_tag = market_labels.get(on_market.get(item.pk), '')
+
     # Active listings tab — auction house + general store only (not trade)
     active_listings = (
         Listing.objects.filter(
@@ -282,6 +303,17 @@ def profile_view(request, username):
         .prefetch_related('license_types')
         .order_by('-created_at')
     )
+
+    # Only the owner sees the ones on their way: a draft half-finished at
+    # midnight or a scheduled lot is otherwise invisible everywhere,
+    # which is how "why isn't my F3 on the shelf?" happens.
+    unfinished_listings = []
+    if is_owner:
+        unfinished_listings = list(
+            Listing.objects.filter(seller=user, status__in=('draft', 'scheduled'))
+            .select_related('state')
+            .order_by('-updated_at')[:6]
+        )
 
     # The trade hook. Every want they've named, read against what the viewer
     # actually holds — the wanted-list matcher pointed at one person.
@@ -346,6 +378,7 @@ def profile_view(request, username):
         'ground': ground_covered(user, public_only=not is_owner),
         'active_listings': active_listings,
         'active_listing_count': active_listings.count(),
+        'unfinished_listings': unfinished_listings,
         'wanted_items': wanted_items,
         'wanted_total': len(all_wants),
         'wanted_answerable': answerable,
@@ -449,7 +482,8 @@ def bench(request):
 def _primary_state(user):
     """The state this collector actually collects, not the one they live in."""
     top = (
-        CollectionItem.objects.filter(owner=user, state__isnull=False)
+        CollectionItem.objects.filter(owner=user, state__isnull=False,
+                                      disposition='held')
         .values('state')
         .annotate(n=Count('id'))
         .order_by('-n')
@@ -472,7 +506,8 @@ def _collection_progress(user):
     if not state:
         return None
 
-    items = CollectionItem.objects.filter(owner=user, state=state)
+    items = CollectionItem.objects.filter(owner=user, state=state,
+                                          disposition='held')
 
     unit_total = GeographicUnit.objects.filter(state=state, is_statewide=False).count()
     unit_held = items.filter(county__isnull=False).values('county').distinct().count()
@@ -508,7 +543,8 @@ def _collection_progress(user):
 def _closing_in_my_units(user, limit=3):
     """Auctions closing soonest in the units this collector already holds."""
     held = set(
-        CollectionItem.objects.filter(owner=user, county__isnull=False)
+        CollectionItem.objects.filter(owner=user, county__isnull=False,
+                                      disposition='held')
         .values_list('county_id', flat=True)
     )
     qs = Listing.objects.filter(

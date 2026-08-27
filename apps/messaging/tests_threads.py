@@ -36,7 +36,7 @@ class ThreadBase(TestCase):
     def _conversation(self, listing=None):
         a, b = sorted([self.seller, self.buyer], key=lambda u: u.pk)
         return Conversation.objects.create(
-            conversation_type='buy_now', listing=listing,
+            listing=listing,
             user_a=a, user_b=b, created_by=self.buyer)
 
     def _sale(self, status='paid'):
@@ -144,12 +144,16 @@ class TwoPaneTests(ThreadBase):
         self.assertContains(resp, 'Nothing here yet')
 
     def test_open_deals_can_be_filtered_to(self):
+        # One thread per pair now — a second pair needs a third person.
         listing, _ = self._sale(status='paid')
         self._conversation(listing)
-        self._conversation()
+        quiet_friend = User.objects.create_user('ms_quiet')
+        a, b = sorted([self.seller, quiet_friend], key=lambda u: u.pk)
+        Conversation.objects.create(user_a=a, user_b=b, created_by=self.seller)
 
         self.client.force_login(self.seller)
-        resp = self.client.get(reverse('messaging:inbox'))
+        # The inbox opens the freshest thread now; the chips ride along.
+        resp = self.client.get(reverse('messaging:inbox'), follow=True)
         counts = {chip['key']: chip['count'] for chip in resp.context['filters']}
         self.assertEqual(counts['deals'], 1)
         self.assertEqual(counts[''], 2)

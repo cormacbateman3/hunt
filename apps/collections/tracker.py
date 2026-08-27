@@ -55,7 +55,7 @@ def ground_covered(user, *, public_only=True):
     Returns ``None`` when there is nothing to measure — a profile with no
     located items should say nothing rather than draw an empty meter.
     """
-    items = CollectionItem.objects.filter(owner=user)
+    items = CollectionItem.objects.filter(owner=user, disposition='held')
     if public_only:
         items = items.filter(is_public=True)
 
@@ -130,7 +130,7 @@ def matrix(user, *, state=None, public_only=False):
     """
     from apps.core.models import State
 
-    items = CollectionItem.objects.filter(owner=user)
+    items = CollectionItem.objects.filter(owner=user, disposition='held')
     if public_only:
         items = items.filter(is_public=True)
 
@@ -197,7 +197,7 @@ def matrix(user, *, state=None, public_only=False):
 
 def collection_groups(user, *, public_only=True, limit=5):
     """Chips over somebody's collection — the decades they actually hold."""
-    items = CollectionItem.objects.filter(owner=user)
+    items = CollectionItem.objects.filter(owner=user, disposition='held')
     if public_only:
         items = items.filter(is_public=True)
 

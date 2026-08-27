@@ -157,7 +157,11 @@ Header. Format and state read first, then the title, then the object line.
                             <dt>Form</dt><dd>{{ listing.get_item_kind_display }}</dd>
                             {% if listing.shape %}<dt>Shape</dt><dd>{{ listing.get_shape_display_label }}</dd>{% endif %}
                             {% if listing.colors %}<dt>Colours</dt><dd>{{ listing.display_colors }}</dd>{% endif %}
-                            <dt>Condition</dt><dd>{{ listing.get_condition_grade_display }}</dd>
+                            <dt>Condition</dt>
+                            <dd>{{ listing.get_condition_grade_display }}{% if listing.is_restored %} &middot; Restored{% endif %}</dd>
+                            {% if listing.condition_description %}
+                                <dt>In the hand</dt><dd>{{ listing.condition_description|linebreaksbr }}</dd>
+                            {% endif %}
                             {% if listing.addons_attached is not None %}
                                 <dt>Add-ons</dt>
                                 <dd>{% if listing.addons_attached %}Still attached{% else %}Detached{% endif %}</dd>
@@ -278,7 +282,6 @@ Header. Format and state read first, then the title, then the object line.
                                 {% csrf_token %}
                                 <input type="hidden" name="recipient_id" value="{{ listing.seller_id }}">
                                 <input type="hidden" name="listing_id" value="{{ listing.pk }}">
-                                <input type="hidden" name="conversation_type" value="{{ listing.listing_type }}">
                                 <button type="submit" class="qa-private-link">write to them instead</button>
                             </form>
                         </div>
@@ -299,7 +302,11 @@ Header. Format and state read first, then the title, then the object line.
                                 {% for bid in recent_bids %}
                                     <tr {% if bid.is_winning %}class="is-winning"{% endif %}>
                                         <td class="lst-bid-amount">${{ bid.amount|floatformat:2 }}</td>
-                                        <td>{{ bid.bidder.username }}{% if bid.is_winning %} <span class="kb-badge kb-badge--live">Winning</span>{% endif %}</td>
+                                        <td>
+                                            {{ bid.bidder.username }}
+                                            {% if bid.is_proxy %}<span class="kb-faint lst-bid-auto" title="Placed automatically by their standing maximum">&middot; auto</span>{% endif %}
+                                            {% if bid.is_winning %} <span class="kb-badge kb-badge--live">Winning</span>{% endif %}
+                                        </td>
                                         <td class="kb-faint">{{ bid.placed_at|date:"M j, g:i a" }}</td>
                                     </tr>
                                 {% endfor %}
@@ -356,35 +363,88 @@ Header. Format and state read first, then the title, then the object line.
                             <span class="kb-eyebrow kb-eyebrow--rust">Ends in</span>
                             <span class="kb-price lst-countdown" id="countdown-value"
                                   data-auction-end="{{ listing.auction_end|date:'c' }}">&mdash;</span>
-                            <span class="kb-faint lst-price-sub">{{ listing.auction_end|date:"D M j, g:i a" }}</span>
+                            <span class="kb-faint lst-price-sub">{{ listing.auction_end|date:"D M j, g:i a" }}
+                                {% if listing.auction_extensions %} &middot; extended &times;{{ listing.auction_extensions }}{% endif %}</span>
                         </div>
                     {% endif %}
                 </div>
 
-                {% if user.is_authenticated and listing.seller_id == user.id %}
-                    <p class="kb-muted lst-note kb-panel-divide">This is your listing. You cannot bid on it.</p>
-                {% elif user.is_authenticated %}
-                    {% if viewer_won_auction %}
-                        <div class="kb-panel-divide kb-stack lst-won">
-                            <p class="lst-won-line">You won this auction at <strong>${{ auction_order.item_amount|floatformat:2 }}</strong>.</p>
-                            {% if auction_order.status == 'pending_payment' %}
-                                <a class="kb-btn kb-btn--primary kb-btn--lg kb-btn--block" href="{% url 'listings:auction_win_review' listing.pk %}">Review &amp; pay</a>
-                            {% else %}
-                                <a class="kb-btn kb-btn--secondary kb-btn--block" href="{% url 'orders:detail' auction_order.pk %}">View your order</a>
-                            {% endif %}
+                {% if auction_open %}
+                    {% comment %}
+                    The room — the closing minutes as a live feed. Hidden
+                    until five minutes out; from there every bid lands as
+                    a row, extensions announce themselves, and the price
+                    pulses when it moves. Owner-directed; no drawn frame
+                    yet (registered).
+                    {% endcomment %}
+                    <div class="lst-room" data-room hidden>
+                        <div class="lst-room-head">
+                            <span class="kb-eyebrow kb-eyebrow--rust">The room</span>
+                            <span class="kb-faint" data-room-note></span>
                         </div>
-                    {% elif not auction_open %}
-                        <p class="kb-muted lst-note kb-panel-divide">
-                            This auction has ended.{% if auction_order %} The item is awaiting payment from the winning bidder.{% endif %}
-                        </p>
-                    {% elif not user.profile.email_verified %}
-                        <p class="lst-blocked kb-panel-divide">Verify your email before placing bids.</p>
-                    {% else %}
+                        <ol class="lst-room-feed" data-room-feed></ol>
+                    </div>
+                {% endif %}
+
+                {% if user.is_authenticated and listing.seller_id == user.id %}
+                    <p class="kb-muted lst-note kb-panel-divide">
+                        {% if auction_open %}
+                            This is your listing. You cannot bid on it.
+                        {% else %}
+                            {% include 'listings/_auction_outcome.html' %}
+                        {% endif %}
+                    </p>
+                {% elif viewer_won_auction %}
+                    <div class="kb-panel-divide kb-stack lst-won">
+                        <p class="lst-won-line">You won this auction at <strong>${{ auction_order.item_amount|floatformat:2 }}</strong>.</p>
+                        {% if auction_order.status == 'pending_payment' %}
+                            <a class="kb-btn kb-btn--primary kb-btn--lg kb-btn--block" href="{% url 'listings:auction_win_review' listing.pk %}">Review &amp; pay</a>
+                        {% else %}
+                            <a class="kb-btn kb-btn--secondary kb-btn--block" href="{% url 'orders:detail' auction_order.pk %}">View your order</a>
+                        {% endif %}
+                    </div>
+                {% elif not auction_open %}
+                    {% comment %}
+                    The outcome, for everyone who wasn't the winner — the
+                    other bidders, the watchers, the signed-out. "You bid
+                    on something, log on an hour later" now has an answer.
+                    {% endcomment %}
+                    <p class="kb-muted lst-note kb-panel-divide">
+                        {% include 'listings/_auction_outcome.html' %}
+                    </p>
+                {% elif not user.is_authenticated %}
+                    <div class="kb-panel-divide">
+                        <a class="kb-btn kb-btn--primary kb-btn--lg kb-btn--block" href="{% url 'accounts:login' %}?next={{ request.path }}">Sign in to bid</a>
+                    </div>
+                {% elif not user.profile.email_verified %}
+                    <p class="lst-blocked kb-panel-divide">Verify your email before placing bids.</p>
+                {% else %}
                         <form method="post" action="{% url 'bids:create' listing.id %}" data-bid-form class="kb-panel-divide lst-bid-form">
                             {% csrf_token %}
                             <div class="kb-between">
-                                <span class="kb-label lst-bid-label">Your bid</span>
+                                <span class="kb-label lst-bid-label">
+                                    Your maximum bid
+                                    <button type="button" class="lst-how-btn" data-how-toggle
+                                            aria-expanded="false" aria-controls="lst-how"
+                                            title="How bidding works here">?</button>
+                                </span>
                                 <span class="kb-faint">Minimum $<span id="min-bid-value">{{ minimum_bid }}</span></span>
+                            </div>
+                            {% comment %}
+                            The proxy explainer — one mechanic, said plainly,
+                            one tap away from the box it explains.
+                            {% endcomment %}
+                            <div class="lst-how" id="lst-how" hidden>
+                                <strong>We bid for you.</strong>
+                                <p>Enter the most you&rsquo;d pay. The price only climbs when
+                                somebody pushes it &mdash; your standing maximum answers one
+                                increment at a time, up to your number and never past it.
+                                Nobody ever sees your maximum.</p>
+                                <p>If two maximums tie, the earlier one keeps the lead. You pay
+                                the price on the board at the close, not your maximum. Already
+                                ahead? Entering a higher number just raises your ceiling.</p>
+                                <p class="lst-how-note">Bids are binding, and a bid in the
+                                closing minutes gives everyone a little more time.</p>
                             </div>
                             <div class="lst-bid-row">
                                 {{ bid_form.amount }}
@@ -399,14 +459,12 @@ Header. Format and state read first, then the title, then the object line.
                             {% endif %}
                             <span class="kb-hint" id="min-bid-helper-wrap">Bids are binding. The seller sets the terms &mdash; KeystoneBid is never the auctioneer.</span>
                         </form>
-                        {% if user_bid %}
-                            <p class="kb-muted lst-note">Your highest bid so far: <strong>${{ user_bid.amount }}</strong></p>
+                        {% if user_max %}
+                            <p class="kb-muted lst-note" data-your-standing>
+                                Your maximum: <strong>${{ user_max|floatformat:2 }}</strong>
+                                {% if viewer_leading %} &middot; you&rsquo;re the high bidder{% else %} &middot; you&rsquo;ve been outbid{% endif %}
+                            </p>
                         {% endif %}
-                    {% endif %}
-                {% else %}
-                    <div class="kb-panel-divide">
-                        <a class="kb-btn kb-btn--primary kb-btn--lg kb-btn--block" href="{% url 'accounts:login' %}?next={{ request.path }}">Sign in to bid</a>
-                    </div>
                 {% endif %}
 
             {% elif is_buy_now %}
@@ -561,8 +619,11 @@ Header. Format and state read first, then the title, then the object line.
                     {% csrf_token %}
                     <input type="hidden" name="recipient_id" value="{{ listing.seller_id }}">
                     <input type="hidden" name="listing_id" value="{{ listing.pk }}">
-                    <input type="hidden" name="conversation_type" value="{{ listing.listing_type }}">
-                    <button type="submit" class="kb-btn kb-btn--secondary kb-btn--sm">Ask a question</button>
+                    {% comment %}
+                    Not "Ask a question" — that is the public Q&A tab two
+                    inches away. This one opens the private thread.
+                    {% endcomment %}
+                    <button type="submit" class="kb-btn kb-btn--secondary kb-btn--sm">Message {{ listing.seller.profile.get_display_name|truncatechars:18 }}</button>
                 </form>
             {% endif %}
         </div>

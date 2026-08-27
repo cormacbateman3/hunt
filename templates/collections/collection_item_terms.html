@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Add an item &mdash; my collection | KeystoneBid{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pages/item-form.css' %}">
+<link rel="stylesheet" href="{% static 'css/pages/sell.css' %}">
+{% endblock %}
+
+{% block main_class %}sl-page{% endblock %}
+
+{% block context_band %}
+<nav class="kb-crumbs" aria-label="Breadcrumb">
+    <div class="kb-band-inner">
+        <a href="{% url 'bench' %}">My Bench</a>
+        <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
+        <a href="{% url 'listings:sell_start' %}">Add an item</a>
+        <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
+        <span class="kb-crumb-current">My collection</span>
+        {% url 'listings:sell_start' as step1_url %}
+        {% url 'collections:edit' item.pk as step2_url %}
+        {% include 'listings/_sell_steps.html' with step=3 destination=destination step1_url=step1_url step2_url=step2_url %}
+    </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+
+{% if form.errors %}
+    <div class="if-errors sl-terms-errors" role="alert">
+        <strong>
+            {% with n=form.errors|length %}{{ n }} thing{{ n|pluralize }} to settle{% endwith %}
+        </strong>
+        <ul>
+            {% for field in form %}{% for error in field.errors %}
+                <li>&middot; <a href="#{{ field.id_for_label }}">{{ field.label }}</a> &mdash; {{ error }}</li>
+            {% endfor %}{% endfor %}
+            {% for error in form.non_field_errors %}<li>&middot; {{ error }}</li>{% endfor %}
+        </ul>
+    </div>
+{% endif %}
+
+<form method="post" novalidate class="sl-terms-floor">
+    {% csrf_token %}
+
+    <section class="sl-panel sl-panel--collection">
+        <div class="sl-panel-bar" aria-hidden="true"></div>
+        <header class="sl-panel-head">
+            <span class="kb-eyebrow kb-eyebrow--brass">Step 3</span>
+            <h1>My collection</h1>
+        </header>
+        <div class="sl-panel-body">
+
+            {% comment %}
+            DEFERRED — the "Which collection" folder row. Blocked on:
+            CollectionFolder, dev plan 10.14. Until it ships, this row
+            isn't here (the drawing says exactly that).
+            Register: docs/internal/plan_design.md
+            {% endcomment %}
+
+            <div class="sl-switches sl-switches--first">
+                <label class="sl-check">
+                    {{ form.is_public }}
+                    <span>
+                        <strong>Show it on my profile</strong>
+                        <small class="sl-hint">Turn this off and only you can see it. It still counts toward your counties.</small>
+                    </span>
+                </label>
+                {{ form.is_public.errors }}
+
+                <label class="sl-check">
+                    {{ form.featured }}
+                    <span>
+                        <strong>Put it in the display case</strong>
+                        <small class="sl-hint">Pins it to the top of your profile. {{ max_featured }} at most.</small>
+                    </span>
+                </label>
+                {{ form.featured.errors }}
+
+                <label class="sl-check">
+                    {{ form.open_to_trade }}
+                    <span>
+                        <strong>I&rsquo;d consider trading it</strong>
+                        <small class="sl-hint">Other collectors can put it in an offer. You still say yes or no every time.</small>
+                    </span>
+                </label>
+                <div class="if-field{% if form.trade_wants.errors %} has-error{% endif %}" data-trade-field>
+                    <label class="kb-label" for="{{ form.trade_wants.id_for_label }}">What you&rsquo;d take for it</label>
+                    {{ form.trade_wants }}
+                    {{ form.trade_wants.errors }}
+                </div>
+            </div>
+
+            <div class="sl-switches">
+                <span class="kb-eyebrow">Only you ever see this</span>
+                <div class="sl-terms-grid">
+                    <div class="if-field{% if form.purchase_price.errors %} has-error{% endif %}">
+                        <label class="kb-label" for="{{ form.purchase_price.id_for_label }}">What you paid</label>
+                        {{ form.purchase_price }}
+                        {{ form.purchase_price.errors }}
+                    </div>
+                    <div class="if-field{% if form.acquired_note.errors %} has-error{% endif %}">
+                        <label class="kb-label" for="{{ form.acquired_note.id_for_label }}">When and where</label>
+                        {{ form.acquired_note }}
+                        {{ form.acquired_note.errors }}
+                    </div>
+                </div>
+                <div class="if-field{% if form.private_note.errors %} has-error{% endif %}">
+                    <label class="kb-label" for="{{ form.private_note.id_for_label }}">Private note</label>
+                    {{ form.private_note }}
+                    {{ form.private_note.errors }}
+                </div>
+                <span class="kb-hint">Never public, never shown to a buyer or trader &mdash; it feeds your
+                    own records and the insurance export, and it is never a price history.</span>
+            </div>
+
+            <div class="sl-panel-foot">
+                <button type="submit" class="if-go if-go--forest">Add it to my collection</button>
+                {% if gap_line %}<span class="sl-cost">{{ gap_line }}</span>{% endif %}
+            </div>
+        </div>
+    </section>
+
+    <p class="sl-swap">
+        <a href="{% url 'collections:my_collection' %}">Leave it &mdash; the piece is saved and the defaults stand.</a>
+    </p>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const box = document.querySelector('#{{ form.open_to_trade.id_for_label }}');
+    const field = document.querySelector('[data-trade-field]');
+    if (box && field) {
+        const apply = () => { field.hidden = !box.checked; };
+        box.addEventListener('change', apply);
+        apply();
+    }
+});
+</script>
+{% endblock %}

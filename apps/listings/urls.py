@@ -15,7 +15,10 @@ urlpatterns = [
     # Step 1 is the front door. `create/` stays as step 2 so every existing
     # link into it keeps working.
     path('sell/', views.sell_start, name='sell_start'),
+    path('sell/from/<int:pk>/', views.sell_from, name='sell_from'),
     path('create/', views.listing_create, name='create'),
+    path('<int:pk>/terms/', views.listing_terms, name='terms'),
+    path('<int:pk>/item/', views.listing_item_edit, name='item_edit'),
     path('<int:listing_id>/bid-status/', bid_views.bid_status, name='bid_status'),
     path('<int:pk>/questions/ask/', views.ask_question, name='ask_question'),
     path('<int:pk>/questions/<int:question_id>/answer/', views.answer_question, name='answer_question'),

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KeystoneBid — Rooms and the Watcher, as built</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Petrona:ital,wght@0,400;0,500;0,600;1,400&family=Public+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #f4f1e8; }
+  .doc { padding: 40px 64px 80px; display: flex; flex-direction: column; gap: 40px; font-family: 'Public Sans', system-ui, sans-serif; color: #1c1f18; }
+</style>
+</head>
+<body>
+<div class="doc">
+
+  <!-- ══ Header ══════════════════════════════════════════════════════ -->
+  <div style="max-width: 960px; display: flex; flex-direction: column; gap: 14px;">
+    <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.11em; text-transform: uppercase; color: #6b6f60;">Messages &middot; as-built frames (plan_design Pass 9f)</span>
+    <h1 style="font-family: Petrona, Georgia, serif; font-size: 38px; font-weight: 600; line-height: 1.12; letter-spacing: -0.015em; margin: 0; color: #26331f;">One thread per pair, a room for your collecting buddies, and a watcher that only ever finds.</h1>
+    <p style="font-size: 15.5px; line-height: 1.65; color: #4d5245; margin: 0; max-width: 810px;">The 8d Messages frame remains the drawing of record for the two-pane page. These frames record what shipped without a drawing: the room (invite-only group chat) and the moderation funnel behind every message. The forum was deliberately not built — a public surface begs for slop; a private room of collecting buddies is the opposite. Messages stay <strong>text only</strong>; image sharing in rooms is registered, blocked on the moderation pipeline proving out in production.</p>
+  </div>
+
+  <!-- ══ M1 — The room, in the thread ════════════════════════════════ -->
+  <div style="display: flex; flex-direction: column; gap: 18px;">
+    <div style="display: flex; align-items: baseline; gap: 12px;">
+      <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; background: #26331f; color: #f4f1e8; padding: 4px 9px; border-radius: 4px;">M1</span>
+      <h2 style="font-family: Petrona, Georgia, serif; font-size: 26px; font-weight: 600; margin: 0; color: #26331f;">A room, open</h2>
+      <span style="font-size: 13px; color: #6b6f60;">brass mark = a room; senders named over their bubbles</span>
+    </div>
+
+    <div style="width: 640px; background: #fff; border: 1px solid #ddd7c8; border-radius: 4px; overflow: hidden;">
+      <div style="border-bottom: 1px solid #e3ddce; padding: 14px 20px; display: flex; align-items: center; gap: 14px;">
+        <span style="width: 38px; height: 38px; border-radius: 3px; background: #a07a26; color: #fff; font-size: 12.5px; font-weight: 700; display: flex; align-items: center; justify-content: center;">TH</span>
+        <div style="display: flex; flex-direction: column; gap: 1px;">
+          <span style="font-family: Petrona, Georgia, serif; font-size: 19px; font-weight: 600; color: #26331f;">The Tioga crowd</span>
+          <span style="font-size: 11.5px; color: #6b6f60;">4 of you &middot; private &mdash; members only</span>
+        </div>
+        <div style="display: flex; gap: 10px; margin-left: auto;">
+          <span style="font-size: 12px; color: #6b6f60; text-decoration: underline;">Members</span>
+          <span style="font-size: 12px; color: #6b6f60; text-decoration: underline;">Report or leave</span>
+        </div>
+      </div>
+      <div style="padding: 18px 20px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; gap: 10px; max-width: 78%;">
+          <span style="width: 28px; height: 28px; border-radius: 3px; background: #f2eee4; color: #6b6f60; font-size: 10.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">DS</span>
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <span style="font-size: 11px; font-weight: 600; color: #a07a26;">Dale Shoemaker</span>
+            <div style="background: #f7f4ec; border: 1px solid #efeade; border-radius: 3px; padding: 10px 13px; font-size: 13.5px; line-height: 1.55; color: #1c1f18;">Bloomsburg show is the 14th. Anybody driving up from the south side?</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px; max-width: 78%; margin-left: auto; flex-direction: row-reverse;">
+          <span style="width: 28px; height: 28px; border-radius: 3px; background: #26331f; color: #f4f1e8; font-size: 10.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">RM</span>
+          <div style="background: #26331f; border-radius: 3px; padding: 10px 13px; font-size: 13.5px; line-height: 1.55; color: #f4f1e8;">I can take two. Leaving seven sharp.</div>
+        </div>
+      </div>
+      <div style="border-top: 1px solid #e3ddce; padding: 12px 20px; display: flex; gap: 10px;">
+        <span style="flex: 1; border: 1px solid #cfc7b4; border-radius: 3px; padding: 10px 12px; font-size: 13px; color: #8c8f80;">Write to the room&hellip;</span>
+        <span style="background: #26331f; color: #fff; font-size: 11.5px; font-weight: 700; letter-spacing: 0.11em; text-transform: uppercase; padding: 11px 18px; border-radius: 3px;">Send</span>
+      </div>
+    </div>
+
+    <div style="width: 960px; background: #fdf6e3; border-left: 3px solid #a07a26; border-radius: 0 4px 4px 0; padding: 18px 22px; display: flex; flex-direction: column; gap: 6px;">
+      <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #a07a26;">The governance, in one line</span>
+      <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #5c5540; max-width: 800px;">Any member brings a friend in (the Members popout has the add box); anyone can leave; only the opener can remove somebody — the one quiet power that fixes a bad add without staff. Blocks: you cannot add someone you're blocked with, and a pair block never ejects anyone from a shared room. Caps and the master switch live on MessagingSettings in the admin.</p>
+    </div>
+  </div>
+
+  <!-- ══ M2 — Open a room ════════════════════════════════════════════ -->
+  <div style="display: flex; flex-direction: column; gap: 18px;">
+    <div style="display: flex; align-items: baseline; gap: 12px;">
+      <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; background: #26331f; color: #f4f1e8; padding: 4px 9px; border-radius: 4px;">M2</span>
+      <h2 style="font-family: Petrona, Georgia, serif; font-size: 26px; font-weight: 600; margin: 0; color: #26331f;">Open a room</h2>
+      <span style="font-size: 13px; color: #6b6f60;">reached from &ldquo;+ New room&rdquo; atop the left pane</span>
+    </div>
+
+    <div style="width: 460px; background: #fff; border: 1px solid #ddd7c8; border-radius: 4px; padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <span style="font-family: Petrona, Georgia, serif; font-size: 24px; font-weight: 600; color: #26331f;">Open a room</span>
+        <span style="font-size: 13px; line-height: 1.55; color: #4d5245;">A private thread for a few of you &mdash; show plans, finds, the usual talk. Only members ever see it. Holds 12 at most.</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 5px;">
+        <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #6b6f60;">What&rsquo;s it called</span>
+        <span style="border: 1px solid #cfc7b4; border-radius: 3px; padding: 10px 12px; font-size: 13px; color: #b9b19c;">e.g. Maryland Waterfowl Collector Crew</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 5px;">
+        <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #6b6f60;">Who&rsquo;s in it</span>
+        <span style="border: 1px solid #cfc7b4; border-radius: 3px; padding: 10px 12px; font-size: 13px; color: #b9b19c;">Usernames, separated by spaces</span>
+        <span style="font-size: 11.5px; color: #8c8f80;">Pick from the list &mdash; you can add people later too; any room member can.</span>
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <span style="background: #a07a26; color: #1b2416; font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 12px 20px; border-radius: 3px;">Open the room</span>
+        <span style="font-size: 12.5px; color: #6b6f60; align-self: center; text-decoration: underline;">Cancel</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ M3 — The watcher ════════════════════════════════════════════ -->
+  <div style="display: flex; flex-direction: column; gap: 18px;">
+    <div style="display: flex; align-items: baseline; gap: 12px;">
+      <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.08em; background: #26331f; color: #f4f1e8; padding: 4px 9px; border-radius: 4px;">M3</span>
+      <h2 style="font-family: Petrona, Georgia, serif; font-size: 26px; font-weight: 600; margin: 0; color: #26331f;">The watcher &mdash; the funnel behind every message</h2>
+      <span style="font-size: 13px; color: #6b6f60;">apps/moderation &middot; the system finds, humans decide</span>
+    </div>
+
+    <div style="width: 960px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;">
+      <div style="background: #fff; border: 1px solid #ddd7c8; border-radius: 4px; padding: 14px; display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: #a07a26;">1 &middot; Watch terms</span>
+        <p style="margin: 0; font-size: 12.5px; line-height: 1.55; color: #4d5245;">Admin-editable patterns for the hard signals — minor-safety language, explicit threats. Free, instant, flags only.</p>
+      </div>
+      <div style="background: #fff; border: 1px solid #ddd7c8; border-radius: 4px; padding: 14px; display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: #a07a26;">2 &middot; Classifier</span>
+        <p style="margin: 0; font-size: 12.5px; line-height: 1.55; color: #4d5245;">The free moderation API scores every message within minutes, async, never in the send path. No key? Scans say <em>skipped</em>, never silently clean.</p>
+      </div>
+      <div style="background: #fff; border: 1px solid #ddd7c8; border-radius: 4px; padding: 14px; display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: #a07a26;">3 &middot; Claude, in context</span>
+        <p style="margin: 0; font-size: 12.5px; line-height: 1.55; color: #4d5245;">Only flagged threads. Reads the surrounding messages and judges intent: banter clears, malice surfaces with a one-line rationale. Can clear noise; can never veto an urgent hit.</p>
+      </div>
+      <div style="background: #26331f; border-radius: 4px; padding: 14px; display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: #c9a44f;">4 &middot; You</span>
+        <p style="margin: 0; font-size: 12.5px; line-height: 1.55; color: #f4f1e8;">The queue in the admin. Urgent findings page staff immediately, in-app. Resolve, dismiss, hide a message, or reach for enforcement — a human, every time.</p>
+      </div>
+    </div>
+
+    <div style="width: 960px; background: #fff; border: 1px solid #ddd7c8; border-radius: 4px; overflow: hidden;">
+      <div style="background: #f7f4ec; border-bottom: 1px solid #e3ddce; padding: 10px 16px;">
+        <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; color: #a07a26;">The queue &middot; ModerationEvent (admin, until Pass 11 dresses it)</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 90px 110px 1fr 160px; gap: 12px; padding: 11px 16px; border-bottom: 1px solid #efeade; align-items: baseline;">
+        <span style="font-size: 11px; font-weight: 700; color: #9c3d1e; text-transform: uppercase; letter-spacing: 0.08em;">Urgent</span>
+        <span style="font-size: 12px; color: #6b6f60;">watch term</span>
+        <span style="font-size: 12.5px; color: #1c1f18;">grooming &middot; &ldquo;don&rsquo;t tell your parents&hellip;&rdquo; &mdash; walt ↔ stranger</span>
+        <span style="font-size: 11.5px; color: #8c8f80;">staff paged &middot; open</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 90px 110px 1fr 160px; gap: 12px; padding: 11px 16px; align-items: baseline;">
+        <span style="font-size: 11px; font-weight: 700; color: #a07a26; text-transform: uppercase; letter-spacing: 0.08em;">Review</span>
+        <span style="font-size: 12px; color: #6b6f60;">escalation</span>
+        <span style="font-size: 12.5px; color: #1c1f18;">&ldquo;Sustained hostility aimed at one person.&rdquo; &mdash; heated thread</span>
+        <span style="font-size: 11.5px; color: #8c8f80;">open</span>
+      </div>
+    </div>
+
+    <div style="width: 960px; background: #fdf6e3; border-left: 3px solid #a07a26; border-radius: 0 4px 4px 0; padding: 18px 22px; display: flex; flex-direction: column; gap: 6px;">
+      <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #a07a26;">What it will never do</span>
+      <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #5c5540; max-width: 800px;">Police profanity between friends, haggling, or taking a deal off the platform; punish anybody automatically; block a message from sending. Every tunable — thresholds, category lists, the model, the master switch — is on ModerationSettings in the admin, not in code. Cost at a few hundred users: tiers 1&ndash;2 free, tier 3 under a few dollars a month.</p>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -19,7 +19,7 @@ the details already recorded carry straight over into a listing.
         </span>
     </div>
     <div class="mn-card-foot">
-        <a href="{% url 'listings:create' %}?from_item={{ item.pk }}" class="mn-card-sell">Sell it</a>
+        <a href="{% url 'listings:sell_from' item.pk %}" class="mn-card-sell">Sell it</a>
         <form method="post" action="{% url 'collections:feature_toggle' item.pk %}">
             {% csrf_token %}
             <input type="hidden" name="next" value="{{ request.get_full_path }}">

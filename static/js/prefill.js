@@ -1,35 +1,54 @@
-/* KeystoneBid image prefill — tier-based form filling from a license photo.
+/* KeystoneBid image prefill — the ledger (Add Item Ideas 4a–4e).
  *
  * Wire-up (per form):
  *   KBPrefill.init({
  *     createUrl, correctionsUrlTemplate, suggestionUrl, source: 'collection'|'listing',
- *     fileInput: '#id_images-0-image',
+ *     fileInput: '#id_featured_image',
  *     jobIdInput: '#prefill-job-id',
  *     panel: '#prefill-panel',
  *     form: 'form',
- *     fields: { state: {sel:'#id_state', kind:'select'}, ... }
+ *     fields: { state: {sel:'#id_state', kind:'select'}, ... },
+ *     lines: {bench:[...], object:[...], lookup:{...}, closing:[...], winks:[...],
+ *             still_reading:'...', reduced_motion:'Reading'},   // ledger_lines.json
+ *     forYou: [{name:'condition', kind:'radio', groupName:'condition_grade'}, ...],
+ *     overlayHost: '[data-slot="front"]',   // where the scan animation plays
  *   });
  *
- * Tier rules (spec §7): high = filled; medium = filled + ✨ badge + one-click clear;
- * low = click-to-apply chip; unmatched = "couldn't match" panel with Suggest.
- * Never overwrites a field the user has edited (dirty tracking).
+ * The contract, from the drawing:
+ *   - No job → no panel. pending/resolving → typed line + rows arriving.
+ *     complete → tally replaces the line. failed → couldn't-read card, panel stays.
+ *   - High/medium rows: green ✓ with "change". Flagged rows: amber with a
+ *     ✓/× pair. ✓ accepts, × clears the field. Both write a PrefillCorrection
+ *     on click, with five seconds of undo. Low: a "Use it" chip. Unmatched:
+ *     the word it read, and "Suggest it".
+ *   - While reading, only the read's target fields lock (aria-busy); the
+ *     condition pair, material and anything price-shaped never lock, and
+ *     Save is never blocked. Unlock on complete, failed, or the 12s mark.
+ *   - Four lines × 1.5s; return early → cut to the closing line. Past 8s
+ *     hold; past 12s say still-reading plainly. One wink per read, never on
+ *     a flagged or failed read, never on a collector's first.
+ *   - Never overwrites a field the user has edited (dirty tracking).
  */
 (function () {
     'use strict';
 
-    const DEFERRED = ['geographic_unit', 'residency', 'holder_eligibility',
-                      'activity_scope', 'duration', 'material', 'addon_type'];
     const FIELD_LABELS = {
         item_kind: 'Item kind', state: 'State', license_year: 'Year', era_guess: 'Era',
-        geographic_unit: 'County / unit', residency: 'Residency', holder_eligibility: 'Eligibility',
-        activity_scope: 'Activity', duration: 'Duration', material: 'Material',
-        addon_type: 'Add-on', shape: 'Shape', colors: 'Colors', serial_number: 'Serial',
+        geographic_unit: 'County / unit', residency: 'Residency', holder_eligibility: 'Who it was for',
+        activity_scope: 'What it allowed', duration: 'How long it lasted', material: 'Material',
+        addon_type: 'Add-on', shape: 'Shape', colors: 'Colours', serial_number: 'Serial',
     };
 
+    // Fields the read may fill but must wait for lookup-built options.
+    const DEFERRED = ['geographic_unit', 'residency', 'holder_eligibility',
+                      'activity_scope', 'duration', 'material', 'addon_type'];
+
+    const LINE_MS = 1500;      // one line's slot
+    const HOLD_MS = 8000;      // past this, hold the last line
+    const PLAIN_MS = 12000;    // past this, say it plainly and unlock
+    const UNDO_MS = 5000;
+
     function csrfToken() {
-        // CSRF_COOKIE_HTTPONLY hides the csrftoken cookie from JS — read the
-        // form's hidden input instead (the browser still sends the cookie, so
-        // server-side validation works as normal).
         const input = document.querySelector('input[name="csrfmiddlewaretoken"]');
         if (input && input.value) return input.value;
         const m = document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)');
@@ -37,22 +56,48 @@
     }
 
     function el(sel) {
-        // Checkbox/radio groups have no id_for_label in Django 5, so a template
-        // can emit sel: '#' — an invalid selector must not kill the whole init.
         if (!sel || sel === '#') return null;
         try { return document.querySelector(sel); } catch (err) { return null; }
+    }
+
+    function esc(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    /* Deterministic per-job picks — a retry (new job id) reads differently. */
+    function seeded(seed) {
+        let s = (seed || 1) >>> 0;
+        return () => {
+            s = (s * 1664525 + 1013904223) >>> 0;
+            return s / 4294967296;
+        };
+    }
+
+    function pick(rand, list) {
+        if (!list || !list.length) return '';
+        return list[Math.floor(rand() * list.length)] || '';
     }
 
     class Prefill {
         constructor(cfg) {
             this.cfg = cfg;
+            this.lines = cfg.lines || null;
             this.jobId = null;
             this.payload = null;
-            this.applied = {};   // field -> {suggested, tier}
+            this.facts = {};
+            this.applied = {};   // field -> {suggested, tier, name, flagged}
             this.cleared = {};
             this.dirty = {};
             this.initial = {};
             this.applying = false;
+            this.rows = [];      // ledger rows in resolution order
+            this.pendingCorrections = {};   // field -> {timer, body, undo}
+            this.sentCorrections = {};      // field -> final we already logged
+            this.attempt = 0;
+            this.reducedMotion = window.matchMedia
+                && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
             this.panel = el(cfg.panel);
             this.fileInput = el(cfg.fileInput);
@@ -63,8 +108,6 @@
                 const node = this.node(field);
                 if (!node) continue;
                 this.initial[field] = this.read(field);
-                // On edit forms, saved values are protected (cfg.protectInitial);
-                // on create forms only user edits after load count as dirty.
                 if (cfg.protectInitial && this.initial[field]) this.dirty[field] = true;
                 const mark = () => { if (!this.applying) this.dirty[field] = true; };
                 ((spec.kind === 'radio' || spec.kind === 'checklist') ? this.group(field) : [node]).forEach(n => {
@@ -73,16 +116,86 @@
                 });
             }
 
+            // The "for you" fields feed the tally and never lock.
+            (cfg.forYou || []).forEach(spec => {
+                this.forYouNodes(spec).forEach(n => {
+                    n.addEventListener('input', () => this.renderTally());
+                    n.addEventListener('change', () => this.renderTally());
+                });
+            });
+
             this.fileInput.addEventListener('change', () => {
                 const file = this.fileInput.files && this.fileInput.files[0];
-                if (!file) return;
-                const key = file.name + ':' + file.size;    // drop zones re-assign on reorder
+                if (!file) {
+                    // The front photograph was removed. Mid-read that means
+                    // the evidence is gone — abort rather than apply values
+                    // from a photograph that no longer exists. A settled
+                    // ledger stays: its rows describe values already in
+                    // the form.
+                    if (this.locked) this.abort();
+                    return;
+                }
+                const key = file.name + ':' + file.size;
                 if (key === this.lastFileKey) return;
                 this.lastFileKey = key;
+                this.lastFile = file;
                 this.start(file);
             });
-            this.form.addEventListener('submit', () => this.logCorrections());
+
+            this.form.addEventListener('submit', () => {
+                this.flushCorrections(true);
+                this.logCorrections();
+            });
+            window.addEventListener('pagehide', () => this.flushCorrections(true));
+
+            // A failed submit reloads the page, but the read already
+            // happened — the server hands the job back and the ledger
+            // settles straight in, describing the values the form kept.
+            if (cfg.resume) this.resumeFromState(cfg.resume);
         }
+
+        resumeFromState(state) {
+            if (!state || state.status !== 'complete' || !state.payload) return;
+            this.jobId = state.job_id;
+            const jobInput = el(this.cfg.jobIdInput);
+            if (jobInput) jobInput.value = state.job_id;
+            this.payload = state.payload;
+            this.facts = state.line_facts || {};
+            this.rand = seeded((state.job_id || 1) * 2654435761);
+            this.lowHints = [];
+            this.missHints = [];
+            this.extraHints = [];
+            this.lotHint = !!state.payload.lot_detected;
+            for (const [field, data] of Object.entries(state.payload.fields || {})) {
+                const spec = this.cfg.fields[field];
+                if (!spec || field === 'addon_type') continue;
+                if (!data || data.value === null || data.value === undefined) continue;
+                const current = this.read(field);
+                if (String(data.value) === String(current) || (data.name && data.name === current)) {
+                    const flagged = data.check !== undefined
+                        ? !!data.check
+                        : (!!data.inferred || !!data.second_pass);
+                    // Submitting was the quiet confirmation — flagged rows
+                    // come back accepted rather than re-amber.
+                    this.applied[field] = {
+                        suggested: data.value, tier: data.tier, name: data.name,
+                        flagged, accepted: flagged || undefined,
+                    };
+                    this.rows.push(field);
+                } else if (data.tier === 'low') {
+                    this.lowHints.push({ field, data });
+                }
+            }
+            for (const miss of state.payload.unmatched || []) {
+                if (!this.missHints.some(h => h.source === miss.source_text)) {
+                    this.missHints.push({ field: miss.field, source: String(miss.source_text) });
+                }
+            }
+            this.reveal();
+            this.settle();
+        }
+
+        /* ── field plumbing ──────────────────────────────────────────── */
 
         node(field) {
             const spec = this.cfg.fields[field];
@@ -115,24 +228,272 @@
             return node.value;
         }
 
+        forYouNodes(spec) {
+            if (spec.kind === 'radio') {
+                return Array.from(this.form.querySelectorAll(`input[name=${spec.groupName}]`));
+            }
+            const node = el(spec.sel);
+            return node ? [node] : [];
+        }
+
+        forYouEmpty(spec) {
+            if (spec.kind === 'radio') {
+                // A checked "Not set" rung is still an empty answer.
+                return !this.forYouNodes(spec).some(n => n.checked && n.value);
+            }
+            const node = this.forYouNodes(spec)[0];
+            return !node || !String(node.value || '').trim();
+        }
+
+        fieldLabel(field) {
+            const spec = this.cfg.fields[field] || {};
+            // The drawing: row labels come from the form's labels.
+            const drawn = this.form.querySelector(`[data-taxonomy-label="${field}"]`);
+            if (drawn) return drawn.textContent.trim();
+            if (spec.sel) {
+                const node = el(spec.sel);
+                if (node && node.id) {
+                    const label = this.form.querySelector(`label[for="${node.id}"]`);
+                    if (label) return label.textContent.trim().replace(/\s+/g, ' ');
+                }
+            }
+            return FIELD_LABELS[field] || field;
+        }
+
+        wrapOf(field) {
+            const spec = this.cfg.fields[field] || {};
+            const anchor = (spec.kind === 'radio' || spec.kind === 'checklist')
+                ? (this.group(field)[0] || {}).parentElement
+                : el(spec.sel);
+            return anchor ? anchor.closest('.if-field') : null;
+        }
+
+        /* ── the lock (4e): only the read's targets, never the rest ───── */
+
+        lockFields() {
+            for (const field of Object.keys(this.cfg.fields)) {
+                const spec = this.cfg.fields[field];
+                const nodes = (spec.kind === 'radio' || spec.kind === 'checklist')
+                    ? this.group(field) : [el(spec.sel)].filter(Boolean);
+                nodes.forEach(n => { n.disabled = true; });
+                const wrap = this.wrapOf(field);
+                if (wrap) {
+                    wrap.classList.add('is-reading');
+                    wrap.setAttribute('aria-busy', 'true');
+                }
+            }
+            this.locked = true;
+        }
+
+        unlockFields() {
+            if (!this.locked) return;
+            for (const field of Object.keys(this.cfg.fields)) {
+                const spec = this.cfg.fields[field];
+                const nodes = (spec.kind === 'radio' || spec.kind === 'checklist')
+                    ? this.group(field) : [el(spec.sel)].filter(Boolean);
+                nodes.forEach(n => { n.disabled = false; });
+                const wrap = this.wrapOf(field);
+                if (wrap) {
+                    wrap.classList.remove('is-reading');
+                    wrap.removeAttribute('aria-busy');
+                }
+            }
+            this.locked = false;
+        }
+
+        settleFlash(field) {
+            const wrap = this.wrapOf(field);
+            if (!wrap) return;
+            wrap.classList.add('is-settled');
+            setTimeout(() => wrap.classList.remove('is-settled'), 1400);
+        }
+
+        /* ── the panel frame ─────────────────────────────────────────── */
+
         reveal() {
-            // The "Read from your photograph" card ships hidden and only
-            // appears once there is a read to show (turn 6b's rail panel).
             const card = this.panel && this.panel.closest('[data-prefill-card]');
             if (card) card.hidden = false;
         }
 
-        status(html) {
-            if (!this.panel) return;
-            this.reveal();
-            let box = this.panel.querySelector('.prefill-status');
-            if (!box) {
-                box = document.createElement('div');
-                box.className = 'prefill-status pf-busy';
-                this.panel.prepend(box);
-            }
-            box.innerHTML = html;
+        frame(metaText) {
+            // The header lives outside this.panel in the template; only the
+            // meta slot is ours to change.
+            const card = this.panel && this.panel.closest('[data-prefill-card]');
+            if (!card) return;
+            const meta = card.querySelector('.if-panel-meta');
+            if (meta && metaText != null) meta.textContent = metaText;
         }
+
+        /* A run that is no longer current must change nothing. */
+        abort() {
+            this.runToken = (this.runToken || 0) + 1;
+            this.stopShow();
+            this.unlockFields();
+            const card = this.panel && this.panel.closest('[data-prefill-card]');
+            if (card) card.hidden = true;   // back to state 1: no photograph, no ledger
+            if (this.panel) this.panel.innerHTML = '';
+            this.lastFileKey = null;
+        }
+
+        /* ── the show: typed lines, one caret (4b/4d) ───────────────── */
+
+        startShow(seedBase) {
+            this.reveal();
+            // The read announces itself where it happens — if the ledger
+            // sits below the fold when the upload lands, bring it up.
+            const card = this.panel && this.panel.closest('[data-prefill-card]');
+            if (card) {
+                card.scrollIntoView({
+                    block: 'nearest',
+                    behavior: this.reducedMotion ? 'auto' : 'smooth',
+                });
+            }
+            this.frame('writing');
+            this.showDone = false;
+            this.showStart = Date.now();
+            this.panel.innerHTML =
+                '<div class="pf-line" data-pf-line><span class="pf-line-text"></span><span class="pf-caret" aria-hidden="true"></span></div>' +
+                '<div class="pf-rows" data-pf-rows></div>';
+            this.lineEl = this.panel.querySelector('.pf-line-text');
+            this.rowsEl = this.panel.querySelector('[data-pf-rows]');
+
+            if (!this.lines || this.reducedMotion) {
+                this.lineEl.textContent = (this.lines && this.lines.reduced_motion) || 'Reading';
+                const caret = this.panel.querySelector('.pf-caret');
+                if (caret) caret.hidden = true;
+                return;
+            }
+            this.rand = seeded(seedBase);
+            this.queue = [pick(this.rand, this.lines.bench)];
+            this.lineIndex = 0;
+            this.typed = 0;
+            this.cutting = false;
+            this.showTimer = setInterval(() => this.tickShow(), 50);
+            this.startOverlay(seedBase);
+        }
+
+        planRemainingLines() {
+            // Slots two and three: object lines, upgraded to lookup lines
+            // when the fact has landed. Slot four: the wink or a closing.
+            if (!this.lines) return;
+            const rand = this.rand;
+            const facts = this.facts || {};
+            const lookups = [];
+            if (facts.era_fact) lookups.push(facts.era_fact);
+            if (facts.unit_plural && facts.state_name
+                && !/count(y|ies)/i.test(facts.unit_label || '')) {
+                lookups.push(pick(rand, this.lines.lookup.unit)
+                    .replace('{state_name}', facts.state_name)
+                    .replace('{unit_plural}', facts.unit_plural));
+            }
+            if (facts.county_name && facts.site_count > 1) {
+                lookups.push((this.lines.lookup.counts[0] || '')
+                    .replace('{site_count}', String(facts.site_count))
+                    .replace('{county_name}', facts.county_name));
+            } else if (facts.county_name && facts.site_count === 0) {
+                lookups.push(this.lines.lookup.counts[1] || '');
+            }
+            const two = lookups.length ? lookups[0] : pick(rand, this.lines.object);
+            const three = lookups.length > 1 ? lookups[1] : pick(rand, this.lines.object);
+            this.queue.push(two, three);
+
+            // One wink per read — never on a flagged or failed read, never
+            // on a collector's first of anything (4d/4e).
+            const anyFlagged = Object.values(this.applied).some(a => a.flagged);
+            const anyLow = (this.lowHints || []).length > 0;
+            const first = facts.my_county_count === 0;
+            if (!anyFlagged && !anyLow && !first && this.lines.winks.length) {
+                this.queue.push(pick(rand, this.lines.winks));
+            } else {
+                this.queue.push(pick(rand, this.lines.closing));
+            }
+        }
+
+        tickShow() {
+            if (!this.lineEl) return;
+            const elapsed = Date.now() - this.showStart;
+
+            if (this.showDone && !this.cutting) {
+                // The job returned — cut to the closing line, never pad.
+                this.cutting = true;
+                this.queue = [this.closingLine()];
+                this.lineIndex = 0;
+                this.typed = 0;
+            }
+            if (elapsed > PLAIN_MS && !this.showDone) {
+                this.lineEl.textContent = this.lines.still_reading;
+                this.unlockFields();
+                return;
+            }
+
+            const msg = this.queue[this.lineIndex] || '';
+            if (this.typed < msg.length) {
+                this.typed = Math.min(msg.length, this.typed + 3);
+                this.lineEl.textContent = msg.slice(0, this.typed);
+                return;
+            }
+            if (this.cutting) {
+                if (!this.cutAt) this.cutAt = Date.now();
+                if (Date.now() - this.cutAt > 900) this.settle();
+                return;
+            }
+            // Line finished — move on after its slot, but past 8s hold.
+            if (elapsed > HOLD_MS) return;
+            const slotEnd = (this.lineIndex + 1) * LINE_MS;
+            if (elapsed >= slotEnd && this.lineIndex < this.queue.length - 1) {
+                this.lineIndex += 1;
+                this.typed = 0;
+            }
+        }
+
+        closingLine() {
+            if (!this.lines) return '';
+            const anyFlagged = Object.values(this.applied).some(a => a.flagged);
+            const anyLow = (this.lowHints || []).length > 0;
+            const first = (this.facts || {}).my_county_count === 0;
+            if (!anyFlagged && !anyLow && !first && !this.winked && this.lines.winks.length) {
+                this.winked = true;
+                return pick(this.rand || seeded(1), this.lines.winks);
+            }
+            return pick(this.rand || seeded(1), this.lines.closing);
+        }
+
+        stopShow() {
+            if (this.showTimer) { clearInterval(this.showTimer); this.showTimer = null; }
+            this.stopOverlay();
+        }
+
+        /* ── the scan animation on the front slot (4b) ──────────────── */
+
+        startOverlay(seed) {
+            const host = el(this.cfg.overlayHost);
+            if (!host) return;
+            this.stopOverlay();
+            const variant = this.reducedMotion ? 3 : (seed % 3);
+            const overlay = document.createElement('div');
+            overlay.className = 'pf-scan pf-scan--' + ['loupe', 'grid', 'sleeve', 'still'][variant];
+            overlay.setAttribute('aria-hidden', 'true');
+            if (variant === 0) {
+                overlay.innerHTML = '<span class="pf-scan-tick pf-scan-tick--tl"></span>'
+                    + '<span class="pf-scan-tick pf-scan-tick--br"></span>'
+                    + '<span class="pf-loupe"></span>';
+            } else if (variant === 1) {
+                overlay.innerHTML = '<span class="pf-scan-sheet"></span><span class="pf-scan-sweep"></span>'
+                    + '<span class="pf-scan-word">READING</span>';
+            } else if (variant === 2) {
+                overlay.innerHTML = '<span class="pf-sleeve"></span>';
+            } else {
+                overlay.innerHTML = '<span class="pf-scan-word">READING</span>';
+            }
+            host.appendChild(overlay);
+            this.overlay = overlay;
+        }
+
+        stopOverlay() {
+            if (this.overlay) { this.overlay.remove(); this.overlay = null; }
+        }
+
+        /* ── the run ─────────────────────────────────────────────────── */
 
         async fetchJSON(url, opts) {
             const resp = await fetch(url, opts);
@@ -140,7 +501,6 @@
             try {
                 data = await resp.json();
             } catch (err) {
-                // An HTML error page (500/403) must surface a readable message.
                 throw new Error('server error (HTTP ' + resp.status + ')');
             }
             if (!resp.ok) throw new Error(data.error || 'server error (HTTP ' + resp.status + ')');
@@ -148,7 +508,19 @@
         }
 
         async start(file) {
-            this.status('<span class="prefill-shimmer">&#10024; Reading your image&hellip;</span>');
+            // One live run at a time: a replaced photograph or a removed one
+            // bumps the token, and the stale run's awaited results are
+            // dropped on the floor instead of applied to the wrong item.
+            const token = this.runToken = (this.runToken || 0) + 1;
+            this.attempt += 1;
+            this.applied = {};
+            this.cleared = {};
+            this.rows = [];
+            this.winked = false;
+            this.facts = {};
+            this.startShow(this.attempt * 7919);
+            this.lockFields();
+
             const body = new FormData();
             body.append('image', file);
             body.append('source_form', this.cfg.source);
@@ -159,31 +531,74 @@
                     headers: { 'X-CSRFToken': csrfToken() },
                 });
                 for (let i = 0; i < 40 && (state.status === 'pending' || state.status === 'resolving'); i++) {
+                    if (token !== this.runToken) return;
                     await new Promise(r => setTimeout(r, 750));
                     state = await this.fetchJSON(this.cfg.createUrl + state.job_id + '/');
                 }
             } catch (err) {
-                this.status('Prefill unavailable: ' + err.message);
+                if (token !== this.runToken) return;
+                this.failed('Prefill unavailable: ' + err.message);
                 return;
             }
+            if (token !== this.runToken) return;
             if (state.status !== 'complete') {
-                this.status('Prefill did not finish: ' + (state.error || state.status));
+                this.failed(state.error || '');
                 return;
             }
             this.jobId = state.job_id;
             const jobInput = el(this.cfg.jobIdInput);
             if (jobInput) jobInput.value = state.job_id;
             this.payload = state.payload;
+            this.facts = state.line_facts || {};
+            // Reseed the LINES on the job id so a retry reads differently
+            // (4b/4e). The overlay is NOT reseeded: one instrument per run
+            // — on the local backend the job id only arrives when the read
+            // is already done, and swapping the loupe for the scan
+            // mid-look reads as a glitch. The attempt seed varies it
+            // between runs instead, which is the intent of "a retry shows
+            // a different one".
+            this.rand = seeded(state.job_id * 2654435761);
             await this.apply(state.payload);
+            if (token !== this.runToken) return;
+            this.stageRows();
+            this.planRemainingLines();
+            this.showDone = true;
+            if (!this.showTimer) this.settle();   // reduced motion goes straight in
+        }
+
+        /* Rows arrive one at a time while the clerk is still talking (4c:
+           "each resolved field adds a row, so the panel grows to the size
+           of the answer") — the values are already in the form; this is
+           the ledger writing them down at a hand's pace. Each row's field
+           flashes as its line lands. */
+        stageRows() {
+            this.clearStagedRows();
+            if (!this.rowsEl) return;
+            this.stagedTimers = [];
+            this.rows.forEach((field, i) => {
+                this.stagedTimers.push(setTimeout(() => {
+                    const info = this.applied[field];
+                    if (!info || !this.rowsEl) return;
+                    const shell = document.createElement('div');
+                    shell.innerHTML = this.rowHTML(field, info);
+                    if (shell.firstChild) this.rowsEl.appendChild(shell.firstChild);
+                    this.settleFlash(field);
+                }, 350 + i * 380));
+            });
+        }
+
+        clearStagedRows() {
+            (this.stagedTimers || []).forEach(t => clearTimeout(t));
+            this.stagedTimers = [];
         }
 
         async apply(payload) {
             this.applying = true;
-            const hints = [];
+            this.lowHints = [];
+            this.missHints = [];
+            this.extraHints = [];
+            this.lotHint = !!payload.lot_detected;
             try {
-                if (payload.lot_detected) {
-                    hints.push({ kind: 'lot' });
-                }
                 const fields = payload.fields || {};
                 const order = Object.keys(this.cfg.fields)
                     .sort((a, b) => (a === 'state' ? -1 : b === 'state' ? 1 : 0));
@@ -191,75 +606,95 @@
                     if (field === 'addon_type') continue;
                     const data = fields[field];
                     if (!data) continue;
-                    await this.applyField(field, data, hints);
+                    await this.applyField(field, data);
                 }
-                await this.applyAddons(fields.addon_type, hints);
+                await this.applyAddons(fields.addon_type);
                 for (const miss of payload.unmatched || []) {
-                    if (!hints.some(h => h.source === miss.source_text)) {
-                        hints.push({ kind: 'unmatched', field: miss.field, source: miss.source_text });
+                    if (!this.missHints.some(h => h.source === miss.source_text)) {
+                        this.missHints.push({ field: miss.field, source: String(miss.source_text) });
                     }
                 }
             } finally {
                 this.applying = false;
             }
-            this.renderPanel(hints, payload);
         }
 
-        async applyField(field, data, hints) {
+        async applyField(field, data) {
             const spec = this.cfg.fields[field];
             if (!spec || data.value === null || data.value === undefined) {
                 if (data && data.source_text && data.tier === 'unmatched') {
-                    hints.push({ kind: 'unmatched', field, source: String(data.source_text) });
+                    this.missHints.push({ field, source: String(data.source_text) });
                 }
                 return;
             }
             if (data.tier === 'low') {
-                hints.push({ kind: 'low', field, data });
+                this.lowHints.push({ field, data });
                 return;
             }
             if (data.tier !== 'high' && data.tier !== 'medium') return;
-            if (this.dirty[field]) return;
-            const ok = await this.set(field, data);
-            if (!ok) {
-                hints.push({ kind: 'unmatched', field, source: String(data.source_text || data.name || '') });
+            if (this.dirty[field]) {
+                // Never overwrite something the seller wrote (or carried in
+                // from their shelf record). If the photograph disagrees,
+                // the value is *offered* — a ○ "Use it" row — not applied.
+                const current = this.read(field);
+                if (String(data.value) !== String(current) && data.name !== current) {
+                    this.lowHints.push({ field, data, conflict: true });
+                }
                 return;
             }
-            this.applied[field] = { suggested: data.value, tier: data.tier, name: data.name };
-            if (data.tier === 'medium' || data.inferred || data.second_pass) this.badge(field, data);
+            const ok = await this.set(field, data);
+            if (!ok) {
+                this.missHints.push({ field, source: String(data.source_text || data.name || '') });
+                return;
+            }
+            // 4e: high AND medium render green with "change". Amber (the
+            // ✓/× pair) is reserved for near-floor matches, second-pass
+            // rescues and inferences — the server says which, per field.
+            const flagged = data.check !== undefined
+                ? !!data.check
+                : (!!data.inferred || !!data.second_pass);
+            this.applied[field] = { suggested: data.value, tier: data.tier, name: data.name, flagged };
+            this.rows.push(field);
+            if (flagged) this.flagField(field, data);
         }
 
-        async applyAddons(addonField, hints) {
+        async applyAddons(addonField) {
             const items = (addonField && addonField.items) || [];
             if (!items.length) return;
             const matched = items.filter(i => i.value !== null && (i.tier === 'high' || i.tier === 'medium'));
             const spec = this.cfg.fields.addon_type || {};
+            const itemFlag = (i) => (i.check !== undefined ? !!i.check : (!!i.inferred || !!i.second_pass));
             if (matched.length && !this.dirty.addon_type) {
                 if (spec.kind === 'checklist') {
                     const ok = await this.set('addon_type', { value: matched.map(i => i.value) });
                     if (ok) {
+                        const flagged = matched.some(itemFlag);
                         this.applied.addon_type = {
                             suggested: matched.map(i => i.value),
                             tier: matched.some(i => i.tier === 'medium') ? 'medium' : 'high',
                             name: matched.map(i => i.name).join(', '),
+                            flagged,
                         };
-                        if (matched.some(i => i.tier === 'medium' || i.second_pass)) {
-                            this.badge('addon_type', { source_text: matched.map(i => i.source_text).join(', '), name: '' });
-                        }
+                        this.rows.push('addon_type');
+                        if (flagged) this.flagField('addon_type', {
+                            source_text: matched.map(i => i.source_text).join(', '), name: '' });
                     }
                 } else {
                     const best = matched[0];
                     const ok = await this.set('addon_type', best);
                     if (ok) {
-                        this.applied.addon_type = { suggested: best.value, tier: best.tier, name: best.name };
-                        if (best.tier === 'medium' || best.second_pass) this.badge('addon_type', best);
+                        const flagged = itemFlag(best);
+                        this.applied.addon_type = { suggested: best.value, tier: best.tier, name: best.name, flagged };
+                        this.rows.push('addon_type');
+                        if (flagged) this.flagField('addon_type', best);
                     }
                     for (const item of matched.slice(1)) {
-                        hints.push({ kind: 'addon-extra', name: item.name, tier: item.tier });
+                        this.extraHints.push({ name: item.name, tier: item.tier });
                     }
                 }
             }
             for (const item of items.filter(i => i.value === null && i.source_text)) {
-                hints.push({ kind: 'unmatched', field: 'addon_type', source: String(item.source_text) });
+                this.missHints.push({ field: 'addon_type', source: String(item.source_text) });
             }
         }
 
@@ -337,102 +772,191 @@
             });
         }
 
-        badge(field, data) {
-            const spec = this.cfg.fields[field];
-            const anchor = (spec.kind === 'radio' || spec.kind === 'checklist')
-                ? (this.group(field).slice(-1)[0] || {}).parentElement
-                : el(spec.sel);
-            if (!anchor || anchor.parentElement.querySelector(`[data-prefill-badge="${field}"]`)) return;
-            // Turn 6b's check-this state: the field the photograph filled
-            // gets the brass border and label until the seller clears it.
-            const wrap = anchor.closest('.if-field');
-            if (wrap) wrap.classList.add('is-flagged');
-            const badge = document.createElement('span');
-            badge.className = 'prefill-badge';
-            badge.dataset.prefillBadge = field;
-            badge.title = 'Read from the photograph as: ' + (data.source_text || data.name || '');
-            badge.innerHTML = '&#10024; read from the photo <button type="button" aria-label="Clear suggestion">&times;</button>';
-            badge.querySelector('button').addEventListener('click', () => {
-                this.applying = true;
-                try {
-                    const initial = this.initial[field] || '';
-                    if (spec.kind === 'radio') {
-                        this.radios(field).forEach(r => { r.checked = r.value === initial; });
-                        // Re-run any listener bound to this radio group (e.g. item_kind
-                        // section toggling) so cleared suggestions restore the layout.
-                        const restored = this.radios(field).find(r => r.checked) || this.radios(field)[0];
-                        if (restored) restored.dispatchEvent(new Event('change', { bubbles: true }));
-                    } else {
-                        const node = el(spec.sel);
-                        if (node) { node.value = initial; node.dispatchEvent(new Event('change', { bubbles: true })); }
-                    }
-                } finally {
-                    this.applying = false;
-                }
-                this.cleared[field] = true;
-                delete this.applied[field];
-                if (wrap) wrap.classList.remove('is-flagged');
-                badge.remove();
-            });
-            anchor.insertAdjacentElement('afterend', badge);
+        /* The brass flag on the field itself — turn 6b's check-this state. */
+        flagField(field, data) {
+            const wrap = this.wrapOf(field);
+            if (wrap) {
+                wrap.classList.add('is-flagged');
+                wrap.title = 'Read from the photograph as: ' + (data.source_text || data.name || '');
+            }
         }
 
-        renderPanel(hints, payload) {
-            // The drawing's plain list: a tick for confident, a question mark
-            // for check-this, a chip for take-it-or-leave-it, and one row for
-            // a word it couldn't match (turns 5b/6b).
-            this.reveal();
-            const esc = (value) => String(value ?? '')
-                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-            const label = (field) => esc(FIELD_LABELS[field] || field);
-            let rows = '';
-
-            const lot = hints.find(h => h.kind === 'lot');
-            if (lot) {
-                rows += '<div class="pf-lot">This photograph looks like <strong>multiple items</strong>. List them as a lot (coming with lot listings), or one item per photograph.</div>';
+        unflagField(field) {
+            const wrap = this.wrapOf(field);
+            if (wrap) {
+                wrap.classList.remove('is-flagged');
+                wrap.removeAttribute('title');
             }
-            for (const [field, info] of Object.entries(this.applied)) {
-                const value = esc(info.name || info.suggested);
-                if (info.tier === 'medium') {
-                    rows += `<div class="pf-row pf-row--check"><span class="pf-mark pf-mark--ask">?</span><span class="pf-field">${label(field)}</span><span class="pf-value">${value}</span><span class="pf-note">worth a look</span></div>`;
-                } else {
-                    rows += `<div class="pf-row"><span class="pf-mark pf-mark--ok">&#10003;</span><span class="pf-field">${label(field)}</span><span class="pf-value">${value}</span></div>`;
+        }
+
+        /* ── settle: rows and the tally (4a/4c) ──────────────────────── */
+
+        /* A read the backend couldn't match may still name something that
+           exists in the form's own options — "Nonresident" beside a
+           Non-Resident option, "Statewide" beside the statewide row. That
+           is a value to offer (○ Use it), not a word to file away
+           (Suggest it). Suggest-it stays for the genuinely unknown. */
+        recoverMisses() {
+            const keep = [];
+            for (const h of this.missHints || []) {
+                const spec = this.cfg.fields[h.field];
+                const hit = spec && this.optionFor(h.field, h.source);
+                if (hit) this.lowHints.push({ field: h.field, data: { value: hit.value, name: hit.name } });
+                else keep.push(h);
+            }
+            this.missHints = keep;
+        }
+
+        optionFor(field, text) {
+            const spec = this.cfg.fields[field];
+            const wanted = String(text || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (!wanted) return null;
+            const match = (label, value) => {
+                const norm = String(label || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                return norm && norm === wanted ? { value, name: label } : null;
+            };
+            if (spec.kind === 'radio' || spec.kind === 'checklist') {
+                for (const input of this.group(field)) {
+                    const label = input.closest('label');
+                    const hit = match(label ? label.textContent.trim() : input.value, input.value);
+                    if (hit) return hit;
                 }
+                return null;
             }
-            const lows = hints.filter(h => h.kind === 'low');
-            rows += lows.map((h, i) =>
-                `<div class="pf-row"><span class="pf-mark pf-mark--maybe">&#9675;</span><span class="pf-field">${label(h.field)}</span><span class="pf-value">${esc(h.data.name || h.data.source_text)}</span><button type="button" class="pf-act" data-low="${i}">Use it</button></div>`
-            ).join('');
-            const extras = hints.filter(h => h.kind === 'addon-extra');
-            rows += extras.map(h =>
-                `<div class="pf-row"><span class="pf-mark pf-mark--maybe">&#9675;</span><span class="pf-field">Add-on</span><span class="pf-value">${esc(h.name)}</span><span class="pf-note">one selectable for now</span></div>`
-            ).join('');
-            const misses = hints.filter(h => h.kind === 'unmatched');
-            rows += misses.map((h, i) =>
-                `<div class="pf-row"><span class="pf-mark pf-mark--miss">&times;</span><span class="pf-field">${label(h.field)}</span><span class="pf-value pf-value--read">&ldquo;${esc(h.source)}&rdquo;</span><button type="button" class="pf-act" data-suggest="${i}">Suggest it</button></div>`
-            ).join('');
+            const node = el(spec.sel);
+            if (!node || !node.options) return null;
+            for (const opt of node.options) {
+                if (!opt.value) continue;
+                const hit = match(opt.text.trim(), opt.value);
+                if (hit) return hit;
+            }
+            return null;
+        }
 
+        settle() {
+            this.clearStagedRows();
+            this.stopShow();
+            this.unlockFields();
+            this.recoverMisses();
+            this.frame('tap any line to change it');
             this.panel.innerHTML =
-                `<div class="pf-rows">${rows}</div>` +
-                '<div class="pf-foot">A tick means we filled it in. A question mark means we filled it in but check it. Anything you&rsquo;ve typed yourself is never overwritten &mdash; and the reads can be wrong, so the entry stays yours to verify.</div>';
+                '<div class="pf-tally" data-pf-tally></div>' +
+                '<div class="pf-rows" data-pf-rows></div>' +
+                // 4a's settled foot: the caveat on the left, the retry on
+                // the right — a changed photograph or a second opinion has
+                // a home without waiting for a failure.
+                '<div class="pf-footbar">' +
+                '<span>Clearing a line empties the field.</span>' +
+                '<button type="button" class="pf-reread" data-pf-reread>Read again</button>' +
+                '</div>';
+            this.rowsEl = this.panel.querySelector('[data-pf-rows]');
+            const reread = this.panel.querySelector('[data-pf-reread]');
+            if (reread) reread.addEventListener('click', () => {
+                if (this.lastFile) this.start(this.lastFile);
+            });
+            this.renderRows();
+            this.renderTally();
+        }
 
-            this.panel.querySelectorAll('[data-low]').forEach(btn => {
+        failed(message) {
+            this.stopShow();
+            this.unlockFields();
+            this.reveal();
+            this.frame('');
+            this.panel.innerHTML =
+                '<div class="pf-failed">' +
+                '<strong>Couldn&rsquo;t read this one.</strong>' +
+                '<span>Fill it in yourself and it lands in the ledger the same way. ' +
+                'A straighter, brighter photograph of the front usually does it.</span>' +
+                (message ? `<span class="pf-failed-why">${esc(message)}</span>` : '') +
+                '<button type="button" class="pf-act" data-pf-retry>Read again</button>' +
+                '</div>';
+            const retry = this.panel.querySelector('[data-pf-retry]');
+            if (retry) retry.addEventListener('click', () => {
+                if (this.lastFile) this.start(this.lastFile);
+            });
+        }
+
+        rowHTML(field, info) {
+            const label = esc(this.fieldLabel(field));
+            const value = esc(info.name || info.suggested);
+            if (info.flagged && !info.accepted) {
+                return `<div class="pf-row pf-row--check" data-pf-row="${field}">` +
+                    `<span class="pf-mark pf-mark--ask">?</span>` +
+                    `<span class="pf-field">${label}</span>` +
+                    `<span class="pf-value">${value}</span>` +
+                    `<span class="pf-pair">` +
+                    `<button type="button" class="pf-yes" data-pf-yes="${field}" aria-label="Accept ${label}">&#10003;</button>` +
+                    `<button type="button" class="pf-no" data-pf-no="${field}" aria-label="Clear ${label}">&times;</button>` +
+                    `</span></div>`;
+            }
+            return `<div class="pf-row" data-pf-row="${field}">` +
+                `<span class="pf-mark pf-mark--ok">&#10003;</span>` +
+                `<span class="pf-field">${label}</span>` +
+                `<span class="pf-value">${value}</span>` +
+                `<button type="button" class="pf-change" data-pf-change="${field}">change</button>` +
+                `</div>`;
+        }
+
+        renderRows() {
+            if (!this.rowsEl) return;
+            let html = '';
+            if (this.lotHint) {
+                html += '<div class="pf-lot">This photograph looks like <strong>multiple items</strong>. ' +
+                    'List them as a lot (coming with lot listings), or one item per photograph.</div>';
+            }
+            for (const field of this.rows) {
+                const info = this.applied[field];
+                if (info) html += this.rowHTML(field, info);
+            }
+            html += (this.lowHints || []).map((h, i) =>
+                `<div class="pf-row"><span class="pf-mark pf-mark--maybe">&#9675;</span>` +
+                `<span class="pf-field">${esc(this.fieldLabel(h.field))}</span>` +
+                `<span class="pf-value">${esc(h.data.name || h.data.source_text)}</span>` +
+                `<button type="button" class="pf-act" data-low="${i}">Use it</button></div>`
+            ).join('');
+            html += (this.extraHints || []).map(h =>
+                `<div class="pf-row"><span class="pf-mark pf-mark--maybe">&#9675;</span>` +
+                `<span class="pf-field">Add-on</span><span class="pf-value">${esc(h.name)}</span>` +
+                `<span class="pf-note">one selectable for now</span></div>`
+            ).join('');
+            html += (this.missHints || []).map((h, i) =>
+                `<div class="pf-row"><span class="pf-mark pf-mark--miss">&times;</span>` +
+                `<span class="pf-field">${esc(this.fieldLabel(h.field))}</span>` +
+                `<span class="pf-value pf-value--read">&ldquo;${esc(h.source)}&rdquo;</span>` +
+                `<button type="button" class="pf-act" data-suggest="${i}">Suggest it</button></div>`
+            ).join('');
+            this.rowsEl.innerHTML = html;
+            this.bindRows();
+        }
+
+        bindRows() {
+            this.rowsEl.querySelectorAll('[data-pf-yes]').forEach(btn => {
+                btn.addEventListener('click', () => this.acceptRow(btn.dataset.pfYes));
+            });
+            this.rowsEl.querySelectorAll('[data-pf-no]').forEach(btn => {
+                btn.addEventListener('click', () => this.clearRow(btn.dataset.pfNo));
+            });
+            this.rowsEl.querySelectorAll('[data-pf-change]').forEach(btn => {
+                btn.addEventListener('click', () => this.focusField(btn.dataset.pfChange));
+            });
+            this.rowsEl.querySelectorAll('[data-low]').forEach(btn => {
                 btn.addEventListener('click', async () => {
-                    const h = lows[Number(btn.dataset.low)];
+                    const h = this.lowHints[Number(btn.dataset.low)];
                     this.applying = true;
                     try { await this.set(h.field, h.data); } finally { this.applying = false; }
                     this.applied[h.field] = { suggested: h.data.value, tier: 'low', name: h.data.name };
-                    btn.disabled = true;
-                    btn.textContent = 'In ✓';
-                    const mark = btn.closest('.pf-row').querySelector('.pf-mark');
-                    mark.className = 'pf-mark pf-mark--ok';
-                    mark.innerHTML = '&#10003;';
+                    this.rows.push(h.field);
+                    this.lowHints.splice(Number(btn.dataset.low), 1);
+                    this.settleFlash(h.field);
+                    this.queueCorrection(h.field, { was_accepted: true });
+                    this.renderRows();
+                    this.renderTally();
                 });
             });
-            this.panel.querySelectorAll('[data-suggest]').forEach(btn => {
+            this.rowsEl.querySelectorAll('[data-suggest]').forEach(btn => {
                 btn.addEventListener('click', async () => {
-                    const h = misses[Number(btn.dataset.suggest)];
+                    const h = this.missHints[Number(btn.dataset.suggest)];
                     const body = new URLSearchParams({
                         suggestion_type: 'new_value',
                         target_model: 'license_type',
@@ -455,11 +979,182 @@
             });
         }
 
+        focusField(field) {
+            const spec = this.cfg.fields[field] || {};
+            const node = (spec.kind === 'radio' || spec.kind === 'checklist')
+                ? this.group(field)[0] : el(spec.sel);
+            if (!node) return;
+            node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            try { node.focus({ preventScroll: true }); } catch (err) { node.focus(); }
+        }
+
+        acceptRow(field) {
+            const info = this.applied[field];
+            if (!info) return;
+            info.accepted = true;
+            this.unflagField(field);
+            this.queueCorrection(field, { was_accepted: true }, () => {
+                info.accepted = false;
+                this.flagField(field, { name: info.name });
+                this.renderRows();
+                this.renderTally();
+            });
+            this.renderRows();
+            this.renderTally();
+        }
+
+        clearRow(field) {
+            const info = this.applied[field];
+            if (!info) return;
+            const spec = this.cfg.fields[field];
+            const restore = () => {
+                this.applying = true;
+                try {
+                    const initial = this.initial[field] || '';
+                    if (spec.kind === 'radio') {
+                        this.radios(field).forEach(r => { r.checked = r.value === initial; });
+                        const on = this.radios(field).find(r => r.checked) || this.radios(field)[0];
+                        if (on) on.dispatchEvent(new Event('change', { bubbles: true }));
+                    } else if (spec.kind === 'checklist') {
+                        const keep = String(initial).split(',');
+                        this.group(field).forEach(i => { i.checked = keep.includes(i.value); });
+                    } else {
+                        const node = el(spec.sel);
+                        if (node) { node.value = initial; node.dispatchEvent(new Event('change', { bubbles: true })); }
+                    }
+                } finally {
+                    this.applying = false;
+                }
+            };
+            restore();
+            this.cleared[field] = info;
+            delete this.applied[field];
+            this.rows = this.rows.filter(f => f !== field);
+            this.unflagField(field);
+            this.queueCorrection(field, { was_cleared: true, cleared_info: info }, async () => {
+                // Undo: put the suggestion back exactly as it was.
+                this.applying = true;
+                try { await this.set(field, { value: info.suggested }); } finally { this.applying = false; }
+                delete this.cleared[field];
+                this.applied[field] = info;
+                this.rows.push(field);
+                if (info.flagged) this.flagField(field, { name: info.name });
+                this.renderRows();
+                this.renderTally();
+            }, 'Cleared — ');
+            this.renderRows();
+            this.renderTally();
+        }
+
+        renderTally() {
+            const tally = this.panel && this.panel.querySelector('[data-pf-tally]');
+            if (!tally) return;
+            const filled = Object.values(this.applied)
+                .filter(a => !a.flagged || a.accepted).length;
+            const toCheck = Object.values(this.applied)
+                .filter(a => a.flagged && !a.accepted).length;
+            const blanks = (this.cfg.forYou || []).filter(s => this.forYouEmpty(s));
+            let html = '<div class="pf-tally-row">' +
+                `<span class="pf-tally-filled">${filled} filled</span>`;
+            if (toCheck) {
+                html += '<span class="pf-tally-sep"></span>' +
+                    `<span class="pf-tally-check">${toCheck} to check</span>`;
+            }
+            html += '<span class="pf-tally-sep"></span>' +
+                `<span class="pf-tally-you">${blanks.length} for you</span></div>`;
+            if (blanks.length) {
+                html += `<span class="pf-tally-blanks">Still blank: ${esc(blanks.map(s => s.name).join(', '))}.</span>`;
+            }
+            tally.innerHTML = html;
+        }
+
+        /* ── corrections: per click, five seconds of undo (4e) ───────── */
+
+        queueCorrection(field, flags, onUndo, undoLabel) {
+            const info = flags.cleared_info || this.applied[field] || this.cleared[field] || {};
+            const body = {
+                field_name: field,
+                suggested_value: info.suggested,
+                final_value: flags.was_cleared ? (this.initial[field] || '') : this.read(field),
+                tier: info.tier || '',
+                was_accepted: !!flags.was_accepted,
+                was_cleared: !!flags.was_cleared,
+            };
+            const pending = this.pendingCorrections[field];
+            if (pending) { clearTimeout(pending.timer); this.removeUndo(field); }
+
+            const timer = setTimeout(() => this.flushCorrection(field), UNDO_MS);
+            this.pendingCorrections[field] = { timer, body, onUndo };
+            if (onUndo) this.showUndo(field, undoLabel || '');
+        }
+
+        showUndo(field, prefix) {
+            const row = this.rowsEl && this.rowsEl.querySelector(`[data-pf-row="${field}"]`);
+            const host = row || this.rowsEl;
+            if (!host) return;
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'pf-undo';
+            chip.dataset.pfUndo = field;
+            chip.textContent = prefix + 'undo';
+            chip.addEventListener('click', () => {
+                const pending = this.pendingCorrections[field];
+                if (!pending) return;
+                clearTimeout(pending.timer);
+                delete this.pendingCorrections[field];
+                chip.remove();
+                if (pending.onUndo) pending.onUndo();
+            });
+            if (row) {
+                const pair = row.querySelector('.pf-pair, .pf-change');
+                if (pair) pair.replaceWith(chip); else row.appendChild(chip);
+            } else {
+                host.prepend(chip);
+            }
+        }
+
+        removeUndo(field) {
+            const chip = this.rowsEl && this.rowsEl.querySelector(`[data-pf-undo="${field}"]`);
+            if (chip) chip.remove();
+        }
+
+        flushCorrection(field, sync) {
+            const pending = this.pendingCorrections[field];
+            if (!pending || !this.jobId) return;
+            clearTimeout(pending.timer);
+            delete this.pendingCorrections[field];
+            this.removeUndo(field);
+            this.sentCorrections[field] = pending.body;
+            const url = this.cfg.correctionsUrlTemplate.replace('/0/', '/' + this.jobId + '/');
+            const payload = JSON.stringify({ corrections: [pending.body] });
+            if (sync && navigator.sendBeacon) {
+                navigator.sendBeacon(url, new Blob([payload], { type: 'application/json' }));
+                return;
+            }
+            fetch(url, {
+                method: 'POST',
+                keepalive: true,
+                headers: { 'X-CSRFToken': csrfToken(), 'Content-Type': 'application/json' },
+                body: payload,
+            }).catch(() => {});
+        }
+
+        flushCorrections(sync) {
+            for (const field of Object.keys(this.pendingCorrections)) {
+                this.flushCorrection(field, sync);
+            }
+        }
+
+        /* The submit-time diff still runs — it catches the quiet edits that
+           never clicked a row button. Rows already logged are skipped
+           unless the field moved again afterwards. */
         logCorrections() {
             if (!this.jobId) return;
             const corrections = [];
             for (const [field, info] of Object.entries(this.applied)) {
                 const finalValue = this.read(field);
+                const sent = this.sentCorrections[field];
+                if (sent && String(sent.final_value) === String(finalValue)) continue;
                 corrections.push({
                     field_name: field,
                     suggested_value: info.suggested,
@@ -469,12 +1164,13 @@
                     was_cleared: false,
                 });
             }
-            for (const field of Object.keys(this.cleared)) {
+            for (const [field, info] of Object.entries(this.cleared)) {
+                if (this.sentCorrections[field]) continue;
                 corrections.push({
                     field_name: field,
-                    suggested_value: (this.payload.fields[field] || {}).value,
+                    suggested_value: info.suggested,
                     final_value: this.read(field),
-                    tier: (this.payload.fields[field] || {}).tier || '',
+                    tier: info.tier || '',
                     was_accepted: false,
                     was_cleared: true,
                 });

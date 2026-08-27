@@ -218,6 +218,10 @@ def handle_payment_intent_succeeded(payment_intent):
         if order.order_type in {'buy_now', 'auction'} and order.listing.status != 'sold':
             order.listing.status = 'sold'
             order.listing.save(update_fields=['status', 'updated_at'])
+        # The moment the money lands, the piece behind the listing has
+        # left the seller's hands — the collection record says so.
+        from apps.collections.disposition import piece_sold
+        piece_sold(order.listing)
 
     if not was_paid:
         order_url = reverse('orders:detail', kwargs={'pk': order.pk})

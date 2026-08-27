@@ -12,7 +12,7 @@ class BidForm(forms.ModelForm):
         widgets = {
             'amount': forms.NumberInput(attrs={
                 'class': 'form-input',
-                'placeholder': 'Enter bid amount',
+                'placeholder': 'The most you’d pay',
                 'step': '0.01',
                 'min': '0.01'
             })

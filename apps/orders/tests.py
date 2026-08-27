@@ -62,7 +62,7 @@ class NoSelfDealingTests(TestCase):
 
     def test_bid_service_rejects_the_seller(self):
         listing = self._auction()
-        ok, message = place_bid(listing=listing, bidder=self.seller, amount=Decimal('25'))
+        ok, message, _ = place_bid(listing=listing, bidder=self.seller, amount=Decimal('25'))
         self.assertFalse(ok)
         self.assertIn('your own listing', message)
         self.assertEqual(Bid.objects.count(), 0)

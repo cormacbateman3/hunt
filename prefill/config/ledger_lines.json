@@ -1,0 +1,59 @@
+{
+  "_comment": "The dealer's voice while the read runs — Add Item Ideas 4d. Reviewed copy, not model output. Slot one is a bench line; slots two and three prefer object lines and upgrade to lookup lines when the value has landed; the last slot may take ONE wink per read, never on a flagged or failed read, never on a collector's first. Lines in winks_held are written but held for the owner's call and are never played. Lookup templates only fire when their placeholders are already computed — never a query on the critical path. Lines never claim value or price.",
+  "bench": [
+    "Let me get my glasses…",
+    "Blowing the dust off…",
+    "Squinting at the small print…",
+    "Holding it up to the light…",
+    "Good light today…",
+    "Cleaning my glasses. One second…",
+    "Pulling up a chair for this one…",
+    "Under the lamp…"
+  ],
+  "object": [
+    "No fade, no pinholes — this lived in a drawer…",
+    "Rarely seen. Often talked about…",
+    "This one’s too clean. Did it ever see a day in the field?…",
+    "Card like this doesn’t usually survive a season…",
+    "Somebody carried this in a wallet. You can tell…",
+    "Pin’s original. That’s rarer than the tag…",
+    "Ink’s still black. Whoever owned this kept it out of the sun…"
+  ],
+  "lookup": {
+    "era": [
+      "{era_fact}"
+    ],
+    "unit": [
+      "{state_name} calls these {unit_plural}. Adjusting…"
+    ],
+    "counts": [
+      "{site_count} {county_name} tags on file, none this clean…",
+      "Nobody has one of these on file yet…"
+    ],
+    "flavor": [
+      "Need to call my buddy from Potter on this one…",
+      "A resident tag from a county that small stayed local…"
+    ]
+  },
+  "closing": [
+    "Reading complete. Admiring it a moment longer…",
+    "Putting it down slowly…",
+    "Trying not to breathe on it…"
+  ],
+  "winks": [
+    "You don’t see this every day…",
+    "Hold on — this might be a fake…",
+    "…kidding. It’s real.",
+    "Someone’s grandfather had taste…",
+    "If you ever sell it, call me first…"
+  ],
+  "winks_held": [
+    "I’d buy this…",
+    "Wife’s got meatloaf on. This is worth being late for…",
+    "Don’t tell the others, but this one’s my favourite today…",
+    "Okay. Now I’m invested…",
+    "That’s going on a wall, surely…"
+  ],
+  "still_reading": "Still reading — carry on filling by hand and it will catch up.",
+  "reduced_motion": "Reading"
+}

@@ -1,0 +1,21 @@
+{% comment %}
+The outcome of a closed auction, said once and reused — the seller's
+panel, every other viewer's panel, signed in or not. Assumes listing and
+auction_order (possibly None) in context.
+{% endcomment %}
+{% if auction_order %}
+    {% if auction_order.status == 'pending_payment' %}
+        Sold for <strong>${{ auction_order.item_amount|floatformat:2 }}</strong>
+        &middot; awaiting the winner&rsquo;s payment.
+    {% else %}
+        Sold for <strong>${{ auction_order.item_amount|floatformat:2 }}</strong>
+        &middot; closed {{ listing.auction_end|date:"M j" }}.
+    {% endif %}
+{% elif listing.status == 'expired' and listing.current_bid and listing.reserve_price %}
+    Closed {{ listing.auction_end|date:"M j" }} &mdash; bidding reached
+    ${{ listing.current_bid|floatformat:2 }}, but the reserve wasn&rsquo;t met.
+{% elif listing.status == 'expired' and listing.current_bid %}
+    Closed {{ listing.auction_end|date:"M j" }} without a sale.
+{% else %}
+    Closed {{ listing.auction_end|date:"M j" }} without selling.
+{% endif %}

@@ -53,6 +53,10 @@ class Listing(models.Model):
     ]
 
     STATUS_CHOICES = [
+        # A draft is step 2 saved without step 3 — the item is described but
+        # the terms aren't set. Never public: browse filters on 'active', and
+        # the detail page 404s a draft for anybody but the seller.
+        ('draft', 'Draft'),
         ('pending', 'Pending'),
         ('active', 'Active'),
         ('scheduled', 'Scheduled'),
@@ -117,6 +121,15 @@ class Listing(models.Model):
     shape = models.CharField(max_length=30, choices=SHAPE_CHOICES, blank=True)
     colors = models.JSONField(default=list, blank=True)
     condition_grade = models.CharField(max_length=20, choices=CONDITION_CHOICES)
+    # The grade is for filtering; the written description is what stops
+    # disputes. Optional — it never gates publishing.
+    condition_description = models.TextField(
+        blank=True, max_length=2000,
+        help_text='The flaws said plainly — foxing, the pin, tears, tape.',
+    )
+    # Not a rung on the ladder: a repaired piece can still be Excellent, and
+    # buyers who won't touch restored work need to filter it out.
+    is_restored = models.BooleanField(default=False)
     resident_status = models.CharField(
         max_length=20, choices=RESIDENT_STATUS_CHOICES, default='unknown'
     )
@@ -171,6 +184,11 @@ class Listing(models.Model):
 
     # Auction Details
     auction_end = models.DateTimeField(null=True, blank=True)
+    # Soft close: a bid in the final two minutes resets the clock to two
+    # minutes, up to a bounded number of times — sniping buys nothing but
+    # everyone else a fair answer. The count is the transparency: the page
+    # can say "extended twice" because the listing remembers.
+    auction_extensions = models.PositiveSmallIntegerField(default=0)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
 
     # Scheduled go-live

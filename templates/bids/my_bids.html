@@ -70,38 +70,15 @@ on items nobody owns yet — so the split is direction, not mechanism.
     {% endif %}
 </section>
 
-{% if settled_bids %}
+{% if settled %}
     <section class="desk-section">
         <div class="desk-rule">
             <h2 class="desk-rule-title">Settled</h2>
             <span class="desk-rule-line" aria-hidden="true"></span>
-            <span class="desk-rule-note">Lots that have closed</span>
+            <span class="desk-rule-note">The last week of closed lots &mdash; what went where</span>
         </div>
         <div class="desk-table">
-            {% for bid in settled_bids %}
-                <div class="desk-grid desk-row desk-row--done">
-                    <div class="desk-item">
-                        <span class="desk-thumb desk-thumb--blank" aria-hidden="true"></span>
-                        <span class="kb-stack desk-item-text">
-                            <a href="{{ bid.listing.get_absolute_url }}" class="desk-title">{{ bid.listing.title }}</a>
-                            <span class="desk-sub">Bid {{ bid.placed_at|date:"j M" }}</span>
-                        </span>
-                    </div>
-                    <div class="desk-money">
-                        <span class="desk-money-label">Yours</span>
-                        <span class="desk-price">${{ bid.amount|floatformat:2 }}</span>
-                    </div>
-                    <div class="desk-money"></div>
-                    <div class="kb-stack desk-stands">
-                        <span class="desk-headline{% if bid.is_winning %} desk-headline--live{% endif %}">
-                            {% if bid.is_winning %}You won it{% else %}{{ bid.listing.get_status_display }}{% endif %}
-                        </span>
-                    </div>
-                    <div class="desk-action">
-                        <a href="{{ bid.listing.get_absolute_url }}" class="desk-quiet">Look</a>
-                    </div>
-                </div>
-            {% endfor %}
+            {% for row in settled %}{% include 'accounts/_ledger_row.html' %}{% endfor %}
         </div>
     </section>
 {% endif %}

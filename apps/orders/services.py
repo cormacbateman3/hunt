@@ -35,6 +35,17 @@ def transition_order(order, target_status, *, actor=None):
 
     order.status = target_status
     order.save(update_fields=['status', 'updated_at'])
+
+    # The sale lifecycle keeps the collection record honest: paid writes
+    # the departure, a refund or cancellation hands the piece back. (The
+    # Stripe webhook sets 'paid' without coming through here and carries
+    # its own piece_sold call.)
+    from apps.collections.disposition import piece_returned, piece_sold
+    if target_status == 'paid':
+        piece_sold(order.listing)
+    elif target_status in {'refunded', 'cancelled'}:
+        piece_returned(order.listing)
+
     return True, 'Order updated.'
 
 

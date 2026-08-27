@@ -116,8 +116,7 @@ Expects `thread`, `other`, `trader_trust`, and optionally `offer`.
                 {% csrf_token %}
                 <input type="hidden" name="recipient_id" value="{{ other.pk }}">
                 {% if offer %}<input type="hidden" name="trade_offer_id" value="{{ offer.pk }}">{% endif %}
-                <input type="hidden" name="conversation_type" value="trade">
-                <button type="submit" class="tb-trader-link">
+                                <button type="submit" class="tb-trader-link">
                     Message them about this &rarr;
                 </button>
             </form>

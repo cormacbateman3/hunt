@@ -70,7 +70,7 @@ with the site's own numbers on the right.
                         {% endif %}
                     </a>
                     <span class="kb-plate-rule" aria-hidden="true"></span>
-                    <a href="{% url 'listings:sell_start' %}" class="kb-sell">List an item</a>
+                    <a href="{% url 'listings:sell_start' %}" class="kb-sell">Add an item</a>
                     <a href="{% url 'accounts:profile' user.username %}" class="kb-plate-user">
                         <span class="kb-avatar">
                             {% if user.profile.avatar %}<img src="{{ user.profile.avatar.url }}" alt="">
