@@ -1716,6 +1716,47 @@ the pass is built.
   fieldsets were the "unstyled text". The legends (Trade · Where it is ·
   Only you see these) now wear the panel eyebrow voice.
 
+---
+
+## Pass 10d — Fifty states, for real ✅
+
+> **Status 2026-08-28** · 1 commit on `feature/alpha-p4-1` · 769 green ·
+> live sweep: all 50 states active on the map. The owner gathered the
+> full national reference set (50 states · 4,187 units · 545 license
+> classes · 415 addons); reviewed, corrected and applied.
+
+- **County-first everywhere (owner's decision, 2026-08-28).** The
+  gathered data declared modern systems as ten states' primary word
+  (CO=GMU with zero GMU rows, KS/MI=DMU, MN=DPA, MT=HD, ME=WMD,
+  NH/NY/VT=WMU, WY=Hunt Area) and sorted system rows above counties.
+  For a marketplace of 25-plus-year-old artifacts the printed geography
+  is county or nothing, so: all 50 primaries are the county family
+  (Parish for LA, Borough/Census Area for AK), counties sort first, and
+  the GMU/WMD/DMU rows remain selectable below for the late-window
+  items that genuinely carry them. Revisit per-state when unit
+  validity-years land (register).
+- **The county family is one rule** (`ground.COUNTY_FAMILY`): a
+  county-family row with no FIPS shape, in a state whose family has
+  shapes, is not drawable ground — PA's Co. 68 admin code and
+  Virginia's six abolished jurisdictions (Elizabeth City County,
+  Warwick, Norfolk County, Princess Anne, South Norfolk, Nansemond)
+  behave identically: selectable and taggable, never counted, until
+  validity-years exist. Independent City / Parish / Borough / Census
+  Area / City and Borough / Municipality joined County in the check.
+- **Apply mechanics**: DB pre-rename Norfolk → Norfolk City (seeder
+  keys on (state, name)); pipeline regenerated losslessly (50 / 4,187 /
+  1,005 rows); non-clobber seed first — every drifted row accounted for
+  (10 = the relabels, 990 = the resort + slug conventions, 13 = the
+  owner's duck-stamp/HIP year backfills) — then `--overwrite`. FD
+  pseudo-state self-creates in `seed_license_types`, so its absence
+  from the new states.csv is bootstrap-safe. New CSV columns
+  (`first_year_source`, `added_date`, `agency_name_historical`) pass
+  through the pipeline untouched.
+- **Register:** unit validity-years (existing entry) now also carries
+  the historic-jurisdiction case; ~730 addon rows still lack
+  `approx_first_year` (gate suggestions only — fill opportunistically);
+  MT's 306 hunting districts stay `geo_data_complete=False` by design.
+
 **Register additions (14b, deferred not dropped):**
 - `GeographicUnit` has no valid-from/valid-to years, so "19 of 185" in a
   redrawn-boundary state measures against today's map and quietly

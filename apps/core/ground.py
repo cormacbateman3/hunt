@@ -24,12 +24,22 @@ from django.db.models import Count, Max, Min
 from .models import GeographicUnit, State
 
 
+# The county family: unit types that are counties in all but name —
+# parishes, boroughs, independent cities and the rest of the FIPS 6-4
+# county-equivalent world. real_units treats them as one kind.
+COUNTY_FAMILY = ('County', 'Parish', 'Borough', 'Census Area',
+                 'City and Borough', 'Municipality', 'Independent City')
+
+
 def real_units(state):
     """Issuing grounds a collector can actually hold — the honest denominator.
 
-    Excludes the Statewide pseudo-unit always. A county-type row with no
-    FIPS shape is excluded only when the state's other counties HAVE
-    shapes — there it can only be an administrative code (PA's row 68).
+    Excludes the Statewide pseudo-unit always. A county-family row with
+    no FIPS shape is excluded only when the state's other county-family
+    rows HAVE shapes — there it is either an administrative code (PA's
+    row 68) or a jurisdiction abolished before FIPS existed (Virginia's
+    Norfolk County, d. 1963). Both stay selectable and taggable; neither
+    counts as drawable ground until unit validity-years exist (register).
     In a state with no boundary geometry at all, shapeless counties are
     simply counties: 14b says the list and the matrix work normally
     there, so the census must not zero out with the map. Non-county unit
@@ -37,10 +47,10 @@ def real_units(state):
     """
     qs = GeographicUnit.objects.filter(state=state, is_statewide=False)
     counties_have_shapes = (
-        qs.filter(unit_type__iexact='county').exclude(fips_code='').exists()
+        qs.filter(unit_type__in=COUNTY_FAMILY).exclude(fips_code='').exists()
     )
     if counties_have_shapes:
-        return qs.exclude(unit_type__iexact='county', fips_code='')
+        return qs.exclude(unit_type__in=COUNTY_FAMILY, fips_code='')
     return qs
 
 
