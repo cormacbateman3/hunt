@@ -1524,20 +1524,17 @@ def listing_edit(request, pk):
         terms_form = ListingTermsForm(instance=listing, user=request.user)
         image_formset = ListingImageFormSet(instance=listing)
 
-    # On edit the role is a visible choice rather than something the upload
-    # order decided. Reordering is what used to relabel a back as a detail;
-    # now the seller says which is which and the order is only the order.
-    # Only on rows that hold a photograph — a blank add-another row keeps
-    # its quiet default instead of opening with a dropdown.
-    for image_form in image_formset.forms:
-        if image_form.instance.pk:
-            image_form.fields['image_role'].widget = forms.Select(
-                choices=IMAGE_ROLE_CHOICES, attrs={'class': 'kb-select'})
+    # The same slot plan as the add flow — the slots open holding the
+    # lot's photographs. Roles live on the hidden per-row fields the
+    # slots drive; the old visible role dropdowns are gone with the rows.
+    slots_cfg, slot_view = _photo_slots(form, image_formset, {})
 
     context = {
         'form': form,
         'terms_form': terms_form,
         'image_formset': image_formset,
+        'slots_cfg_json': json.dumps(slots_cfg),
+        'slot_view': slot_view,
         'listing': listing,
         'config_listing_type': listing.listing_type,
         'taxonomy_fields': TAXONOMY_FIELDS,

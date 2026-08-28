@@ -1047,6 +1047,42 @@
 /* ── Photograph rows, on the edit forms ─────────────────────────────── */
 /* The roles are settled facts there — a back stays a back — so the rows
    show what each file is instead of re-asking. */
+/* ── Where it stands: the fieldsets (trade, where it is, only-you) ──
+   These classes rendered bare browser fieldsets — the "unstyled text"
+   of the field report. Legends wear the panel eyebrow voice. */
+.kb-fieldset {
+    border: 1px solid var(--kb-rule-soft);
+    border-radius: var(--kb-r-md);
+    background: var(--kb-surface);
+    padding: 14px 16px 16px;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.kb-fieldset-legend {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--kb-brass);
+    padding: 0 4px;
+}
+
+.kb-radio-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.kb-field-note {
+    display: block;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--kb-ink-4);
+}
+
 .if-photo-row {
     border: 1px solid var(--kb-rule);
     border-radius: var(--kb-r-md);

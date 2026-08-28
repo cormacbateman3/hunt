@@ -110,19 +110,32 @@ class OneRecordTests(TermsBase):
         self.assertEqual(source.condition_grade, 'excellent')
 
 
-class EditPhotosSpeakTests(TermsBase):
-    def test_the_panel_meta_is_a_sentence_now(self):
+class EditPhotosAreTheAddFormTests(TermsBase):
+    """"Why not the add an item format we worked on" — no reason. Every
+    editor now wears the same slot plan the add flow does, with the
+    record's photographs already sitting in their slots."""
+
+    def test_the_collection_editor_wears_the_slots(self):
         draft = self._draft('auction')
         source = draft.source_collection_item
         Listing.objects.filter(pk=draft.pk).update(status='expired')
 
         resp = self.client.get(reverse('collections:edit', args=[source.pk]))
+        self.assertContains(resp, 'data-slots-ui')
+        self.assertContains(resp, 'if-slot--front')
         self.assertNotContains(resp, 'travels with the file')
-        self.assertContains(resp, 'the label sticks with the photograph')
-
-        Listing.objects.filter(pk=draft.pk).update(status='active')
-        resp = self.client.get(reverse('listings:edit', args=[draft.pk]))
-        self.assertNotContains(resp, 'travels with the file')
-        self.assertContains(resp, 'Add a photograph')
-        # The raw "Currently: <path>" widget chrome is gone.
         self.assertNotContains(resp, 'Currently:')
+        # And the dead trade-rules paragraph went with it — a piece with
+        # a live lot cannot even reach this form since 10b.
+        self.assertNotContains(resp, 'off the table until the lot closes')
+
+    def test_the_live_editor_wears_the_slots_with_the_front_in_place(self):
+        draft = self._draft('auction')
+        Listing.objects.filter(pk=draft.pk).update(status='active')
+
+        resp = self.client.get(reverse('listings:edit', args=[draft.pk]))
+        self.assertContains(resp, 'data-slots-ui')
+        # The saved front sits in its slot, marked as committed.
+        self.assertContains(resp, 'data-existing="yes"')
+        self.assertNotContains(resp, 'Currently:')
+        self.assertNotContains(resp, 'travels with the file')

@@ -1684,10 +1684,37 @@ the pass is built.
   Blank formset extras stopped shouting DETAIL · NEW with a drop box:
   they read "Add a photograph", and the role dropdown appears only on
   rows that hold one.
-- **Register:** the live-listing editor (`listing_edit`, active lots
-  only now) still uses clean rows rather than the full slot plan —
-  drafts and scheduled get the true slot UI via the step-2 page. Worth
-  folding into the slot plan when the editor next gets a pass.
+- **Register:** ~~the live-listing editor still uses clean rows~~ —
+  cleared same day by Pass 10c below.
+
+---
+
+## Pass 10c — The edit is the add form ✅
+
+> **Status 2026-08-27** · 1 commit on `feature/alpha-p4-1` · 768 green ·
+> live sweep clean. The rest of the same field report: "why not the add
+> an item format we worked on" — no reason, so now it is.
+
+- **The slot plan wears every editor.** `apps.core.slot_plan` was built
+  to hold saved records ("the back slot is the row whose role is back")
+  and the edit views simply never called it. Now the collection editor
+  and the live-listing editor both render the same slot panel as the
+  add flow — photographs already sitting in their slots, marked
+  committed, × ticks the row's DELETE, drag reorders. The listings
+  panel became one shared include (`_photo_slot_panel.html`) used by
+  create, the step-2 revisits and the live editor; the old row layout,
+  its role dropdowns and the up/down arrows are gone. (This also
+  resolves the "auction updated but store didn't" impression — that was
+  scheduled-vs-active taking different doors; both wear slots now.)
+- **The dead trade-rules paragraph is deleted, not tucked away.** Since
+  one-record-one-editor, a piece with a live lot cannot reach the
+  collection form at all — explaining auction-lot and Store behaviour
+  there was describing a state that cannot occur. The comment in
+  `_trade_block.html` records why.
+- **"Where it stands" is styled.** `kb-fieldset`, `kb-fieldset-legend`,
+  `kb-radio-row` and `kb-field-note` had no CSS anywhere — bare browser
+  fieldsets were the "unstyled text". The legends (Trade · Where it is ·
+  Only you see these) now wear the panel eyebrow voice.
 
 **Register additions (14b, deferred not dropped):**
 - `GeographicUnit` has no valid-from/valid-to years, so "19 of 185" in a

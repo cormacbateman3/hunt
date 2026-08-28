@@ -66,72 +66,7 @@ and they were a good part of why the ledger sat below the fold.
         <div class="if-floor">
             {# ── The evidence rail ─────────────────────────────────── #}
             <div class="if-rail">
-                <section class="if-panel if-panel--photos" data-photo-panel>
-                    <div class="if-panel-head">
-                        <span class="if-panel-eyebrow">Photographs</span>
-                        <span class="if-panel-meta" data-photo-count>{{ slot_view.count|default:0 }} of 5</span>
-                    </div>
-                    <div class="if-photos-body">
-                        {% comment %}
-                        A photograph held through a failed submit hangs back in
-                        its slot (data-kept) — the slot showing it *is* the
-                        announcement; there is no notice box. The × on a kept
-                        slot writes the field into #discard-kept so the server
-                        actually lets go of it.
-                        {% endcomment %}
-                        <div class="if-slots" data-slots-ui hidden>
-                        <div class="if-slot-pair">
-                            <div class="if-slot-col">
-                                <button type="button" class="if-slot if-slot--front{% if slot_view.front.thumb %} is-filled{% endif %}" data-slot="front"
-                                        {% if slot_view.front.existing %}data-existing="yes"{% endif %}
-                                        {% if slot_view.front.kept %}data-kept="{{ slot_view.front.kept }}"{% endif %}>
-                                    {% if slot_view.front.thumb %}<img src="{{ slot_view.front.thumb }}" alt="">{% endif %}
-                                    <span class="if-slot-badge">Featured &middot; front</span>
-                                    <span class="if-slot-x" data-slot-x="front" role="button" aria-label="Remove the front photograph">&times;</span>
-                                </button>
-                                <span class="if-slot-cap">The one buyers see first</span>
-                            </div>
-                            <div class="if-slot-col">
-                                <button type="button" class="if-slot{% if slot_view.back.thumb %} is-filled{% endif %}" data-slot="back"
-                                        {% if slot_view.back.existing %}data-existing="yes"{% endif %}
-                                        {% if slot_view.back.kept %}data-kept="{{ slot_view.back.kept }}"{% endif %}>
-                                    {% if slot_view.back.thumb %}<img src="{{ slot_view.back.thumb }}" alt="">{% endif %}
-                                    <span class="if-slot-badge if-slot-badge--back">Back</span>
-                                    <span class="if-slot-x" data-slot-x="back" role="button" aria-label="Remove the back photograph">&times;</span>
-                                </button>
-                                <span class="if-slot-cap">Pin, printing, stamps</span>
-                            </div>
-                        </div>
-                        <div class="if-details-row">
-                            {% for d in slot_view.details %}
-                            <button type="button" class="if-slot if-slot--detail{% if d.thumb %} is-filled{% endif %}" data-slot="detail{{ forloop.counter0 }}"
-                                    {% if d.existing %}data-existing="yes"{% endif %}
-                                    {% if d.kept %}data-kept="{{ d.kept }}"{% endif %}>
-                                {% if d.thumb %}<img src="{{ d.thumb }}" alt="">{% else %}+{% endif %}
-                                <span class="if-slot-x" data-slot-x="detail{{ forloop.counter0 }}" role="button" aria-label="Remove this photograph">&times;</span>
-                            </button>
-                            {% endfor %}
-                        </div>
-                        {% comment %}Turn 6b's line — the Turn-5 fixed-slots copy is retired.{% endcomment %}
-                        <span class="if-photos-note">
-                            Close-ups of a flaw, a maker mark, the pin. Drag to reorder these three.
-                        </span>
-                        </div>
-                        {# The slots stage into these; without JavaScript they are the form. #}
-                        <div class="if-native" id="img-native">
-                            {{ form.featured_image }}
-                            {% if form.featured_image.errors %}<ul class="errorlist">{% for e in form.featured_image.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
-                            {{ image_formset.management_form }}
-                            {% for img_form in image_formset %}
-                                {{ img_form.image }}
-                                {{ img_form.image_role }}
-                                {{ img_form.sort_order }}
-                                {{ img_form.id }}
-                                {% if img_form.DELETE %}{{ img_form.DELETE }}{% endif %}
-                            {% endfor %}
-                        </div>
-                    </div>
-                </section>
+                {% include 'listings/_photo_slot_panel.html' %}
 
                 <section class="if-panel" data-prefill-card hidden>
                     <div class="if-panel-head">

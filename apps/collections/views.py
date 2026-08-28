@@ -477,6 +477,11 @@ def collection_item_edit(request, pk):
         form = CollectionItemForm(instance=item, user=request.user)
         image_formset = CollectionItemImageFormSet(instance=item)
 
+    # The same slot plan as the add flow — the slots open holding the
+    # record's photographs, because the edit is the add form revisited,
+    # not a second, lesser form.
+    slots_cfg, slot_view = photo_slots(image_formset)
+
     return render(request, 'collections/collection_item_form.html', {
         'form': form,
         'image_formset': image_formset,
@@ -484,6 +489,8 @@ def collection_item_edit(request, pk):
         'item': item,
         'taxonomy_fields': TAXONOMY_FIELDS,
         'taxonomy_field_names_json': json.dumps([item[0] for item in TAXONOMY_FIELDS]),
+        'slots_cfg_json': json.dumps(slots_cfg),
+        'slot_view': slot_view,
         'ledger_lines_json': line_bank_json(),
         'suggestion_form': ReferenceDataSuggestionForm(
             initial={'target_model': 'collection_item', 'target_id': item.id, 'suggestion_type': 'new_value'}

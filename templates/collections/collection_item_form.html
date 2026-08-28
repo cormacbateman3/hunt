@@ -61,7 +61,6 @@
         <div class="if-floor">
             {# ── The evidence rail ─────────────────────────────────── #}
             <div class="if-rail">
-                {% if mode == 'create' %}
                 <section class="if-panel if-panel--photos" data-photo-panel>
                     <div class="if-panel-head">
                         <span class="if-panel-eyebrow">Photographs</span>
@@ -118,43 +117,6 @@
                         </div>
                     </div>
                 </section>
-                {% else %}
-                <section class="if-panel">
-                    <div class="if-panel-head">
-                        <span class="if-panel-eyebrow">Photographs</span>
-                        <span class="if-panel-meta">front, back or detail &mdash; the label sticks with the photograph</span>
-                    </div>
-                    <div class="if-photos-body">
-                        {{ image_formset.management_form }}
-                        {% for image_form in image_formset %}
-                            <div class="if-photo-row{% if not image_form.instance.pk %} if-photo-row--new{% endif %}">
-                                {{ image_form.id }}
-                                {{ image_form.sort_order }}
-                                {{ image_form.image_role }}
-                                {% if image_form.instance.image %}
-                                    <img src="{{ image_form.instance.image.url }}" alt="" class="if-row-thumb">
-                                {% else %}
-                                    <span class="if-row-thumb if-row-thumb--empty"></span>
-                                {% endif %}
-                                <div class="if-photo-row-body">
-                                    <span class="if-photo-role">
-                                        {% if image_form.instance.pk %}{{ image_form.instance.get_image_role_display }}{% else %}Add a photograph{% endif %}
-                                    </span>
-                                    {{ image_form.image }}
-                                    {{ image_form.errors }}
-                                </div>
-                                {% if image_form.instance.pk and image_form.DELETE %}
-                                    <label class="if-photo-del">{{ image_form.DELETE }} drop</label>
-                                {% endif %}
-                            </div>
-                        {% endfor %}
-                        <span class="if-photos-note">
-                            Choosing a file on a filled row replaces that
-                            photograph; drop removes it.
-                        </span>
-                    </div>
-                </section>
-                {% endif %}
 
                 <section class="if-panel" data-prefill-card hidden>
                     <div class="if-panel-head">
@@ -434,7 +396,6 @@
 <script src="{% static 'js/item-form.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    {% if mode == 'create' %}
     KBItemForm.init({
         form: '.if-page form[enctype]',
         kind: 'collection',
@@ -442,18 +403,11 @@ document.addEventListener('DOMContentLoaded', () => {
         {% comment %}
         The slot plan is drawn server-side (apps.core.slot_plan) so a
         saved record's rows keep their roles — "the back slot" is the row
-        whose role is back, never just row 1.
+        whose role is back, never just row 1. Edit uses the same plan:
+        the slots open holding the record's photographs.
         {% endcomment %}
         slots: {{ slots_cfg_json|safe }},
     });
-    {% else %}
-    KBItemForm.init({
-        form: '.if-page form[enctype]',
-        kind: 'collection',
-        freshTitle: {% if form.title.value %}false{% else %}true{% endif %},
-        slots: { front: null, back: null, details: [] },
-    });
-    {% endif %}
     {% comment %}
     Material never rides the read — a photograph can't feel card from
     celluloid (4a/4e). It counts in the tally's "for you" instead.
