@@ -49,17 +49,11 @@
     flex-shrink: 0;
 }
 
-/* The 2B mark: die-cut tag, punch hole, 13. Inline SVG so it takes the
-   bar's own colour and the page's Petrona for the number. */
+/* The 2B mark: die-cut tag, punch hole, 13. Sizes live on the SVG's
+   own width/height attributes — CSS never resizes it. */
 .bt-mark {
     display: block;
     flex-shrink: 0;
-}
-
-.kb-brand .bt-mark {
-    width: 21px;
-    height: 29px;
-    color: var(--kb-cream);
 }
 
 /* 2C — the ruled wordmark: the name sits on a brass rule, a line
@@ -701,12 +695,6 @@ body {
     flex-shrink: 0;
 }
 
-.kb-nameplate .bt-mark {
-    width: 30px;
-    height: 41px;
-    color: var(--kb-cream);
-}
-
 .kb-nameplate-word {
     font-family: var(--kb-font-display);
     font-size: 33px;
@@ -720,8 +708,6 @@ body {
 
 .kb-footer .bt-mark {
     display: inline-block;
-    width: 15px;
-    height: 21px;
     color: var(--kb-brass);
     vertical-align: -4px;
     margin-right: 5px;

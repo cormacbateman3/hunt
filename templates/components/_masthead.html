@@ -13,7 +13,7 @@ alone (nav band and stat line collapse).
     <div class="kb-masthead-plate">
         <div class="kb-masthead-inner">
             <a href="{% url 'home' %}" class="kb-nameplate">
-                {% include 'components/_mark.html' %}
+                {% include 'components/_mark.html' with mark_w=24 mark_h=33 mark_card='var(--kb-cream)' mark_ink='var(--kb-forest)' mark_num='var(--kb-forest)' %}
                 <span class="kb-nameplate-word">Backtag</span>
             </a>
 

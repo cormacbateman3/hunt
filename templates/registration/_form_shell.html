@@ -23,14 +23,16 @@ hatched parchment, and there is one thing to do.
     </header>
 
     {% comment %}
-    The full lockup (logo round 2): mark, name and the descriptor line.
-    The EST. line went with the Backtag rename — the mark's own words
-    carry it.
+    The primary lockup (logo round 2, 2B+2C): the filled tag beside the
+    name on its brass rule, the descriptor beneath. Horizontal — the
+    mark sits with the name, never towering over it.
     {% endcomment %}
     <div class="au-plate">
-        {% include 'components/_mark.html' %}
-        <span class="au-name">Backtag</span>
-        <span class="au-est">Collect &middot; Record &middot; Preserve</span>
+        {% include 'components/_mark.html' with mark_w=34 mark_h=46 mark_card='var(--kb-forest)' mark_ink='var(--kb-page)' mark_num='var(--kb-brass)' %}
+        <span class="au-words">
+            <span class="au-name">Backtag</span>
+            <span class="au-est">Collect &middot; Record &middot; Preserve</span>
+        </span>
     </div>
 
     {% block sheets %}{% endblock %}

@@ -32,8 +32,8 @@
 {# ── Band 1 — topbar. Home overrides this with the full 158px masthead. ── #}
 <header class="kb-topbar" id="kb-topbar">
     <div class="kb-band-inner">
+        {# Away from home the bar carries just the name (owner's call). #}
         <a href="{% url 'home' %}" class="kb-brand">
-            {% include 'components/_mark.html' %}
             <span>Backtag</span>
         </a>
 
@@ -140,7 +140,7 @@
 <footer class="kb-footer">
     <div class="kb-footer-inner">
         <div>
-            <p class="kb-footer-brand">{% include 'components/_mark.html' %} Backtag</p>
+            <p class="kb-footer-brand">{% include 'components/_mark.html' with mark_outline=1 mark_w=15 mark_h=20 %} Backtag</p>
             <p class="kb-footer-tag">Antique and vintage hunting licences, bought, sold and traded by the people who collect them.</p>
         </div>
         <div class="kb-footer-col">

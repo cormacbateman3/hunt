@@ -43,23 +43,19 @@
 }
 
 /* ── The nameplate, centred ──────────────────────────────────────────── */
+/* The primary lockup, horizontal (logo round 2): the filled tag beside
+   the name on its brass rule, the descriptor beneath. */
 .au-plate {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 4px;
+    justify-content: center;
+    gap: 14px;
 }
 
-.au-mark {
-    width: 34px;
-    height: 34px;
-    display: block;
-}
-
-.au-plate .bt-mark {
-    width: 34px;
-    height: 46px;
-    color: var(--kb-forest);
+.au-words {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
 }
 
 .au-name {
@@ -68,6 +64,10 @@
     font-weight: 600;
     letter-spacing: -0.015em;
     color: var(--kb-forest);
+    line-height: 1;
+    /* 2C — the name sits on its brass rule. */
+    border-bottom: 2px solid var(--kb-brass);
+    padding-bottom: 6px;
 }
 
 .au-est {
