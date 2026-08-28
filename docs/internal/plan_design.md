@@ -1621,11 +1621,33 @@ survive conversation deletion via SET_NULL.
     via the miles machinery, import-a-spreadsheet). Its "Today's three"
     chip is Pass 15 and its Almanac links are Pass 14 — the band waits
     on neither, just on its own build.
-- **Mobile — six screens, 390pt, 44pt targets** ⬜. Two things happen on a
-  phone: you get a letter and bid, or you're at a show with a licence in
-  your hand. Tabs are Hunt / Mine / Bench / Add. The desk work (matrix,
-  sets, settings rooms, Almanac article, dual rosters) becomes one line:
-  *open this on a computer*.
+- **Mobile — chapter 12, 390pt, 44pt targets** ✅ **done 2026-08-27** ·
+  760 green (5 added). Built as a phone layer over the real pages, not
+  six separate screens:
+  - **The four tabs** (Hunt · Mine · Bench · Add) fixed to the bottom at
+    ≤640px, 52px targets, safe-area padding, Bench wearing the unread
+    count. Members only — a visitor's topbar carries enough. The
+    masthead's "Add an item" hands its job to the tab.
+  - **What the phone drops**: the nine settings rooms and the trade
+    composer's dual rosters hand the whole page to one line — "This is
+    desk work — open it on a computer and it spreads out properly" —
+    and the matrix hands over just its panel (the rest of My collection
+    works fine on a phone). One `_desk_note.html` + `mobile.css` swap;
+    the desktop never sees any of it.
+  - **One column reading as rows**: the card grid flattens to
+    thumb-left rows at phone width; 44px buttons and tap targets;
+    context bands ride sideways instead of wrapping into a wall.
+  - **Register (15b, deferred not dropped):** the camera screen that
+    "justifies an app" (scan → do I own this → what they go for, no
+    account needed) — blocked on Price History (Pass 12) for the
+    comparable figures and on an add-time "you already own one"
+    duplicate check that doesn't exist yet; the photo-prefill half is
+    built. The letter→lot→bid path works today through the responsive
+    lot page; its drawn one-number bid sheet can follow as polish.
+
+**Pass 10 stands** with one carve-out open: the 16a new-member home
+variant (the "this page changes completely" band) — everything else in
+the pass is built.
 
 **Register additions (14b, deferred not dropped):**
 - `GeographicUnit` has no valid-from/valid-to years, so "19 of 185" in a
@@ -2065,3 +2087,24 @@ Need to add a section somewhere on the site for like system information (probabl
 Will also probably need a like help button too - mainly so there is an easy point to submit something to admins. FAQs could possibly go there too.
 
 In messages module. Add option to delete a thread - only deletes for user, system still stores the messages. Or maybe user can just archive.
+
+----
+parking lot:
+
+daily trivia and daily polls are getting parking lot.
+
+----
+Current hunt season dates data:
+
+Greetings — your original plan — is the best use, full stop. "Two weeks till opening day" hitting a PA user at the right moment is worth more than any ticker, because it's personal and ephemeral. This alone justifies the scraper.
+
+1. Seasonal browse surfacing (the sleeper best use). Collector interest is seasonal: when turkey season is three weeks out, turkey stamps get more attention. A small homepage module — "Turkey opens in Maryland in 18 days" → a row of turkey tags and stamps currently listed — is authentic retail logic, not gimmick. It's the same instinct as a hardware store putting shovels out before the snow. Cheap to build too: you already have species/method facets on LicenseType, so it's a filter query keyed to the nearest opener.
+
+2. Auction-timing hint for sellers. This one's unexpected but genuinely practical: an auction ending at 8am on opening morning of rifle season is ending while half its bidders are in a tree stand. One dry line in the listing form when the chosen end date collides with a major opener — "Heads up: this ends opening weekend of PA rifle. Your bidders may be in the woods." — is useful, funny, and shows the site knows its people better than almost anything else could.
+
+3. Empty states and micro-copy. "Quiet in here this week. Rifle opened Monday — everybody's out." Costs nothing, lands exactly in the voice you've built, and turns a dead moment (no results, no messages) into a wink instead of a shrug. You already decided humor lives in low-stakes UI; this is that.
+
+4. Notification/email timing. Instead of arbitrary marketing cadence, key the occasional digest to season moments: "Opening day Saturday — here's what came in from Pennsylvania this month." Same email, better excuse to send it, and the excuse is one your users actually care about.
+
+PA not the default for everything - just choose state.
+The market sort and filter have some bugs.

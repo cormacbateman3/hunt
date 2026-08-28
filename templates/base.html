@@ -23,6 +23,8 @@
     <link rel="stylesheet" href="{% static 'css/kb-ui.css' %}">
 
     {% block extra_css %}{% endblock %}
+    {# Last on purpose: the phone rules override whatever a page loaded. #}
+    <link rel="stylesheet" href="{% static 'css/mobile.css' %}">
 </head>
 <body>
 
@@ -159,6 +161,8 @@
         <p>&copy; {% now "Y" %} KeystoneBid. Sellers set their own terms &mdash; KeystoneBid is never the auctioneer. Only expired licences are tradeable.</p>
     </div>
 </footer>
+
+{% include 'components/_tab_bar.html' %}
 
 <script src="{% static 'js/custom.js' %}"></script>
 {% block extra_js %}{% endblock %}

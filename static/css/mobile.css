@@ -1,0 +1,129 @@
+/* ==========================================================================
+   On a phone — chapter 12 / 15b
+
+   The phone has two jobs: answering a letter at night, and standing at a
+   show with a tag in your hand. Four tabs (Hunt · Mine · Bench · Add),
+   44pt targets, and the desk work — matrix, settings rooms, the trade
+   composer — becomes one honest line instead of a cramped version
+   nobody uses. Everything here fires at 640px and below; the desktop
+   never sees any of it.
+   ========================================================================== */
+
+.kb-tabbar { display: none; }
+.kb-desk-note { display: none; }
+
+@media (max-width: 640px) {
+
+    /* ── The four tabs ──────────────────────────────────────────────── */
+    .kb-tabbar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 60;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        background: var(--kb-surface);
+        border-top: 1px solid var(--kb-rule);
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .kb-tabbar-item {
+        min-height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        font-size: 12.5px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: var(--kb-ink-3);
+        text-decoration: none;
+        border-top: 2px solid transparent;
+        margin-top: -1px;
+    }
+
+    .kb-tabbar-item.is-on {
+        color: var(--kb-forest);
+        border-top-color: var(--kb-forest);
+    }
+
+    .kb-tabbar-badge {
+        min-width: 17px;
+        height: 17px;
+        padding: 0 4px;
+        border-radius: 999px;
+        background: var(--kb-rust);
+        color: #fff;
+        font-size: 10.5px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* The page clears the bar; the Add button in the topbar is the
+       tab's job now. */
+    body { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
+    .kb-sell { display: none; }
+
+    /* ── 44pt targets ───────────────────────────────────────────────── */
+    .kb-btn { min-height: 44px; }
+    .kb-tab,
+    .kb-subtab {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    /* Context bands ride sideways rather than wrapping into a wall. */
+    .kb-context .kb-band-inner {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        white-space: nowrap;
+        scrollbar-width: none;
+    }
+
+    /* ── One column, reading as rows ────────────────────────────────── */
+    .kb-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .kb-card { display: flex; }
+
+    .kb-card-media {
+        width: 112px;
+        flex-shrink: 0;
+        aspect-ratio: 1 / 1;
+    }
+
+    .kb-card-media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .kb-card-body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    /* ── What the phone drops (15b) ─────────────────────────────────── */
+    .kb-desk-note {
+        display: block;
+        margin: var(--kb-7) auto;
+        max-width: 36ch;
+        font-size: 13.5px;
+        line-height: 1.6;
+        color: var(--kb-ink-3);
+        text-align: center;
+    }
+
+    /* The settings rooms and the trade composer hand the whole page to
+       the note; the matrix hands over just its panel (the rest of My
+       collection works fine on a phone). */
+    .kb-settings > *:not(.kb-desk-note),
+    .kb-composer > *:not(.kb-desk-note),
+    .kb-mine .mn-panel { display: none !important; }
+}

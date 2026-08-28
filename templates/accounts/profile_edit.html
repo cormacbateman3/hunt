@@ -20,6 +20,7 @@
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/settings.css' %}">{% endblock %}
 
 {% block content %}
+{% include 'components/_desk_note.html' %}
 {% comment %}
 Six stacked cards on one page become ten named rooms in four groups. The
 grouping is by whose problem it is: Me is how you appear, Hunting is what
