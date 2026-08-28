@@ -1787,6 +1787,50 @@ the pass is built.
 - The owner's 1964 WMD listing repaired to its store form (price,
   floor, offers, trade note, active).
 
+---
+
+## Pass 10f — Backtag ✅ (implementation plan §1–§3)
+
+> **Status 2026-08-28** · 2 commits on `feature/alpha-p4-1` · 792 green
+> (16 added). Tasks 1–3 of `backtag_implementation_plan.md`, plus the
+> rename itself. §4–§7 (greetings, badges, sharing, seasons) remain in
+> that plan, unscheduled here.
+
+- **The name.** KeystoneBid → Backtag in every sentence a member reads
+  (~80 files: templates, letters, admin titles, settings, scripts).
+  Kept deliberately: the `kb-` CSS prefix, the `config` module, the
+  repo name, `__keystonebid_demo__` — identifiers, not language.
+- **The nav (§1).** The Market · Collections · Research · Dashboard.
+  Paths renamed (/market/, /dashboard/, /research/) with the **URL
+  names keeping their old words** so every reverse and sent letter
+  still lands; old paths 301 with query strings preserved. Research
+  opens onto two rooms: **The Field Guide** (the Almanac renamed) and
+  **The Archives** — shell only per the plan, stating the permanent-
+  census idea with a real count and a deliberately disabled search.
+- **The header (§2).** Home masthead: three bars → two (strap, date and
+  EST. line gone; Sign out only in the avatar menu, which already ran
+  Profile → Settings → divider → Sign out). Sticky, condensing on
+  scroll (nav + stat line collapse). `/` and Ctrl/Cmd-K focus search.
+  **Typeahead** via `/api/search/` grouped Listings / Collectors /
+  Counties, keyboard-walkable. **Badge colours split**: red only when
+  action is required (`ACTION_TYPES` = order_paid, auction_won,
+  moderation_urgent), brass for informational. **Dashboard action dot**
+  from a cached `needs_you_count` — something waiting on you, distinct
+  from Alerts.
+- **The hero (§3).** "Nobody collects these to get rich." / the
+  supporting line / *"History isn't going to save itself."* — image
+  placeholder right, `Join the collection` + `Look around first`, the
+  free-to-join fine print.
+- **The mark (logo round 2, owner chose 2B+2C).** The numbered-tag
+  glyph (die-cut card, punch hole, 13-for-1913) as an inline SVG
+  component (`_mark.html`) that inherits each context's colour and the
+  page's Petrona; the nav wordmark sits on a brass rule (2C). Wired:
+  topbar, masthead, footer (brass), auth lockup with COLLECT · RECORD ·
+  PRESERVE, and a geometry-only favicon (the number drops below 24px,
+  the silhouette stays). The full eight-file export set (PNG email
+  header, print master, app tiles) is registered for when assets are
+  cut properly.
+
 **Register additions (14b, deferred not dropped):**
 - `GeographicUnit` has no valid-from/valid-to years, so "19 of 185" in a
   redrawn-boundary state measures against today's map and quietly

@@ -1,0 +1,17 @@
+{% comment %}
+The Backtag mark — direction 2B from the logo round: the object itself,
+a die-cut card with chamfered top corners and one punch hole, carrying
+13 for 1913, the year the licences start. Inline SVG on purpose: it
+inherits the page's Petrona for the number and takes its colour from
+currentColor, so the same include is forest on parchment, cream on
+forest, brass in the footer. The nav pairs it with 2C's ruled wordmark
+(a brass rule under the name — CSS, not markup).
+{% endcomment %}
+<svg class="bt-mark" viewBox="0 0 44 60" role="img" aria-hidden="true" focusable="false">
+    <path d="M 11 2 L 33 2 L 42 11 L 42 53 Q 42 58 37 58 L 7 58 Q 2 58 2 53 L 2 11 Z"
+          fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/>
+    <circle cx="22" cy="12.5" r="4.2" fill="none" stroke="currentColor" stroke-width="2.2"/>
+    <text x="22" y="44" text-anchor="middle"
+          font-family="Petrona, Georgia, serif" font-size="24" font-weight="600"
+          fill="currentColor">13</text>
+</svg>

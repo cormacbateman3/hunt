@@ -22,10 +22,15 @@ hatched parchment, and there is one thing to do.
         <span class="au-strap-alt">{% block alt_prompt %}{% endblock %}</span>
     </header>
 
+    {% comment %}
+    The full lockup (logo round 2): mark, name and the descriptor line.
+    The EST. line went with the Backtag rename — the mark's own words
+    carry it.
+    {% endcomment %}
     <div class="au-plate">
-        <img src="{% static 'img/keystone-mark.svg' %}" alt="" class="au-mark">
+        {% include 'components/_mark.html' %}
         <span class="au-name">Backtag</span>
-        <span class="au-est">Est. 2026 &middot; Pennsylvania</span>
+        <span class="au-est">Collect &middot; Record &middot; Preserve</span>
     </div>
 
     {% block sheets %}{% endblock %}

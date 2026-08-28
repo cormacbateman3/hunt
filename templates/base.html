@@ -33,7 +33,7 @@
 <header class="kb-topbar" id="kb-topbar">
     <div class="kb-band-inner">
         <a href="{% url 'home' %}" class="kb-brand">
-            <img src="{% static 'img/keystone-mark.svg' %}" alt="">
+            {% include 'components/_mark.html' %}
             <span>Backtag</span>
         </a>
 
@@ -84,7 +84,8 @@
                         <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                     </svg>
                     {% if nav_unread_notifications_count %}
-                        <span class="kb-alert-count kb-alert-count--rust">{{ nav_unread_notifications_count }}</span>
+                        {% comment %}Red only when action is required. §2.{% endcomment %}
+                        <span class="kb-alert-count {% if nav_action_count %}kb-alert-count--rust{% else %}kb-alert-count--brass{% endif %}">{{ nav_unread_notifications_count }}</span>
                     {% endif %}
                 </a>
 
@@ -139,7 +140,7 @@
 <footer class="kb-footer">
     <div class="kb-footer-inner">
         <div>
-            <p class="kb-footer-brand">Backtag</p>
+            <p class="kb-footer-brand">{% include 'components/_mark.html' %} Backtag</p>
             <p class="kb-footer-tag">Antique and vintage hunting licences, bought, sold and traded by the people who collect them.</p>
         </div>
         <div class="kb-footer-col">

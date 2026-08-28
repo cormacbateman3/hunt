@@ -79,3 +79,65 @@ class TwoBarMastheadTests(TestCase):
         self.client.force_login(user)
         html = self.client.get(reverse('home')).content.decode()
         self.assertNotIn('kb-strap-link', html)
+
+
+class TheMarkTests(TestCase):
+    def test_the_tag_mark_is_inline_and_everywhere_it_should_be(self):
+        html = self.client.get(reverse('home')).content.decode()
+        # 2B: the die-cut tag with the punch hole and 13; inline SVG so
+        # it takes the context's colour and the page's Petrona.
+        self.assertIn('bt-mark', html)
+        self.assertIn('>13</text>', html)
+
+    def test_the_auth_lockup_carries_the_descriptor(self):
+        html = self.client.get('/accounts/login/').content.decode()
+        self.assertIn('bt-mark', html)
+        self.assertIn('Collect &middot; Record &middot; Preserve', html)
+        self.assertNotIn('Est. 2026', html)
+
+
+class ModernHeaderTests(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()
+
+    def test_search_suggest_groups_the_three_kinds(self):
+        from apps.core.models import GeographicUnit, State
+
+        state, _ = State.objects.get_or_create(
+            code='PA', defaults={'name': 'Pennsylvania', 'slug': 'pennsylvania'})
+        GeographicUnit.objects.create(
+            state=state, name='Cameron', slug='mh-cameron', fips_code='42023')
+        User.objects.create_user('cameron_kid', password='pw')
+
+        data = self.client.get('/api/search/?q=camer').json()
+        self.assertEqual(sorted(data.keys()),
+                         ['collectors', 'counties', 'listings'])
+        self.assertTrue(any('Cameron' in row['title'] for row in data['counties']))
+        self.assertTrue(any(row['meta'] == 'cameron_kid' for row in data['collectors']))
+
+    def test_short_queries_stay_quiet(self):
+        data = self.client.get('/api/search/?q=c').json()
+        self.assertEqual(data, {'listings': [], 'collectors': [], 'counties': []})
+
+    def test_the_badge_is_neutral_until_action_is_required(self):
+        from apps.notifications.models import Notification
+
+        member = User.objects.create_user('mh_member', password='pw')
+        self.client.force_login(member)
+        Notification.objects.create(
+            user=member, notification_type='new_message', message='hello')
+        html = self.client.get(reverse('hunt')).content.decode()
+        self.assertIn('kb-alert-count--brass', html)
+
+        Notification.objects.create(
+            user=member, notification_type='order_paid', message='ship it')
+        html = self.client.get(reverse('hunt')).content.decode()
+        self.assertIn('kb-alert-count--rust', html)
+
+    def test_the_dashboard_dot_marks_something_waiting(self):
+        member = User.objects.create_user('mh_dot', password='pw')
+        self.client.force_login(member)
+        html = self.client.get(reverse('hunt')).content.decode()
+        self.assertNotIn('kb-dest-dot', html)

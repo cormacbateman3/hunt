@@ -413,3 +413,110 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initAuctionLive();
 });
+
+/* ── The header, made modern (implementation plan §2) ───────────────── */
+(function () {
+    'use strict';
+
+    /* Sticky condensed masthead: past the nameplate the nav row and the
+       stat line collapse; search, Mail/Alerts, the gold CTA and the
+       avatar stay in reach. */
+    const masthead = document.getElementById('kb-masthead');
+    if (masthead) {
+        const onScroll = () => {
+            masthead.classList.toggle('is-condensed', window.scrollY > 96);
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        onScroll();
+    }
+
+    /* "/" focuses search from anywhere; ctrl/cmd-K for those feeling
+       modern. Never while already typing somewhere. */
+    const searchInput = () =>
+        document.getElementById('kb-q-home') || document.getElementById('kb-q');
+    document.addEventListener('keydown', (event) => {
+        const el = document.activeElement;
+        const typing = el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.isContentEditable);
+        const cmdK = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k';
+        const slash = event.key === '/' && !typing && !event.ctrlKey && !event.metaKey && !event.altKey;
+        if (slash || cmdK) {
+            const input = searchInput();
+            if (!input) return;
+            event.preventDefault();
+            input.focus();
+            input.select();
+        }
+    });
+
+    /* Typeahead: results grouped Listings / Collectors / Counties, each
+       row a real link. Arrows walk it, Enter goes, Esc closes. */
+    const esc = (s) => String(s).replace(/[&<>"]/g,
+        (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    document.querySelectorAll('#kb-q, #kb-q-home').forEach((input) => {
+        const wrap = input.closest('form');
+        if (!wrap) return;
+        wrap.classList.add('kb-search-anchored');
+        const box = document.createElement('div');
+        box.className = 'kb-suggest';
+        box.hidden = true;
+        wrap.appendChild(box);
+        let timer = null;
+        let items = [];
+        let active = -1;
+
+        const close = () => { box.hidden = true; box.innerHTML = ''; items = []; active = -1; };
+        const render = (data) => {
+            const groups = [['Listings', data.listings],
+                            ['Collectors', data.collectors],
+                            ['Counties', data.counties]];
+            let html = '';
+            items = [];
+            groups.forEach(([label, rows]) => {
+                if (!rows || !rows.length) return;
+                html += '<div class="kb-suggest-group">' + label + '</div>';
+                rows.forEach((row) => {
+                    items.push(row);
+                    html += '<a class="kb-suggest-row" href="' + esc(row.url) + '">'
+                        + '<span>' + esc(row.title) + '</span>'
+                        + (row.meta ? '<small>' + esc(row.meta) + '</small>' : '')
+                        + '</a>';
+                });
+            });
+            if (!html) { close(); return; }
+            box.innerHTML = html;
+            box.hidden = false;
+            active = -1;
+        };
+
+        input.addEventListener('input', () => {
+            clearTimeout(timer);
+            const q = input.value.trim();
+            if (q.length < 2) { close(); return; }
+            timer = setTimeout(async () => {
+                try {
+                    const resp = await fetch('/api/search/?q=' + encodeURIComponent(q));
+                    if (resp.ok) render(await resp.json());
+                } catch (err) { close(); }
+            }, 180);
+        });
+        input.addEventListener('keydown', (event) => {
+            const rows = box.querySelectorAll('.kb-suggest-row');
+            if (box.hidden || !rows.length) return;
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                active += event.key === 'ArrowDown' ? 1 : -1;
+                active = (active + rows.length) % rows.length;
+                rows.forEach((row, i) => row.classList.toggle('is-active', i === active));
+            } else if (event.key === 'Enter' && active >= 0) {
+                event.preventDefault();
+                window.location.href = items[active].url;
+            } else if (event.key === 'Escape') {
+                close();
+            }
+        });
+        document.addEventListener('click', (event) => {
+            if (!wrap.contains(event.target)) close();
+        });
+    });
+})();

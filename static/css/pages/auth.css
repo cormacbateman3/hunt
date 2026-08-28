@@ -56,6 +56,12 @@
     display: block;
 }
 
+.au-plate .bt-mark {
+    width: 34px;
+    height: 46px;
+    color: var(--kb-forest);
+}
+
 .au-name {
     font-family: var(--kb-font-display);
     font-size: 32px;

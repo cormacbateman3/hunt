@@ -13,7 +13,7 @@ alone (nav band and stat line collapse).
     <div class="kb-masthead-plate">
         <div class="kb-masthead-inner">
             <a href="{% url 'home' %}" class="kb-nameplate">
-                <img src="{% static 'img/keystone-mark.svg' %}" alt="">
+                {% include 'components/_mark.html' %}
                 <span class="kb-nameplate-word">Backtag</span>
             </a>
 
@@ -49,7 +49,7 @@ alone (nav band and stat line collapse).
                         </svg>
                         <span>Alerts</span>
                         {% if nav_unread_notifications_count %}
-                            <span class="kb-alert-count kb-alert-count--rust">{{ nav_unread_notifications_count }}</span>
+                            <span class="kb-alert-count {% if nav_action_count %}kb-alert-count--rust{% else %}kb-alert-count--brass{% endif %}">{{ nav_unread_notifications_count }}</span>
                         {% endif %}
                     </a>
                     <span class="kb-plate-rule" aria-hidden="true"></span>

@@ -49,6 +49,21 @@
     flex-shrink: 0;
 }
 
+/* The 2B mark: die-cut tag, punch hole, 13. Inline SVG so it takes the
+   bar's own colour and the page's Petrona for the number. */
+.bt-mark {
+    display: block;
+    flex-shrink: 0;
+}
+
+.kb-brand .bt-mark {
+    width: 21px;
+    height: 29px;
+    color: var(--kb-cream);
+}
+
+/* 2C — the ruled wordmark: the name sits on a brass rule, a line
+   filled in on a form. */
 .kb-brand span {
     font-family: var(--kb-font-display);
     font-size: 21px;
@@ -56,6 +71,8 @@
     letter-spacing: -0.015em;
     color: var(--kb-cream);
     line-height: 1;
+    border-bottom: 2px solid var(--kb-brass);
+    padding-bottom: 3px;
 }
 
 .kb-brand:hover span {
@@ -684,6 +701,12 @@ body {
     flex-shrink: 0;
 }
 
+.kb-nameplate .bt-mark {
+    width: 30px;
+    height: 41px;
+    color: var(--kb-cream);
+}
+
 .kb-nameplate-word {
     font-family: var(--kb-font-display);
     font-size: 33px;
@@ -691,6 +714,17 @@ body {
     letter-spacing: -0.015em;
     line-height: 1;
     color: var(--kb-cream);
+    border-bottom: 2px solid var(--kb-brass);
+    padding-bottom: 4px;
+}
+
+.kb-footer .bt-mark {
+    display: inline-block;
+    width: 15px;
+    height: 21px;
+    color: var(--kb-brass);
+    vertical-align: -4px;
+    margin-right: 5px;
 }
 
 .kb-nameplate-est {
@@ -815,4 +849,76 @@ body {
     .kb-strap-line { display: none; }
     .kb-masthead-inner { padding: 0 var(--kb-4); }
     .kb-plate-alert span:not([class]) { display: none; }
+}
+
+/* ── The header, made modern (implementation plan §2) ───────────────── */
+/* Sticky, and condensed on scroll: nav row and stat line collapse. */
+.kb-masthead {
+    position: sticky;
+    top: 0;
+    z-index: 55;
+}
+
+.kb-masthead.is-condensed .kb-masthead-nav {
+    display: none;
+}
+
+/* The Dashboard action dot: something is waiting on you — distinct
+   from Alerts, which covers things that happened. */
+.kb-dest-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-left: 5px;
+    border-radius: 50%;
+    background: var(--kb-rust);
+    vertical-align: 2px;
+}
+
+/* The typeahead: grouped Listings / Collectors / Counties. */
+.kb-search-anchored { position: relative; }
+
+.kb-suggest {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    min-width: 260px;
+    z-index: 70;
+    background: var(--kb-surface);
+    border: 1px solid var(--kb-rule-strong);
+    border-radius: var(--kb-r-md);
+    box-shadow: var(--kb-shadow-panel);
+    overflow: hidden;
+}
+
+.kb-suggest-group {
+    padding: 8px 12px 4px;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--kb-brass);
+}
+
+.kb-suggest-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 12px;
+    font-size: 13px;
+    color: var(--kb-ink-1);
+    text-decoration: none;
+}
+
+.kb-suggest-row small {
+    color: var(--kb-ink-4);
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+.kb-suggest-row:hover,
+.kb-suggest-row.is-active {
+    background: var(--kb-page);
 }

@@ -228,6 +228,56 @@ def almanac(request):
     return render(request, 'core/almanac.html', {'default_state': states})
 
 
+def search_suggest_api(request):
+    """The header typeahead (implementation plan §2): results grouped by
+    type — Listings / Collectors / Counties — each row a real link. The
+    Archives search will eventually answer through this same box.
+    """
+    from django.contrib.auth.models import User
+
+    from apps.listings.models import Listing
+
+    q = (request.GET.get('q') or '').strip()
+    if len(q) < 2:
+        return JsonResponse({'listings': [], 'collectors': [], 'counties': []})
+
+    listings = [
+        {
+            'title': listing.title,
+            'meta': ' · '.join(filter(None, [
+                listing.county_ref.name if listing.county_ref_id else '',
+                str(listing.license_year or ''),
+            ])),
+            'url': f'/listings/{listing.pk}/',
+        }
+        for listing in Listing.objects.filter(
+            status='active', title__icontains=q)
+        .select_related('county_ref').order_by('-created_at')[:5]
+    ]
+    collectors = [
+        {
+            'title': user.profile.get_display_name() if hasattr(user, 'profile') else user.username,
+            'meta': user.username,
+            'url': f'/accounts/profile/{user.username}/',
+        }
+        for user in User.objects.filter(
+            is_active=True, username__icontains=q)
+        .select_related('profile')[:5]
+    ]
+    counties = [
+        {
+            'title': f'{unit.name}, {unit.state.code}' if unit.state_id else unit.name,
+            'meta': unit.state.issuance_unit_label if unit.state_id else '',
+            'url': f'/market/?state_id={unit.state_id}&county_id={unit.pk}',
+        }
+        for unit in GeographicUnit.objects.filter(
+            name__icontains=q, is_statewide=False)
+        .select_related('state').order_by('sort_order', 'name')[:5]
+    ]
+    return JsonResponse({'listings': listings, 'collectors': collectors,
+                         'counties': counties})
+
+
 def research(request):
     """Research — the section landing over two areas (implementation plan §1).
 
