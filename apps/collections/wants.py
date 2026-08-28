@@ -87,3 +87,36 @@ def rows(user):
     # would trade, then the rest.
     out.sort(key=lambda row: (-row['listed'], -row['traders'], -row['holders']))
     return out
+
+
+def starters(user):
+    """16a: "Most people start with one of these" — ways into a first want.
+
+    Each is a real prefilled link, not a hypothetical: home county when
+    they've said one, the state's first licensing year, and the blank
+    form. The query strings feed ``_wanted_initial_from_query`` on the
+    create view.
+    """
+    from apps.core.models import State
+
+    rows = []
+    profile = getattr(user, 'profile', None) if user.is_authenticated else None
+    home = profile.home_county if profile and profile.home_county_id else None
+    if home is not None and home.state_id:
+        rows.append({
+            'label': f'Anything from {home.name}',
+            'query': f'state_id={home.state_id}&county_id={home.pk}',
+        })
+
+    state = (home.state if home is not None and home.state_id else None) \
+        or State.objects.filter(is_primary_default=True).first()
+    if state and state.min_license_year:
+        unit_word = (state.issuance_unit_label or 'county').lower()
+        rows.append({
+            'label': f'A {state.min_license_year}, any {unit_word}',
+            'query': (f'state_id={state.pk}&year_min={state.min_license_year}'
+                      f'&year_max={state.min_license_year}'),
+        })
+
+    rows.append({'label': 'Write my own', 'query': ''})
+    return rows

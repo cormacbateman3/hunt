@@ -148,7 +148,7 @@ Register: docs/internal/plan_design.md
                                 <span class="mn-want-sub">one closes {{ row.closing.auction_end|date:"l" }}</span>
                             {% endif %}
                         {% else %}
-                            <span class="mn-want-count mn-want-count--quiet">None listed</span>
+                            <span class="mn-want-count mn-want-count--quiet">Nothing listed today</span>
                         {% endif %}
                     </div>
 
@@ -165,10 +165,19 @@ Register: docs/internal/plan_design.md
         </div>
     {% else %}
         <div class="kb-empty">
-            <h2>You haven&rsquo;t said what you&rsquo;re after</h2>
+            <h2>Tell us one thing you&rsquo;re after and you&rsquo;ll stop having to look</h2>
             <p>A want is a standing search. Name a place, a range of years or a type,
                and anything listed against it finds you &mdash; and so do the collectors
                who already own one.</p>
+            {% if want_starters %}
+                <p class="kb-faint">Most people start with one of these</p>
+                <div class="kb-starters">
+                    {% for starter in want_starters %}
+                        <a href="{% url 'collections:wanted_create' %}{% if starter.query %}?{{ starter.query }}{% endif %}"
+                           class="kb-chip">{{ starter.label }}</a>
+                    {% endfor %}
+                </div>
+            {% endif %}
         </div>
     {% endif %}
 
@@ -177,6 +186,23 @@ Register: docs/internal/plan_design.md
     </div>
 
 {% else %}
+    {% if not item_total %}
+        {% comment %}
+        16a — nothing yet: the rail stays hidden until there is something
+        to filter (an empty control is worse than no control), and the
+        sentence names what this page becomes.
+        {% endcomment %}
+        <div class="kb-empty">
+            <h2>{{ max_featured }} of these become your display case</h2>
+            <p>It&rsquo;s the first thing another collector sees when they open
+               your profile &mdash; add an item and the case starts filling from
+               the top. A licence you record here can go up for sale in minutes,
+               because the details carry straight over.</p>
+            <div class="kb-empty-actions">
+                <a href="{% url 'collections:create' %}" class="kb-btn kb-btn--primary">Add your first item</a>
+            </div>
+        </div>
+    {% else %}
     <div class="mn-layout">
         <form method="get" class="mn-rail" aria-label="Narrow it down">
             <div class="kb-between">
@@ -270,15 +296,8 @@ Register: docs/internal/plan_design.md
                 </div>
             {% else %}
                 <div class="kb-empty">
-                    <h2>{% if item_total %}Nothing matches that{% else %}Nothing recorded yet{% endif %}</h2>
-                    <p>
-                        {% if item_total %}
-                            Loosen a filter on the left.
-                        {% else %}
-                            A licence you record here can go up for sale in a few minutes
-                            later, because the details carry straight over.
-                        {% endif %}
-                    </p>
+                    <h2>Nothing matches that</h2>
+                    <p>Loosen a filter on the left.</p>
                     <div class="kb-empty-actions">
                         <a href="{% url 'collections:create' %}" class="kb-btn kb-btn--primary">Add an item</a>
                     </div>
@@ -286,5 +305,6 @@ Register: docs/internal/plan_design.md
             {% endif %}
         </div>
     </div>
+    {% endif %}
 {% endif %}
 {% endblock %}

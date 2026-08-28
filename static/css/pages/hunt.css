@@ -6,6 +6,44 @@
    pickup before spending a click on it.
    ========================================================================== */
 
+/* 16a — nothing matched: each relaxation is one filter let go, wearing
+   its own count. A measured step out, never a guess. */
+.hunt-relax {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: min(360px, 100%);
+    margin: 4px 0 2px;
+}
+
+.hunt-relax-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-md);
+    padding: 9px 14px;
+    font-size: 13px;
+    color: var(--kb-ink-1);
+    text-decoration: none;
+    background: var(--kb-surface);
+}
+
+.hunt-relax-row:hover {
+    border-color: var(--kb-forest);
+}
+
+.hunt-relax-count {
+    color: var(--kb-forest);
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.hunt-come {
+    margin: 6px 0 0;
+}
+
 .kb-hunt {
     max-width: var(--kb-page-max);
     margin: 0 auto;

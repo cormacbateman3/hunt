@@ -455,6 +455,77 @@ class HuntView(BaseListingListView):
             .count()
         )
 
+    def _count_with_query(self, query_string):
+        """Count results as if the request had arrived with this query."""
+        from django.http import QueryDict
+
+        original = self.request.GET
+        try:
+            self.request.GET = QueryDict(query_string, mutable=False)
+            return self.get_queryset().count()
+        finally:
+            self.request.GET = original
+
+    def _relaxations(self, chips):
+        """16a's way out of an over-narrowed search: each relaxation is the
+        same search with one filter let go, carrying its own count — a
+        measured step, never a guess. Rows that free nothing stay unsaid."""
+        rows = []
+        for chip in chips:
+            count = self._count_with_query(chip['url'].lstrip('?'))
+            if count:
+                rows.append({'label': chip['label'], 'url': chip['url'],
+                             'count': count})
+        rows.sort(key=lambda row: row['count'])
+        return rows
+
+    def _come_to_you(self):
+        """"Nine collectors own one; two will trade" — the standing-search
+        pitch, measured against real shelves. Returns None when the active
+        filters carry nothing a want could hold (format-only searches)."""
+        from apps.collections.models import CollectionItem
+        from apps.collections.tradeability import open_to_trade
+
+        params = self.request.GET
+        clause = Q()
+        want_params = []
+        state_id = params.get('state_id', '')
+        if state_id.isdigit():
+            clause &= Q(state_id=state_id)
+            want_params.append(f'state_id={state_id}')
+        county_id = params.get('county_id', '')
+        if county_id.isdigit():
+            clause &= Q(county_id=county_id)
+            want_params.append(f'county_id={county_id}')
+        year_min = params.get('year_min', '')
+        if year_min.isdigit():
+            clause &= Q(license_year__gte=int(year_min))
+            want_params.append(f'year_min={year_min}')
+        year_max = params.get('year_max', '')
+        if year_max.isdigit():
+            clause &= Q(license_year__lte=int(year_max))
+            want_params.append(f'year_max={year_max}')
+        type_id = params.get('license_type_id', '')
+        if type_id.isdigit():
+            clause &= Q(license_types__id=type_id)
+            want_params.append(f'license_type_id={type_id}')
+        if not want_params:
+            return None
+
+        shelves = CollectionItem.objects.filter(
+            is_public=True, disposition='held').filter(clause)
+        if self.request.user.is_authenticated:
+            shelves = shelves.exclude(owner=self.request.user)
+        holders = shelves.values('owner_id').distinct().count()
+        traders = (
+            open_to_trade(shelves).values('owner_id').distinct().count()
+        )
+        return {
+            'holders': holders,
+            'traders': traders,
+            'want_query': '&'.join(want_params),
+        }
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         request = self.request
@@ -487,6 +558,25 @@ class HuntView(BaseListingListView):
 
         context['applied_filters'] = self._applied_filters(context)
         context['hunt_title'] = self._hunt_title(context)
+
+        # 16a — nothing matched: relaxations with counts, and the offer
+        # to let it come to you instead. Only when filters caused the
+        # silence; an unfiltered empty catalog is a different sentence.
+        if not context['result_total'] and context['applied_filters']:
+            context['relaxations'] = self._relaxations(context['applied_filters'])
+            if request.user.is_authenticated:
+                context['come_to_you'] = self._come_to_you()
+
+        # The wanted tab's first-timer chips (16a: "Most people start
+        # with one of these") — only for somebody with no wants at all;
+        # a wanted list that merely matches nothing today needs patience,
+        # not suggestions.
+        if context['current_tab'] == 'wants' and request.user.is_authenticated:
+            from apps.collections.models import WantedItem
+
+            if not WantedItem.objects.filter(user=request.user).exists():
+                from apps.collections import wants as wants_module
+                context['want_starters'] = wants_module.starters(request.user)
 
         # Just closed — the last 24 hours of the Auction House, below the
         # live grid so it never crowds what's still on the clock. Results

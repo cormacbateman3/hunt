@@ -1596,12 +1596,31 @@ survive conversation deletion via SET_NULL.
   - The map's owned lens now counts held pieces only — ground.py's old
     "open question" note replaced by 9i's decision, both surfaces moved
     together.
-- **Empty states — three shapes** ⬜ NEXT. *Nothing yet* (Petrona sentence
-  naming what will be here, one dark button, a real number from the
-  database). *Nothing matched* (filters as removable chips, each
-  relaxation with its own count, then save it as a want). *Nothing left
-  to do* (**green rule** — a reward, not a failure). Two rules: never
-  render an empty control; never use the words empty, none or zero.
+- **Empty states — three shapes** ✅ **done 2026-08-27** · 755 green
+  (8 added). The audit found most blocks already in-voice from earlier
+  passes; what was missing was the machinery:
+  - **Nothing matched (Hunt)**: each relaxation is the same search with
+    one filter let go, wearing its own live count (rows that free
+    nothing stay unsaid); "or keep the search and let it come to you —
+    N collectors own one; M will trade" measured against real held
+    shelves; **Save this as a want** carries the filters into a
+    prefilled want form (`_wanted_initial_from_query`).
+  - **Nothing left to do (Bench)**: the green rule (`kb-empty--clear`),
+    "All clear. Nothing is waiting on you." + what's running (parcels in
+    transit, auctions running) so the quiet reads as earned.
+  - **Nothing yet**: the mine page stops rendering the filter rail over
+    an unrecorded collection ("an empty control is worse than no
+    control") and says "{6} of these become your display case"; the
+    wanted-list empties (Hunt wants tab + mine) offer the 16a starters
+    ("Anything from {home county}" / "A {first year}, any county" /
+    "Write my own"), each a real prefilled link. "None listed" became
+    "Nothing listed today" — the words empty/none/zero stay out of
+    member-facing empty copy (audited all 14 blocks).
+  - **Still open from 16a** ⬜: the new-member HOME variant (county
+    greeting strip, "this page changes completely", collectors near you
+    via the miles machinery, import-a-spreadsheet). Its "Today's three"
+    chip is Pass 15 and its Almanac links are Pass 14 — the band waits
+    on neither, just on its own build.
 - **Mobile — six screens, 390pt, 44pt targets** ⬜. Two things happen on a
   phone: you get a letter and bid, or you're at a show with a licence in
   your hand. Tabs are Hunt / Mine / Bench / Add. The desk work (matrix,

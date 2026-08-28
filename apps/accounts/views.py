@@ -476,12 +476,43 @@ def bench(request):
         'greeting': greeting,
         'needs_you': rows,
         'needs_you_count': len(rows),
+        'all_clear': _all_clear(user) if not rows else None,
         'readiness': user.profile.account_readiness,
         'closing_soon': _closing_in_my_units(user),
         'wanted_matches': _wanted_matches(user),
         'progress': _collection_progress(user),
     }
     return render(request, 'accounts/bench.html', context)
+
+
+def _all_clear(user):
+    """16a — nothing left to do reads as finished, never broken: say what
+    is running on its own so the quiet is clearly earned."""
+    from apps.orders.models import Order
+
+    parcels = Order.objects.filter(
+        Q(buyer=user) | Q(seller=user),
+        status__in=('label_created', 'in_transit'),
+    ).count()
+    auctions = (
+        Listing.objects.filter(
+            status='active', listing_type='auction',
+            auction_end__gt=timezone.now())
+        .filter(Q(seller=user) | Q(bids__bidder=user))
+        .distinct()
+        .count()
+    )
+    bits = []
+    if parcels:
+        bits.append(f'{parcels} parcel{"s are" if parcels != 1 else " is"} in transit')
+    if auctions:
+        bits.append(f'{auctions} auction{"s are" if auctions != 1 else " is"} running')
+    if bits:
+        line = (' and '.join(bits)
+                + '. They need nothing from you today.')
+    else:
+        line = 'When something lands on a clock it appears here first.'
+    return {'parcels': parcels, 'auctions': auctions, 'line': line}
 
 
 def _primary_state(user):

@@ -43,9 +43,14 @@
                 {% endfor %}
             </div>
         {% else %}
-            <div class="kb-empty">
-                <h2>Nothing needs you</h2>
-                <p>No payment due, nothing waiting to be posted, no offer sitting unanswered. When something lands on a clock it appears here first.</p>
+            {% comment %}
+            16a — the green rule, not a grey apology: this is the state a
+            good week ends in, and it should feel like one. What's running
+            on its own is named so the quiet reads as earned.
+            {% endcomment %}
+            <div class="kb-empty kb-empty--clear">
+                <h2>All clear. Nothing is waiting on you.</h2>
+                <p>{{ all_clear.line }}</p>
                 <div class="kb-empty-actions">
                     <a href="{% url 'hunt' %}" class="kb-btn kb-btn--primary">Go hunting</a>
                     <a href="{% url 'listings:sell_start' %}" class="kb-btn kb-btn--secondary">Sell an item</a>

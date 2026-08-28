@@ -153,6 +153,7 @@ def my_collection(request):
     # and what you have asked for. They are one page because they answer one
     # question between them.
     view = request.GET.get('view', 'items')
+    want_total = WantedItem.objects.filter(user=request.user).count()
 
     return render(request, 'collections/my_collection.html', {
         'view': view,
@@ -164,7 +165,9 @@ def my_collection(request):
         'ground': ground_covered(request.user, public_only=False),
         'matrix': tracker_matrix(request.user) if view == 'matrix' else None,
         'want_rows': wants.rows(request.user) if view == 'wants' else None,
-        'want_total': WantedItem.objects.filter(user=request.user).count(),
+        'want_total': want_total,
+        'want_starters': (wants.starters(request.user)
+                          if view == 'wants' and not want_total else None),
         'featured_items': featured_items,
         'featured_ids': featured_ids,
         'featured_count': featured_count,
@@ -481,6 +484,23 @@ def collection_item_delete(request, pk):
     return render(request, 'collections/collection_item_delete.html', {'item': item})
 
 
+def _wanted_initial_from_query(params):
+    """A want prefilled from wherever you were standing — the Hunt page's
+    "Save this as a want" and the starter chips carry their filters here
+    (16a: the form opens already saying what you meant)."""
+    initial = {}
+    for field, param in (('state', 'state_id'), ('county', 'county_id'),
+                         ('license_type', 'license_type_id')):
+        value = params.get(param, '')
+        if value.isdigit():
+            initial[field] = int(value)
+    for field in ('year_min', 'year_max'):
+        value = params.get(field, '')
+        if value.isdigit():
+            initial[field] = int(value)
+    return initial
+
+
 @login_required
 def wanted_item_create(request):
     if request.method == 'POST':
@@ -492,7 +512,7 @@ def wanted_item_create(request):
             messages.success(request, 'Wanted item added.')
             return redirect('collections:my_collection')
     else:
-        form = WantedItemForm()
+        form = WantedItemForm(initial=_wanted_initial_from_query(request.GET))
     return render(request, 'collections/wanted_item_form.html', {
         'form': form,
         'mode': 'create',
