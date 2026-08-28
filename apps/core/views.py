@@ -228,6 +228,39 @@ def almanac(request):
     return render(request, 'core/almanac.html', {'default_state': states})
 
 
+def research(request):
+    """Research — the section landing over two areas (implementation plan §1).
+
+    The Field Guide is the reference wiki (the Almanac content under its
+    new name); the Archives is the permanent census of public items —
+    shell only this pass, real index later.
+    """
+    from apps.collections.models import CollectionItem
+
+    return render(request, 'core/research.html', {
+        'kb_zone': 'almanac',
+        'public_item_count': CollectionItem.objects.filter(
+            is_public=True).count(),
+        'state_count': State.objects.exclude(code='FD').count(),
+    })
+
+
+def archives(request):
+    """The Archives — a searchable record of every public item, past and
+    present: a permanent census of what survives, not a browse of what's
+    for sale. Shell only this pass (plan §1: "Just create shell") — the
+    page says plainly what it will be, with real numbers so it isn't
+    hypothetical. The search box ships disabled rather than pretending.
+    """
+    from apps.collections.models import CollectionItem
+
+    return render(request, 'core/archives.html', {
+        'kb_zone': 'almanac',
+        'public_item_count': CollectionItem.objects.filter(
+            is_public=True).count(),
+    })
+
+
 def home(request):
     """The home page.
 

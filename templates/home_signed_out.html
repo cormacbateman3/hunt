@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}KeystoneBid &middot; Antique Hunting Licenses, Bought, Sold and Traded{% endblock %}
+{% block title %}Backtag &middot; Antique Hunting Licenses, Bought, Sold and Traded{% endblock %}
 
 {% block masthead %}{% include 'components/_masthead.html' %}{% endblock %}
 
@@ -16,37 +16,45 @@ greeting removed. A stranger needs telling what this is; a member needs
 telling what changed.
 {% endcomment %}
 
+{% comment %}
+Implementation plan §3 — three lines, headline / supporting / closer,
+with the hero image placeholder on the right where the plan draws it.
+{% endcomment %}
 <section class="hm-hero">
     <div class="hm-hero-copy">
-        <span class="kb-eyebrow kb-eyebrow--brass">Est. 2026 &middot; Pennsylvania</span>
-        <h1 class="hm-hero-title">A licence is a cheap thing to own, and the only one your grandfather carried.</h1>
+        <h1 class="hm-hero-title">Nobody collects these to get rich.</h1>
         <p class="hm-hero-lede">
-            Antique and vintage hunting licences, bought, sold and traded by the people
-            who collect them. Sellers set their own terms &mdash; we are never the
-            auctioneer. Only expired licences change hands here.
+            Buy, sell, and trade with people who know what they&rsquo;re looking
+            at, and keep building the collection only you&rsquo;re chasing.
         </p>
+        <p class="hm-hero-closer">History isn&rsquo;t going to save itself.</p>
         <div class="kb-inline hm-hero-actions">
-            <a href="{% url 'accounts:register' %}" class="kb-btn kb-btn--gold kb-btn--lg">Join the community</a>
+            <a href="{% url 'accounts:register' %}" class="kb-btn kb-btn--gold kb-btn--lg">Join the collection</a>
             <a href="{% url 'hunt' %}" class="kb-btn kb-btn--secondary kb-btn--lg">Look around first</a>
         </div>
         <p class="hm-hero-fine">Free to join, to browse and to trade. Sellers pay a commission when something sells.</p>
     </div>
 
-    <div class="hm-hero-stats">
-        <div class="hm-stat">
-            <span class="hm-stat-figure">{{ stat_listings }}</span>
-            <span class="hm-stat-label">licence{{ stat_listings|pluralize }} listed</span>
-        </div>
-        <div class="hm-stat">
-            <span class="hm-stat-figure">{{ stat_units }}</span>
-            <span class="hm-stat-label">count{{ stat_units|pluralize:"y,ies" }} represented</span>
-        </div>
-        <div class="hm-stat">
-            <span class="hm-stat-figure">{{ stat_collectors }}</span>
-            <span class="hm-stat-label">collector{{ stat_collectors|pluralize }}</span>
-        </div>
+    <div class="hm-hero-art" aria-hidden="true">
+        {% comment %}Placeholder until the hero photograph exists.{% endcomment %}
+        <span class="hm-hero-plate"></span>
     </div>
 </section>
+
+<div class="hm-hero-stats hm-hero-stats--band">
+    <div class="hm-stat">
+        <span class="hm-stat-figure">{{ stat_listings }}</span>
+        <span class="hm-stat-label">licence{{ stat_listings|pluralize }} listed</span>
+    </div>
+    <div class="hm-stat">
+        <span class="hm-stat-figure">{{ stat_units }}</span>
+        <span class="hm-stat-label">count{{ stat_units|pluralize:"y,ies" }} represented</span>
+    </div>
+    <div class="hm-stat">
+        <span class="hm-stat-figure">{{ stat_collectors }}</span>
+        <span class="hm-stat-label">collector{{ stat_collectors|pluralize }}</span>
+    </div>
+</div>
 
 <div class="hm-markets">
     {% for m in marketplaces %}

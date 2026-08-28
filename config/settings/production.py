@@ -1,5 +1,5 @@
 """
-Django production settings for KeystoneBid project.
+Django production settings for Backtag project.
 """
 
 from .base import *

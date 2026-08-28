@@ -7,12 +7,12 @@ there, they arrive from a letter. Signed out, the topbar carries enough.
 {% if user.is_authenticated %}
 <nav class="kb-tabbar" aria-label="Primary">
     <a href="{% url 'hunt' %}"
-       class="kb-tabbar-item{% if kb_zone == 'hunt' %} is-on{% endif %}">Hunt</a>
+       class="kb-tabbar-item{% if kb_zone == 'hunt' %} is-on{% endif %}">Market</a>
     <a href="{% url 'collections:my_collection' %}"
        class="kb-tabbar-item{% if '/collections/my' in request.path %} is-on{% endif %}">Mine</a>
     <a href="{% url 'bench' %}"
        class="kb-tabbar-item{% if kb_zone == 'bench' and '/collections/my' not in request.path %} is-on{% endif %}">
-        Bench
+        Dashboard
         {% if nav_unread_notifications_count %}
             <span class="kb-tabbar-badge">{{ nav_unread_notifications_count }}</span>
         {% endif %}

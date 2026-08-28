@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}The Archives &middot; Backtag{% endblock %}
+
+{% block content %}
+{% comment %}
+Shell only, per the implementation plan ("Just create shell in this
+pass"): the page says plainly what it will be, with the real count so
+it isn't hypothetical, and the search ships disabled rather than
+pretending to work. The real index — search returning a table of
+state / county / year / type / serial-where-public rows linking to
+item pages — comes when the census work lands; it will run through
+the header search as well.
+{% endcomment %}
+<div class="ar-intro">
+    <span class="kb-eyebrow kb-eyebrow--brass">Research &rsaquo; The Archives</span>
+    <h1 class="kb-page-title">A permanent census of what survives.</h1>
+    <p class="kb-page-lede">
+        Every public item on the site enters this record and stays &mdash; sold,
+        traded or still on a shelf. Not a store window: a register. When the
+        search opens you&rsquo;ll ask it for a state, a county, a year or a type
+        and get back the table of what exists, each row a door to the item.
+    </p>
+</div>
+
+<div class="kb-panel ar-soon">
+    <span class="kb-eyebrow">The record is already filling</span>
+    <p class="ar-soon-copy">
+        {{ public_item_count }} item{{ public_item_count|pluralize }} on public
+        record today. Anything a collector sets public joins the census, and
+        the record keeps it after the sale &mdash; the point is what survives,
+        not what&rsquo;s for sale.
+    </p>
+    <p class="ar-soon-copy">
+        The search itself isn&rsquo;t open yet &mdash; it arrives with the census
+        build, and it will answer from the header search box too.
+    </p>
+</div>
+
+<div class="ar-search" aria-hidden="true">
+    <input type="search" class="kb-input" disabled
+           placeholder="A state, a county, a year, a serial&hellip;">
+    <button type="button" class="kb-btn kb-btn--secondary" disabled>Search the record</button>
+</div>
+
+<div class="kb-empty-actions ar-actions">
+    <a href="{% url 'research' %}" class="kb-btn kb-btn--secondary">Back to Research</a>
+    <a href="{% url 'collectors' %}" class="kb-btn kb-btn--primary">Browse the collections</a>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .ar-intro { max-width: 810px; display: flex; flex-direction: column; gap: 10px; }
+    .ar-soon { margin: var(--kb-6) 0; max-width: 810px; display: flex; flex-direction: column; gap: 10px; border-left: 3px solid var(--kb-brass); }
+    .ar-soon-copy { margin: 0; font: var(--kb-text-body-sm); color: var(--kb-ink-2); }
+    .ar-search { display: flex; gap: 10px; max-width: 560px; margin-bottom: var(--kb-5); opacity: 0.55; }
+    .ar-search .kb-input { flex: 1; }
+    .ar-actions { justify-content: flex-start; }
+</style>
+{% endblock %}

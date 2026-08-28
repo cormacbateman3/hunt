@@ -1,4 +1,4 @@
-/* KeystoneBid item form — the evidence rail and the work column.
+/* Backtag item form — the evidence rail and the work column.
  *
  * Three jobs, all drawn on turns 5b/6b:
  *   1. Named photograph slots. Front and back are fixed slots, so reordering

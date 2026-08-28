@@ -1,5 +1,5 @@
 """
-Django base settings for KeystoneBid project.
+Django base settings for Backtag project.
 This file contains settings common to all environments.
 """
 
@@ -26,7 +26,7 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'django.contrib.staticfiles',
 
-    # KeystoneBid apps
+    # Backtag apps
     'apps.core',
     'apps.accounts',
     'apps.listings',

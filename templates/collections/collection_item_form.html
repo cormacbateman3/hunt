@@ -2,7 +2,7 @@
 {% load core_tags %}
 {% load static %}
 
-{% block title %}{% if mode == 'create' %}Add an item{% else %}Edit — {{ item.title }}{% endif %} | KeystoneBid{% endblock %}
+{% block title %}{% if mode == 'create' %}Add an item{% else %}Edit — {{ item.title }}{% endif %} | Backtag{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/pages/item-form.css' %}">
@@ -13,7 +13,7 @@
 {% if mode == 'create' %}
 <nav class="kb-crumbs" aria-label="Breadcrumb">
     <div class="kb-band-inner">
-        <a href="{% url 'bench' %}">My Bench</a>
+        <a href="{% url 'bench' %}">Dashboard</a>
         <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
         <a href="{% url 'listings:sell_start' %}">Add an item</a>
         <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>

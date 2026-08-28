@@ -55,7 +55,7 @@ def register(request):
                 'user': user,
                 'verification_url': verification_url,
             }
-            subject = 'Verify your KeystoneBid account'
+            subject = 'Verify your Backtag account'
             text_body = render_to_string(
                 'accounts/emails/verify_email.txt',
                 email_context,
@@ -676,7 +676,7 @@ def resend_verification_email(request):
     )
     email_context = {'user': request.user, 'verification_url': verification_url}
     send_mail(
-        subject='Verify your KeystoneBid account',
+        subject='Verify your Backtag account',
         message=render_to_string('accounts/emails/verify_email.txt', email_context),
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[request.user.email],

@@ -63,7 +63,7 @@ class Address(models.Model):
 
 class UserProfile(models.Model):
     """
-    Extended user profile for KeystoneBid collectors.
+    Extended user profile for Backtag collectors.
     Extends Django's built-in User model via OneToOne relationship.
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')

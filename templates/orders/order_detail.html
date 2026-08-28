@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ order.listing.title }} &middot; Order &middot; KeystoneBid{% endblock %}
+{% block title %}{{ order.listing.title }} &middot; Order &middot; Backtag{% endblock %}
 
 {% block context_band %}
 <nav class="kb-crumbs" aria-label="Breadcrumb">
     <div class="kb-band-inner">
-        <a href="{% url 'bench' %}">My Bench</a>
+        <a href="{% url 'bench' %}">Dashboard</a>
         <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
         <a href="{% url 'orders:my_orders' %}">Orders</a>
         <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>

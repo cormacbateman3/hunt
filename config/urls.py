@@ -1,10 +1,11 @@
 """
-KeystoneBid URL Configuration
+Backtag URL Configuration
 """
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic import RedirectView
 
 
 from apps.accounts import views as account_views
@@ -16,14 +17,30 @@ urlpatterns = [
     # Admin
     path('admin/', admin.site.urls),
 
-    # The four zones. Each has a job: Hunt is one catalog, Collections is
-    # people and what they own, My Bench is your workspace, The Almanac is
-    # what the community knows. Top-level, because they are the navigation.
-    path('hunt/', listing_views.HuntView.as_view(), name='hunt'),
-    path('hunt/map/', listing_views.hunt_map, name='hunt_map'),
+    # The four zones. Each has a job: The Market is one catalog,
+    # Collections is people and what they own, Research is what the
+    # community knows, the Dashboard is your workspace. Top-level,
+    # because they are the navigation. The URL *names* keep their old
+    # words on purpose — hundreds of reverses and letters point at them;
+    # only the paths people see changed with the Backtag rename.
+    path('market/', listing_views.HuntView.as_view(), name='hunt'),
+    path('market/map/', listing_views.hunt_map, name='hunt_map'),
     path('collections/', collection_views.collections_zone, name='collectors'),
-    path('bench/', account_views.bench, name='bench'),
-    path('almanac/', core_views.almanac, name='almanac'),
+    path('dashboard/', account_views.bench, name='bench'),
+    path('research/', core_views.research, name='research'),
+    path('research/field-guide/', core_views.almanac, name='almanac'),
+    path('research/archives/', core_views.archives, name='archives'),
+
+    # The old paths keep working forever — bookmarks, letters already
+    # sent, and muscle memory all land where they meant to.
+    path('hunt/', RedirectView.as_view(pattern_name='hunt', permanent=True,
+                                       query_string=True)),
+    path('hunt/map/', RedirectView.as_view(pattern_name='hunt_map',
+                                           permanent=True, query_string=True)),
+    path('bench/', RedirectView.as_view(pattern_name='bench', permanent=True,
+                                        query_string=True)),
+    path('almanac/', RedirectView.as_view(pattern_name='almanac',
+                                          permanent=True, query_string=True)),
 
     # App URLs
     path('accounts/', include('apps.accounts.urls')),
@@ -52,6 +69,6 @@ if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 
 # Customize admin site
-admin.site.site_header = "KeystoneBid Administration"
-admin.site.site_title = "KeystoneBid Admin"
-admin.site.index_title = "Welcome to KeystoneBid Administration"
+admin.site.site_header = "Backtag Administration"
+admin.site.site_title = "Backtag Admin"
+admin.site.index_title = "Welcome to Backtag Administration"

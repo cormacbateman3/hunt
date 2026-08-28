@@ -1,5 +1,5 @@
 """
-WSGI config for KeystoneBid project.
+WSGI config for Backtag project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 

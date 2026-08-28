@@ -59,7 +59,10 @@ class HomeTests(TestCase):
         """158px on home, compressed to 56px everywhere else (2a)."""
         home = self.client.get(reverse('home')).content.decode()
         self.assertIn('kb-masthead', home)
-        self.assertIn('Est. 2026', home)
+        # Two bars now (implementation plan §2): the utility strip and
+        # the EST. sub-line are gone; the nameplate stands alone.
+        self.assertNotIn('kb-masthead-strap', home)
+        self.assertNotIn('Est. 2026', home)
 
         hunt = self.client.get(reverse('hunt')).content.decode()
         self.assertNotIn('kb-masthead', hunt)

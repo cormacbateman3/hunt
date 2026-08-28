@@ -1,4 +1,4 @@
-// Vanilla JavaScript utilities for KeystoneBid.
+// Vanilla JavaScript utilities for Backtag.
 
 function fadeOutMessages() {
     const messages = document.querySelectorAll('[role="alert"]');

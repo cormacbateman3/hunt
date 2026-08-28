@@ -108,7 +108,7 @@ class TradeLifecycleTests(DispositionBase):
 
 
 class SaleLifecycleTests(DispositionBase):
-    """The missing half of 8b: a KeystoneBid sale writes the departure the
+    """The missing half of 8b: a Backtag sale writes the departure the
     moment the money lands, and a refund hands the piece back. Before
     this, a sold piece sat in its seller's collection forever — on the
     profile, in the runs, offered to want-matchers."""

@@ -1,7 +1,7 @@
 """The sale writes the departure — the missing half of Pass 8b.
 
 Trades already record their departures (``_close_traded_pieces`` stamps
-``disposition='traded'`` on delivery), but a piece SOLD on KeystoneBid
+``disposition='traded'`` on delivery), but a piece SOLD on Backtag
 kept sitting in its seller's collection forever: still on the profile,
 still counted in runs, still offered to trade matchers. These two hooks
 are the sale lifecycle's pen:

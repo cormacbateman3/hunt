@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{% if conversation.is_group %}{{ conversation.name }}{% else %}{{ other.profile.get_display_name }}{% endif %} &middot; Messages &middot; KeystoneBid{% endblock %}
+{% block title %}{% if conversation.is_group %}{{ conversation.name }}{% else %}{{ other.profile.get_display_name }}{% endif %} &middot; Messages &middot; Backtag{% endblock %}
 
 {% block context_band %}{% include 'components/_bench_tabs.html' %}{% endblock %}
 

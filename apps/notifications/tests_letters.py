@@ -293,7 +293,7 @@ class TheSentMailTests(LetterBase):
         self.assertTrue(send_notification_email(note))
 
         sent = mail.outbox[0]
-        self.assertNotIn('[KeystoneBid]', sent.subject)
+        self.assertNotIn('[Backtag]', sent.subject)
         self.assertIn('1921 Sullivan resident button', sent.subject)
 
     def test_it_goes_out_as_georgia_html_and_readable_plain_text(self):

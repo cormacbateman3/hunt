@@ -375,12 +375,39 @@
 
 .hm-hero {
     display: grid;
-    grid-template-columns: 1fr 300px;
+    grid-template-columns: 1fr 380px;
     gap: var(--kb-8);
     align-items: center;
     padding: var(--kb-8) 0 var(--kb-7);
     border-bottom: 2px solid var(--kb-forest);
     margin-bottom: var(--kb-7);
+}
+
+/* §3 — the closer line, the image placeholder, the stat band. */
+.hm-hero-closer {
+    margin: 2px 0 0;
+    font: italic 500 17px/1.4 var(--kb-font-display);
+    color: var(--kb-ink-2);
+}
+
+.hm-hero-art {
+    align-self: stretch;
+    display: flex;
+}
+
+.hm-hero-plate {
+    flex: 1;
+    min-height: 240px;
+    background: var(--kb-hatch);
+    border: 1px solid var(--kb-rule);
+    border-radius: var(--kb-r-lg);
+}
+
+.hm-hero-stats--band {
+    display: flex;
+    gap: var(--kb-7);
+    padding: var(--kb-4) 0;
+    border-bottom: 1px solid var(--kb-rule);
 }
 
 .hm-hero-copy {
