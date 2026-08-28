@@ -12,9 +12,23 @@
 <div class="if-page">
     <div class="if-head">
         <h1>Edit the entry</h1>
+        {% comment %}
+        The lede says which mode this is. Drafts and scheduled lots edit
+        on the step pages with the full run of choices; this page exists
+        because a LIVE listing is a different animal — offers may be open
+        under its terms and an auction clock never resets — so edits here
+        save quietly, without re-publishing. Twice the owner read the two
+        modes as "two different processes"; the page now says the rule.
+        {% endcomment %}
         <p class="if-lede">
-            An edit is not a different decision from the one that made the listing,
-            so it works the same way the listing was made.
+            {% if listing.listing_type == 'auction' %}
+                This lot is live &mdash; bids stand and the clock never resets.
+                Everything here saves quietly, without re-opening anything.
+            {% else %}
+                It&rsquo;s up in the Store now, so edits save quietly &mdash; change
+                the price or the terms whenever; offers already open keep the
+                terms they were made under.
+            {% endif %}
         </p>
     </div>
 
