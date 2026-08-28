@@ -1757,6 +1757,36 @@ the pass is built.
   `approx_first_year` (gate suggestions only — fill opportunistically);
   MT's 306 hunting districts stay `geo_data_complete=False` by design.
 
+---
+
+## Pass 10e — The marketplace is a fact ✅
+
+> **Status 2026-08-28** · 1 commit on `feature/alpha-p4-1` · 776 green
+> (7 added). The field report's "major logic flaw": the live editor's
+> quiet Where-it's-listed dropdown turned a Store listing into an
+> auction with no clock and no starting price — the terms save cleared
+> the store fields, nothing set auction terms, and the lazy closer
+> swept the wreck as "ended, $None".
+
+- **The type is locked on the live editor** (`_lock_marketplace`):
+  disabled at the form level so no POST can flip it, and rendered as a
+  static fact ("The General Store · move it") instead of a control.
+  The "Started from" box is gone — the shelf link is structural
+  (one record, one editor) and told a seller nothing.
+- **Moving is a deliberate act now, both directions** (`listings:move`):
+  off the market first, terms second. The listing returns to draft on
+  the bench, the terms page asks the NEW marketplace's questions, and
+  its foot button is the only thing that opens it again (fresh clock,
+  cross-type fields cleared properly by the publish path). Guards:
+  active listings only; **a lot with bids cannot move — bids stand**;
+  pending offers are declined with a letter to their senders rather
+  than left dangling.
+- **"$None" can't print**: the detail's current-bid figure defaults
+  a null price to 0.00 (the state is unreachable now, but the template
+  stops lying if data ever wounds a listing again).
+- The owner's 1964 WMD listing repaired to its store form (price,
+  floor, offers, trade note, active).
+
 **Register additions (14b, deferred not dropped):**
 - `GeographicUnit` has no valid-from/valid-to years, so "19 of 185" in a
   redrawn-boundary state measures against today's map and quietly

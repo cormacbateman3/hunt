@@ -1493,6 +1493,63 @@ def listing_terms(request, pk):
     })
 
 
+def _lock_marketplace(form):
+    """A live listing's marketplace is a fact, not a field.
+
+    The quiet dropdown was the trap that made a Store listing an
+    auction with no clock and no starting price — the terms save then
+    cleared the store fields, and the lazy closer swept the wreck as
+    ended. Disabled fields ignore posted data; moving marketplaces is
+    the deliberate act on listing_move, which goes back through the
+    terms page where the new terms actually get set.
+    """
+    form.fields['listing_type'].disabled = True
+
+
+@login_required
+def listing_move(request, pk):
+    """Move a live listing between the Store and the Auction House.
+
+    Off the market first, then the terms: the listing returns to draft
+    on your bench, the terms page asks the new marketplace's questions,
+    and nothing is public again until its foot button opens it. Bids
+    stand, so a lot with bids cannot move; pending offers are declined
+    with a letter to their senders rather than left dangling against a
+    listing that no longer exists in that form.
+    """
+    listing = get_object_or_404(Listing, pk=pk, seller=request.user)
+    if request.method != 'POST':
+        return redirect('listings:edit', pk=pk)
+    move_to = request.POST.get('move_to')
+    if move_to not in ('auction', 'buy_now') or move_to == listing.listing_type:
+        return redirect('listings:edit', pk=pk)
+    if listing.status != 'active':
+        messages.error(request, 'Only a live listing can move.')
+        return redirect('listings:detail', pk=pk)
+    if listing.listing_type == 'auction' and listing.bids.exists():
+        messages.error(request, 'This lot has bids, and bids stand — it cannot move.')
+        return redirect('listings:edit', pk=pk)
+
+    from apps.offers.models import Offer
+    from apps.offers.services import decline_offer
+
+    for offer in Offer.objects.filter(listing=listing, status='pending'):
+        decline_offer(offer, request.user)
+
+    listing.listing_type = move_to
+    listing.status = 'draft'
+    listing.auction_end = None
+    listing.scheduled_at = None
+    listing.save(update_fields=['listing_type', 'status', 'auction_end',
+                                'scheduled_at', 'updated_at'])
+    destination = sell_flow.BY_KEY[move_to]['name']
+    messages.success(
+        request,
+        f'Off the market and back on your bench. Set the terms and '
+        f'{destination} opens it when you are ready.')
+    return redirect('listings:terms', pk=listing.pk)
+
+
 @login_required
 def listing_edit(request, pk):
     """Edit an existing listing (owner only)"""
@@ -1507,6 +1564,7 @@ def listing_edit(request, pk):
         form = ListingForm(request.POST, request.FILES, instance=listing, user=request.user)
         terms_form = ListingTermsForm(request.POST, instance=listing, user=request.user)
         image_formset = ListingImageFormSet(request.POST, request.FILES, instance=listing)
+        _lock_marketplace(form)
 
         if form.is_valid() and terms_form.is_valid() and image_formset.is_valid():
             form.save()
@@ -1523,6 +1581,7 @@ def listing_edit(request, pk):
         form = ListingForm(instance=listing, user=request.user)
         terms_form = ListingTermsForm(instance=listing, user=request.user)
         image_formset = ListingImageFormSet(instance=listing)
+        _lock_marketplace(form)
 
     # The same slot plan as the add flow — the slots open holding the
     # lot's photographs. Roles live on the hidden per-row fields the

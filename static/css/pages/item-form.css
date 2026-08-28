@@ -1047,6 +1047,25 @@
 /* ── Photograph rows, on the edit forms ─────────────────────────────── */
 /* The roles are settled facts there — a back stays a back — so the rows
    show what each file is instead of re-asking. */
+/* The marketplace as a fact, and the move panel beneath the form. */
+.if-static {
+    margin: 0;
+    padding: 9px 0;
+    font-size: 14px;
+    color: var(--kb-ink-1);
+}
+
+.if-static a {
+    color: var(--kb-brass);
+}
+
+.if-move {
+    margin-top: var(--kb-4);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
 /* ── Where it stands: the fieldsets (trade, where it is, only-you) ──
    These classes rendered bare browser fieldsets — the "unstyled text"
    of the field report. Legends wear the panel eyebrow voice. */

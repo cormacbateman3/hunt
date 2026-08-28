@@ -139,3 +139,120 @@ class EditPhotosAreTheAddFormTests(TermsBase):
         self.assertContains(resp, 'data-existing="yes"')
         self.assertNotContains(resp, 'Currently:')
         self.assertNotContains(resp, 'travels with the file')
+
+
+class TheMarketplaceIsAFactTests(TermsBase):
+    """The live editor's quiet listing_type dropdown once turned a Store
+    listing into a clockless auction that closed itself at $None. The
+    marketplace is a fact on the live editor now; moving is a deliberate
+    act that takes the listing off the market and back through the terms
+    page, where the new marketplace's questions actually get asked."""
+
+    def _live_store(self):
+        draft = self._draft('buy_now')
+        self.client.post(reverse('listings:terms', args=[draft.pk]), {
+            'buy_now_price': '35.50', 'allow_offers': 'on',
+        })
+        draft.refresh_from_db()
+        assert draft.status == 'active', draft.status
+        return draft
+
+    def _live_auction(self):
+        draft = self._draft('auction')
+        self.client.post(reverse('listings:terms', args=[draft.pk]), {
+            'starting_price': '40', 'duration_days': '7',
+        })
+        draft.refresh_from_db()
+        assert draft.status == 'active', draft.status
+        return draft
+
+    def test_the_type_cannot_be_flipped_by_a_post(self):
+        listing = self._live_store()
+        self.client.post(reverse('listings:edit', args=[listing.pk]), {
+            'listing_type': 'auction',  # the old trap — now ignored
+            'item_kind': 'license',
+            'title': listing.title, 'description': 'Out of an estate lot.',
+            'condition_grade': 'good', 'license_year': '1955',
+            'state': str(self.pa.id),
+            'buy_now_price': '35.50',
+            'additional_images-TOTAL_FORMS': '0',
+            'additional_images-INITIAL_FORMS': '0',
+            'additional_images-MIN_NUM_FORMS': '0',
+            'additional_images-MAX_NUM_FORMS': '10',
+        })
+        listing.refresh_from_db()
+        self.assertEqual(listing.listing_type, 'buy_now')
+        self.assertEqual(listing.status, 'active')
+        self.assertIsNotNone(listing.buy_now_price)
+
+    def test_the_editor_shows_a_fact_and_a_door(self):
+        listing = self._live_store()
+        resp = self.client.get(reverse('listings:edit', args=[listing.pk]))
+        self.assertContains(resp, 'The General Store')
+        self.assertContains(resp, 'Move to the Auction House')
+        self.assertNotContains(resp, 'Started from')
+
+    def test_moving_goes_off_market_then_through_the_terms(self):
+        listing = self._live_store()
+        resp = self.client.post(reverse('listings:move', args=[listing.pk]),
+                                {'move_to': 'auction'})
+        self.assertRedirects(resp, reverse('listings:terms', args=[listing.pk]))
+        listing.refresh_from_db()
+        self.assertEqual(listing.status, 'draft')
+        self.assertEqual(listing.listing_type, 'auction')
+
+        # The terms page is the only thing that opens it again — with a
+        # real clock and the store fields cleared properly.
+        self.client.post(reverse('listings:terms', args=[listing.pk]), {
+            'starting_price': '40', 'duration_days': '7',
+        })
+        listing.refresh_from_db()
+        self.assertEqual(listing.status, 'active')
+        self.assertIsNotNone(listing.auction_end)
+        self.assertIsNone(listing.buy_now_price)
+
+    def test_a_lot_with_bids_stands(self):
+        from apps.bids.models import Bid
+
+        listing = self._live_auction()
+        Bid.objects.create(listing=listing, bidder=self.buyer, amount=45)
+        resp = self.client.post(reverse('listings:move', args=[listing.pk]),
+                                {'move_to': 'buy_now'}, follow=True)
+        self.assertContains(resp, 'bids stand')
+        listing.refresh_from_db()
+        self.assertEqual(listing.listing_type, 'auction')
+        self.assertEqual(listing.status, 'active')
+
+    def test_a_quiet_lot_can_move_to_the_store(self):
+        listing = self._live_auction()
+        self.client.post(reverse('listings:move', args=[listing.pk]),
+                         {'move_to': 'buy_now'})
+        listing.refresh_from_db()
+        self.assertEqual(listing.status, 'draft')
+        self.assertEqual(listing.listing_type, 'buy_now')
+        self.assertIsNone(listing.auction_end)
+
+    def test_pending_offers_are_declined_with_a_letter(self):
+        from apps.notifications.models import Notification
+        from apps.offers.models import Offer
+        from apps.offers.services import create_offer
+
+        listing = self._live_store()
+        offer, status = create_offer(
+            listing=listing, from_user=self.buyer, amount=30)
+        self.assertIsNotNone(offer, status)
+
+        self.client.post(reverse('listings:move', args=[listing.pk]),
+                         {'move_to': 'auction'})
+        offer.refresh_from_db()
+        self.assertEqual(offer.status, 'declined')
+        self.assertTrue(Notification.objects.filter(
+            user=self.buyer, notification_type='offer_declined').exists())
+
+    def test_a_wrecked_auction_never_prints_dollar_none(self):
+        listing = self._live_auction()
+        Listing.objects.filter(pk=listing.pk).update(
+            status='expired', current_bid=None, starting_price=None)
+        resp = self.client.get(reverse('listings:detail', args=[listing.pk]))
+        self.assertNotContains(resp, '$None')
+        self.assertNotContains(resp, '>None<')

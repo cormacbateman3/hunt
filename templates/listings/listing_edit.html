@@ -118,17 +118,20 @@
                     </div>
                 </div>
 
-                <div class="if-grid if-grid--halves">
-                    <div class="if-field{% if form.listing_type.errors %} has-error{% endif %}">
-                        <label class="kb-label" for="{{ form.listing_type.id_for_label }}">Where it&rsquo;s listed</label>
-                        {{ form.listing_type }}
-                        {{ form.listing_type.errors }}
-                    </div>
-                    <div class="if-field{% if form.source_collection_item.errors %} has-error{% endif %}">
-                        <label class="kb-label" for="{{ form.source_collection_item.id_for_label }}">Started from</label>
-                        {{ form.source_collection_item }}
-                        {{ form.source_collection_item.errors }}
-                    </div>
+                {% comment %}
+                The marketplace is a fact here, not a field — the quiet
+                dropdown once turned a Store listing into a clockless
+                auction. Moving is the deliberate act at the page's foot.
+                The old "Started from" box is gone: the shelf link is
+                structural (one record, one editor) and says nothing a
+                seller can use.
+                {% endcomment %}
+                <div class="if-field">
+                    <span class="kb-label">Where it&rsquo;s listed</span>
+                    <p class="if-static">
+                        {% if listing.listing_type == 'auction' %}The Auction House{% else %}The General Store{% endif %}
+                        &middot; <a href="#move-it">move it</a>
+                    </p>
                 </div>
 
                 <section class="if-section">
@@ -382,11 +385,37 @@
     </form>
 
     {% comment %}
-    Must stay OUTSIDE the form above. This partial renders its own form
-    element, and the HTML parser drops a nested opening tag while still
-    honouring the closing one -- which closed the host form early and
-    orphaned the submit button and every field after this point.
+    Must stay OUTSIDE the form above (its own form element) — same rule
+    as the suggestion partial below. Moving marketplaces is off the
+    market first, terms second: the listing returns to draft and the
+    terms page's foot button is the only thing that opens it again.
     {% endcomment %}
+    <section class="if-panel if-move" id="move-it">
+        <div class="if-panel-head">
+            <span class="if-panel-eyebrow">Move it</span>
+        </div>
+        {% if listing.listing_type == 'auction' and listing.bids.exists %}
+            <p class="kb-hint">This lot has bids, and bids stand &mdash; it can&rsquo;t
+               move while they do.</p>
+        {% else %}
+            <p class="kb-hint">
+                Moving takes it off the market and back to your bench as a
+                draft. You set the
+                {% if listing.listing_type == 'auction' %}Store price{% else %}auction terms{% endif %}
+                there, and nothing is public again until you open it.
+                {% if listing.listing_type == 'buy_now' %}Open offers are declined with a note to their senders.{% endif %}
+            </p>
+            <form method="post" action="{% url 'listings:move' listing.pk %}">
+                {% csrf_token %}
+                <button type="submit" name="move_to"
+                        value="{% if listing.listing_type == 'auction' %}buy_now{% else %}auction{% endif %}"
+                        class="kb-btn kb-btn--secondary">
+                    Move to {% if listing.listing_type == 'auction' %}the General Store{% else %}the Auction House{% endif %}
+                </button>
+            </form>
+        {% endif %}
+    </section>
+
     <details class="if-more">
         <summary>Is a value missing?</summary>
         <div class="if-more-body">
