@@ -56,8 +56,6 @@
     flex-shrink: 0;
 }
 
-/* 2C — the ruled wordmark: the name sits on a brass rule, a line
-   filled in on a form. */
 .kb-brand span {
     font-family: var(--kb-font-display);
     font-size: 21px;
@@ -65,8 +63,6 @@
     letter-spacing: -0.015em;
     color: var(--kb-cream);
     line-height: 1;
-    border-bottom: 2px solid var(--kb-brass);
-    padding-bottom: 3px;
 }
 
 .kb-brand:hover span {
@@ -695,6 +691,8 @@ body {
     flex-shrink: 0;
 }
 
+/* The 2C ruled-wordmark treatment lives only where the round draws it
+   (the login lockup) — the nav bars carry the name bare. */
 .kb-nameplate-word {
     font-family: var(--kb-font-display);
     font-size: 33px;
@@ -702,8 +700,6 @@ body {
     letter-spacing: -0.015em;
     line-height: 1;
     color: var(--kb-cream);
-    border-bottom: 2px solid var(--kb-brass);
-    padding-bottom: 4px;
 }
 
 .kb-footer .bt-mark {
