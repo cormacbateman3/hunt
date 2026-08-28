@@ -448,6 +448,23 @@ def collection_item_detail(request, pk):
 @login_required
 def collection_item_edit(request, pk):
     item = get_object_or_404(CollectionItem, pk=pk, owner=request.user)
+
+    # One record, one editor. While a lot exists for this piece the pair
+    # is the same physical thing, and two open edit forms is how the two
+    # copies learn to tell different stories — so the record is edited on
+    # the lot, and every lot save mirrors back to this shelf row.
+    operative = item.listings.filter(
+        status__in=('draft', 'scheduled', 'pending', 'active'),
+    ).order_by('-created_at').first()
+    if operative is not None:
+        messages.info(
+            request,
+            'This piece is on its way to market, so its record is edited '
+            'on the lot — changes flow back to your shelf on their own.')
+        if operative.status in ('draft', 'scheduled'):
+            return redirect('listings:item_edit', pk=operative.pk)
+        return redirect('listings:edit', pk=operative.pk)
+
     if request.method == 'POST':
         form = CollectionItemForm(request.POST, instance=item, user=request.user)
         image_formset = CollectionItemImageFormSet(request.POST, request.FILES, instance=item)

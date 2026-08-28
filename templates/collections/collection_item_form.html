@@ -122,12 +122,12 @@
                 <section class="if-panel">
                     <div class="if-panel-head">
                         <span class="if-panel-eyebrow">Photographs</span>
-                        <span class="if-panel-meta">what each one is travels with the file</span>
+                        <span class="if-panel-meta">front, back or detail &mdash; the label sticks with the photograph</span>
                     </div>
                     <div class="if-photos-body">
                         {{ image_formset.management_form }}
                         {% for image_form in image_formset %}
-                            <div class="if-photo-row">
+                            <div class="if-photo-row{% if not image_form.instance.pk %} if-photo-row--new{% endif %}">
                                 {{ image_form.id }}
                                 {{ image_form.sort_order }}
                                 {{ image_form.image_role }}
@@ -138,16 +138,20 @@
                                 {% endif %}
                                 <div class="if-photo-row-body">
                                     <span class="if-photo-role">
-                                        {% if image_form.instance.pk %}{{ image_form.instance.get_image_role_display }}{% else %}Detail &middot; new{% endif %}
+                                        {% if image_form.instance.pk %}{{ image_form.instance.get_image_role_display }}{% else %}Add a photograph{% endif %}
                                     </span>
                                     {{ image_form.image }}
                                     {{ image_form.errors }}
                                 </div>
-                                {% if image_form.DELETE %}
+                                {% if image_form.instance.pk and image_form.DELETE %}
                                     <label class="if-photo-del">{{ image_form.DELETE }} drop</label>
                                 {% endif %}
                             </div>
                         {% endfor %}
+                        <span class="if-photos-note">
+                            Choosing a file on a filled row replaces that
+                            photograph; drop removes it.
+                        </span>
                     </div>
                 </section>
                 {% endif %}

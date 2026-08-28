@@ -1649,6 +1649,46 @@ survive conversation deletion via SET_NULL.
 variant (the "this page changes completely" band) — everything else in
 the pass is built.
 
+---
+
+## Pass 10b — One record, one editor ✅
+
+> **Status 2026-08-27** · 1 commit on `feature/alpha-p4-1` · 767 green
+> (7 added) · live sweep against the owner's real scheduled F3 clean.
+> The field report on editing: "it is almost like we edited the Add an
+> item form but the edit got left behind" — which was literally true.
+
+- **Scheduled is not live.** The terms form treated any non-draft as
+  live and stripped the clock fields, so a scheduled listing was
+  locked: no reschedule, no go-up-now. Now scheduled edits on the same
+  step-2 page as a draft (slots and all — the old combined editor
+  redirects it there), its terms reopen with the set date shown, and
+  publishing again is free: **a new date reschedules, a cleared date
+  puts it up right now** (auction clocks recompute from the new
+  go-live). `activate_scheduled_listings` was already in `run_jobs`.
+- **One record, one editor.** A listed piece is a collection item on
+  its way to market — the same physical thing, and two open edit forms
+  is how two copies learn to tell different stories. While a lot exists
+  (draft/scheduled/pending/active) the collection editor redirects to
+  the lot's editor with a note, and **every lot save mirrors the shared
+  descriptive fields back to the shelf record**
+  (`_mirror_listing_to_source`). Terms, privacy and disposition remain
+  each side's own business. Found under the same stone: a POST that
+  omitted `source_collection_item` silently severed the pair — the
+  field is disabled once bound, so the link cannot be orphaned.
+- **The edit photo blocks speak.** "what each one is travels with the
+  file" → "front, back or detail — the label sticks with the
+  photograph". The raw ClearableFileInput chrome ("Currently:
+  <filesystem path> Change:") is gone from every image field — plain
+  file inputs beside the thumbnails that already show what's there.
+  Blank formset extras stopped shouting DETAIL · NEW with a drop box:
+  they read "Add a photograph", and the role dropdown appears only on
+  rows that hold one.
+- **Register:** the live-listing editor (`listing_edit`, active lots
+  only now) still uses clean rows rather than the full slot plan —
+  drafts and scheduled get the true slot UI via the step-2 page. Worth
+  folding into the slot plan when the editor next gets a pass.
+
 **Register additions (14b, deferred not dropped):**
 - `GeographicUnit` has no valid-from/valid-to years, so "19 of 185" in a
   redrawn-boundary state measures against today's map and quietly

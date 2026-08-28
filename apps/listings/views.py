@@ -103,6 +103,39 @@ def _copy_collection_images_to_listing(listing, uploaded_any=False):
         )
 
 
+def _mirror_listing_to_source(listing):
+    """One record, not two drifting copies.
+
+    A listed piece is a collection item that happens to be on its way to
+    market — the same physical thing. While the lot exists, its editors
+    are the operative ones (the collection editor redirects here), and
+    every save mirrors the shared descriptive fields back to the shelf
+    record so the pair can never tell two stories. Terms, privacy and
+    disposition stay each side's own business.
+    """
+    source = listing.source_collection_item
+    if source is None:
+        return
+    source.title = listing.title
+    source.description = listing.description
+    source.category = listing.category
+    source.item_kind = listing.item_kind
+    source.addons_attached = listing.addons_attached
+    source.license_year = listing.license_year
+    source.state = listing.state
+    source.county = listing.county_ref
+    source.resident_status = listing.resident_status
+    source.condition_grade = listing.condition_grade
+    source.condition_description = listing.condition_description
+    source.is_restored = listing.is_restored
+    source.shape = listing.shape
+    source.colors = listing.colors
+    source.serial_number = listing.serial_number
+    source.era_label = listing.era_label
+    source.save()
+    source.license_types.set(listing.license_types.all())
+
+
 def _copy_listing_images_to_collection_item(listing, item):
     """Give the auto-created collection item the photographs it was made from.
 
@@ -1095,6 +1128,10 @@ def listing_create(request):
             # 4e: Auto-create CollectionItem if none linked. Born quiet —
             # the draft may be abandoned, and a half-described piece must
             # not sit on the public profile. Publishing flips it public.
+            # From here on the pair is ONE record: every listing save
+            # mirrors the shared fields back (_mirror_listing_to_source),
+            # and the collection editor redirects to the lot while one is
+            # on its way to market.
             if not listing.source_collection_item:
                 collection_item = CollectionItem.objects.create(
                     owner=request.user,
@@ -1198,7 +1235,9 @@ def listing_item_edit(request, pk):
         Listing.objects.select_related('state', 'county_ref', 'source_collection_item'),
         pk=pk, seller=request.user,
     )
-    if listing.status != 'draft':
+    # Scheduled edits here too: nothing is public yet, so it gets the same
+    # step-2 page as a draft rather than the live listing's editor.
+    if listing.status not in ('draft', 'scheduled'):
         return redirect('listings:edit', pk=listing.pk)
 
     if request.method == 'POST':
@@ -1210,6 +1249,7 @@ def listing_item_edit(request, pk):
             form.save()
             image_formset.save()
             _normalize_listing_image_sort_order(listing)
+            _mirror_listing_to_source(listing)
             _link_prefill_job(request, listing)
             clear_stash(request)
             if 'save_draft' in request.POST:
@@ -1360,8 +1400,10 @@ def listing_terms(request, pk):
         Listing.objects.select_related('state', 'county_ref', 'source_collection_item'),
         pk=pk, seller=request.user,
     )
-    if listing.status != 'draft':
-        # A live listing's terms are edited on the edit page.
+    if listing.status not in ('draft', 'scheduled'):
+        # A live listing's terms are edited on the edit page. Scheduled is
+        # not live: it publishes again freely — a new date reschedules,
+        # a cleared date puts it up now.
         return redirect('listings:edit', pk=listing.pk)
 
     # "You can move an item between all three later" (6a) — and a draft
@@ -1456,6 +1498,11 @@ def listing_edit(request, pk):
     """Edit an existing listing (owner only)"""
     listing = get_object_or_404(Listing, pk=pk, seller=request.user)
 
+    # Anything not yet public edits on the step-2 page with the slots —
+    # this combined editor is for listings already on the market.
+    if listing.status in ('draft', 'scheduled'):
+        return redirect('listings:item_edit', pk=listing.pk)
+
     if request.method == 'POST':
         form = ListingForm(request.POST, request.FILES, instance=listing, user=request.user)
         terms_form = ListingTermsForm(request.POST, instance=listing, user=request.user)
@@ -1463,16 +1510,14 @@ def listing_edit(request, pk):
 
         if form.is_valid() and terms_form.is_valid() and image_formset.is_valid():
             form.save()
-            # publish=False: editing a live listing never resets its clock,
-            # and editing a draft here leaves it a draft — the terms page's
-            # foot button is the only publisher.
+            # publish=False: editing a live listing never resets its clock —
+            # the terms page's foot button is the only publisher.
             terms_form.save(publish=False)
             image_formset.save()
             _copy_collection_images_to_listing(listing)
             _normalize_listing_image_sort_order(listing)
+            _mirror_listing_to_source(listing)
             messages.success(request, 'Listing updated successfully!')
-            if listing.status == 'draft':
-                return redirect('listings:terms', pk=listing.pk)
             return redirect('listings:detail', pk=listing.pk)
     else:
         form = ListingForm(instance=listing, user=request.user)
@@ -1482,9 +1527,12 @@ def listing_edit(request, pk):
     # On edit the role is a visible choice rather than something the upload
     # order decided. Reordering is what used to relabel a back as a detail;
     # now the seller says which is which and the order is only the order.
+    # Only on rows that hold a photograph — a blank add-another row keeps
+    # its quiet default instead of opening with a dropdown.
     for image_form in image_formset.forms:
-        image_form.fields['image_role'].widget = forms.Select(
-            choices=IMAGE_ROLE_CHOICES, attrs={'class': 'form-select'})
+        if image_form.instance.pk:
+            image_form.fields['image_role'].widget = forms.Select(
+                choices=IMAGE_ROLE_CHOICES, attrs={'class': 'kb-select'})
 
     context = {
         'form': form,

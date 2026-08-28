@@ -45,7 +45,7 @@
                 <section class="if-panel">
                     <div class="if-panel-head">
                         <span class="if-panel-eyebrow">Photographs</span>
-                        <span class="if-panel-meta">what each one is travels with the file</span>
+                        <span class="if-panel-meta">front, back or detail &mdash; the label sticks with the photograph</span>
                     </div>
                     <div class="if-photos-body">
                         <div class="if-field">
@@ -58,34 +58,47 @@
                         </div>
                         {{ image_formset.management_form }}
                         {% for image_form in image_formset %}
-                            <div class="if-photo-row" data-image-row draggable="true">
-                                {{ image_form.id }}
-                                {{ image_form.sort_order }}
-                                {{ image_form.image_role }}
-                                {% if image_form.instance.image %}
-                                    <img src="{{ image_form.instance.image.url }}" alt="" class="if-row-thumb">
-                                {% else %}
-                                    <span class="if-row-thumb if-row-thumb--empty"></span>
-                                {% endif %}
-                                <div class="if-photo-row-body">
-                                    <span class="if-photo-role">
-                                        {% if image_form.instance.pk %}{{ image_form.instance.get_image_role_display }}{% else %}Detail &middot; new{% endif %}
-                                    </span>
-                                    {{ image_form.image }}
-                                    {{ image_form.errors }}
-                                </div>
-                                <div class="if-photo-row-acts">
-                                    <button type="button" class="pf-act" data-move-up title="Move up">&uarr;</button>
-                                    <button type="button" class="pf-act" data-move-down title="Move down">&darr;</button>
-                                    {% if image_form.DELETE %}
-                                        <label class="if-photo-del">{{ image_form.DELETE }} drop</label>
+                            {% if image_form.instance.pk %}
+                                <div class="if-photo-row" data-image-row draggable="true">
+                                    {{ image_form.id }}
+                                    {{ image_form.sort_order }}
+                                    {% if image_form.instance.image %}
+                                        <img src="{{ image_form.instance.image.url }}" alt="" class="if-row-thumb">
+                                    {% else %}
+                                        <span class="if-row-thumb if-row-thumb--empty"></span>
                                     {% endif %}
+                                    <div class="if-photo-row-body">
+                                        <label class="if-photo-role" for="{{ image_form.image_role.id_for_label }}">What this one is</label>
+                                        {{ image_form.image_role }}
+                                        {{ image_form.image }}
+                                        {{ image_form.errors }}
+                                    </div>
+                                    <div class="if-photo-row-acts">
+                                        <button type="button" class="pf-act" data-move-up title="Move up">&uarr;</button>
+                                        <button type="button" class="pf-act" data-move-down title="Move down">&darr;</button>
+                                        {% if image_form.DELETE %}
+                                            <label class="if-photo-del">{{ image_form.DELETE }} drop</label>
+                                        {% endif %}
+                                    </div>
                                 </div>
-                            </div>
+                            {% else %}
+                                <div class="if-photo-row if-photo-row--new">
+                                    {{ image_form.id }}
+                                    {{ image_form.sort_order }}
+                                    {{ image_form.image_role }}
+                                    <span class="if-row-thumb if-row-thumb--empty"></span>
+                                    <div class="if-photo-row-body">
+                                        <span class="if-photo-role">Add a photograph</span>
+                                        {{ image_form.image }}
+                                        {{ image_form.errors }}
+                                    </div>
+                                </div>
+                            {% endif %}
                         {% endfor %}
                         <span class="if-photos-note">
                             Moving one up or down changes the order and nothing else &mdash;
-                            a back stays the back.
+                            a back stays the back. Choosing a file on a filled row
+                            replaces that photograph.
                         </span>
                     </div>
                 </section>

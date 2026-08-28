@@ -202,6 +202,14 @@
                 </div>
             {% endif %}
 
+            {% if listing.status == 'scheduled' %}
+                <p class="kb-hint sl-scheduled-note">
+                    Scheduled to go up {{ listing.scheduled_at|date:"l j F, g:i a" }} &mdash;
+                    save with a new date to reschedule, or untick the later
+                    date to put it up right now.
+                </p>
+            {% endif %}
+
             <div class="sl-panel-foot">
                 <button type="submit" class="if-go">
                     {% if config_listing_type == 'auction' %}Open the lot{% else %}Put it in the Store{% endif %}

@@ -346,6 +346,9 @@ class CollectionItemImageForm(forms.ModelForm):
         widgets = {
             'sort_order': forms.HiddenInput(),
             'image_role': forms.HiddenInput(),
+            # Plain file input — "Currently: <path> Change:" is not a
+            # sentence. The thumbnail shows what's there.
+            'image': forms.FileInput(),
         }
 
     def has_changed(self):
