@@ -1985,7 +1985,7 @@ column. The 10.7 address-suffix class has no other member standing.
 
 ---
 
-## Pass 11 — The staff desk ⬜
+## Pass 11 — The staff desk 🚧 first rooms shipped 2026-08-31
 
 **Design refs** — turn 17a (desk), 17b (strike review, taxonomy, prefill),
 19a (member page), 19b (moderation), 18a (three defects).
@@ -1993,6 +1993,39 @@ column. The 10.7 address-suffix class has no other member standing.
 New `/staff/` in slate + gold. Django admin stays exactly as it is for editing
 rows; this is the front door that answers *what gets worse if I don't touch it
 today*.
+
+> **Shipped (first slice)** · `apps/staff`, 861 green (17 added), smoke-
+> proved against real dev scans. The owner's ask: make the admin usable,
+> starting with the moderation agents' UI.
+>
+> - **The shell** — `/staff/` in 17a's exact clothes (slate `#1f2733`,
+>   gold STAFF chip, "Django admin →" as a door). `staff_member_required`
+>   on every view.
+> - **The desk (17a-lite)** — six TRUE tiles, no "no model yet" ghosts:
+>   urgent moderation, open moderation, member reports, questions held,
+>   payments open, suggestions pending — each linking into the room or
+>   the right admin changelist — plus the urgent-first preview of what
+>   the watcher found.
+> - **The moderation room** — the ModerationEvent queue (open / urgent /
+>   decided / everything), urgent floating on top, two verbs on every
+>   row (Resolve / Dismiss) recording who decided and when.
+> - **The scan reader** (the drawings predate the watcher — new design
+>   in 19b's language): the classifier's 0–1 category scores as bars
+>   **against the live house thresholds** — the dashed ticks ARE
+>   `flag_threshold`/`urgent_threshold` off ModerationSettings, so the
+>   admin's tunables move the lines on every scan; tones match exactly
+>   what the watcher would do (locked by test). Claude's in-context read
+>   as a card in its own words (concern/cleared, category, rationale),
+>   "wasn't asked" said plainly. Watch-term chips. The surrounding
+>   thread (what Claude read). Hide-from-thread / put-it-back —
+>   reversible, never deletes.
+>
+> **Still owed (next slices):** member page (19a — needs the audit-note
+> table); one queue over four models (19b — needs `Report` widened from
+> MessageReport + a moderation action on Review); strike review +
+> taxonomy + prefill analytics screens (17b); cleared-rate column;
+> MarketplaceSettings as a screen that counts what a fee change touches;
+> 18a's Strike CheckConstraint before the moderator screen ships.
 
 - **Desk** — six stat tiles, queues ordered by consequence, "acts on its own
   tonight unless you look" at the top.

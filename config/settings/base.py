@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'apps.reviews',
     'apps.prefill',
     'apps.moderation',
+    'apps.staff',
 ]
 
 # Address autocomplete (10.7): Google Places, loaded only on the address form

@@ -14,8 +14,10 @@ from apps.core import views as core_views
 from apps.listings import views as listing_views
 
 urlpatterns = [
-    # Admin
+    # Admin — Django admin edits rows; /staff/ is the front door that
+    # answers "what gets worse if I don't touch it today" (Pass 11).
     path('admin/', admin.site.urls),
+    path('staff/', include(('apps.staff.urls', 'staff'), namespace='staff')),
 
     # The four zones. Each has a job: The Market is one catalog,
     # Collections is people and what they own, Research is what the

@@ -1,0 +1,41 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Staff{% endblock %} &middot; Backtag Staff</title>
+    <link rel="icon" type="image/svg+xml" href="{% static 'img/favicon.svg' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Petrona:wght@400;500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/staff.css' %}">
+</head>
+<body class="sd-body">
+
+{% comment %}
+The 17a shell: slate, a gold STAFF chip, and the rooms. "Django admin →"
+is a door, not a room — rows are still edited there.
+{% endcomment %}
+<header class="sd-topbar">
+    <a class="sd-brand" href="{% url 'staff:desk' %}">Backtag</a>
+    <span class="sd-chip">Staff</span>
+    <nav class="sd-nav" aria-label="Staff">
+        <a href="{% url 'staff:desk' %}" {% if room == 'desk' %}class="is-here" aria-current="page"{% endif %}>Desk</a>
+        <a href="{% url 'staff:moderation' %}" {% if room == 'moderation' %}class="is-here" aria-current="page"{% endif %}>Moderation</a>
+        <a href="{% url 'admin:index' %}">Django admin &rarr;</a>
+    </nav>
+    <span class="sd-who">{{ request.user.username }} &middot; staff</span>
+</header>
+
+{% if messages %}
+    <div class="sd-flash">
+        {% for message in messages %}<p>{{ message }}</p>{% endfor %}
+    </div>
+{% endif %}
+
+<main class="sd-page">
+    {% block content %}{% endblock %}
+</main>
+
+</body>
+</html>
