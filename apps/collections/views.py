@@ -153,6 +153,7 @@ def my_collection(request):
     # and what you have asked for. They are one page because they answer one
     # question between them.
     view = request.GET.get('view', 'items')
+    want_total = WantedItem.objects.filter(user=request.user).count()
 
     return render(request, 'collections/my_collection.html', {
         'view': view,
@@ -164,7 +165,9 @@ def my_collection(request):
         'ground': ground_covered(request.user, public_only=False),
         'matrix': tracker_matrix(request.user) if view == 'matrix' else None,
         'want_rows': wants.rows(request.user) if view == 'wants' else None,
-        'want_total': WantedItem.objects.filter(user=request.user).count(),
+        'want_total': want_total,
+        'want_starters': (wants.starters(request.user)
+                          if view == 'wants' and not want_total else None),
         'featured_items': featured_items,
         'featured_ids': featured_ids,
         'featured_count': featured_count,
@@ -172,6 +175,9 @@ def my_collection(request):
         'counties': counties,
         'license_types': license_types,
         'filters': filters,
+        # The filter bar lists the default state's units, so its label is
+        # that state's own word (14a) — not a hardcoded "County".
+        'unit_label': default_state.issuance_unit_label if default_state else 'County',
     })
 
 
@@ -442,6 +448,23 @@ def collection_item_detail(request, pk):
 @login_required
 def collection_item_edit(request, pk):
     item = get_object_or_404(CollectionItem, pk=pk, owner=request.user)
+
+    # One record, one editor. While a lot exists for this piece the pair
+    # is the same physical thing, and two open edit forms is how the two
+    # copies learn to tell different stories — so the record is edited on
+    # the lot, and every lot save mirrors back to this shelf row.
+    operative = item.listings.filter(
+        status__in=('draft', 'scheduled', 'pending', 'active'),
+    ).order_by('-created_at').first()
+    if operative is not None:
+        messages.info(
+            request,
+            'This piece is on its way to market, so its record is edited '
+            'on the lot — changes flow back to your shelf on their own.')
+        if operative.status in ('draft', 'scheduled'):
+            return redirect('listings:item_edit', pk=operative.pk)
+        return redirect('listings:edit', pk=operative.pk)
+
     if request.method == 'POST':
         form = CollectionItemForm(request.POST, instance=item, user=request.user)
         image_formset = CollectionItemImageFormSet(request.POST, request.FILES, instance=item)
@@ -454,6 +477,11 @@ def collection_item_edit(request, pk):
         form = CollectionItemForm(instance=item, user=request.user)
         image_formset = CollectionItemImageFormSet(instance=item)
 
+    # The same slot plan as the add flow — the slots open holding the
+    # record's photographs, because the edit is the add form revisited,
+    # not a second, lesser form.
+    slots_cfg, slot_view = photo_slots(image_formset)
+
     return render(request, 'collections/collection_item_form.html', {
         'form': form,
         'image_formset': image_formset,
@@ -461,6 +489,8 @@ def collection_item_edit(request, pk):
         'item': item,
         'taxonomy_fields': TAXONOMY_FIELDS,
         'taxonomy_field_names_json': json.dumps([item[0] for item in TAXONOMY_FIELDS]),
+        'slots_cfg_json': json.dumps(slots_cfg),
+        'slot_view': slot_view,
         'ledger_lines_json': line_bank_json(),
         'suggestion_form': ReferenceDataSuggestionForm(
             initial={'target_model': 'collection_item', 'target_id': item.id, 'suggestion_type': 'new_value'}
@@ -478,6 +508,23 @@ def collection_item_delete(request, pk):
     return render(request, 'collections/collection_item_delete.html', {'item': item})
 
 
+def _wanted_initial_from_query(params):
+    """A want prefilled from wherever you were standing — the Hunt page's
+    "Save this as a want" and the starter chips carry their filters here
+    (16a: the form opens already saying what you meant)."""
+    initial = {}
+    for field, param in (('state', 'state_id'), ('county', 'county_id'),
+                         ('license_type', 'license_type_id')):
+        value = params.get(param, '')
+        if value.isdigit():
+            initial[field] = int(value)
+    for field in ('year_min', 'year_max'):
+        value = params.get(field, '')
+        if value.isdigit():
+            initial[field] = int(value)
+    return initial
+
+
 @login_required
 def wanted_item_create(request):
     if request.method == 'POST':
@@ -489,7 +536,7 @@ def wanted_item_create(request):
             messages.success(request, 'Wanted item added.')
             return redirect('collections:my_collection')
     else:
-        form = WantedItemForm()
+        form = WantedItemForm(initial=_wanted_initial_from_query(request.GET))
     return render(request, 'collections/wanted_item_form.html', {
         'form': form,
         'mode': 'create',

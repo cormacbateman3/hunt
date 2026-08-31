@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ room_label }} &middot; Settings &middot; KeystoneBid{% endblock %}
+{% block title %}{{ room_label }} &middot; Settings &middot; Backtag{% endblock %}
 
 {% block context_band %}
 <nav class="kb-crumbs" aria-label="Breadcrumb">
     <div class="kb-band-inner">
-        <a href="{% url 'bench' %}">My Bench</a>
+        <a href="{% url 'bench' %}">Dashboard</a>
         <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
         <a href="{% url 'accounts:profile_edit' %}">Settings</a>
         <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
@@ -20,6 +20,7 @@
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/settings.css' %}">{% endblock %}
 
 {% block content %}
+{% include 'components/_desk_note.html' %}
 {% comment %}
 Six stacked cards on one page become ten named rooms in four groups. The
 grouping is by whose problem it is: Me is how you appear, Hunting is what
@@ -207,7 +208,7 @@ Nothing is in two groups.
         {% elif room == 'payouts' %}
             <p class="st-note">
                 Buyers pay through Stripe and payouts follow Stripe&rsquo;s normal
-                schedule. KeystoneBid never holds your money &mdash; there is no escrow
+                schedule. Backtag never holds your money &mdash; there is no escrow
                 here, which is why the handshake and the strike ladder exist.
             </p>
             <ul class="st-checks">

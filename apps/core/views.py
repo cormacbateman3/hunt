@@ -228,6 +228,89 @@ def almanac(request):
     return render(request, 'core/almanac.html', {'default_state': states})
 
 
+def search_suggest_api(request):
+    """The header typeahead (implementation plan §2): results grouped by
+    type — Listings / Collectors / Counties — each row a real link. The
+    Archives search will eventually answer through this same box.
+    """
+    from django.contrib.auth.models import User
+
+    from apps.listings.models import Listing
+
+    q = (request.GET.get('q') or '').strip()
+    if len(q) < 2:
+        return JsonResponse({'listings': [], 'collectors': [], 'counties': []})
+
+    listings = [
+        {
+            'title': listing.title,
+            'meta': ' · '.join(filter(None, [
+                listing.county_ref.name if listing.county_ref_id else '',
+                str(listing.license_year or ''),
+            ])),
+            'url': f'/listings/{listing.pk}/',
+        }
+        for listing in Listing.objects.filter(
+            status='active', title__icontains=q)
+        .select_related('county_ref').order_by('-created_at')[:5]
+    ]
+    collectors = [
+        {
+            'title': user.profile.get_display_name() if hasattr(user, 'profile') else user.username,
+            'meta': user.username,
+            'url': f'/accounts/profile/{user.username}/',
+        }
+        for user in User.objects.filter(
+            is_active=True, username__icontains=q)
+        .select_related('profile')[:5]
+    ]
+    counties = [
+        {
+            'title': f'{unit.name}, {unit.state.code}' if unit.state_id else unit.name,
+            'meta': unit.state.issuance_unit_label if unit.state_id else '',
+            'url': f'/market/?state_id={unit.state_id}&county_id={unit.pk}',
+        }
+        for unit in GeographicUnit.objects.filter(
+            name__icontains=q, is_statewide=False)
+        .select_related('state').order_by('sort_order', 'name')[:5]
+    ]
+    return JsonResponse({'listings': listings, 'collectors': collectors,
+                         'counties': counties})
+
+
+def research(request):
+    """Research — the section landing over two areas (implementation plan §1).
+
+    The Field Guide is the reference wiki (the Almanac content under its
+    new name); the Archives is the permanent census of public items —
+    shell only this pass, real index later.
+    """
+    from apps.collections.models import CollectionItem
+
+    return render(request, 'core/research.html', {
+        'kb_zone': 'almanac',
+        'public_item_count': CollectionItem.objects.filter(
+            is_public=True).count(),
+        'state_count': State.objects.exclude(code='FD').count(),
+    })
+
+
+def archives(request):
+    """The Archives — a searchable record of every public item, past and
+    present: a permanent census of what survives, not a browse of what's
+    for sale. Shell only this pass (plan §1: "Just create shell") — the
+    page says plainly what it will be, with real numbers so it isn't
+    hypothetical. The search box ships disabled rather than pretending.
+    """
+    from apps.collections.models import CollectionItem
+
+    return render(request, 'core/archives.html', {
+        'kb_zone': 'almanac',
+        'public_item_count': CollectionItem.objects.filter(
+            is_public=True).count(),
+    })
+
+
 def home(request):
     """The home page.
 

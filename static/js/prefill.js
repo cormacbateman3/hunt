@@ -1,4 +1,4 @@
-/* KeystoneBid image prefill — the ledger (Add Item Ideas 4a–4e).
+/* Backtag image prefill — the ledger (Add Item Ideas 4a–4e).
  *
  * Wire-up (per form):
  *   KBPrefill.init({

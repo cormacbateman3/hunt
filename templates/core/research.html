@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Research &middot; Backtag{% endblock %}
+
+{% block content %}
+{% comment %}
+Implementation plan §1: Research is the nav word; under it sit two
+areas. The Field Guide is the reference wiki (the Almanac content,
+renamed); the Archives is the permanent census of public items. Each
+card says what its area is with a real number, per the empty-state
+rules — never hypothetical.
+{% endcomment %}
+<div class="rs-intro">
+    <span class="kb-eyebrow kb-eyebrow--brass">Research</span>
+    <h1 class="kb-page-title">What the community knows, written down and kept.</h1>
+    <p class="kb-page-lede">
+        Two rooms. The Field Guide is what collectors know about the material
+        &mdash; states, counties, eras, the licences themselves. The Archives is
+        the record of what survives: every public item on the site, past and
+        present, whether or not it is for sale.
+    </p>
+</div>
+
+<div class="rs-areas">
+    <a href="{% url 'almanac' %}" class="rs-area">
+        <span class="kb-eyebrow">The Field Guide</span>
+        <h2 class="rs-area-title">One page per state, county, era and licence type.</h2>
+        <p class="rs-area-copy">
+            History, identifying features, known variants, first-issue years
+            &mdash; written by the collectors who have held them, signed, with
+            their holding beside their name. Reference pages cover
+            {{ state_count }} states today; the written entries come with the
+            Almanac build.
+        </p>
+        <span class="rs-area-go">Open the Field Guide &rarr;</span>
+    </a>
+
+    <a href="{% url 'archives' %}" class="rs-area">
+        <span class="kb-eyebrow">The Archives</span>
+        <h2 class="rs-area-title">A permanent census of what survives.</h2>
+        <p class="rs-area-copy">
+            Every public item on the site, past and present &mdash; state, county,
+            year, type &mdash; each row linking to the item&rsquo;s page. Items stay
+            in the record after they sell or trade: the point is what exists,
+            not what&rsquo;s for sale. {{ public_item_count }} item{{ public_item_count|pluralize }}
+            on public record so far.
+        </p>
+        <span class="rs-area-go">See the Archives &rarr;</span>
+    </a>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .rs-intro { max-width: 810px; display: flex; flex-direction: column; gap: 10px; }
+    .rs-areas { margin-top: var(--kb-6); display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--kb-4); max-width: 960px; }
+    .rs-area { border: 1px solid var(--kb-rule); border-radius: var(--kb-r-lg); background: var(--kb-surface); padding: 22px 24px 20px; display: flex; flex-direction: column; gap: 9px; text-decoration: none; }
+    .rs-area:hover { border-color: var(--kb-forest); }
+    .rs-area-title { margin: 0; font: var(--kb-text-section); color: var(--kb-ink); }
+    .rs-area-copy { margin: 0; font: var(--kb-text-body-sm); color: var(--kb-ink-2); }
+    .rs-area-go { margin-top: auto; padding-top: 6px; font-size: 12.5px; font-weight: 600; color: var(--kb-brass); }
+</style>
+{% endblock %}

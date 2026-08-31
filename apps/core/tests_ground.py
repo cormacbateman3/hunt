@@ -188,3 +188,32 @@ class MapApiTests(GroundBase):
         self.assertEqual(
             self.client.get(reverse('core:map_data_api'),
                             {'collector': 'nobody'}).status_code, 404)
+
+
+class CountyFamilyTests(TestCase):
+    """Virginia's dead jurisdictions and PA's Co. 68 are one rule now:
+    a county-family row without a shape, in a state whose county family
+    has shapes, is not drawable ground — an administrative code or a
+    jurisdiction abolished before FIPS existed. It stays selectable and
+    taggable; it just doesn't count until unit validity-years exist."""
+
+    def test_independent_cities_join_the_family(self):
+        from apps.core import ground
+        from apps.core.models import GeographicUnit, State
+
+        va = State.objects.create(
+            code='VX', name='Virginiaish', slug='virginiaish')
+        GeographicUnit.objects.create(
+            state=va, name='Fairfax', slug='cf-fairfax', fips_code='51059')
+        GeographicUnit.objects.create(
+            state=va, name='Norfolk City', slug='cf-norfolk-city',
+            unit_type='Independent City', fips_code='51710')
+        GeographicUnit.objects.create(
+            state=va, name='Norfolk County', slug='cf-norfolk-county',
+            fips_code='')
+        GeographicUnit.objects.create(
+            state=va, name='South Norfolk', slug='cf-south-norfolk',
+            unit_type='Independent City', fips_code='')
+
+        real = set(ground.real_units(va).values_list('name', flat=True))
+        self.assertEqual(real, {'Fairfax', 'Norfolk City'})

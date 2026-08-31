@@ -28,7 +28,7 @@ def send_notification_email(notification):
 
     One shell and one builder per letter (see ``letters.py``) rather than a
     subject map of shouty labels and six near-identical templates. The
-    subject is the letter's own sentence, with no ``[KeystoneBid]`` prefix:
+    subject is the letter's own sentence, with no ``[Backtag]`` prefix:
     the sender name already says who it is from, and the front of a subject
     line is the most valuable space in an inbox — it should carry the item
     and the number, not our own name a second time.

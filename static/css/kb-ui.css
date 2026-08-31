@@ -1,5 +1,5 @@
 /* ==========================================================================
-   KeystoneBid component vocabulary
+   Backtag component vocabulary
    Where the two disagree the later turns win — square corners, hairline
    rules, no drop shadows.
 
@@ -661,6 +661,24 @@ a.kb-card:hover {
     flex-wrap: wrap;
     justify-content: center;
     margin-top: 4px;
+}
+
+/* 16a — nothing left to do: the green rule, a reward rather than a
+   failure. The state a good week ends in should look like one. */
+.kb-empty--clear {
+    border-top: 3px solid var(--kb-forest);
+}
+
+.kb-empty--clear h2 {
+    color: var(--kb-forest);
+}
+
+/* 16a — "Most people start with one of these": prefilled first steps. */
+.kb-starters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 /* ── Utility ─────────────────────────────────────────────────────────── */

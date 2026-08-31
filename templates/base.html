@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}KeystoneBid &middot; Antique Hunting License Marketplace{% endblock %}</title>
+    <title>{% block title %}Backtag &middot; Antique Hunting License Marketplace{% endblock %}</title>
     <link rel="icon" type="image/svg+xml" href="{% static 'img/favicon.svg' %}">
 
     {% comment %}
@@ -23,6 +23,8 @@
     <link rel="stylesheet" href="{% static 'css/kb-ui.css' %}">
 
     {% block extra_css %}{% endblock %}
+    {# Last on purpose: the phone rules override whatever a page loaded. #}
+    <link rel="stylesheet" href="{% static 'css/mobile.css' %}">
 </head>
 <body>
 
@@ -30,24 +32,26 @@
 {# ── Band 1 — topbar. Home overrides this with the full 158px masthead. ── #}
 <header class="kb-topbar" id="kb-topbar">
     <div class="kb-band-inner">
+        {# Away from home the bar carries just the name (owner's call). #}
         <a href="{% url 'home' %}" class="kb-brand">
-            <img src="{% static 'img/keystone-mark.svg' %}" alt="">
-            <span>KeystoneBid</span>
+            <span>Backtag</span>
         </a>
 
         <span class="kb-topbar-divider" aria-hidden="true"></span>
 
         <nav class="kb-topbar-nav" id="kb-topbar-nav" aria-label="Primary">
             <a href="{% url 'hunt' %}" class="kb-dest"
-               {% if kb_zone == 'hunt' %}aria-current="page"{% endif %}>Hunt</a>
+               {% if kb_zone == 'hunt' %}aria-current="page"{% endif %}>The Market</a>
             <a href="{% url 'collectors' %}" class="kb-dest"
                {% if kb_zone == 'collections' %}aria-current="page"{% endif %}>Collections</a>
+            <a href="{% url 'research' %}" class="kb-dest"
+               {% if kb_zone == 'almanac' %}aria-current="page"{% endif %}>Research</a>
             {% if user.is_authenticated %}
                 <a href="{% url 'bench' %}" class="kb-dest"
-                   {% if kb_zone == 'bench' %}aria-current="page"{% endif %}>My Bench</a>
+                   {% if kb_zone == 'bench' %}aria-current="page"{% endif %}>
+                    Dashboard{% if nav_bench_dot %}<span class="kb-dest-dot" aria-label="Something needs you"></span>{% endif %}
+                </a>
             {% endif %}
-            <a href="{% url 'almanac' %}" class="kb-dest kb-dest--soon"
-               {% if kb_zone == 'almanac' %}aria-current="page"{% endif %}>The Almanac</a>
         </nav>
 
         <form class="kb-search" action="{% url 'hunt' %}" method="get" role="search">
@@ -80,7 +84,8 @@
                         <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                     </svg>
                     {% if nav_unread_notifications_count %}
-                        <span class="kb-alert-count kb-alert-count--rust">{{ nav_unread_notifications_count }}</span>
+                        {% comment %}Red only when action is required. §2.{% endcomment %}
+                        <span class="kb-alert-count {% if nav_action_count %}kb-alert-count--rust{% else %}kb-alert-count--brass{% endif %}">{{ nav_unread_notifications_count }}</span>
                     {% endif %}
                 </a>
 
@@ -135,11 +140,11 @@
 <footer class="kb-footer">
     <div class="kb-footer-inner">
         <div>
-            <p class="kb-footer-brand">KeystoneBid</p>
+            <p class="kb-footer-brand">{% include 'components/_mark.html' with mark_outline=1 mark_w=15 mark_h=20 %} Backtag</p>
             <p class="kb-footer-tag">Antique and vintage hunting licences, bought, sold and traded by the people who collect them.</p>
         </div>
         <div class="kb-footer-col">
-            <h2>Hunt</h2>
+            <h2>The Market</h2>
             <a href="{% url 'hunt' %}">All items</a>
             <a href="{% url 'hunt' %}?sort=ending">Ending soon</a>
             <a href="{% url 'hunt' %}?sort=new">Newly listed</a>
@@ -147,8 +152,9 @@
         <div class="kb-footer-col">
             <h2>Collectors</h2>
             <a href="{% url 'collectors' %}">Browse collectors</a>
+            <a href="{% url 'research' %}">Research</a>
             {% if user.is_authenticated %}
-                <a href="{% url 'bench' %}">My Bench</a>
+                <a href="{% url 'bench' %}">Dashboard</a>
                 <a href="{% url 'listings:sell_start' %}">Sell an item</a>
             {% else %}
                 <a href="{% url 'accounts:register' %}">Create an account</a>
@@ -156,9 +162,11 @@
         </div>
     </div>
     <div class="kb-footer-legal">
-        <p>&copy; {% now "Y" %} KeystoneBid. Sellers set their own terms &mdash; KeystoneBid is never the auctioneer. Only expired licences are tradeable.</p>
+        <p>&copy; {% now "Y" %} Backtag. Sellers set their own terms &mdash; Backtag is never the auctioneer. Only expired licences are tradeable.</p>
     </div>
 </footer>
+
+{% include 'components/_tab_bar.html' %}
 
 <script src="{% static 'js/custom.js' %}"></script>
 {% block extra_js %}{% endblock %}

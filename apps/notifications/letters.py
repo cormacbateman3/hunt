@@ -442,7 +442,7 @@ def _plain(notification):
     # The first sentence becomes the headline and the rest becomes the body,
     # so a two-sentence message does not print its opening line twice.
     head, _, rest = (notification.message or '').strip().partition('.')
-    head = head.strip() or 'A note from KeystoneBid'
+    head = head.strip() or 'A note from Backtag'
     return {
         'subject': head[:120],
         'headline': head + '.',
@@ -452,7 +452,7 @@ def _plain(notification):
         'reason': (
             'Letters about a deal in progress always come.'
             if notification.notification_type in ALWAYS_SENT
-            else 'You get this because of something you did on KeystoneBid.'),
+            else 'You get this because of something you did on Backtag.'),
         'can_opt_out': notification.notification_type not in ALWAYS_SENT,
     }
 

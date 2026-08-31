@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Add an item &middot; KeystoneBid{% endblock %}
+{% block title %}Add an item &middot; Backtag{% endblock %}
 
 {% block context_band %}
 <nav class="kb-crumbs" aria-label="Breadcrumb">
     <div class="kb-band-inner">
-        <a href="{% url 'bench' %}">My Bench</a>
+        <a href="{% url 'bench' %}">Dashboard</a>
         <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
         <span class="kb-crumb-current">Add an item</span>
         {% include 'listings/_sell_steps.html' with step=1 %}

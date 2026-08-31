@@ -1,4 +1,4 @@
-Welcome to KeystoneBid, {{ user.username }}.
+Welcome to Backtag, {{ user.username }}.
 
 Please verify your email address by opening this link:
 {{ verification_url }}

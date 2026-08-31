@@ -1,0 +1,23 @@
+{% comment %}
+15b — the four tabs a phone gets: Hunt, Mine, Bench, Add. Fixed to the
+bottom at phone widths only (mobile.css); desktop never sees it. The
+Almanac lives under Mine on a phone — nobody browses reading matter
+there, they arrive from a letter. Signed out, the topbar carries enough.
+{% endcomment %}
+{% if user.is_authenticated %}
+<nav class="kb-tabbar" aria-label="Primary">
+    <a href="{% url 'hunt' %}"
+       class="kb-tabbar-item{% if kb_zone == 'hunt' %} is-on{% endif %}">Market</a>
+    <a href="{% url 'collections:my_collection' %}"
+       class="kb-tabbar-item{% if '/collections/my' in request.path %} is-on{% endif %}">Mine</a>
+    <a href="{% url 'bench' %}"
+       class="kb-tabbar-item{% if kb_zone == 'bench' and '/collections/my' not in request.path %} is-on{% endif %}">
+        Dashboard
+        {% if nav_unread_notifications_count %}
+            <span class="kb-tabbar-badge">{{ nav_unread_notifications_count }}</span>
+        {% endif %}
+    </a>
+    <a href="{% url 'listings:sell_start' %}"
+       class="kb-tabbar-item{% if '/listings/sell' in request.path %} is-on{% endif %}">Add</a>
+</nav>
+{% endif %}

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}My collection &middot; My Bench &middot; KeystoneBid{% endblock %}
+{% block title %}My collection &middot; Dashboard &middot; Backtag{% endblock %}
 
 {% block context_band %}{% include 'components/_bench_tabs.html' %}{% endblock %}
 
@@ -55,6 +55,7 @@ Register: docs/internal/plan_design.md
     issuing in — never a gap, so never counted against you.
     {% endcomment %}
     {% if matrix %}
+        {% include 'components/_desk_note.html' %}
         <section class="mn-panel">
             <div class="mn-panel-head">
                 <span class="kb-eyebrow kb-eyebrow--brass">{{ matrix.state.name }} &rsaquo; {{ matrix.unit_label_plural }} by decade</span>
@@ -109,8 +110,8 @@ Register: docs/internal/plan_design.md
     {% else %}
         <div class="kb-empty">
             <h2>Nothing to measure yet</h2>
-            <p>The matrix needs items with a county and a year on them. Add a few
-               and it will show you the shape of what you have.</p>
+            <p>The matrix needs items with a {{ unit_label|lower }} and a year on
+               them. Add a few and it will show you the shape of what you have.</p>
             <div class="kb-empty-actions">
                 <a href="{% url 'collections:create' %}" class="kb-btn kb-btn--primary">Add an item</a>
             </div>
@@ -148,7 +149,7 @@ Register: docs/internal/plan_design.md
                                 <span class="mn-want-sub">one closes {{ row.closing.auction_end|date:"l" }}</span>
                             {% endif %}
                         {% else %}
-                            <span class="mn-want-count mn-want-count--quiet">None listed</span>
+                            <span class="mn-want-count mn-want-count--quiet">Nothing listed today</span>
                         {% endif %}
                     </div>
 
@@ -165,10 +166,19 @@ Register: docs/internal/plan_design.md
         </div>
     {% else %}
         <div class="kb-empty">
-            <h2>You haven&rsquo;t said what you&rsquo;re after</h2>
+            <h2>Tell us one thing you&rsquo;re after and you&rsquo;ll stop having to look</h2>
             <p>A want is a standing search. Name a place, a range of years or a type,
                and anything listed against it finds you &mdash; and so do the collectors
                who already own one.</p>
+            {% if want_starters %}
+                <p class="kb-faint">Most people start with one of these</p>
+                <div class="kb-starters">
+                    {% for starter in want_starters %}
+                        <a href="{% url 'collections:wanted_create' %}{% if starter.query %}?{{ starter.query }}{% endif %}"
+                           class="kb-chip">{{ starter.label }}</a>
+                    {% endfor %}
+                </div>
+            {% endif %}
         </div>
     {% endif %}
 
@@ -177,6 +187,23 @@ Register: docs/internal/plan_design.md
     </div>
 
 {% else %}
+    {% if not item_total %}
+        {% comment %}
+        16a — nothing yet: the rail stays hidden until there is something
+        to filter (an empty control is worse than no control), and the
+        sentence names what this page becomes.
+        {% endcomment %}
+        <div class="kb-empty">
+            <h2>{{ max_featured }} of these become your display case</h2>
+            <p>It&rsquo;s the first thing another collector sees when they open
+               your profile &mdash; add an item and the case starts filling from
+               the top. A licence you record here can go up for sale in minutes,
+               because the details carry straight over.</p>
+            <div class="kb-empty-actions">
+                <a href="{% url 'collections:create' %}" class="kb-btn kb-btn--primary">Add your first item</a>
+            </div>
+        </div>
+    {% else %}
     <div class="mn-layout">
         <form method="get" class="mn-rail" aria-label="Narrow it down">
             <div class="kb-between">
@@ -193,7 +220,7 @@ Register: docs/internal/plan_design.md
             </div>
 
             <div class="mn-facet">
-                <label class="kb-label" for="mn-county">County</label>
+                <label class="kb-label" for="mn-county">{{ unit_label }}</label>
                 <select name="county_id" id="mn-county" class="kb-select" onchange="this.form.submit()">
                     <option value="">All</option>
                     {% for county in counties %}
@@ -229,7 +256,7 @@ Register: docs/internal/plan_design.md
                 <span class="kb-label">Group by</span>
                 <div class="kb-inline">
                     <a href="?{% if filters.search %}search={{ filters.search }}&amp;{% endif %}group_by=county"
-                       class="kb-chip kb-chip--sm {% if group_by == 'county' %}is-on{% endif %}">County</a>
+                       class="kb-chip kb-chip--sm {% if group_by == 'county' %}is-on{% endif %}">{{ unit_label }}</a>
                     <a href="?{% if filters.search %}search={{ filters.search }}&amp;{% endif %}group_by=decade"
                        class="kb-chip kb-chip--sm {% if group_by == 'decade' %}is-on{% endif %}">Decade</a>
                     {% if group_by %}
@@ -270,15 +297,8 @@ Register: docs/internal/plan_design.md
                 </div>
             {% else %}
                 <div class="kb-empty">
-                    <h2>{% if item_total %}Nothing matches that{% else %}Nothing recorded yet{% endif %}</h2>
-                    <p>
-                        {% if item_total %}
-                            Loosen a filter on the left.
-                        {% else %}
-                            A licence you record here can go up for sale in a few minutes
-                            later, because the details carry straight over.
-                        {% endif %}
-                    </p>
+                    <h2>Nothing matches that</h2>
+                    <p>Loosen a filter on the left.</p>
                     <div class="kb-empty-actions">
                         <a href="{% url 'collections:create' %}" class="kb-btn kb-btn--primary">Add an item</a>
                     </div>
@@ -286,5 +306,6 @@ Register: docs/internal/plan_design.md
             {% endif %}
         </div>
     </div>
+    {% endif %}
 {% endif %}
 {% endblock %}

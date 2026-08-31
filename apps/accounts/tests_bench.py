@@ -147,7 +147,8 @@ class BenchPageTests(TestCase):
         self.client.force_login(self.me)
         resp = self.client.get(reverse('bench'))
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, 'Nothing needs you')
+        # 16a: the green rule — this state reads as earned, never broken.
+        self.assertContains(resp, 'All clear')
 
     def test_progress_uses_the_states_own_unit_label(self):
         """Pennsylvania issues by county; a GMU state must not say county."""

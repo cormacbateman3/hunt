@@ -76,8 +76,15 @@ def ground_covered(user, *, public_only=True):
     state_name = state_rows[0]['state__name']
     unit_label = state_rows[0]['state__issuance_unit_label'] or 'County'
 
-    held = {r['county_id'] for r in state_rows if r['county_id']}
-    total = GeographicUnit.objects.filter(state_id=state_id).count()
+    # The honest denominator: real issuing grounds only. Counting the
+    # Statewide pseudo-unit or an administrative code as ground is how a
+    # 67-county state comes to say 68 — and a statewide piece is a real
+    # answer that must never count for (or against) the unit total.
+    from apps.core import ground
+
+    real_ids = set(ground.real_units(state_id).values_list('id', flat=True))
+    held = {r['county_id'] for r in state_rows if r['county_id']} & real_ids
+    total = len(real_ids)
 
     years = [r['license_year'] for r in state_rows if r['license_year']]
     span = (min(years), max(years)) if years else None
@@ -87,7 +94,7 @@ def ground_covered(user, *, public_only=True):
     # flatter everybody.
     by_county = {}
     for row in state_rows:
-        if row['county_id'] and row['license_year']:
+        if row['county_id'] in real_ids and row['license_year']:
             by_county.setdefault(row['county__name'], []).append(row['license_year'])
     deepest = None
     for name, county_years in by_county.items():
@@ -145,8 +152,16 @@ def matrix(user, *, state=None, public_only=False):
     if not state:
         return None
 
-    units = list(
-        GeographicUnit.objects.filter(state=state).order_by('sort_order', 'name'))
+    # Real issuing grounds down the side — plus Statewide as its own first
+    # row (14a: "statewide is a real answer, not a blank. It gets its own
+    # row in the matrix and never counts against your unit total").
+    # Administrative codes stay out entirely.
+    from apps.core import ground
+
+    real = list(ground.real_units(state).order_by('sort_order', 'name'))
+    statewide = GeographicUnit.objects.filter(
+        state=state, is_statewide=True).first()
+    units = ([statewide] if statewide else []) + real
     if not units:
         return None
 
@@ -182,13 +197,14 @@ def matrix(user, *, state=None, public_only=False):
     filled = sum(
         1 for row in rows for cell in row['cells'] if cell['state'] == 'held')
 
+    statewide_id = statewide.id if statewide else None
     return {
         'state': state,
         'unit_label_plural': plural_unit(state.issuance_unit_label),
         'decades': decades,
         'rows': rows,
-        'units_held': len(held_units),
-        'units_total': len(units),
+        'units_held': len(held_units - {statewide_id}),
+        'units_total': len(real),
         'filled': filled,
         'fillable': fillable,
         'pct': round(filled / fillable * 100) if fillable else 0,

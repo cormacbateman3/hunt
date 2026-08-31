@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static humanize core_tags %}
 
-{% block title %}{{ listing.title }} &middot; KeystoneBid{% endblock %}
+{% block title %}{{ listing.title }} &middot; Backtag{% endblock %}
 
 {% block extra_css %}<link rel="stylesheet" href="{% static 'css/pages/listing.css' %}">{% endblock %}
 
@@ -350,7 +350,7 @@ Header. Format and state read first, then the title, then the object line.
                 <div class="lst-price-row">
                     <div class="kb-stack">
                         <span class="kb-eyebrow">Current bid</span>
-                        <span class="kb-price lst-big">$<span id="current-bid-value">{{ listing.current_price|floatformat:2 }}</span></span>
+                        <span class="kb-price lst-big">$<span id="current-bid-value">{{ listing.current_price|default_if_none:0|floatformat:2 }}</span></span>
                         <span class="kb-faint lst-price-sub">
                             <span id="bid-count-value">{{ bid_count }}</span> bid{{ bid_count|pluralize }}
                             {% if listing.reserve_price %}
@@ -457,7 +457,7 @@ Header. Format and state read first, then the title, then the object line.
                                     {% endfor %}
                                 </div>
                             {% endif %}
-                            <span class="kb-hint" id="min-bid-helper-wrap">Bids are binding. The seller sets the terms &mdash; KeystoneBid is never the auctioneer.</span>
+                            <span class="kb-hint" id="min-bid-helper-wrap">Bids are binding. The seller sets the terms &mdash; Backtag is never the auctioneer.</span>
                         </form>
                         {% if user_max %}
                             <p class="kb-muted lst-note" data-your-standing>

@@ -1562,25 +1562,284 @@ survive conversation deletion via SET_NULL.
 
 ---
 
-## Pass 10 — Empty states, mobile, fifty states ⬜
+## Pass 10 — Empty states, mobile, fifty states 🚧 IN PROGRESS
 
 **Design refs** — turn 16a/16b (empty states), 15a/15b (mobile), 14a/14b (units).
 
-- **Empty states — three shapes.** *Nothing yet* (Petrona sentence naming what will
-  be here, one dark button, a real number from the database). *Nothing matched*
-  (filters as removable chips, each relaxation with its own count, then save it as
-  a want). *Nothing left to do* (**green rule** — a reward, not a failure).
-  Two rules: never render an empty control; never use the words empty, none or zero.
-- **Mobile — six screens, 390pt, 44pt targets.** Two things happen on a phone: you
-  get a letter and bid, or you're at a show with a licence in your hand. Tabs are
-  Hunt / Mine / Bench / Add. The desk work (matrix, sets, settings rooms, Almanac
-  article, dual rosters) becomes one line: *open this on a computer*.
-- **The four unit-label substitutions** (14a) — the cheapest high-value item on the
-  readiness sheet. Every label and every sentence saying "county" reads
-  `issuance_unit_label`; numbered units sort by `unit_number` and print with their
-  type prefix; `is_statewide` renders as **Statewide** wherever a unit name would
-  go; anything drawing a shape checks `geo_data_complete` first and **disables the
-  map toggle with the reason attached rather than hiding it**.
+- **The four unit-label substitutions** (14a/14b) ✅ **done 2026-08-27** ·
+  747 green (8 added) · live sweep clean over the 26 states already seeded.
+  What actually remained after T9 (which had quietly built most of it —
+  `unit_label_plural` matrix headers, hatched never-issued cells,
+  `real_units`, grid degrade, quiet inactive map states with a tooltip
+  reason): the **counting rules**, which were lying in four places.
+  - `tracker.ground_covered` measured "N of M" against ALL of a state's
+    GeographicUnit rows — Statewide pseudo-unit and admin codes included
+    (the "68 counties" family). Now `ground.real_units` is the one
+    denominator, held intersects it, and the deepest run digs only real
+    ground. Same treatment in `_collection_progress` (bench meters).
+  - **`real_units` learned the honest boundary rule**: a shapeless
+    county-type row is an administrative code only in a state whose other
+    counties HAVE shapes; in a state with no geometry at all, counties
+    are counties — 14b's "the list and the matrix work normally" — so
+    the census never zeroes out with the map.
+  - **The matrix gives Statewide its own first row** that fills cells but
+    never moves the unit figure; admin codes left the rows entirely.
+  - Collectors cards: a statewide piece no longer counts as a county
+    (figures, home-county line). Landing band stops counting statewide
+    listings among units. **"Countys" is not a word** — two `f'{label}s'`
+    spellings replaced with `plural_unit`.
+  - **The unit word rides beside each state** everywhere a state is
+    chosen: `State.option_label` ("Colorado · GMU", county states bare)
+    wired into all three item/wanted forms via `label_from_instance` and
+    the four hand-rolled template selects. Mine-view filter label and
+    group chip read the state's word.
+  - The map's owned lens now counts held pieces only — ground.py's old
+    "open question" note replaced by 9i's decision, both surfaces moved
+    together.
+- **Empty states — three shapes** ✅ **done 2026-08-27** · 755 green
+  (8 added). The audit found most blocks already in-voice from earlier
+  passes; what was missing was the machinery:
+  - **Nothing matched (Hunt)**: each relaxation is the same search with
+    one filter let go, wearing its own live count (rows that free
+    nothing stay unsaid); "or keep the search and let it come to you —
+    N collectors own one; M will trade" measured against real held
+    shelves; **Save this as a want** carries the filters into a
+    prefilled want form (`_wanted_initial_from_query`).
+  - **Nothing left to do (Bench)**: the green rule (`kb-empty--clear`),
+    "All clear. Nothing is waiting on you." + what's running (parcels in
+    transit, auctions running) so the quiet reads as earned.
+  - **Nothing yet**: the mine page stops rendering the filter rail over
+    an unrecorded collection ("an empty control is worse than no
+    control") and says "{6} of these become your display case"; the
+    wanted-list empties (Hunt wants tab + mine) offer the 16a starters
+    ("Anything from {home county}" / "A {first year}, any county" /
+    "Write my own"), each a real prefilled link. "None listed" became
+    "Nothing listed today" — the words empty/none/zero stay out of
+    member-facing empty copy (audited all 14 blocks).
+  - **Still open from 16a** ⬜: the new-member HOME variant (county
+    greeting strip, "this page changes completely", collectors near you
+    via the miles machinery, import-a-spreadsheet). Its "Today's three"
+    chip is Pass 15 and its Almanac links are Pass 14 — the band waits
+    on neither, just on its own build.
+- **Mobile — chapter 12, 390pt, 44pt targets** ✅ **done 2026-08-27** ·
+  760 green (5 added). Built as a phone layer over the real pages, not
+  six separate screens:
+  - **The four tabs** (Hunt · Mine · Bench · Add) fixed to the bottom at
+    ≤640px, 52px targets, safe-area padding, Bench wearing the unread
+    count. Members only — a visitor's topbar carries enough. The
+    masthead's "Add an item" hands its job to the tab.
+  - **What the phone drops**: the nine settings rooms and the trade
+    composer's dual rosters hand the whole page to one line — "This is
+    desk work — open it on a computer and it spreads out properly" —
+    and the matrix hands over just its panel (the rest of My collection
+    works fine on a phone). One `_desk_note.html` + `mobile.css` swap;
+    the desktop never sees any of it.
+  - **One column reading as rows**: the card grid flattens to
+    thumb-left rows at phone width; 44px buttons and tap targets;
+    context bands ride sideways instead of wrapping into a wall.
+  - **Register (15b, deferred not dropped):** the camera screen that
+    "justifies an app" (scan → do I own this → what they go for, no
+    account needed) — blocked on Price History (Pass 12) for the
+    comparable figures and on an add-time "you already own one"
+    duplicate check that doesn't exist yet; the photo-prefill half is
+    built. The letter→lot→bid path works today through the responsive
+    lot page; its drawn one-number bid sheet can follow as polish.
+
+**Pass 10 stands** with one carve-out open: the 16a new-member home
+variant (the "this page changes completely" band) — everything else in
+the pass is built.
+
+---
+
+## Pass 10b — One record, one editor ✅
+
+> **Status 2026-08-27** · 1 commit on `feature/alpha-p4-1` · 767 green
+> (7 added) · live sweep against the owner's real scheduled F3 clean.
+> The field report on editing: "it is almost like we edited the Add an
+> item form but the edit got left behind" — which was literally true.
+
+- **Scheduled is not live.** The terms form treated any non-draft as
+  live and stripped the clock fields, so a scheduled listing was
+  locked: no reschedule, no go-up-now. Now scheduled edits on the same
+  step-2 page as a draft (slots and all — the old combined editor
+  redirects it there), its terms reopen with the set date shown, and
+  publishing again is free: **a new date reschedules, a cleared date
+  puts it up right now** (auction clocks recompute from the new
+  go-live). `activate_scheduled_listings` was already in `run_jobs`.
+- **One record, one editor.** A listed piece is a collection item on
+  its way to market — the same physical thing, and two open edit forms
+  is how two copies learn to tell different stories. While a lot exists
+  (draft/scheduled/pending/active) the collection editor redirects to
+  the lot's editor with a note, and **every lot save mirrors the shared
+  descriptive fields back to the shelf record**
+  (`_mirror_listing_to_source`). Terms, privacy and disposition remain
+  each side's own business. Found under the same stone: a POST that
+  omitted `source_collection_item` silently severed the pair — the
+  field is disabled once bound, so the link cannot be orphaned.
+- **The edit photo blocks speak.** "what each one is travels with the
+  file" → "front, back or detail — the label sticks with the
+  photograph". The raw ClearableFileInput chrome ("Currently:
+  <filesystem path> Change:") is gone from every image field — plain
+  file inputs beside the thumbnails that already show what's there.
+  Blank formset extras stopped shouting DETAIL · NEW with a drop box:
+  they read "Add a photograph", and the role dropdown appears only on
+  rows that hold one.
+- **Register:** ~~the live-listing editor still uses clean rows~~ —
+  cleared same day by Pass 10c below.
+
+---
+
+## Pass 10c — The edit is the add form ✅
+
+> **Status 2026-08-27** · 1 commit on `feature/alpha-p4-1` · 768 green ·
+> live sweep clean. The rest of the same field report: "why not the add
+> an item format we worked on" — no reason, so now it is.
+
+- **The slot plan wears every editor.** `apps.core.slot_plan` was built
+  to hold saved records ("the back slot is the row whose role is back")
+  and the edit views simply never called it. Now the collection editor
+  and the live-listing editor both render the same slot panel as the
+  add flow — photographs already sitting in their slots, marked
+  committed, × ticks the row's DELETE, drag reorders. The listings
+  panel became one shared include (`_photo_slot_panel.html`) used by
+  create, the step-2 revisits and the live editor; the old row layout,
+  its role dropdowns and the up/down arrows are gone. (This also
+  resolves the "auction updated but store didn't" impression — that was
+  scheduled-vs-active taking different doors; both wear slots now.)
+- **The dead trade-rules paragraph is deleted, not tucked away.** Since
+  one-record-one-editor, a piece with a live lot cannot reach the
+  collection form at all — explaining auction-lot and Store behaviour
+  there was describing a state that cannot occur. The comment in
+  `_trade_block.html` records why.
+- **"Where it stands" is styled.** `kb-fieldset`, `kb-fieldset-legend`,
+  `kb-radio-row` and `kb-field-note` had no CSS anywhere — bare browser
+  fieldsets were the "unstyled text". The legends (Trade · Where it is ·
+  Only you see these) now wear the panel eyebrow voice.
+
+---
+
+## Pass 10d — Fifty states, for real ✅
+
+> **Status 2026-08-28** · 1 commit on `feature/alpha-p4-1` · 769 green ·
+> live sweep: all 50 states active on the map. The owner gathered the
+> full national reference set (50 states · 4,187 units · 545 license
+> classes · 415 addons); reviewed, corrected and applied.
+
+- **County-first everywhere (owner's decision, 2026-08-28).** The
+  gathered data declared modern systems as ten states' primary word
+  (CO=GMU with zero GMU rows, KS/MI=DMU, MN=DPA, MT=HD, ME=WMD,
+  NH/NY/VT=WMU, WY=Hunt Area) and sorted system rows above counties.
+  For a marketplace of 25-plus-year-old artifacts the printed geography
+  is county or nothing, so: all 50 primaries are the county family
+  (Parish for LA, Borough/Census Area for AK), counties sort first, and
+  the GMU/WMD/DMU rows remain selectable below for the late-window
+  items that genuinely carry them. Revisit per-state when unit
+  validity-years land (register).
+- **The county family is one rule** (`ground.COUNTY_FAMILY`): a
+  county-family row with no FIPS shape, in a state whose family has
+  shapes, is not drawable ground — PA's Co. 68 admin code and
+  Virginia's six abolished jurisdictions (Elizabeth City County,
+  Warwick, Norfolk County, Princess Anne, South Norfolk, Nansemond)
+  behave identically: selectable and taggable, never counted, until
+  validity-years exist. Independent City / Parish / Borough / Census
+  Area / City and Borough / Municipality joined County in the check.
+- **Apply mechanics**: DB pre-rename Norfolk → Norfolk City (seeder
+  keys on (state, name)); pipeline regenerated losslessly (50 / 4,187 /
+  1,005 rows); non-clobber seed first — every drifted row accounted for
+  (10 = the relabels, 990 = the resort + slug conventions, 13 = the
+  owner's duck-stamp/HIP year backfills) — then `--overwrite`. FD
+  pseudo-state self-creates in `seed_license_types`, so its absence
+  from the new states.csv is bootstrap-safe. New CSV columns
+  (`first_year_source`, `added_date`, `agency_name_historical`) pass
+  through the pipeline untouched.
+- **Register:** unit validity-years (existing entry) now also carries
+  the historic-jurisdiction case; ~730 addon rows still lack
+  `approx_first_year` (gate suggestions only — fill opportunistically);
+  MT's 306 hunting districts stay `geo_data_complete=False` by design.
+
+---
+
+## Pass 10e — The marketplace is a fact ✅
+
+> **Status 2026-08-28** · 1 commit on `feature/alpha-p4-1` · 776 green
+> (7 added). The field report's "major logic flaw": the live editor's
+> quiet Where-it's-listed dropdown turned a Store listing into an
+> auction with no clock and no starting price — the terms save cleared
+> the store fields, nothing set auction terms, and the lazy closer
+> swept the wreck as "ended, $None".
+
+- **The type is locked on the live editor** (`_lock_marketplace`):
+  disabled at the form level so no POST can flip it, and rendered as a
+  static fact ("The General Store · move it") instead of a control.
+  The "Started from" box is gone — the shelf link is structural
+  (one record, one editor) and told a seller nothing.
+- **Moving is a deliberate act now, both directions** (`listings:move`):
+  off the market first, terms second. The listing returns to draft on
+  the bench, the terms page asks the NEW marketplace's questions, and
+  its foot button is the only thing that opens it again (fresh clock,
+  cross-type fields cleared properly by the publish path). Guards:
+  active listings only; **a lot with bids cannot move — bids stand**;
+  pending offers are declined with a letter to their senders rather
+  than left dangling.
+- **"$None" can't print**: the detail's current-bid figure defaults
+  a null price to 0.00 (the state is unreachable now, but the template
+  stops lying if data ever wounds a listing again).
+- The owner's 1964 WMD listing repaired to its store form (price,
+  floor, offers, trade note, active).
+
+---
+
+## Pass 10f — Backtag ✅ (implementation plan §1–§3)
+
+> **Status 2026-08-28** · 2 commits on `feature/alpha-p4-1` · 792 green
+> (16 added). Tasks 1–3 of `backtag_implementation_plan.md`, plus the
+> rename itself. §4–§7 (greetings, badges, sharing, seasons) remain in
+> that plan, unscheduled here.
+
+- **The name.** KeystoneBid → Backtag in every sentence a member reads
+  (~80 files: templates, letters, admin titles, settings, scripts).
+  Kept deliberately: the `kb-` CSS prefix, the `config` module, the
+  repo name, `__keystonebid_demo__` — identifiers, not language.
+- **The nav (§1).** The Market · Collections · Research · Dashboard.
+  Paths renamed (/market/, /dashboard/, /research/) with the **URL
+  names keeping their old words** so every reverse and sent letter
+  still lands; old paths 301 with query strings preserved. Research
+  opens onto two rooms: **The Field Guide** (the Almanac renamed) and
+  **The Archives** — shell only per the plan, stating the permanent-
+  census idea with a real count and a deliberately disabled search.
+- **The header (§2).** Home masthead: three bars → two (strap, date and
+  EST. line gone; Sign out only in the avatar menu, which already ran
+  Profile → Settings → divider → Sign out). Sticky, condensing on
+  scroll (nav + stat line collapse). `/` and Ctrl/Cmd-K focus search.
+  **Typeahead** via `/api/search/` grouped Listings / Collectors /
+  Counties, keyboard-walkable. **Badge colours split**: red only when
+  action is required (`ACTION_TYPES` = order_paid, auction_won,
+  moderation_urgent), brass for informational. **Dashboard action dot**
+  from a cached `needs_you_count` — something waiting on you, distinct
+  from Alerts.
+- **The hero (§3).** "Nobody collects these to get rich." / the
+  supporting line / *"History isn't going to save itself."* — image
+  placeholder right, `Join the collection` + `Look around first`, the
+  free-to-join fine print.
+- **The mark (logo round 2, owner chose 2B+2C).** The numbered-tag
+  glyph (die-cut card, punch hole, 13-for-1913) as an inline SVG
+  component (`_mark.html`) that inherits each context's colour and the
+  page's Petrona; the nav wordmark sits on a brass rule (2C). Wired:
+  topbar, masthead, footer (brass), auth lockup with COLLECT · RECORD ·
+  PRESERVE, and a geometry-only favicon (the number drops below 24px,
+  the silhouette stays). The full eight-file export set (PNG email
+  header, print master, app tiles) is registered for when assets are
+  cut properly.
+
+**Register additions (14b, deferred not dropped):**
+- `GeographicUnit` has no valid-from/valid-to years, so "19 of 185" in a
+  redrawn-boundary state measures against today's map and quietly
+  overstates gaps. Blocked on: unit validity fields + per-state boundary
+  history data (owner gathers state data separately).
+- The collectors card's "counties held" stat label stays the house word
+  even for a GMU-state collector — a per-collector unit word needs a
+  primary-state label annotation on the directory query. Cheap once
+  wanted; noted at `templates/collections/collectors.html` stat label.
 
 ---
 
@@ -2010,3 +2269,24 @@ Need to add a section somewhere on the site for like system information (probabl
 Will also probably need a like help button too - mainly so there is an easy point to submit something to admins. FAQs could possibly go there too.
 
 In messages module. Add option to delete a thread - only deletes for user, system still stores the messages. Or maybe user can just archive.
+
+----
+parking lot:
+
+daily trivia and daily polls are getting parking lot.
+
+----
+Current hunt season dates data:
+
+Greetings — your original plan — is the best use, full stop. "Two weeks till opening day" hitting a PA user at the right moment is worth more than any ticker, because it's personal and ephemeral. This alone justifies the scraper.
+
+1. Seasonal browse surfacing (the sleeper best use). Collector interest is seasonal: when turkey season is three weeks out, turkey stamps get more attention. A small homepage module — "Turkey opens in Maryland in 18 days" → a row of turkey tags and stamps currently listed — is authentic retail logic, not gimmick. It's the same instinct as a hardware store putting shovels out before the snow. Cheap to build too: you already have species/method facets on LicenseType, so it's a filter query keyed to the nearest opener.
+
+2. Auction-timing hint for sellers. This one's unexpected but genuinely practical: an auction ending at 8am on opening morning of rifle season is ending while half its bidders are in a tree stand. One dry line in the listing form when the chosen end date collides with a major opener — "Heads up: this ends opening weekend of PA rifle. Your bidders may be in the woods." — is useful, funny, and shows the site knows its people better than almost anything else could.
+
+3. Empty states and micro-copy. "Quiet in here this week. Rifle opened Monday — everybody's out." Costs nothing, lands exactly in the voice you've built, and turns a dead moment (no results, no messages) into a wink instead of a shrug. You already decided humor lives in low-stakes UI; this is that.
+
+4. Notification/email timing. Instead of arbitrary marketing cadence, key the occasional digest to season moments: "Opening day Saturday — here's what came in from Pennsylvania this month." Same email, better excuse to send it, and the excuse is one your users actually care about.
+
+PA not the default for everything - just choose state.
+The market sort and filter have some bugs.

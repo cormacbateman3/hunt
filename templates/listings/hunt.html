@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ hunt_title }} &middot; Hunt &middot; KeystoneBid{% endblock %}
+{% block title %}{{ hunt_title }} &middot; The Market &middot; Backtag{% endblock %}
 
 {% block context_band %}{% include 'components/_hunt_tabs.html' %}{% endblock %}
 
@@ -56,7 +56,7 @@
                 <h2 class="hunt-facet-title">Where it was issued</h2>
                 <select name="state_id" class="kb-select" onchange="this.form.submit()">
                     {% for state in states %}
-                        <option value="{{ state.id }}" {% if selected_state.id == state.id %}selected{% endif %}>{{ state.name }}</option>
+                        <option value="{{ state.id }}" {% if selected_state.id == state.id %}selected{% endif %}>{{ state.option_label }}</option>
                     {% endfor %}
                 </select>
                 {% if counties %}
@@ -186,20 +186,62 @@
 
             {% elif current_tab == 'wants' %}
                 <div class="kb-empty">
-                    <h2>Nothing matches your wanted list yet</h2>
-                    <p>A want is a standing search: name a {{ selected_state.issuance_unit_label|lower|default:'county' }}, a range of years or a type, and anything listed against it turns up here and in your Bench.</p>
-                    <div class="kb-empty-actions">
-                        <a href="{% url 'collections:wanted_create' %}" class="kb-btn kb-btn--primary">Add a want</a>
-                        <a href="?tab=all" class="kb-btn kb-btn--secondary">Browse everything</a>
-                    </div>
+                    {% if want_starters %}
+                        <h2>Tell us one thing you&rsquo;re after and you&rsquo;ll stop having to look</h2>
+                        <p>A want is a standing search. You get a letter the day one is listed, and collectors who own one can offer you a trade without you asking.</p>
+                        <p class="kb-faint">Most people start with one of these</p>
+                        <div class="kb-starters">
+                            {% for starter in want_starters %}
+                                <a href="{% url 'collections:wanted_create' %}{% if starter.query %}?{{ starter.query }}{% endif %}"
+                                   class="kb-chip">{{ starter.label }}</a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <h2>Nothing matches your wanted list today</h2>
+                        <p>Your wants are standing searches &mdash; the day something is listed against one, it turns up here and a letter goes out. Nothing needs doing.</p>
+                        <div class="kb-empty-actions">
+                            <a href="{% url 'collections:wanted_create' %}" class="kb-btn kb-btn--primary">Add another want</a>
+                            <a href="?tab=all" class="kb-btn kb-btn--secondary">Browse everything</a>
+                        </div>
+                    {% endif %}
                 </div>
             {% else %}
+                {% comment %}
+                16a — Nothing matched: the filters stay as chips above,
+                each relaxation carries its own count, and the way to keep
+                the search is a want. Never the words empty, none or zero.
+                {% endcomment %}
                 <div class="kb-empty">
-                    <h2>Nothing here yet</h2>
-                    <p>No item matches all of those filters at once. Widening the year range or clearing a type usually finds the nearest thing.</p>
-                    <div class="kb-empty-actions">
-                        <a href="{% url 'hunt' %}" class="kb-btn kb-btn--primary">Clear all filters</a>
-                    </div>
+                    <h2>Nothing for sale matches all of those at once</h2>
+                    {% if relaxations %}
+                        <p>One step widens it &mdash; each of these is the same search with one thing let go.</p>
+                        <div class="hunt-relax">
+                            {% for row in relaxations %}
+                                <a href="{{ row.url }}" class="hunt-relax-row">
+                                    <span>Without {{ row.label }}</span>
+                                    <span class="hunt-relax-count">{{ row.count }} item{{ row.count|pluralize }}</span>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p>Nothing nearby frees it either &mdash; this is scarce ground.</p>
+                    {% endif %}
+                    {% if come_to_you %}
+                        <p class="hunt-come">
+                            Or keep the search and let it come to you.
+                            {% if come_to_you.holders %}
+                                {{ come_to_you.holders }} collector{{ come_to_you.holders|pluralize }} own{{ come_to_you.holders|pluralize:'s,' }} one{% if come_to_you.traders %}; {{ come_to_you.traders }} will trade{% endif %}.
+                            {% endif %}
+                        </p>
+                        <div class="kb-empty-actions">
+                            <a href="{% url 'collections:wanted_create' %}?{{ come_to_you.want_query }}" class="kb-btn kb-btn--primary">Save this as a want</a>
+                            <a href="{% url 'hunt' %}" class="kb-btn kb-btn--secondary">Clear all filters</a>
+                        </div>
+                    {% else %}
+                        <div class="kb-empty-actions">
+                            <a href="{% url 'hunt' %}" class="kb-btn kb-btn--primary">Clear all filters</a>
+                        </div>
+                    {% endif %}
                 </div>
             {% endif %}
 

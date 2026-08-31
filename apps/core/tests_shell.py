@@ -53,22 +53,23 @@ class ZoneTests(TestCase):
     def test_the_masthead_carries_all_four_zones_when_signed_in(self):
         self.client.force_login(self.user)
         html = self.client.get(reverse('hunt')).content.decode()
-        for label in ('Hunt', 'Collections', 'My Bench', 'The Almanac'):
-            self.assertIn('>' + label + '</a>', html)
+        for label in ('>The Market</a>', '>Collections</a>', '>Research</a>',
+                      'Dashboard'):
+            self.assertIn(label, html)
 
-    def test_signed_out_visitors_are_not_offered_a_bench(self):
+    def test_signed_out_visitors_are_not_offered_a_dashboard(self):
         html = self.client.get(reverse('hunt')).content.decode()
-        self.assertNotIn('>My Bench</a>', html)
-        self.assertIn('>The Almanac</a>', html)
+        self.assertNotIn('Dashboard', html)
+        self.assertIn('>Research</a>', html)
 
     def test_the_username_dropdown_is_gone(self):
-        """It hid state. Its items are visible My Bench tabs now; the
+        """It hid state. Its items are visible workspace tabs now; the
         avatar carries only profile, settings and sign out."""
         self.client.force_login(self.user)
         html = self.client.get(reverse('hunt')).content.decode()
         self.assertNotIn('user-menu-dropdown', html)
         self.assertIn('kb-account-menu', html)
-        for gone in ('>Dashboard<', '>My Listings<', '>Orders<', '>Favorites<'):
+        for gone in ('>My Listings<', '>Orders<', '>Favorites<'):
             self.assertNotIn(gone, html)
 
 

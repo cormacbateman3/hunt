@@ -171,6 +171,9 @@ class ListingForm(forms.ModelForm):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         self.fields['state'].queryset = State.objects.order_by('-is_primary_default', 'name')
+        # 14a: the unit word rides beside each state ("Colorado · GMU"),
+        # so choosing one says what the next field will ask for.
+        self.fields['state'].label_from_instance = lambda state: state.option_label
         self.fields['source_collection_item'].queryset = CollectionItem.objects.none()
         self.fields['featured_image'].required = False
         self.fields['license_year'].required = False
@@ -188,6 +191,10 @@ class ListingForm(forms.ModelForm):
         self.fields['condition_grade'].choices = [
             choice for choice in self.fields['condition_grade'].choices if choice[0]
         ]
+        # Plain file input: on the edit pages the bound ClearableFileInput
+        # printed "Currently: <path> Change:" — the thumbnail already
+        # shows what's there.
+        self.fields['featured_image'].widget = forms.FileInput()
 
         # Trade is not a listing type — trades start from collections;
         # legacy trade rows keep the option only while being edited.
@@ -204,6 +211,13 @@ class ListingForm(forms.ModelForm):
 
         if self.user and self.user.is_authenticated:
             self.fields['source_collection_item'].queryset = CollectionItem.objects.filter(owner=self.user).order_by('-created_at')
+
+        # Once a listing is bound to its shelf record the pair is one
+        # item — a POST that happens to omit the field must not quietly
+        # sever the link and orphan the piece. Disabled fields ignore
+        # posted data and keep the stored value.
+        if self.instance.pk and self.instance.source_collection_item_id:
+            self.fields['source_collection_item'].disabled = True
 
         if self.instance and self.instance.pk:
             self.fields['colors'].initial = self.instance.colors
@@ -425,7 +439,10 @@ class ListingTermsForm(forms.ModelForm):
     )
     scheduled_at = forms.DateTimeField(
         required=False,
-        widget=forms.DateTimeInput(attrs={'class': 'kb-input', 'type': 'datetime-local'}),
+        widget=forms.DateTimeInput(
+            attrs={'class': 'kb-input', 'type': 'datetime-local'},
+            format='%Y-%m-%dT%H:%M',
+        ),
         help_text='Handy before a show. Max 30 days out; leave blank to go live now.',
         input_formats=['%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M'],
     )
@@ -500,7 +517,10 @@ class ListingTermsForm(forms.ModelForm):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         self.listing_type = self.instance.listing_type
-        self.is_live = bool(self.instance.pk) and self.instance.status != 'draft'
+        # Scheduled is NOT live: nothing is public and no clock has run, so
+        # the duration and go-live fields stay editable — a seller who
+        # scheduled a week out must be able to reschedule or go up now.
+        self.is_live = bool(self.instance.pk) and self.instance.status not in ('draft', 'scheduled')
 
         drop = self.STORE_ONLY if self.listing_type == 'auction' else self.AUCTION_ONLY
         for name in drop:
@@ -509,6 +529,11 @@ class ListingTermsForm(forms.ModelForm):
             # The clock question was answered when the lot opened.
             self.fields.pop('duration_days', None)
             self.fields.pop('scheduled_at', None)
+        elif self.instance.pk and self.instance.scheduled_at \
+                and 'scheduled_at' in self.fields:
+            # A scheduled listing reopens its terms with the date it was
+            # given, so rescheduling starts from the truth.
+            self.fields['scheduled_at'].initial = self.instance.scheduled_at
 
         for optional_field in ('bid_increment', 'shipping_service', 'shipping_payer'):
             if optional_field in self.fields:
@@ -590,16 +615,15 @@ class ListingTermsForm(forms.ModelForm):
             listing.trade_notes = ''
             listing.allow_cash = False
 
-        if publish and listing.status == 'draft':
+        if publish and listing.status in ('draft', 'scheduled'):
+            # A scheduled listing publishes again freely: a new date
+            # reschedules it, a cleared date puts it up right now.
             scheduled_at = self.cleaned_data.get('scheduled_at')
             if self.listing_type == 'auction':
                 go_live = scheduled_at or timezone.now()
                 listing.auction_end = go_live + timedelta(days=int(self.cleaned_data['duration_days']))
-            if scheduled_at:
-                listing.scheduled_at = scheduled_at
-                listing.status = 'scheduled'
-            else:
-                listing.status = 'active'
+            listing.scheduled_at = scheduled_at
+            listing.status = 'scheduled' if scheduled_at else 'active'
 
         if commit:
             listing.save()
@@ -624,6 +648,11 @@ class ListingImageForm(forms.ModelForm):
         widgets = {
             'sort_order': forms.HiddenInput(),
             'image_role': forms.HiddenInput(),
+            # A plain file input: the default ClearableFileInput prints
+            # "Currently: <path> Change:" — a filesystem path is not a
+            # sentence anybody should read. The thumbnail shows what's
+            # there; the drop checkbox removes it.
+            'image': forms.FileInput(),
         }
 
     def has_changed(self):

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Trade with {{ other.profile.get_display_name|default:other.username }} &middot; KeystoneBid{% endblock %}
+{% block title %}Trade with {{ other.profile.get_display_name|default:other.username }} &middot; Backtag{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/pages/trade-board.css' %}">
@@ -13,7 +13,7 @@
 {% block context_band %}
 <nav class="kb-crumbs" aria-label="Breadcrumb">
     <div class="kb-band-inner">
-        <a href="{% url 'bench' %}">My Bench</a>
+        <a href="{% url 'bench' %}">Dashboard</a>
         <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
         <a href="{% url 'listings:detail' trade.listing.pk %}">The Trading Block</a>
         <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>

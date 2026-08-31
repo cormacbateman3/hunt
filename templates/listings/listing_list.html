@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ section_title }} | KeystoneBid{% endblock %}
+{% block title %}{{ section_title }} | Backtag{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/pages/browse.css' %}">
@@ -28,7 +28,7 @@
                 <select class="form-select" id="state_id" name="state_id">
                     <option value="" {% if not filters.state_id %}selected{% endif %}>Any</option>
                     {% for state in states %}
-                        <option value="{{ state.id }}" {% if filters.state_id == state.id|stringformat:'s' %}selected{% endif %}>{{ state.name }}</option>
+                        <option value="{{ state.id }}" {% if filters.state_id == state.id|stringformat:'s' %}selected{% endif %}>{{ state.option_label }}</option>
                     {% endfor %}
                 </select>
             </div>

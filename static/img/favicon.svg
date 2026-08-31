@@ -1,7 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- KeystoneBid: keystone mark on parchment -->
-  <rect width="64" height="64" rx="12" fill="#f5ecd7"/>
-  <rect width="64" height="64" rx="12" fill="none" stroke="#d9cfb7" stroke-width="2"/>
-  <polygon points="16,13 48,13 41,51 23,51" fill="#35502f"/>
-  <polygon points="21,18 43,18 37.5,46 26.5,46" fill="none" stroke="#f5ecd7" stroke-width="2" opacity="0.55"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 60">
+  <!-- Backtag 2B, tab-size: the number drops out below 24px, the die-cut
+       silhouette stays (logo round 2). -->
+  <path d="M 11 2 L 33 2 L 42 11 L 42 53 Q 42 58 37 58 L 7 58 Q 2 58 2 53 L 2 11 Z"
+        fill="#26331f"/>
+  <circle cx="22" cy="12.5" r="4.6" fill="#f4efe2"/>
+  <rect x="10" y="26" width="24" height="3.4" fill="#a07a26"/>
+  <rect x="10" y="35" width="24" height="3.4" fill="#a07a26"/>
+  <rect x="10" y="44" width="16" height="3.4" fill="#a07a26"/>
 </svg>

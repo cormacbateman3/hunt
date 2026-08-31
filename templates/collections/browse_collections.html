@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Everything owned &middot; Collections &middot; KeystoneBid{% endblock %}
+{% block title %}Everything owned &middot; Collections &middot; Backtag{% endblock %}
 
 {% block context_band %}{% include 'components/_collections_tabs.html' %}{% endblock %}
 
@@ -42,7 +42,7 @@ is what the multi-select panels always implied.
                 <select class="kb-select" id="state_id" name="state_id">
                     <option value="" {% if not filters.state_id %}selected{% endif %}>Any</option>
                     {% for state in states %}
-                        <option value="{{ state.id }}" {% if filters.state_id == state.id|stringformat:'s' %}selected{% endif %}>{{ state.name }}</option>
+                        <option value="{{ state.id }}" {% if filters.state_id == state.id|stringformat:'s' %}selected{% endif %}>{{ state.option_label }}</option>
                     {% endfor %}
                 </select>
             </div>

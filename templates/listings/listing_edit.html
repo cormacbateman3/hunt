@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static core_tags %}
 
-{% block title %}Edit — {{ listing.title }} | KeystoneBid{% endblock %}
+{% block title %}Edit — {{ listing.title }} | Backtag{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/pages/sell.css' %}">
@@ -12,9 +12,23 @@
 <div class="if-page">
     <div class="if-head">
         <h1>Edit the entry</h1>
+        {% comment %}
+        The lede says which mode this is. Drafts and scheduled lots edit
+        on the step pages with the full run of choices; this page exists
+        because a LIVE listing is a different animal — offers may be open
+        under its terms and an auction clock never resets — so edits here
+        save quietly, without re-publishing. Twice the owner read the two
+        modes as "two different processes"; the page now says the rule.
+        {% endcomment %}
         <p class="if-lede">
-            An edit is not a different decision from the one that made the listing,
-            so it works the same way the listing was made.
+            {% if listing.listing_type == 'auction' %}
+                This lot is live &mdash; bids stand and the clock never resets.
+                Everything here saves quietly, without re-opening anything.
+            {% else %}
+                It&rsquo;s up in the Store now, so edits save quietly &mdash; change
+                the price or the terms whenever; offers already open keep the
+                terms they were made under.
+            {% endif %}
         </p>
     </div>
 
@@ -38,57 +52,12 @@
     <form method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
         <input type="hidden" name="prefill_job_id" id="prefill-job-id" value="">
+        <input type="hidden" name="discard_kept" id="discard-kept" value="">
 
         <div class="if-floor">
             {# ── The evidence rail ─────────────────────────────────── #}
             <div class="if-rail">
-                <section class="if-panel">
-                    <div class="if-panel-head">
-                        <span class="if-panel-eyebrow">Photographs</span>
-                        <span class="if-panel-meta">what each one is travels with the file</span>
-                    </div>
-                    <div class="if-photos-body">
-                        <div class="if-field">
-                            <label class="kb-label" for="{{ form.featured_image.id_for_label }}">Featured &middot; front</label>
-                            {% if listing.featured_image %}
-                                <img src="{{ listing.featured_image.url }}" alt="The front of {{ listing.title }}" class="if-row-thumb if-row-thumb--wide">
-                            {% endif %}
-                            {{ form.featured_image }}
-                            {{ form.featured_image.errors }}
-                        </div>
-                        {{ image_formset.management_form }}
-                        {% for image_form in image_formset %}
-                            <div class="if-photo-row" data-image-row draggable="true">
-                                {{ image_form.id }}
-                                {{ image_form.sort_order }}
-                                {{ image_form.image_role }}
-                                {% if image_form.instance.image %}
-                                    <img src="{{ image_form.instance.image.url }}" alt="" class="if-row-thumb">
-                                {% else %}
-                                    <span class="if-row-thumb if-row-thumb--empty"></span>
-                                {% endif %}
-                                <div class="if-photo-row-body">
-                                    <span class="if-photo-role">
-                                        {% if image_form.instance.pk %}{{ image_form.instance.get_image_role_display }}{% else %}Detail &middot; new{% endif %}
-                                    </span>
-                                    {{ image_form.image }}
-                                    {{ image_form.errors }}
-                                </div>
-                                <div class="if-photo-row-acts">
-                                    <button type="button" class="pf-act" data-move-up title="Move up">&uarr;</button>
-                                    <button type="button" class="pf-act" data-move-down title="Move down">&darr;</button>
-                                    {% if image_form.DELETE %}
-                                        <label class="if-photo-del">{{ image_form.DELETE }} drop</label>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        {% endfor %}
-                        <span class="if-photos-note">
-                            Moving one up or down changes the order and nothing else &mdash;
-                            a back stays the back.
-                        </span>
-                    </div>
-                </section>
+                {% include 'listings/_photo_slot_panel.html' %}
 
                 <section class="if-panel" data-prefill-card hidden>
                     <div class="if-panel-head">
@@ -149,17 +118,20 @@
                     </div>
                 </div>
 
-                <div class="if-grid if-grid--halves">
-                    <div class="if-field{% if form.listing_type.errors %} has-error{% endif %}">
-                        <label class="kb-label" for="{{ form.listing_type.id_for_label }}">Where it&rsquo;s listed</label>
-                        {{ form.listing_type }}
-                        {{ form.listing_type.errors }}
-                    </div>
-                    <div class="if-field{% if form.source_collection_item.errors %} has-error{% endif %}">
-                        <label class="kb-label" for="{{ form.source_collection_item.id_for_label }}">Started from</label>
-                        {{ form.source_collection_item }}
-                        {{ form.source_collection_item.errors }}
-                    </div>
+                {% comment %}
+                The marketplace is a fact here, not a field — the quiet
+                dropdown once turned a Store listing into a clockless
+                auction. Moving is the deliberate act at the page's foot.
+                The old "Started from" box is gone: the shelf link is
+                structural (one record, one editor) and says nothing a
+                seller can use.
+                {% endcomment %}
+                <div class="if-field">
+                    <span class="kb-label">Where it&rsquo;s listed</span>
+                    <p class="if-static">
+                        {% if listing.listing_type == 'auction' %}The Auction House{% else %}The General Store{% endif %}
+                        &middot; <a href="#move-it">move it</a>
+                    </p>
                 </div>
 
                 <section class="if-section">
@@ -413,11 +385,37 @@
     </form>
 
     {% comment %}
-    Must stay OUTSIDE the form above. This partial renders its own form
-    element, and the HTML parser drops a nested opening tag while still
-    honouring the closing one -- which closed the host form early and
-    orphaned the submit button and every field after this point.
+    Must stay OUTSIDE the form above (its own form element) — same rule
+    as the suggestion partial below. Moving marketplaces is off the
+    market first, terms second: the listing returns to draft and the
+    terms page's foot button is the only thing that opens it again.
     {% endcomment %}
+    <section class="if-panel if-move" id="move-it">
+        <div class="if-panel-head">
+            <span class="if-panel-eyebrow">Move it</span>
+        </div>
+        {% if listing.listing_type == 'auction' and listing.bids.exists %}
+            <p class="kb-hint">This lot has bids, and bids stand &mdash; it can&rsquo;t
+               move while they do.</p>
+        {% else %}
+            <p class="kb-hint">
+                Moving takes it off the market and back to your bench as a
+                draft. You set the
+                {% if listing.listing_type == 'auction' %}Store price{% else %}auction terms{% endif %}
+                there, and nothing is public again until you open it.
+                {% if listing.listing_type == 'buy_now' %}Open offers are declined with a note to their senders.{% endif %}
+            </p>
+            <form method="post" action="{% url 'listings:move' listing.pk %}">
+                {% csrf_token %}
+                <button type="submit" name="move_to"
+                        value="{% if listing.listing_type == 'auction' %}buy_now{% else %}auction{% endif %}"
+                        class="kb-btn kb-btn--secondary">
+                    Move to {% if listing.listing_type == 'auction' %}the General Store{% else %}the Auction House{% endif %}
+                </button>
+            </form>
+        {% endif %}
+    </section>
+
     <details class="if-more">
         <summary>Is a value missing?</summary>
         <div class="if-more-body">
@@ -436,7 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
         form: 'form[enctype]',
         kind: 'listing',
         freshTitle: false,
-        slots: { front: { input: '#{{ form.featured_image.id_for_label }}' }, back: {}, details: [] },
+        slots: {{ slots_cfg_json|safe }},
     });
     KBPrefill.init({
         createUrl: '{% url "prefill:create_job" %}',

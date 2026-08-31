@@ -113,7 +113,11 @@ def base_queryset():
             # today; swap the annotation, not the layout, when sets exist.
             # Register: docs/internal/plan_design.md
             county_count=Count(
-                'collection_items__county', filter=public, distinct=True,
+                'collection_items__county',
+                # A statewide piece is a real answer, not a county — it
+                # never counts toward (or against) anyone's unit figure.
+                filter=public & Q(collection_items__county__is_statewide=False),
+                distinct=True,
             ),
             selling_count=Count(
                 'listings', filter=Q(listings__status='active'), distinct=True,
@@ -297,7 +301,8 @@ def _home_counties(user_ids):
     rows = (
         CollectionItem.objects
         .filter(is_public=True, disposition='held',
-                owner_id__in=user_ids, county__isnull=False)
+                owner_id__in=user_ids, county__isnull=False,
+                county__is_statewide=False)
         .values_list('owner_id', 'county__name', 'county__state__code')
         .distinct()
     )

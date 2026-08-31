@@ -13,10 +13,10 @@ The aggregate builders below feed the map's two lenses — what's listed
 (marketplace supply) and what's owned (a collector's ground) — keyed by
 FIPS so the client can join them straight onto the TopoJSON.
 
-Owned counts follow ``tracker.ground_covered``: every recorded piece counts,
-including departed ones — whether departed pieces belong in coverage is an
-open product question in the deferred register, and the two surfaces should
-move together when it's decided.
+Owned counts follow ``tracker.ground_covered``: held pieces only. The open
+question this note used to carry was decided in Pass 9i — a piece that
+departed (sold, traded, given away) is nobody's ground — and both surfaces
+moved together.
 """
 
 from django.db.models import Count, Max, Min
@@ -24,17 +24,34 @@ from django.db.models import Count, Max, Min
 from .models import GeographicUnit, State
 
 
+# The county family: unit types that are counties in all but name —
+# parishes, boroughs, independent cities and the rest of the FIPS 6-4
+# county-equivalent world. real_units treats them as one kind.
+COUNTY_FAMILY = ('County', 'Parish', 'Borough', 'Census Area',
+                 'City and Borough', 'Municipality', 'Independent City')
+
+
 def real_units(state):
     """Issuing grounds a collector can actually hold — the honest denominator.
 
-    Excludes the Statewide pseudo-unit and county-type rows with no FIPS
-    shape (administrative codes, never ground). Keeps non-county unit types:
-    a Game Management Unit has no FIPS and is still a real place.
+    Excludes the Statewide pseudo-unit always. A county-family row with
+    no FIPS shape is excluded only when the state's other county-family
+    rows HAVE shapes — there it is either an administrative code (PA's
+    row 68) or a jurisdiction abolished before FIPS existed (Virginia's
+    Norfolk County, d. 1963). Both stay selectable and taggable; neither
+    counts as drawable ground until unit validity-years exist (register).
+    In a state with no boundary geometry at all, shapeless counties are
+    simply counties: 14b says the list and the matrix work normally
+    there, so the census must not zero out with the map. Non-county unit
+    types (GMU, WMD) are real places with or without a shape.
     """
-    return (
-        GeographicUnit.objects.filter(state=state, is_statewide=False)
-        .exclude(unit_type__iexact='county', fips_code='')
+    qs = GeographicUnit.objects.filter(state=state, is_statewide=False)
+    counties_have_shapes = (
+        qs.filter(unit_type__in=COUNTY_FAMILY).exclude(fips_code='').exists()
     )
+    if counties_have_shapes:
+        return qs.exclude(unit_type__in=COUNTY_FAMILY, fips_code='')
+    return qs
 
 
 def real_unit_count(state):
@@ -50,7 +67,7 @@ def _active_listings():
 def _collection_items(owner, *, public_only):
     from apps.collections.models import CollectionItem
 
-    items = CollectionItem.objects.filter(owner=owner)
+    items = CollectionItem.objects.filter(owner=owner, disposition='held')
     if public_only:
         items = items.filter(is_public=True)
     return items
@@ -128,7 +145,7 @@ def state_rows(state, *, owner=None, owner_public_only=False, exclude_collector=
     from apps.collections.models import CollectionItem
 
     collectors_qs = CollectionItem.objects.filter(
-        state=state, is_public=True, county__isnull=False
+        state=state, is_public=True, disposition='held', county__isnull=False
     )
     if exclude_collector is not None:
         collectors_qs = collectors_qs.exclude(owner=exclude_collector)

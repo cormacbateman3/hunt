@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Add an item &mdash; the terms | KeystoneBid{% endblock %}
+{% block title %}Add an item &mdash; the terms | Backtag{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/pages/item-form.css' %}">
@@ -13,7 +13,7 @@
 {% block context_band %}
 <nav class="kb-crumbs" aria-label="Breadcrumb">
     <div class="kb-band-inner">
-        <a href="{% url 'bench' %}">My Bench</a>
+        <a href="{% url 'bench' %}">Dashboard</a>
         <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
         <a href="{% url 'listings:sell_start' %}">Add an item</a>
         <span class="kb-crumb-sep" aria-hidden="true">&rsaquo;</span>
@@ -200,6 +200,14 @@
                     dev plan 13.6. Register: docs/internal/plan_design.md
                     {% endcomment %}
                 </div>
+            {% endif %}
+
+            {% if listing.status == 'scheduled' %}
+                <p class="kb-hint sl-scheduled-note">
+                    Scheduled to go up {{ listing.scheduled_at|date:"l j F, g:i a" }} &mdash;
+                    save with a new date to reschedule, or untick the later
+                    date to put it up right now.
+                </p>
             {% endif %}
 
             <div class="sl-panel-foot">
