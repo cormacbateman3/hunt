@@ -385,9 +385,11 @@ class WhereTheyLiveTests(CollectorsBaseTest):
         self.assertIn(self.walt, [row['user'] for row in rows])
 
     def test_the_place_line_prefers_the_profile(self):
+        """10.23: the unit's name verbatim, then the state written out —
+        never the appended label that printed "Baltimore County County"."""
         rows = self.client.get(reverse('collectors')).context['rows']
         walt = next(row for row in rows if row['user'] == self.walt)
-        self.assertEqual(walt['place'], 'Lycoming County, PA')
+        self.assertEqual(walt['place'], 'Lycoming, Pennsylvania')
 
     def test_a_profile_that_says_nothing_still_gets_a_place(self):
         """Nobody gets an empty card."""

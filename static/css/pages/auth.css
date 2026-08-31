@@ -165,6 +165,7 @@
 }
 
 .au-field input,
+.au-field select,
 .au-form input[type="text"],
 .au-form input[type="email"],
 .au-form input[type="password"] {
@@ -177,7 +178,8 @@
     color: var(--kb-ink);
 }
 
-.au-field input:focus {
+.au-field input:focus,
+.au-field select:focus {
     outline: 2px solid var(--kb-brass);
     outline-offset: -1px;
 }

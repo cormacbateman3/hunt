@@ -239,8 +239,16 @@ class ListingForm(forms.ModelForm):
             state = initial_state if isinstance(initial_state, State) else State.objects.filter(pk=initial_state).first()
         if state is None and self.instance and self.instance.pk:
             state = self.instance.state or getattr(self.instance.county_ref, 'state', None)
-        # No fallback to a default state: a fresh form says "Choose a state"
-        # rather than quietly deciding the item is from Pennsylvania.
+        # 10.21: the one guess a fresh form may make is the seller's own
+        # home state — they told us where they stand. The site default (PA)
+        # never lands here: a member who hasn't said a state still gets
+        # "Choose a state" rather than the form quietly deciding the item
+        # is from Pennsylvania. Unbound forms only — a POST that cleared
+        # the state must stay cleared.
+        if state is None and not self.is_bound and not self.instance.pk:
+            profile = getattr(self.user, 'profile', None) if self.user else None
+            if profile is not None and profile.home_state_id:
+                state = profile.home_state
         return state
 
     def _set_reference_querysets(self, state):

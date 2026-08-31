@@ -1824,7 +1824,8 @@ the pass is built.
 - **The mark (logo round 2, owner chose 2B+2C).** The numbered-tag
   glyph (die-cut card, punch hole, 13-for-1913) as an inline SVG
   component (`_mark.html`) that inherits each context's colour and the
-  page's Petrona; the nav wordmark sits on a brass rule (2C). Wired:
+  page's Petrona; the nav wordmark is bare — the 2C brass rule lives
+  only on the auth lockup (owner's call, 08-30). Wired:
   topbar, masthead, footer (brass), auth lockup with COLLECT · RECORD ·
   PRESERVE, and a geometry-only favicon (the number drops below 24px,
   the silhouette stays). The full eight-file export set (PNG email
@@ -1840,6 +1841,113 @@ the pass is built.
   even for a GMU-state collector — a per-collector unit word needs a
   primary-state label annotation on the directory query. Cheap once
   wanted; noted at `templates/collections/collectors.html` stat label.
+
+---
+
+## Pass 10g — Home state is the default, not Pennsylvania ✅ · **10.21** (tasks_08-30 §1)
+
+> **Status 2026-08-30** · on `feature/alpha-p4-tasks-0830` · 815 green
+> (13 added). First of the six 08-30 intake items.
+
+- **One rule, one place: `apps/core/defaults.py::default_state(user)`** —
+  the member's `home_state` → the `is_primary_default` state → first
+  alphabetically. Every surface that preselects a state goes through it.
+- **Where it now opens at home:** the Market filter bar (`HuntView`),
+  the Market map (`hunt_map`, which already did this — collapsed onto
+  the helper), Everything-owned browse (`browse.resolve_state`), the
+  My-collection filter sidebar, the Collectors tab, the Field Guide
+  reference button, the geo-units and license-types APIs' no-param
+  fallback, and the wanted-list starter chips.
+- **Item forms guess home, never the site default.** `ListingForm` /
+  `CollectionItemForm`: a fresh unbound form prefills the owner's home
+  state (county list + year bounds follow); a member who never said one
+  still gets "Choose a state" — the no-PA-guess rule stands. Bound
+  POSTs that cleared the state stay cleared. `WantedItemForm` (which
+  always had a PA fallback) now takes `user` and falls back home-first.
+- **County prefills nothing** — per the intake note, `home_county` is
+  who the member is, not where a search starts.
+- **Registration requires home state** (10.26 groundwork): required
+  field on the door, saved to the profile, FD pseudo-state excluded,
+  alphabetical by plain name. Copy: "Filters and new records open on
+  your state. Change it any time in Settings."
+- **Bug found on the way:** `_primary_state` (accounts/views) read
+  `profile.state` — a field that has never existed — so an empty shelf
+  always landed on PA. Now falls back home-first via the helper.
+- Tests: `apps/core/tests_defaults.py` (helper + every surface),
+  registration coverage in `tests_auth.py` incl. the full POST the page
+  produces.
+
+---
+
+## Pass 10h — The settings county list follows the state ✅ · **10.22** (tasks_08-30 §2)
+
+> **Status 2026-08-30** · on `feature/alpha-p4-tasks-0830` · 817 green
+> (2 added).
+
+Exactly the wiring bug the intake suspected. The server half always
+worked — a POST's county queryset is scoped to whatever state the POST
+names — but the profile room rendered its fields in a generic loop and
+never got the browser half every item form carries. Added the same
+cascade (fetch `core:geo_units_api`, keep the selection when still
+valid, reset to "Not saying" on a state change or cleared state), plus
+the label following the state's own unit word ("Home county" → "Home
+WMD"). Tests lock the script's presence on the room and the exact
+pk-shaped request it makes.
+
+---
+
+## Pass 10i — Nothing is appended to a place name ✅ · **10.23** (tasks_08-30 §3)
+
+> **Status 2026-08-30** · on `feature/alpha-p4-tasks-0830` · 822 green
+> (5 added).
+
+The audit found exactly one producer of "Baltimore County County":
+`UserProfile.place` appended the state's unit label to the unit's name.
+It feeds the profile header, breadcrumb, collectors cards, listing
+detail's seller line, message threads and trade stories — one property,
+one fix. Now "{unit}, {state}" with both names verbatim and the state
+written out: *Lycoming, Pennsylvania* · *Baltimore City, Maryland*. The
+profile header carries the intake's format: **of** Lycoming,
+Pennsylvania. The collectors-card fallback built from held items
+(`_home_counties`) matched to the same shape.
+
+Everything else came back clean: every template renders
+`county.name`/`county_ref.name` verbatim; the letters and the ledger
+lines use the unit word grammatically as a count noun ("the last county
+you need"), not as a suffix; the typeahead's label sits in its own meta
+column. The 10.7 address-suffix class has no other member standing.
+
+---
+
+## Pass 10j — Destructive actions take two steps ✅ · **10.24** (tasks_08-30 §4)
+
+> **Status 2026-08-31** · on `feature/alpha-p4-tasks-0830` · 831 green
+> (9 added). Intake's open question (modal vs page) resolved: **dialog
+> with JavaScript, plain page without** — both the same words.
+
+- **One dialog for everything.** `window.kbConfirm` moved to `custom.js`
+  (the photograph ×'s dialog, now shared); any control marked
+  `data-kb-confirm="plain words"` gets intercepted, confirmed, then its
+  own form submitted (`requestSubmit(button)` keeps name/value).
+  `item-form.js` delegates instead of carrying a second copy.
+- **Collection item.** "Strike it from the record" is off the detail
+  page (Edit and Sell it remain) and off the legacy row partial; it now
+  sits at the bottom of the edit form as a quiet rust link. The trigger
+  keeps the house words; the dialog is plain: *This permanently deletes
+  "{title}" — the record, its photographs, and your private notes. It
+  cannot be undone.* No-JS: the link walks to the rebuilt confirm page
+  (house markup, same plain words) — GET never deletes, POST does.
+- **One-record guard found on the way:** the delete view would orphan a
+  live lot (`source_collection_item` is SET_NULL). It now refuses while
+  an operative lot exists and walks to the lot's editor instead — same
+  rule as the edit redirect (10b).
+- **Draft discard.** "Discard this draft" on the terms page was the one
+  true one-click destroyer — now behind the same dialog. The copy's
+  shelf promise ("the piece itself stays on your collection shelf") is
+  unconditional because step 2 gives every draft a shelf twin (4e) —
+  a test now locks that invariant.
+- `_collection_item_row.html` is included nowhere (legacy) — its bare
+  Delete removed anyway; registered for a future sweep of dead partials.
 
 ---
 
@@ -2288,5 +2396,6 @@ Greetings — your original plan — is the best use, full stop. "Two weeks till
 
 4. Notification/email timing. Instead of arbitrary marketing cadence, key the occasional digest to season moments: "Opening day Saturday — here's what came in from Pennsylvania this month." Same email, better excuse to send it, and the excuse is one your users actually care about.
 
-PA not the default for everything - just choose state.
+PA not the default for everything - just choose state. — ✅ done, Pass 10g
+(10.21): home state is the default everywhere, PA only for the undeclared.
 The market sort and filter have some bugs.

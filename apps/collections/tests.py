@@ -143,3 +143,68 @@ class WantedItemFormTests(TestCase):
         form = WantedItemForm()
         self.assertIn('state', form.fields)
         self.assertNotIn('tradeability', form.fields)
+
+
+class TwoStepStrikeTests(TestCase):
+    """10.24 - nothing is deleted on one click, anywhere.
+
+    The detail page keeps Edit only; the strike lives at the bottom of the
+    edit form behind the shared confirm; the GET page is the no-JavaScript
+    second step and deletes nothing by itself."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.pa, _ = State.objects.get_or_create(
+            code='PA', defaults={'name': 'Pennsylvania', 'slug': 'pennsylvania',
+                                 'is_primary_default': True})
+        cls.owner = User.objects.create_user('strike_owner', password='pw')
+        cls.item = CollectionItem.objects.create(
+            owner=cls.owner, title='1931 Cameron', state=cls.pa,
+            condition_grade='good')
+
+    def setUp(self):
+        self.client.force_login(self.owner)
+
+    def test_the_detail_page_keeps_edit_only(self):
+        resp = self.client.get(
+            reverse('collections:item_detail', args=[self.item.pk]))
+        self.assertContains(resp, 'Edit the record')
+        self.assertNotContains(resp, 'Strike it from the record')
+
+    def test_my_collection_offers_no_bare_delete(self):
+        resp = self.client.get(reverse('collections:my_collection'))
+        self.assertNotContains(
+            resp, reverse('collections:delete', args=[self.item.pk]))
+
+    def test_the_edit_form_carries_the_trigger_and_the_plain_question(self):
+        resp = self.client.get(reverse('collections:edit', args=[self.item.pk]))
+        self.assertContains(resp, 'Strike it from the record')
+        self.assertContains(resp, 'data-kb-confirm')
+        self.assertContains(resp, 'It cannot be undone')
+
+    def test_the_no_js_second_step_asks_first_and_deletes_on_post_only(self):
+        url = reverse('collections:delete', args=[self.item.pk])
+        page = self.client.get(url)
+        self.assertContains(page, 'Delete it permanently')
+        self.assertContains(page, 'cannot be undone')
+        self.assertTrue(CollectionItem.objects.filter(pk=self.item.pk).exists())
+
+        resp = self.client.post(url)
+        self.assertRedirects(resp, reverse('collections:my_collection'))
+        self.assertFalse(CollectionItem.objects.filter(pk=self.item.pk).exists())
+
+    def test_a_piece_on_its_way_to_market_cannot_be_struck(self):
+        """Deleting the shelf half would orphan a live lot (10b)."""
+        from decimal import Decimal
+
+        from apps.listings.models import Listing
+
+        Listing.objects.create(
+            seller=self.owner, title='1931 Cameron lot', description='d',
+            state=self.pa, condition_grade='good', listing_type='buy_now',
+            buy_now_price=Decimal('25'), status='active',
+            source_collection_item=self.item)
+        resp = self.client.post(
+            reverse('collections:delete', args=[self.item.pk]))
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(CollectionItem.objects.filter(pk=self.item.pk).exists())

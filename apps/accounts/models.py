@@ -138,16 +138,19 @@ class UserProfile(models.Model):
 
     @property
     def place(self):
-        """Where they collect from, in the state's own vocabulary.
+        """Where they collect from: "{unit}, {state}", both verbatim (10.23).
+
+        Nothing is ever appended to the unit's name — the schema name is
+        already complete. "Baltimore County" carries its own word, and
+        Baltimore City is a distinct jurisdiction that no suffix could fix;
+        bolting the unit label on printed "Baltimore County County".
 
         Falls back to whatever free text a pre-FK profile carried, so nobody
         loses their county to a migration that could not match it.
         """
         if self.home_county_id:
             unit = self.home_county
-            label = unit.state.issuance_unit_label if unit.state_id else ''
-            place = f'{unit.name} {label}'.strip() if label else unit.name
-            return f'{place}, {unit.state.code}' if unit.state_id else place
+            return f'{unit.name}, {unit.state.name}' if unit.state_id else unit.name
         if self.home_state_id:
             return self.home_state.name
         return self.county or ''

@@ -291,7 +291,9 @@ def _since(user):
 
 
 def _home_counties(user_ids):
-    """{user_id: 'Cameron, PA'} for the one county they collect, if it's one.
+    """{user_id: 'Cameron, Pennsylvania'} for the one county they collect,
+    if it's one — the same "{unit}, {state}" shape as ``profile.place``
+    (10.23), names verbatim, nothing appended.
 
     One query for the whole page. Doing this per row is the difference
     between two queries and two hundred.
@@ -303,15 +305,15 @@ def _home_counties(user_ids):
         .filter(is_public=True, disposition='held',
                 owner_id__in=user_ids, county__isnull=False,
                 county__is_statewide=False)
-        .values_list('owner_id', 'county__name', 'county__state__code')
+        .values_list('owner_id', 'county__name', 'county__state__name')
         .distinct()
     )
     seen = {}
-    for owner_id, name, code in rows:
+    for owner_id, name, state_name in rows:
         if owner_id in seen:
             seen[owner_id] = None          # more than one — no single home
         else:
-            seen[owner_id] = f'{name}, {code}'
+            seen[owner_id] = f'{name}, {state_name}' if state_name else name
     return {k: v for k, v in seen.items() if v}
 
 

@@ -1316,3 +1316,26 @@
     .if-grid--condwrite { grid-template-columns: 1fr; }
     .if-called { flex-direction: column; align-items: flex-start; }
 }
+
+/* -- The strike corner (10.24) --
+   The one destructive act on the edit page: last thing on it, quiet
+   until pointed at, and never the same colour as Save. The click opens
+   the shared confirm; the dialog does the warning, this just stands
+   apart from the working buttons. */
+.if-strike {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--kb-rule-soft, #e6ddc8);
+    display: flex;
+    justify-content: flex-end;
+}
+.if-strike-trigger {
+    font-size: 12.5px;
+    color: var(--kb-rust, #9c3d1e);
+    text-decoration: none;
+    border-bottom: 1px dotted currentColor;
+    padding-bottom: 1px;
+}
+.if-strike-trigger:hover {
+    border-bottom-style: solid;
+}

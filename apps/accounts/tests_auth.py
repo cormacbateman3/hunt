@@ -12,10 +12,15 @@ from django.urls import reverse
 from django.utils import timezone
 
 from apps.accounts.forms import UserRegistrationForm
-from apps.core.models import TermsAcceptance, TermsVersion
+from apps.core.models import State, TermsAcceptance, TermsVersion
 
 
 class TermsBase(TestCase):
+    def setUp(self):
+        self.pa, _ = State.objects.get_or_create(
+            code='PA', defaults={'name': 'Pennsylvania', 'slug': 'pa-auth',
+                                 'is_primary_default': True})
+
     def _publish(self, version='1.2', **kwargs):
         return TermsVersion.objects.create(
             version=version,
@@ -32,6 +37,7 @@ class TermsBase(TestCase):
             'email': 'newcomer@example.com',
             'password1': 'a-long-enough-passphrase',
             'password2': 'a-long-enough-passphrase',
+            'home_state': str(self.pa.pk),
         }
         data.update(overrides)
         return data
@@ -100,6 +106,49 @@ class RegistrationTermsTests(TermsBase):
         TermsAcceptance.objects.create(user=user, terms=terms)
         TermsAcceptance.objects.get_or_create(user=user, terms=terms)
         self.assertEqual(TermsAcceptance.objects.filter(user=user).count(), 1)
+
+
+class RegistrationHomeStateTests(TermsBase):
+    """10.21: home state is the one thing the whole site personalises on,
+    so the door asks for it — and only for it, never the county."""
+
+    def test_home_state_is_required(self):
+        form = UserRegistrationForm(data=self._registration(home_state=''))
+        self.assertFalse(form.is_valid())
+        self.assertIn('home_state', form.errors)
+
+    def test_joining_records_where_home_is(self):
+        form = UserRegistrationForm(data=self._registration())
+        self.assertTrue(form.is_valid(), form.errors)
+        user = form.save()
+        self.assertEqual(user.profile.home_state, self.pa)
+
+    def test_federal_is_not_a_place_anybody_lives(self):
+        State.objects.get_or_create(
+            code='FD', defaults={'name': 'Federal', 'slug': 'fd-auth'})
+        form = UserRegistrationForm()
+        self.assertNotIn(
+            'FD', [state.code for state in form.fields['home_state'].queryset])
+
+    def test_the_door_asks_for_it_and_says_why(self):
+        html = self.client.get(reverse('accounts:register')).content.decode()
+        self.assertIn('Home state', html)
+        self.assertIn('Choose your state', html)
+        self.assertIn('Filters and new records open on your state', html)
+
+    def test_leaving_it_blank_fails_on_the_page_not_in_the_void(self):
+        resp = self.client.post(
+            reverse('accounts:register'), self._registration(home_state=''))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Say which state is home')
+        self.assertFalse(User.objects.filter(username='newcomer').exists())
+
+    def test_the_whole_door_works_end_to_end(self):
+        resp = self.client.post(
+            reverse('accounts:register'), self._registration())
+        self.assertRedirects(resp, reverse('accounts:login'))
+        user = User.objects.get(username='newcomer')
+        self.assertEqual(user.profile.home_state, self.pa)
 
 
 class AuthPageTests(TermsBase):
@@ -191,6 +240,29 @@ class SettingsRoomTests(TestCase):
         self.assertEqual(resp.status_code, 302)
         self.member.profile.refresh_from_db()
         self.assertEqual(self.member.profile.home_county, lycoming)
+
+    def test_the_county_list_follows_the_state(self):
+        """10.22: switch Maryland to Pennsylvania and the county list
+        follows. The server half always worked (the test below proves a
+        posted pair saves); this locks the browser half the room never
+        had — the cascade script, wired to the two real fields."""
+        html = self.client.get(
+            reverse('accounts:profile_edit'), {'room': 'profile'}).content.decode()
+        self.assertIn('/api/geo-units/', html)
+        self.assertIn("getElementById('id_home_state')", html)
+        self.assertIn("getElementById('id_home_county')", html)
+
+    def test_the_cascade_api_answers_the_scripts_exact_question(self):
+        """The script asks by pk — the id the state <option> carries."""
+        from apps.core.models import GeographicUnit, State
+        pa, _ = State.objects.get_or_create(
+            code='PA', defaults={'name': 'Pennsylvania', 'slug': 'pa3',
+                                 'is_primary_default': True})
+        lycoming = GeographicUnit.objects.create(
+            state=pa, name='Lycoming', slug='st-lyc-api')
+        resp = self.client.get('/api/geo-units/', {'state': pa.pk})
+        names = [unit['name'] for unit in resp.json()['results']]
+        self.assertIn('Lycoming', names)
 
     def test_a_county_from_the_wrong_state_is_refused(self):
         from apps.core.models import GeographicUnit, State

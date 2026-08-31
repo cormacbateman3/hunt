@@ -1,0 +1,2 @@
+source_type,state,license_type,year_or_era,condition,price,currency,is_actual_sale,sale_or_observed_date,url,notes
+manual_research,Connecticut,Resident Hunting License,1938,Good,45.00,USD,True,2024-06-01,,EXAMPLE ROW - delete before adding real data. Fill one row per observation.

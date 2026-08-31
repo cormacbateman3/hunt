@@ -18,6 +18,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.accounts.follows import following_ids
+from apps.core import defaults
 from apps.core.constants import FORM_TAXONOMY_FIELDS
 from apps.core.slot_plan import photo_slots
 from apps.core.upload_stash import (
@@ -135,8 +136,9 @@ def my_collection(request):
     featured_ids = {i.pk for i in featured_items}
     featured_count = base_qs.filter(featured=True).count()
 
-    # Filter sidebar data
-    default_state = State.objects.filter(is_primary_default=True).first()
+    # Filter sidebar data — the unit list opens on the collector's own
+    # state (10.21), the site default only when they never said one.
+    default_state = defaults.default_state(request.user)
     counties = GeographicUnit.objects.filter(state=default_state).order_by('sort_order', 'name') if default_state else GeographicUnit.objects.none()
     license_types = LicenseType.objects.filter(is_system_value=True).order_by('category', 'name')
 
@@ -246,10 +248,7 @@ def collections_zone(request):
 
     page = collector_rows(request.user, request.GET)
 
-    default_state = (
-        State.objects.filter(is_primary_default=True).first()
-        or State.objects.order_by('name').first()
-    )
+    default_state = defaults.default_state(request.user)
     state_id = request.GET.get('state_id', '')
     selected_state = (
         State.objects.filter(pk=state_id).first() if state_id.isdigit() else None
@@ -279,7 +278,7 @@ def browse_collections(request):
     choose the template.
     """
     return render(request, 'collections/browse_collections.html',
-                  browse_page(request.GET))
+                  browse_page(request.GET, request.user))
 
 
 @login_required
@@ -500,10 +499,32 @@ def collection_item_edit(request, pk):
 
 @login_required
 def collection_item_delete(request, pk):
+    """The second step (10.24). The trigger wears the house words; this
+    page — and the in-form dialog that stands in for it when JavaScript
+    is on — says plainly what will happen, and nothing is deleted before
+    a second explicit click."""
     item = get_object_or_404(CollectionItem, pk=pk, owner=request.user)
+
+    # While a lot exists the pair is one physical thing (10b). Deleting
+    # the shelf half would orphan a lot mid-market, so the strike waits
+    # until the piece is back on the shelf.
+    operative = item.listings.filter(
+        status__in=('draft', 'scheduled', 'pending', 'active'),
+    ).order_by('-created_at').first()
+    if operative is not None:
+        messages.info(
+            request,
+            'This piece is on its way to market, so its record can’t be '
+            'struck yet. Take the lot down first.')
+        if operative.status in ('draft', 'scheduled'):
+            return redirect('listings:item_edit', pk=operative.pk)
+        return redirect('listings:edit', pk=operative.pk)
+
     if request.method == 'POST':
+        title = item.title
         item.delete()
-        messages.success(request, 'Collection item deleted.')
+        messages.success(
+            request, f'“{title}” is deleted from your collection.')
         return redirect('collections:my_collection')
     return render(request, 'collections/collection_item_delete.html', {'item': item})
 
@@ -528,7 +549,7 @@ def _wanted_initial_from_query(params):
 @login_required
 def wanted_item_create(request):
     if request.method == 'POST':
-        form = WantedItemForm(request.POST)
+        form = WantedItemForm(request.POST, user=request.user)
         if form.is_valid():
             wanted_item = form.save(commit=False)
             wanted_item.user = request.user
@@ -536,7 +557,8 @@ def wanted_item_create(request):
             messages.success(request, 'Wanted item added.')
             return redirect('collections:my_collection')
     else:
-        form = WantedItemForm(initial=_wanted_initial_from_query(request.GET))
+        form = WantedItemForm(initial=_wanted_initial_from_query(request.GET),
+                              user=request.user)
     return render(request, 'collections/wanted_item_form.html', {
         'form': form,
         'mode': 'create',
@@ -550,13 +572,13 @@ def wanted_item_create(request):
 def wanted_item_edit(request, pk):
     wanted_item = get_object_or_404(WantedItem, pk=pk, user=request.user)
     if request.method == 'POST':
-        form = WantedItemForm(request.POST, instance=wanted_item)
+        form = WantedItemForm(request.POST, instance=wanted_item, user=request.user)
         if form.is_valid():
             form.save()
             messages.success(request, 'Wanted item updated.')
             return redirect('collections:my_collection')
     else:
-        form = WantedItemForm(instance=wanted_item)
+        form = WantedItemForm(instance=wanted_item, user=request.user)
     return render(request, 'collections/wanted_item_form.html', {
         'form': form,
         'mode': 'edit',

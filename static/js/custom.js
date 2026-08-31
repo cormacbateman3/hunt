@@ -520,3 +520,67 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 })();
+
+/* ── The second step (10.24) ─────────────────────────────────────────────
+ * One confirm dialog for everything destructive, the same one the
+ * photograph × always used. The branded words stay on the trigger;
+ * the dialog speaks plainly and asks for one more explicit click.
+ *
+ * Mark any control with data-kb-confirm="what happens, plainly" and,
+ * optionally, data-kb-confirm-ok="Delete it". A <button> re-submits its
+ * own form with its own name/value; an <a> inside a form submits that
+ * form (its href stays a real no-JavaScript fallback page).
+ */
+(function () {
+    'use strict';
+
+    window.kbConfirm = function (message, opts) {
+        opts = opts || {};
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.className = 'kb-modal-overlay';
+            const modal = document.createElement('div');
+            modal.className = 'kb-modal';
+            const text = document.createElement('p');
+            text.textContent = message;
+            const actions = document.createElement('div');
+            actions.className = 'kb-modal-actions';
+            const cancel = document.createElement('button');
+            cancel.type = 'button';
+            cancel.className = 'kb-btn kb-btn--secondary';
+            cancel.textContent = opts.cancelLabel || 'Keep it';
+            const ok = document.createElement('button');
+            ok.type = 'button';
+            ok.className = 'kb-btn kb-btn--primary';
+            ok.textContent = opts.okLabel || 'Remove';
+            actions.appendChild(cancel);
+            actions.appendChild(ok);
+            modal.appendChild(text);
+            modal.appendChild(actions);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            const done = (answer) => { overlay.remove(); resolve(answer); };
+            ok.addEventListener('click', () => done(true));
+            cancel.addEventListener('click', () => done(false));
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) done(false); });
+            cancel.focus();
+        });
+    };
+
+    document.addEventListener('click', (event) => {
+        const trigger = event.target.closest('[data-kb-confirm]');
+        if (!trigger) return;
+        event.preventDefault();
+        window.kbConfirm(trigger.dataset.kbConfirm, {
+            okLabel: trigger.dataset.kbConfirmOk || 'Delete it',
+        }).then((sure) => {
+            if (!sure) return;
+            const form = trigger.closest('form');
+            if (!form) return;
+            // requestSubmit(button) keeps the button's name/value and its
+            // formnovalidate; it fires submit, not click, so no loop.
+            if (trigger.tagName === 'BUTTON') form.requestSubmit(trigger);
+            else form.requestSubmit();
+        });
+    });
+})();

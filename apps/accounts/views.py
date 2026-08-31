@@ -15,6 +15,7 @@ from .bench import needs_you
 from .follows import follower_count, following_ids
 from .forms import UserRegistrationForm, UserProfileForm, AddressForm
 from .models import Address, Follow, UserProfile
+from apps.core import defaults
 from apps.core.models import GeographicUnit, State
 from apps.listings.models import Listing
 from apps.bids.models import Bid
@@ -527,8 +528,9 @@ def _primary_state(user):
     )
     if top:
         return State.objects.filter(pk=top['state']).first()
-    profile_state = getattr(user.profile, 'state', None)
-    return profile_state or State.objects.filter(is_primary_default=True).first()
+    # An empty shelf says nothing about what they collect, so fall back to
+    # where they live (10.21) — the site default only past that.
+    return defaults.default_state(user)
 
 
 def _collection_progress(user):

@@ -239,7 +239,14 @@
         <span aria-hidden="true">&middot;</span>
         <button type="submit" name="to_collection" value="1" formnovalidate>Keep it in my collection</button>
         <span aria-hidden="true">&middot;</span>
-        <button type="submit" name="discard" value="1" formnovalidate>Discard this draft</button>
+        {% comment %}
+        10.24 — deleting a draft takes a second, plainly-worded click. The
+        shelf sentence is always true: step 2 gives every draft a shelf
+        twin (4e), so the piece survives the lot.
+        {% endcomment %}
+        <button type="submit" name="discard" value="1" formnovalidate
+                data-kb-confirm="This permanently deletes this draft listing. The piece itself stays on your collection shelf. It cannot be undone."
+                data-kb-confirm-ok="Discard it">Discard this draft</button>
     </p>
 
     <section class="sl-strip">

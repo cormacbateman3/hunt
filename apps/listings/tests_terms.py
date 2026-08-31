@@ -490,3 +490,26 @@ class TheShelfSkipTests(TermsBase):
             reverse('listings:sell_from', args=[item.pk]) + '?to=buy_now',
             target_status_code=302,
         )
+
+
+class TwoStepDiscardTests(TermsBase):
+    """10.24 - deleting a draft takes a second, plainly-worded click."""
+
+    def test_the_discard_button_asks_before_it_acts(self):
+        listing = self._draft('buy_now')
+        html = self.client.get(
+            reverse('listings:terms', args=[listing.pk])).content.decode()
+        self.assertIn('Discard this draft', html)
+        self.assertIn('data-kb-confirm', html)
+        self.assertIn('It cannot be undone', html)
+
+    def test_every_draft_has_a_shelf_twin_so_the_page_may_promise_one(self):
+        """The confirm says the piece stays on the shelf. That is only
+        allowed to be unconditional because step 2 gives every draft a
+        shelf twin (4e) - this locks the invariant the copy leans on."""
+        listing = self._draft('buy_now')
+        self.assertIsNotNone(listing.source_collection_item)
+        html = self.client.get(
+            reverse('listings:terms', args=[listing.pk])).content.decode()
+        self.assertIn('Keep it in my collection', html)
+        self.assertIn('stays on your collection shelf', html)

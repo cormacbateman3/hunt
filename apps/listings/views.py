@@ -24,6 +24,7 @@ from apps.bids.services import (
 )
 from apps.collections.models import CollectionItem, WantedItem
 from apps.collections.tradeability import is_open_to_trade
+from apps.core import defaults
 from apps.core.models import GeographicUnit, LicenseType, State
 from apps.core.constants import (
     FORM_LICENSE_TYPE_CATEGORIES,
@@ -263,7 +264,9 @@ class BaseListingListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         selected_state_id = self.request.GET.get('state_id')
-        default_state = State.objects.filter(is_primary_default=True).first() or State.objects.order_by('name').first()
+        # 10.21: the filter bar opens on the viewer's own state; the site
+        # default (PA) is only for strangers and the undeclared.
+        default_state = defaults.default_state(self.request.user)
         if 'state_id' in self.request.GET:
             selected_state = State.objects.filter(pk=selected_state_id).first() if selected_state_id and selected_state_id.isdigit() else None
         else:
@@ -1919,13 +1922,7 @@ def hunt_map(request):
         if state_param:
             state = State.objects.filter(code__iexact=state_param).first()
         if state is None:
-            profile = getattr(request.user, 'profile', None) \
-                if request.user.is_authenticated else None
-            if profile is not None and profile.home_state_id:
-                state = profile.home_state
-        if state is None:
-            state = (State.objects.filter(is_primary_default=True).first()
-                     or State.objects.order_by('name').first())
+            state = defaults.default_state(request.user)
 
     return render(request, 'listings/hunt_map.html', {
         'hunt_tabs': [

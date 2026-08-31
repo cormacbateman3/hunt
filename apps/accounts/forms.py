@@ -36,6 +36,18 @@ class UserRegistrationForm(UserCreationForm):
         })
     )
 
+    # 10.21: home state is the one thing the whole site personalises on —
+    # every filter and fresh form opens there — so joining asks for it.
+    # The county does not belong here: it prefills nothing, and a shorter
+    # door matters more than a fuller profile.
+    home_state = forms.ModelChoiceField(
+        queryset=None,
+        label='Home state',
+        empty_label='Choose your state',
+        error_messages={'required': 'Say which state is home — the site opens on it.'},
+        widget=forms.Select(attrs={'class': 'kb-input'}),
+    )
+
     accept_terms = forms.BooleanField(
         required=True,
         error_messages={'required': 'You have to accept the rules to join.'},
@@ -47,7 +59,14 @@ class UserRegistrationForm(UserCreationForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        from apps.core.models import TermsVersion
+        from apps.core.models import State, TermsVersion
+
+        # Alphabetical and by plain name: a new member is scanning for the
+        # one state they live in, not reading unit vocabularies. Federal is
+        # a pseudo-state for duck stamps, not a place anybody lives.
+        self.fields['home_state'].queryset = (
+            State.objects.exclude(code='FD').order_by('name'))
+        self.fields['home_state'].label_from_instance = lambda state: state.name
 
         # Acceptance is recorded against a version, so there has to be one.
         # If nothing is published the checkbox is not shown at all rather
@@ -63,11 +82,16 @@ class UserRegistrationForm(UserCreationForm):
 
     def save(self, commit=True):
         user = super().save(commit=commit)
-        if commit and self.terms:
-            from apps.core.models import TermsAcceptance
-            TermsAcceptance.objects.get_or_create(
-                user=user, terms=self.terms,
-                defaults={'context': 'registration'})
+        if commit:
+            # The profile row already exists — the post_save signal made it.
+            profile = user.profile
+            profile.home_state = self.cleaned_data['home_state']
+            profile.save(update_fields=['home_state'])
+            if self.terms:
+                from apps.core.models import TermsAcceptance
+                TermsAcceptance.objects.get_or_create(
+                    user=user, terms=self.terms,
+                    defaults={'context': 'registration'})
         return user
 
     def clean_email(self):

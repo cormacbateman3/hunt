@@ -1,15 +1,27 @@
 {% extends 'base.html' %}
 
-{% block title %}Delete Collection Item | Backtag{% endblock %}
+{% block title %}Strike it from the record &middot; Backtag{% endblock %}
+
+{% comment %}
+The no-JavaScript second step (10.24) — with scripts on, the edit form
+opens the same question as a dialog and this page is never seen. The
+branding stays on the button that got them here; this page is plain on
+purpose: somebody who doesn't know what "strike it from the record"
+means must still understand exactly what the next click does.
+{% endcomment %}
 
 {% block content %}
-<section class="card" style="max-width: 700px;">
-    <h1 style="margin-bottom: 0.8rem;">Delete collection item</h1>
-    <p style="margin-bottom: 1rem;">Are you sure you want to delete <strong>{{ item.title }}</strong>?</p>
-    <form method="post">
+<section class="kb-confirm">
+    <span class="kb-eyebrow kb-eyebrow--brass">Strike it from the record</span>
+    <h1 class="kb-confirm-title">Delete &ldquo;{{ item.title }}&rdquo;?</h1>
+    <p class="kb-confirm-body">
+        This permanently deletes the record from your collection &mdash; its
+        photographs and your private notes go with it. It cannot be undone.
+    </p>
+    <form method="post" class="kb-confirm-acts">
         {% csrf_token %}
-        <button type="submit" class="btn-primary">Delete</button>
-        <a href="{% url 'collections:my_collection' %}" style="margin-left: 0.75rem; color: var(--color-aged-amber);">Cancel</a>
+        <a class="kb-btn kb-btn--secondary" href="{% url 'collections:edit' item.pk %}">Keep it</a>
+        <button type="submit" class="kb-btn kb-btn--primary">Delete it permanently</button>
     </form>
 </section>
 {% endblock %}

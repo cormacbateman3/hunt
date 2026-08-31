@@ -7,6 +7,7 @@ from django.db.models import Q
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.core import defaults
 from apps.core.constants import FORM_LICENSE_TYPE_CATEGORIES
 from apps.core.daybook import day_book
 from apps.core.forms import ReferenceDataSuggestionForm
@@ -14,16 +15,16 @@ from apps.core.models import GeographicUnit, LicenseType, State
 from apps.listings.models import Listing
 
 
-def _selected_state_from_code(state_code):
+def _selected_state_from_code(state_code, user=None):
     if state_code:
         if str(state_code).isdigit():
             return State.objects.filter(pk=int(state_code)).first()
         return State.objects.filter(code__iexact=state_code).first()
-    return State.objects.filter(is_primary_default=True).first() or State.objects.order_by('name').first()
+    return defaults.default_state(user)
 
 
 def geo_units_api(request):
-    state = _selected_state_from_code(request.GET.get('state', ''))
+    state = _selected_state_from_code(request.GET.get('state', ''), request.user)
     units = GeographicUnit.objects.none()
     if state:
         units = GeographicUnit.objects.filter(state=state).order_by('sort_order', 'name')
@@ -96,7 +97,7 @@ def map_data_api(request):
 
 
 def license_types_api(request):
-    state = _selected_state_from_code(request.GET.get('state', ''))
+    state = _selected_state_from_code(request.GET.get('state', ''), request.user)
     year_param = request.GET.get('year', '')
     year = int(year_param) if year_param.isdigit() else None
 
@@ -224,8 +225,9 @@ def almanac(request):
     worse than one that says plainly what it will be. This page states that
     and points at the two things that already exist.
     """
-    states = State.objects.filter(is_primary_default=True).first()
-    return render(request, 'core/almanac.html', {'default_state': states})
+    # The reference button names the viewer's own state (10.21).
+    return render(request, 'core/almanac.html',
+                  {'default_state': defaults.default_state(request.user)})
 
 
 def search_suggest_api(request):

@@ -97,7 +97,7 @@ def starters(user):
     form. The query strings feed ``_wanted_initial_from_query`` on the
     create view.
     """
-    from apps.core.models import State
+    from apps.core.defaults import default_state
 
     rows = []
     profile = getattr(user, 'profile', None) if user.is_authenticated else None
@@ -108,8 +108,10 @@ def starters(user):
             'query': f'state_id={home.state_id}&county_id={home.pk}',
         })
 
+    # The county's state when they named a county, else their home state,
+    # else the site default (10.21).
     state = (home.state if home is not None and home.state_id else None) \
-        or State.objects.filter(is_primary_default=True).first()
+        or default_state(user)
     if state and state.min_license_year:
         unit_word = (state.issuance_unit_label or 'county').lower()
         rows.append({

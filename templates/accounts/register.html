@@ -11,7 +11,7 @@
             <span class="au-form-no">Form 2 &middot; New member</span>
             <h1 class="au-title">Join the community</h1>
             <p class="au-lede">
-                Free, and no card. Four fields here, and then you&rsquo;re looking at licences.
+                Free, and no card. Five fields here, and then you&rsquo;re looking at licences.
             </p>
         </div>
 
@@ -33,6 +33,13 @@
                 {{ form.email }}
                 <span class="au-hint">We send one link to confirm it. Deal notices come here too.</span>
                 {{ form.email.errors }}
+            </div>
+
+            <div class="au-field">
+                <label class="au-label" for="{{ form.home_state.id_for_label }}">Home state</label>
+                {{ form.home_state }}
+                <span class="au-hint">Filters and new records open on your state. Change it any time in Settings.</span>
+                {{ form.home_state.errors }}
             </div>
 
             <div class="au-field">

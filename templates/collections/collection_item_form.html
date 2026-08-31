@@ -388,6 +388,25 @@
             {% include 'core/_reference_data_suggestion_form.html' %}
         </div>
     </details>
+
+    {% if mode == 'edit' %}
+    {% comment %}
+    10.24 — the one destructive act, at the bottom of the edit form and
+    behind a second click. The trigger keeps the house words; the dialog
+    says plainly what happens (custom.js picks up data-kb-confirm). With
+    JavaScript off, the link is the same promise: it walks to a page
+    that asks in the same plain words before anything is deleted.
+    Outside the main form for the same nested-form reason as above.
+    {% endcomment %}
+    <div class="if-strike">
+        <form method="post" action="{% url 'collections:delete' item.pk %}">
+            {% csrf_token %}
+            <a href="{% url 'collections:delete' item.pk %}" class="if-strike-trigger"
+               data-kb-confirm="This permanently deletes “{{ item.title }}” from your collection — the record, its photographs, and your private notes. It cannot be undone."
+               data-kb-confirm-ok="Delete it permanently">Strike it from the record</a>
+        </form>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 

@@ -87,3 +87,31 @@ class AlmanacPlaceholderTests(TestCase):
         )
         resp = self.client.get(reverse('almanac'))
         self.assertContains(resp, reverse('hunt'))
+
+
+class SecondStepDialogTests(TestCase):
+    """10.24 - one confirm dialog for everything destructive.
+
+    Read the artifacts, not the DOM: the dialog must live once in
+    custom.js (with the delegated data-kb-confirm wire-up), and the
+    photograph confirm in item-form.js must delegate to it rather than
+    carry a second copy that could drift."""
+
+    @staticmethod
+    def _js(name):
+        from pathlib import Path
+
+        from django.conf import settings
+        return (Path(settings.BASE_DIR) / 'static' / 'js' / name).read_text(
+            encoding='utf-8')
+
+    def test_custom_js_owns_the_dialog_and_the_wireup(self):
+        js = self._js('custom.js')
+        self.assertIn('window.kbConfirm', js)
+        self.assertIn('data-kb-confirm', js)
+        self.assertIn('requestSubmit', js)
+
+    def test_item_form_js_delegates_instead_of_duplicating(self):
+        js = self._js('item-form.js')
+        self.assertIn('window.kbConfirm', js)
+        self.assertNotIn('kb-modal-overlay', js)

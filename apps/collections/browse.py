@@ -18,6 +18,7 @@ Three rules the bar has to keep:
 from django.core.paginator import Paginator
 from django.db.models import Q
 
+from apps.core import defaults
 from apps.core.constants import (
     FORM_LICENSE_TYPE_CATEGORIES,
     LICENSE_TYPE_CATEGORY_QUESTIONS,
@@ -96,13 +97,11 @@ def apply_filters(queryset, params):
     return queryset.order_by(SORTS.get(sort, SORTS['newest'])).distinct()
 
 
-def resolve_state(params):
-    """(default state, selected state). Pennsylvania unless told otherwise;
-    an explicit empty ``state_id`` means *anywhere* and must survive."""
-    default = (
-        State.objects.filter(is_primary_default=True).first()
-        or State.objects.order_by('name').first()
-    )
+def resolve_state(params, user=None):
+    """(default state, selected state). The viewer's home state unless told
+    otherwise (10.21), the site default when they never said one; an
+    explicit empty ``state_id`` means *anywhere* and must survive."""
+    default = defaults.default_state(user)
     if 'state_id' not in params:
         return default, default
     state_id = params.get('state_id', '')
@@ -194,7 +193,7 @@ def applied_filters(params, groups):
     return chips
 
 
-def page(params):
+def page(params, user=None):
     """Everything the Everything-owned template needs, in one call."""
     items = (
         CollectionItem.objects.filter(is_public=True)
@@ -204,7 +203,7 @@ def page(params):
     paginator = Paginator(apply_filters(items, params), PER_PAGE)
     page_obj = paginator.get_page(params.get('page'))
 
-    default_state, selected_state = resolve_state(params)
+    default_state, selected_state = resolve_state(params, user)
     groups = license_type_groups(params, selected_state)
 
     query = params.copy()

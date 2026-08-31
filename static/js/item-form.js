@@ -32,19 +32,9 @@
     }
 
     function kbConfirm(message) {
-        return new Promise((resolve) => {
-            const overlay = document.createElement('div');
-            overlay.className = 'kb-modal-overlay';
-            overlay.innerHTML = '<div class="kb-modal"><p>' + message + '</p>'
-                + '<div class="kb-modal-actions">'
-                + '<button type="button" class="kb-btn kb-btn--secondary" data-cancel>Keep it</button>'
-                + '<button type="button" class="kb-btn kb-btn--primary" data-ok>Remove</button>'
-                + '</div></div>';
-            document.body.appendChild(overlay);
-            overlay.querySelector('[data-ok]').addEventListener('click', () => { overlay.remove(); resolve(true); });
-            overlay.querySelector('[data-cancel]').addEventListener('click', () => { overlay.remove(); resolve(false); });
-            overlay.addEventListener('click', (e) => { if (e.target === overlay) { overlay.remove(); resolve(false); } });
-        });
+        // The shared dialog (custom.js, 10.24) — every confirm wears the
+        // same face, photograph removals and record strikes alike.
+        return window.kbConfirm(message);
     }
 
     /* ── Photograph slots ───────────────────────────────────────────── */

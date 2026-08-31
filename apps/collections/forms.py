@@ -8,6 +8,7 @@ from apps.core.constants import (
     FORM_LICENSE_TYPE_CATEGORIES,
     SHAPE_CHOICES,
 )
+from apps.core.defaults import default_state
 from apps.core.models import GeographicUnit, LicenseType, ReferenceDataSuggestion, State
 from apps.core.widgets import TagsStillAttachedSelect
 from apps.collections.models import (
@@ -171,8 +172,16 @@ class CollectionItemForm(forms.ModelForm):
             state = initial_state if isinstance(initial_state, State) else State.objects.filter(pk=initial_state).first()
         if state is None and self.instance and self.instance.pk:
             state = self.instance.state or getattr(self.instance.county, 'state', None)
-        # No fallback to a default state: a fresh form says "Choose a state"
-        # rather than quietly deciding the piece is from Pennsylvania.
+        # 10.21: the one guess a fresh form may make is the owner's own
+        # home state — they told us where they stand. The site default (PA)
+        # never lands here: a member who hasn't said a state still gets
+        # "Choose a state" rather than the form quietly deciding the piece
+        # is from Pennsylvania. Unbound forms only — a POST that cleared
+        # the state must stay cleared.
+        if state is None and not self.is_bound and not self.instance.pk:
+            profile = getattr(self.user, 'profile', None) if self.user else None
+            if profile is not None and profile.home_state_id:
+                state = profile.home_state
         return state
 
     def _set_reference_querysets(self, state):
@@ -446,6 +455,7 @@ class WantedItemForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         self.fields['state'].queryset = State.objects.order_by('-is_primary_default', 'name')
         self.fields['state'].label_from_instance = lambda state: state.option_label
@@ -471,7 +481,9 @@ class WantedItemForm(forms.ModelForm):
         if state is None and self.instance and self.instance.pk:
             state = self.instance.state or getattr(self.instance.county, 'state', None)
         if state is None:
-            state = State.objects.filter(is_primary_default=True).first() or State.objects.order_by('name').first()
+            # 10.21: a fresh want opens on the member's home state, the
+            # site default only for a member who never said one.
+            state = default_state(self.user)
         return state
 
     def clean(self):

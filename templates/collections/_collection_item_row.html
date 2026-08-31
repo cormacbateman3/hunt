@@ -58,7 +58,10 @@
                     <button type="submit" class="btn-secondary" style="font-size: 0.82rem; padding: 0.25rem 0.55rem;">Feature</button>
                 {% endif %}
             </form>
-            <a class="btn-secondary" href="{% url 'collections:delete' item.pk %}" style="font-size: 0.82rem; padding: 0.25rem 0.55rem; color: var(--color-hunting-rust);">Delete</a>
+            {% comment %}
+            10.24: no bare Delete on a list row. Striking the record lives
+            in the edit form, behind its confirm.
+            {% endcomment %}
         </div>
     </div>
 </article>

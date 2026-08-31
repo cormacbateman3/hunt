@@ -301,3 +301,43 @@ Nothing is in two groups.
     </div>
 </div>
 {% endblock %}
+
+{% block extra_js %}
+{% if room == 'profile' %}
+<script>
+// 10.22: the county list follows the state, the way it does on every item
+// form. The server half always worked — a POST's county queryset is scoped
+// to whatever state the POST names — but the settings room never had the
+// browser half, so switching Maryland to Pennsylvania left Maryland's
+// counties standing until Save.
+document.addEventListener('DOMContentLoaded', () => {
+    const stateSelect = document.getElementById('{{ form.home_state.id_for_label }}');
+    const countySelect = document.getElementById('{{ form.home_county.id_for_label }}');
+    if (!stateSelect || !countySelect) return;
+    const countyLabel = document.querySelector('label[for="{{ form.home_county.id_for_label }}"]');
+
+    stateSelect.addEventListener('change', async () => {
+        const kept = countySelect.value;
+        countySelect.innerHTML = '<option value="">Not saying</option>';
+        if (!stateSelect.value) return;
+
+        const resp = await fetch('{% url "core:geo_units_api" %}?state=' + encodeURIComponent(stateSelect.value));
+        if (!resp.ok) return;
+        const data = await resp.json();
+        data.results.forEach((unit) => {
+            const option = document.createElement('option');
+            option.value = unit.id;
+            option.textContent = unit.name;
+            if (String(unit.id) === kept) option.selected = true;
+            countySelect.appendChild(option);
+        });
+        // The label keeps the state's own word — "Home county" in
+        // Pennsylvania, "Home WMD" in Maine — same rule as the form.
+        if (countyLabel) {
+            countyLabel.textContent = 'Home ' + (data.issuance_unit_label || 'County').toLowerCase();
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

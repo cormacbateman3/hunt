@@ -54,6 +54,54 @@ class ProfileTests(TestCase):
     def _url(self, user=None):
         return reverse('accounts:profile', args=[(user or self.harold).username])
 
+
+class PlaceTests(ProfileTests):
+    """10.23 — the unit's stored name verbatim, then the state written out.
+
+    No suffix works across the board: Baltimore County and Baltimore City
+    are distinct jurisdictions, and appending the unit label printed
+    "Baltimore County County". So nothing is ever appended."""
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.md, _ = State.objects.get_or_create(
+            code='MD', defaults={'name': 'Maryland', 'slug': 'pf-maryland',
+                                 'issuance_unit_label': 'County'})
+        cls.balt_county = GeographicUnit.objects.create(
+            state=cls.md, name='Baltimore County', slug='pf-balt-co')
+        cls.balt_city = GeographicUnit.objects.create(
+            state=cls.md, name='Baltimore City', slug='pf-balt-city',
+            unit_type='Independent City')
+
+    def _marylander(self, county):
+        user = User.objects.create_user(f'pf_{county.slug}', password='pw')
+        user.profile.home_state = self.md
+        user.profile.home_county = county
+        user.profile.save()
+        return user
+
+    def test_the_name_that_carries_its_own_word_is_left_alone(self):
+        user = self._marylander(self.balt_county)
+        self.assertEqual(user.profile.place, 'Baltimore County, Maryland')
+
+    def test_the_city_that_is_not_a_county_is_left_alone_too(self):
+        user = self._marylander(self.balt_city)
+        self.assertEqual(user.profile.place, 'Baltimore City, Maryland')
+
+    def test_the_common_case_reads_plainly(self):
+        self.assertEqual(self.harold.profile.place, 'Lycoming, Pennsylvania')
+
+    def test_the_header_says_of_whom_and_whence(self):
+        html = self.client.get(self._url()).content.decode()
+        self.assertIn('of Lycoming, Pennsylvania', html)
+
+    def test_a_state_only_profile_names_the_state(self):
+        user = User.objects.create_user('pf_stateonly', password='pw')
+        user.profile.home_state = self.md
+        user.profile.save()
+        self.assertEqual(user.profile.place, 'Maryland')
+
     # ── The trade hook ───────────────────────────────────────────────────
     def test_the_rail_says_what_you_hold_against_what_they_want(self):
         CollectionItem.objects.create(

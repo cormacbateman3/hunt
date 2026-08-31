@@ -127,11 +127,15 @@
 
             <div class="cd-acts">
                 {% if is_owner %}
+                    {% comment %}
+                    10.24: nothing destructive lives on this page. Striking
+                    the record moved into the edit form, behind a plain
+                    confirm — a one-click delete beside Edit was a trap.
+                    {% endcomment %}
                     <a class="kb-btn kb-btn--secondary" href="{% url 'collections:edit' item.pk %}">Edit the record</a>
                     {% if item.disposition == 'held' %}
                         <a class="kb-btn kb-btn--secondary" href="{% url 'listings:sell_start' %}?q={{ item.title|urlencode }}">Sell it</a>
                     {% endif %}
-                    <a class="kb-btn kb-btn--text" href="{% url 'collections:delete' item.pk %}">Strike it from the record</a>
                 {% elif user.is_authenticated %}
                     {% comment %}
                     The tag above says "Open to trade"; without this there

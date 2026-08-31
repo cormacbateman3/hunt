@@ -43,7 +43,10 @@ rail is cross-referenced against the viewer's own shelves.
                 <span class="pf-handle">@{{ profile_user.username }}</span>
             </div>
             <p class="pf-where">
-                {% if profile.place %}{{ profile.place }} &middot; {% endif %}
+                {% comment %}10.23 — "of Allegheny, Pennsylvania", the unit's
+                name verbatim: no suffix works across Baltimore County and
+                Baltimore City, so none is ever added.{% endcomment %}
+                {% if profile.place %}of {{ profile.place }} &middot; {% endif %}
                 here since {{ profile_user.date_joined|date:"Y" }}
                 {% if follower_count %} &middot; {{ follower_count }} follower{{ follower_count|pluralize }}{% endif %}
             </p>
