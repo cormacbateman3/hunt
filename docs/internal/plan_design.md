@@ -1951,6 +1951,40 @@ column. The 10.7 address-suffix class has no other member standing.
 
 ---
 
+## Pass 10k — Favorites on every card, and the honest numbers ✅ · **10.25** (tasks_08-30 §5, part)
+
+> **Status 2026-08-31** · on `feature/alpha-p4-2` · 844 green (13
+> added). Whole-collection favoriting + the playlist presentation are
+> **deferred to Pass 13 by the owner's call** — registered there, not
+> dropped. Views resolved (intake open question): **session-deduped
+> total**, no 24-hour window.
+
+- **The heart.** `.kb-card-watch` was drawn in kb-ui.css with no markup —
+  it now exists everywhere: the market grid, home strips, profile
+  listings and shelf pieces, bench's closing rail, the detail-page
+  rails, and Everything owned (reversing Pass 3's "the favourite count
+  goes" — the intake overrules it). Cards restructured `<a>` →
+  `<article>` + stretched cover link so the heart is a real form; the
+  seller's own cards carry no heart (counts only, incl. My-collection
+  cards); signed-out hearts walk to the door with `?next=`.
+- **The count.** "N favorites" (the plain word, per the intake — the
+  detail page's "watching" label retired) at the bottom of cards and on
+  both detail pages; speaks only when non-zero. One `annotate` per grid
+  (`apps/favorites/shortcuts.py::with_favorite_counts` + `favorite_ids`)
+  — no N+1.
+- **Views.** `Listing.view_count`, incremented on the detail page once
+  per browser session (capped session list), never for the seller,
+  anonymous included. "37 views" beside the Listed date.
+- **The Listed date.** `Listing.published_at` — stamped on terms publish,
+  by the activation job, and on relist (the clone was inheriting last
+  week's date and another lot's view count — both reset now). Backfilled
+  from `created_at` for everything ever public. The leak was real:
+  `listing_detail` printed `created_at` ("Listed" = the draft's
+  birthday); it now prints `published_at`.
+- Seller desk's "N watching" line (seller-facing lens) deliberately kept.
+
+---
+
 ## Pass 11 — The staff desk ⬜
 
 **Design refs** — turn 17a (desk), 17b (strike review, taxonomy, prefill),
@@ -1999,6 +2033,18 @@ across seven turns quietly depend on it.** Nothing else unlocks as much.
 **Owes the deferred register** — the collector card's third figure goes back to
 **"sets going"**. Swap the annotation in `apps/collections/collectors.py`; the layout
 does not change.
+
+**Also owed here — 10.25's deferred half (owner's call, 2026-08-31):**
+whole collections as favoritable objects, and the Spotify-playlist
+presentation (user-written description, optional cover image, 2×2 mosaic
+of the first four items' featured images as the default cover, detail
+order cover → title → description → favorite count → item grid). The
+owner chose to wait for this model rather than bolt fields onto
+UserProfile. When it lands: `Favorite` gains a `collection` FK (extend
+the XOR constraint), and the card heart/count pattern from 10.25
+(`kb-card-watch` + `kb-card-favs`, `apps/favorites/shortcuts.py`) reuses
+directly. The "run" rules (auto-filing what you already own) stay
+distinct from 10.26's wanted rules — no shared engine.
 
 
 Name, optional rule, membership table for hand-picked ones. **Without it there is

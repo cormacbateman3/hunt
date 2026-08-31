@@ -356,21 +356,26 @@ def home(request):
         },
     ]
 
+    from apps.favorites.shortcuts import favorite_ids, with_favorite_counts
+
     running = live.filter(listing_type='auction', auction_end__gt=now)
     closing = list(
-        running.select_related('county_ref', 'state', 'seller')
+        with_favorite_counts(running.select_related('county_ref', 'state', 'seller'))
         .order_by('auction_end')[:4]
     )
     fresh = list(
-        live.select_related('county_ref', 'state')
+        with_favorite_counts(live.select_related('county_ref', 'state'))
         .order_by('-created_at')[:5]
     )
+    fav_listing_ids, fav_item_ids = favorite_ids(request.user)
 
     context = {
         'marketplaces': marketplaces,
         'closing_tonight': closing,
         'closing_count': running.count(),
         'fresh': fresh,
+        'fav_listing_ids': fav_listing_ids,
+        'fav_item_ids': fav_item_ids,
         'day_book': day_book(request.user),
         'stat_listings': live.count(),
         'stat_units': live.filter(county_ref__isnull=False)

@@ -248,11 +248,26 @@
     text-decoration: none;
     color: inherit;
     transition: border-color 0.15s;
+    /* 10.25: the card is an <article> now — the cover link stretches over
+       it and the corner heart floats above the cover. */
+    position: relative;
 }
 
 /* Hairline, not lift. Paper doesn't float. */
-a.kb-card:hover {
+.kb-card:hover {
     border-color: var(--kb-forest);
+}
+
+.kb-card-cover {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+}
+
+/* The form is layout-invisible so the heart positions against the media
+   box exactly as it was drawn. */
+.kb-card-watch-form {
+    display: contents;
 }
 
 .kb-card-media {
@@ -295,6 +310,7 @@ a.kb-card:hover {
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    z-index: 2;
 }
 
 .kb-card-watch svg {
@@ -307,6 +323,13 @@ a.kb-card:hover {
 .kb-card-watch.is-on svg {
     stroke: var(--kb-rust);
     fill: var(--kb-rust);
+}
+
+/* The quiet count at the bottom of a card (10.25) — speaks only when
+   somebody has actually saved the thing. Shared by every card family. */
+.kb-card-favs {
+    font-size: 11px;
+    color: var(--kb-ink-4);
 }
 
 .kb-card-placeholder {

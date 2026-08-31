@@ -4,8 +4,15 @@ The listing card.
 One grid holds auctions, buy-now and trades, so every card states its format
 in the top-left corner. On a trade card, what the owner wants sits where a
 price would — that is the information a trader is actually scanning for.
+
+10.25 — the root is an <article> with a stretched cover link, because the
+corner heart is a real form and a form may not live inside an anchor. The
+heart wears .kb-card-watch (drawn in kb-ui.css before it had markup);
+sellers see no heart on their own lots, strangers get walked to the door.
+The favourite count sits at the bottom and only speaks when it is not zero.
 {% endcomment %}
-<a href="{{ listing.get_absolute_url }}" class="kb-card">
+<article class="kb-card">
+    <a href="{{ listing.get_absolute_url }}" class="kb-card-cover" aria-label="{{ listing.title }}"></a>
     <div class="kb-card-media">
         {% if listing.listing_type == 'auction' %}
             <span class="kb-badge kb-badge--auction">Auction</span>
@@ -19,6 +26,27 @@ price would — that is the information a trader is actually scanning for.
             <img src="{{ listing.featured_image.url }}" alt="{{ listing.title }}" loading="lazy">
         {% else %}
             <span class="kb-card-placeholder">no scan yet</span>
+        {% endif %}
+
+        {% if user.is_authenticated and listing.seller_id != user.id %}
+            <form method="post" action="{% url 'favorites:toggle_listing' listing.pk %}" class="kb-card-watch-form">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit"
+                        class="kb-card-watch{% if fav_listing_ids and listing.pk in fav_listing_ids %} is-on{% endif %}"
+                        aria-label="{% if fav_listing_ids and listing.pk in fav_listing_ids %}Remove from favorites{% else %}Save to favorites{% endif %}">
+                    <svg viewBox="0 0 24 24" stroke-width="2" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                </button>
+            </form>
+        {% elif not user.is_authenticated %}
+            <a class="kb-card-watch" href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}"
+               aria-label="Sign in to save this to your favorites">
+                <svg viewBox="0 0 24 24" stroke-width="2" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+            </a>
         {% endif %}
     </div>
 
@@ -58,5 +86,9 @@ price would — that is the information a trader is actually scanning for.
                 </span>
             {% endif %}
         </div>
+
+        {% if listing.favorite_count %}
+            <span class="kb-card-favs">{{ listing.favorite_count }} favorite{{ listing.favorite_count|pluralize }}</span>
+        {% endif %}
     </div>
-</a>
+</article>

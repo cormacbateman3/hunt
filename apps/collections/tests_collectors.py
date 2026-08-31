@@ -326,11 +326,14 @@ class EverythingOwnedTests(CollectorsBaseTest):
         self.assertIn('era=1950s', chips['1930s'])
         self.assertNotIn('era=1930s', chips['1930s'])
 
-    def test_the_card_keeps_the_owner_and_drops_the_favourite_count(self):
+    def test_the_card_keeps_the_owner_and_carries_the_heart(self):
+        """10.25 reversed the Pass 3 call that dropped favourites here:
+        the corner heart and the public count are on every card now. The
+        owner stays — it is still the seam between the two tabs."""
         html = self.client.get(
             reverse('collectors'), {'tab': 'owned'}).content.decode()
         self.assertIn('co_walt', html)
-        self.assertNotIn('fav', html.split('ow-grid')[1])
+        self.assertIn('kb-card-watch', html.split('ow-grid')[1])
 
 
 class GroundCoveredTests(CollectorsBaseTest):

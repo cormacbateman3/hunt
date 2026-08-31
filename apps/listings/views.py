@@ -5,7 +5,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count, F, Q
 from django.http import Http404
 from django.urls import reverse
 from django.views.generic import ListView
@@ -52,6 +52,7 @@ from apps.trades.models import TradeOffer
 from apps.enforcement.services import enforce_capability
 from apps.notifications.services import create_notification
 from apps.favorites.models import Favorite
+from apps.favorites.shortcuts import favorite_ids, with_favorite_counts
 from apps.reviews.models import Review
 
 
@@ -259,7 +260,7 @@ class BaseListingListView(ListView):
                 | Q(license_types__name__icontains=search)
             )
 
-        return queryset.distinct()
+        return with_favorite_counts(queryset.distinct())
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -302,6 +303,7 @@ class BaseListingListView(ListView):
         context['section_title'] = self.section_title
         context['section_description'] = self.section_description
         context['current_route_name'] = self.request.resolver_match.view_name
+        context['fav_listing_ids'], context['fav_item_ids'] = favorite_ids(self.request.user)
         filters = {
             'state_id': self.request.GET.get('state_id', str(default_state.id) if default_state else ''),
             'county_id': self.request.GET.get('county_id', ''),
@@ -791,6 +793,16 @@ def listing_detail(request, pk):
             raise Http404('No listing matches the given query.')
         return redirect('listings:terms', pk=listing.pk)
 
+    # 10.25 — the view counter. One count per browser session, never the
+    # seller's own visits, nothing that isn't public. The session list is
+    # capped so a long browse doesn't grow a cookie-backed record forever.
+    if listing.status not in ('draft', 'scheduled') and request.user.id != listing.seller_id:
+        seen = request.session.get('seen_lots', [])
+        if listing.pk not in seen:
+            Listing.objects.filter(pk=listing.pk).update(view_count=F('view_count') + 1)
+            request.session['seen_lots'] = (seen + [listing.pk])[-300:]
+            listing.view_count += 1
+
     is_auction = listing.listing_type == 'auction'
 
     # An ended auction closes the moment somebody looks at it — cron only
@@ -845,19 +857,23 @@ def listing_detail(request, pk):
             era_filter = Q(license_year__isnull=True, era_label=listing_era)
 
     related_listings = (
-        Listing.objects.filter(status='active', state=listing.state)
-        .exclude(pk=listing.pk)
-        .filter(era_filter | Q(license_types__in=listing.license_types.all()))
-        .select_related('seller', 'state', 'county_ref')
-        .distinct()
+        with_favorite_counts(
+            Listing.objects.filter(status='active', state=listing.state)
+            .exclude(pk=listing.pk)
+            .filter(era_filter | Q(license_types__in=listing.license_types.all()))
+            .select_related('seller', 'state', 'county_ref')
+            .distinct()
+        )
         .order_by('-created_at')[:6]
     ) if listing.state else []
 
     # Discovery: more from this seller
     more_from_seller = (
-        Listing.objects.filter(status='active', seller=listing.seller)
-        .exclude(pk=listing.pk)
-        .select_related('seller', 'state', 'county_ref')
+        with_favorite_counts(
+            Listing.objects.filter(status='active', seller=listing.seller)
+            .exclude(pk=listing.pk)
+            .select_related('seller', 'state', 'county_ref')
+        )
         .order_by('-created_at')[:6]
     )
 
@@ -881,6 +897,8 @@ def listing_detail(request, pk):
             request.user.is_authenticated
             and Favorite.objects.filter(user=request.user, listing=listing).exists()
         ),
+        # The rails' cards need the viewer's saved ids for their hearts.
+        'fav_listing_ids': favorite_ids(request.user)[0],
         'seller_review_summary': seller_review_summary,
         'seller_completed_sales': seller_completed_sales,
         'listing_favorite_count': listing_favorite_count,

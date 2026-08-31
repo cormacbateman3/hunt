@@ -191,6 +191,18 @@ class Listing(models.Model):
     auction_extensions = models.PositiveSmallIntegerField(default=0)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
 
+    # 10.25 — the two honest numbers on a public lot.
+    # `published_at` is when it last went live: the "Listed" date. It is NOT
+    # created_at (a draft's birthday) and never the shelf record's date — a
+    # piece catalogued in March and listed in August was listed in August.
+    published_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text='When this lot last went live — the "Listed" date shown to buyers',
+    )
+    # Detail-page views by people other than the seller, deduplicated per
+    # browser session; a relist starts from zero.
+    view_count = models.PositiveIntegerField(default=0)
+
     # Scheduled go-live
     scheduled_at = models.DateTimeField(
         null=True, blank=True,

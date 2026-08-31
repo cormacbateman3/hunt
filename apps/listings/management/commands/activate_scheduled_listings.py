@@ -44,7 +44,10 @@ class Command(BaseCommand):
                     continue
 
                 locked.status = 'active'
-                locked.save(update_fields=['status', 'updated_at'])
+                # The "Listed" date is the moment it actually went up —
+                # not when it was scheduled, not when it was drafted.
+                locked.published_at = now
+                locked.save(update_fields=['status', 'published_at', 'updated_at'])
 
                 create_notification(
                     user=locked.seller,
