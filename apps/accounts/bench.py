@@ -101,6 +101,15 @@ def _listing_thumb(listing):
     return None
 
 
+def _trade_thumb(listing, item):
+    """The lot's photo when there is a lot, else the piece's own first photo."""
+    thumb = _listing_thumb(listing)
+    if thumb or item is None:
+        return thumb
+    image = next(iter(item.images.all()), None)
+    return image.image.url if image and image.image else None
+
+
 def needs_you(user):
     """Every open obligation for ``user``, soonest deadline first."""
     now = timezone.now()
@@ -185,10 +194,12 @@ def needs_you(user):
         ))
 
     # ── Trade proposals waiting on your answer ─────────────────────────
+    # Since 10.10 an offer is usually about a collection item with no lot
+    # behind it, so the title and thumbnail come from the piece first.
     trade_offers = (
         TradeOffer.objects.filter(to_user=user, status='pending')
-        .select_related('trade_listing', 'from_user')
-        .prefetch_related('items')
+        .select_related('trade_listing', 'subject_item', 'from_user')
+        .prefetch_related('items', 'subject_item__images')
     )
     for offer in trade_offers:
         item_count = offer.items.count()
@@ -199,20 +210,20 @@ def needs_you(user):
             label=_humanise(offer.expires_at, now, noun='Trade offer expires').capitalize(),
             title=(
                 f'{offer.from_user.username} offers {item_count} item'
-                f'{"s" if item_count != 1 else ""} for your {offer.trade_listing.title}'
+                f'{"s" if item_count != 1 else ""} for your {offer.subject_title}'
             ),
             sub=f'{counter}{item_count} item{"s" if item_count != 1 else ""}{cash}'.strip(' ·'),
             action='Review offer',
             url=reverse('trades:offer_detail', args=[offer.pk]),
-            thumb=_listing_thumb(offer.trade_listing),
+            thumb=_trade_thumb(offer.trade_listing, offer.subject_item),
         ))
 
     # ── Live trades where your side has not moved ──────────────────────
     live_trades = (
         Trade.objects.filter(status__in=['accepted', 'awaiting_shipments', 'shipped_one'])
         .filter(Q(initiator=user) | Q(counterparty=user))
-        .select_related('listing')
-        .prefetch_related('shipments')
+        .select_related('listing', 'offer__subject_item')
+        .prefetch_related('shipments', 'offer__subject_item__images')
     )
     for trade in live_trades:
         mine = [s for s in trade.shipments.all() if s.sender_id == user.id]
@@ -222,11 +233,13 @@ def needs_you(user):
         rows.append(_row(
             kind='trade_ship', due_at=trade.ship_by_deadline, now=now,
             label=_humanise(trade.ship_by_deadline, now, noun='Send your side').capitalize(),
-            title=f'Trade with {other.username} — {trade.listing.title}',
+            title=f'Trade with {other.username} — {trade.subject_title}',
             sub='Both sides ship before either is marked complete.',
             action='Open trade',
             url=reverse('trades:trade_detail', args=[trade.pk]),
-            thumb=_listing_thumb(trade.listing),
+            thumb=_trade_thumb(
+                trade.listing, trade.offer.subject_item if trade.offer_id else None,
+            ),
         ))
 
     rows.sort(key=lambda r: r['sort_key'])

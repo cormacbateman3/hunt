@@ -85,6 +85,16 @@ class TradeOffer(models.Model):
         """
         return bool(self.cash_amount) and self.cash_direction == 'from_proposer'
 
+    @property
+    def subject_title(self):
+        """What the offer is about. Since 10.10 most offers have no lot, so
+        the piece asked for names it; ``trade_listing`` is the older anchor."""
+        if self.subject_item_id:
+            return self.subject_item.title
+        if self.trade_listing_id:
+            return self.trade_listing.title
+        return 'your piece'
+
     def __str__(self):
         return f"Trade offer from {self.from_user.username} to {self.to_user.username}"
 

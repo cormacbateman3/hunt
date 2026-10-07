@@ -23,6 +23,7 @@ from apps.collections.models import CollectionItem
 from apps.listings.models import Listing
 from apps.offers.models import Offer
 from apps.orders.models import Order
+from apps.trades.models import Trade, TradeOffer
 
 
 class NeedsYouTests(TestCase):
@@ -126,6 +127,59 @@ class NeedsYouTests(TestCase):
             amount=Decimal('40'), status='pending',
         )
         self.assertEqual(needs_you_count(self.me), len(needs_you(self.me)))
+
+
+class UnlistedTradeTests(TestCase):
+    """Since 10.10 a trade offer is usually about a piece with no lot behind
+    it. The Bench read ``offer.trade_listing.title`` and ``trade.listing.title``
+    unguarded, so being sent such an offer took the whole Bench down."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.me = User.objects.create_user('unlisted_me', password='pw')
+        cls.them = User.objects.create_user('unlisted_them', password='pw')
+        cls.pa, _ = State.objects.get_or_create(
+            code='PA', defaults={'name': 'Pennsylvania', 'slug': 'pennsylvania'},
+        )
+        cls.piece = CollectionItem.objects.create(
+            owner=cls.me, title='1931 Clinton resident', state=cls.pa,
+            license_year=1931, condition_grade='good',
+        )
+
+    def _offer(self, **kwargs):
+        defaults = {
+            'subject_item': self.piece, 'trade_listing': None,
+            'from_user': self.them, 'to_user': self.me, 'status': 'pending',
+            'expires_at': timezone.now() + timedelta(days=3),
+        }
+        defaults.update(kwargs)
+        return TradeOffer.objects.create(**defaults)
+
+    def test_an_offer_on_an_unlisted_piece_names_the_piece(self):
+        self._offer()
+        rows = needs_you(self.me)
+        self.assertEqual([r['kind'] for r in rows], ['trade_offer'])
+        self.assertIn('1931 Clinton resident', rows[0]['title'])
+
+    def test_a_live_trade_without_a_lot_names_the_piece(self):
+        offer = self._offer(status='accepted')
+        Trade.objects.create(
+            offer=offer, listing=None, initiator=self.them, counterparty=self.me,
+            status='awaiting_shipments',
+            ship_by_deadline=timezone.now() + timedelta(days=5),
+        )
+        rows = needs_you(self.me)
+        self.assertEqual([r['kind'] for r in rows], ['trade_ship'])
+        self.assertIn('1931 Clinton resident', rows[0]['title'])
+
+    def test_the_bench_page_renders_with_both(self):
+        self._offer()
+        Trade.objects.create(
+            offer=self._offer(status='accepted'), listing=None,
+            initiator=self.them, counterparty=self.me, status='accepted',
+        )
+        self.client.force_login(self.me)
+        self.assertEqual(self.client.get(reverse('bench')).status_code, 200)
 
 
 class BenchPageTests(TestCase):
