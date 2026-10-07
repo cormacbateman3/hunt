@@ -2050,6 +2050,36 @@ today*.
 
 ---
 
+## Workable-product batch 1 — crashes and safety holes ✅ 2026-10-07
+
+Branch `feature/alpha-p4-3`. The first batch from the new roadmap
+(`docs/internal/plans/plan_workable_product_10062026.md`, Phase 1A plus W1.24).
+No design frames involved; these are fixes to what the audit found. 861 → 895
+tests, all green.
+
+**What shipped**
+
+| Roadmap | Fix |
+|---|---|
+| W1.3 | The Bench no longer crashes on a trade offer for an unlisted piece. `TradeOffer.subject_title`; rows fall back to the piece's own photo |
+| W1.4 | User / UserProfile admin pages (500 since the home-county change) and the moderation-event list (500 on group rooms) open again. `apps/core/tests_admin_smoke.py` renders every registered list, search and add page |
+| W1.2 | `orders:update_status` is gone; `transition_order` refuses shipping statuses from any non-staff member |
+| W1.1 | `apps/shipping/tracking.py`: the Shippo webhook needs `?token=` (`SHIPPO_WEBHOOK_TOKEN`, fails closed) and only names parcels, whose status is re-fetched from Shippo; typed-in tracking is verified with the carrier; unknown codes no longer read as in transit; trade form gets a carrier dropdown |
+| W1.24 | Prefill reads the four printed PA county layouts; "NAME Co NN" (antlerless) names the county; numbers only PA 1913–1937, never nonresident or samples (facts from the stakeholder's book) |
+| W1.5 | A payment landing after its order was released, or from a previous buyer, sells nothing; staff are emailed to refund it, the payer is told. Checkout metadata carries `buyer_id` |
+
+**Deviations / notes**
+
+- **Owner action:** set `SHIPPO_WEBHOOK_TOKEN` and register the webhook as
+  `…/shipping/webhooks/shippo/?token=<token>`. Until then every webhook is refused and
+  the shipment poll keeps tracking current.
+- New notification types `payment_after_cancel`, `payment_needs_refund`;
+  `moderation_urgent` (already sent) is now a declared choice (migration
+  notifications 0008, choices only).
+- Refunds are still manual (W4.3 automates them).
+
+---
+
 # Blocked on new models
 
 The designer's own build order (20a). Each is independently shippable.
