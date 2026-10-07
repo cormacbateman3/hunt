@@ -13,6 +13,10 @@ class Notification(models.Model):
         ('auction_expired', 'Auction Expired'),
         ('payment_received', 'Payment Received'),
         ('payment_confirmed', 'Payment Confirmed'),
+        # A payment that landed after its order was released (W1.5): the
+        # payer is told it will be refunded; staff are asked to refund it.
+        ('payment_after_cancel', 'Payment After Cancellation'),
+        ('payment_needs_refund', 'Payment Needs Refund'),
         # Alpha types
         ('order_created', 'Order Created'),
         ('order_paid', 'Order Paid'),
@@ -45,6 +49,8 @@ class Notification(models.Model):
         ('account_restricted', 'Account Restricted'),
         # Messaging
         ('new_message', 'New Message'),
+        # Staff (already sent by apps.moderation; now a declared choice)
+        ('moderation_urgent', 'Moderation Urgent'),
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')

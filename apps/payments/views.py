@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -15,6 +17,7 @@ from apps.shipping.services import ShippoError, ensure_checkout_shipping_ready
 from .models import PaymentTransaction, Transaction
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
+logger = logging.getLogger(__name__)
 
 
 def _get_or_create_order_from_transaction(transaction):
@@ -96,8 +99,12 @@ def create_checkout_session(request, order_id):
             mode='payment',
             success_url=f"{settings.SITE_URL.rstrip('/')}/payments/success/{order.pk}/",
             cancel_url=f"{settings.SITE_URL.rstrip('/')}/payments/cancel/{order.pk}/",
-            metadata={'order_id': str(order.pk)},
-            payment_intent_data={'metadata': {'order_id': str(order.pk)}},
+            # buyer_id lets the webhook tell a late payment from a previous
+            # buyer apart from the order's current one (W1.5).
+            metadata={'order_id': str(order.pk), 'buyer_id': str(order.buyer_id)},
+            payment_intent_data={
+                'metadata': {'order_id': str(order.pk), 'buyer_id': str(order.buyer_id)},
+            },
         )
 
         payment.stripe_checkout_session_id = checkout_session.id
@@ -179,6 +186,47 @@ def handle_checkout_session_completed(session):
     payment.save(update_fields=['stripe_payment_intent_id', 'stripe_checkout_session_id', 'status', 'updated_at'])
 
 
+def _flag_payment_for_refund(order, payment_intent, payer_id):
+    """A payment that must not complete a sale. Until automatic refunds land
+    (roadmap W4.3), staff are emailed to refund it in Stripe and the payer is
+    told plainly. Nothing is marked sold, and the order's own payment record
+    is left alone (it may now belong to a different buyer)."""
+    from django.contrib.auth.models import User
+
+    intent_id = payment_intent.get('id', '')
+    cents = payment_intent.get('amount_received') or payment_intent.get('amount') or 0
+    amount = f'${cents / 100:.2f}'
+    logger.warning(
+        'Stray payment %s (%s) for order #%s in status %s; payer %s, buyer %s',
+        intent_id, amount, order.pk, order.status, payer_id, order.buyer_id,
+    )
+    for staff in User.objects.filter(is_staff=True, is_active=True):
+        create_notification(
+            user=staff,
+            notification_type='payment_needs_refund',
+            message=(
+                f'Refund needed: payment {intent_id} ({amount}) arrived for order #{order.pk} '
+                f'after it was {order.get_status_display().lower()}. Refund it in Stripe.'
+            ),
+            link_url=f'/admin/orders/order/{order.pk}/change/',
+            queue_email=True,
+            dedupe_window_hours=48,
+        )
+    payer = User.objects.filter(pk=payer_id).first() if payer_id else order.buyer
+    if payer:
+        create_notification(
+            user=payer,
+            notification_type='payment_after_cancel',
+            message=(
+                f'Your payment of {amount} for {order.listing.title} arrived after the order had '
+                'been released, so it did not go through as a purchase. We will refund it to your '
+                'card within a few days; you do not need to do anything.'
+            ),
+            queue_email=True,
+            dedupe_window_hours=48,
+        )
+
+
 def handle_payment_intent_succeeded(payment_intent):
     metadata = payment_intent.get('metadata') or {}
     order_id = metadata.get('order_id')
@@ -197,10 +245,21 @@ def handle_payment_intent_succeeded(payment_intent):
     if not order:
         return
 
+    payer_id = metadata.get('buyer_id')
     with db_transaction.atomic():
         order = Order.objects.select_for_update().select_related(
             'listing', 'buyer', 'seller',
         ).get(pk=order.pk)
+
+        # A payment for an order that is no longer waiting on one (released
+        # after the pay window), or from someone who is no longer its buyer,
+        # must not sell anything. It is flagged for a refund instead.
+        stray = order.status not in {'pending_payment', 'paid'} or (
+            payer_id and str(order.buyer_id) != str(payer_id)
+        )
+        if stray:
+            _flag_payment_for_refund(order, payment_intent, payer_id)
+            return
 
         payment, _ = PaymentTransaction.objects.get_or_create(order=order)
         was_paid = order.status == 'paid'
