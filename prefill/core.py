@@ -301,7 +301,58 @@ def _direct(value: Any, conf: float, max_tier: str = "high") -> dict:
             "conf": conf, "tier": _cap(tier_for(conf, 100), max_tier), "inferred": False}
 
 
-COUNTY_NUM_RE = re.compile(r"(?:CO|COUNTY)\.?\s*(?:NUMBER|NUM|NO|#)?\s*0*(\d{1,3})", re.I)
+# PA printed a county number on resident tags 1913–1937 only, in four layouts
+# (the stakeholder's book, p20–27): "COUNTY No. 46" (1913–22), "COUNTY NUMBER
+# 46" (1923), "No. 24 Co." (1924) and "Co. 34 PENNA." (1925–37). From 1951,
+# antlerless licences print "ADAMS Co 34" — a county NAME, then the licence
+# number — which the old single pattern read as county 34 (Juniata) at high
+# confidence. Nonresident tags never carried one, and 0 or 68+ appear only on
+# sample tags (p72, p79).
+COUNTY_NUM_RE = re.compile(r"\b(?:CO|COUNTY)\.?\s*(?:NUMBER|NUM|NO\.?|#)?\s*0*(\d{1,3})\b", re.I)
+COUNTY_NUM_FIRST_RE = re.compile(r"\bNO\.?\s*0*(\d{1,3})\s*CO\b", re.I)   # the 1924 layout
+PA_COUNTY_NUMBER_YEARS = (1913, 1937)
+PA_COUNTY_NUMBERS = range(1, 68)
+
+
+def _county_named_before(text: str, start: int, cands: list) -> dict | None:
+    """The county whose name sits right before "Co" on the same line — the
+    antlerless layout, where the number after it is not a county."""
+    line = text[:start].split("\n")[-1]
+    words = re.findall(r"[A-Za-z]{3,}", line)
+    if not words or not cands:
+        return None
+    hit = process.extractOne(_norm(words[-1]), [c["norm"] for c in cands], scorer=fuzz.WRatio)
+    return cands[hit[2]] if hit and hit[1] >= GEO_NAME_FLOOR else None
+
+
+def printed_county(raw: dict, abbrev: str, cands: list) -> tuple[str, Any] | None:
+    """What the tag's county marking says: ("number", "34"), ("name", rec) for
+    the antlerless "NAME Co NN" layout, or None when no marking can be
+    believed (wrong era, nonresident, a sample's 0 or 68+)."""
+    if abbrev == "PA":
+        year = raw.get("license_year")
+        if isinstance(year, int) and not (PA_COUNTY_NUMBER_YEARS[0] <= year <= PA_COUNTY_NUMBER_YEARS[1]):
+            year_blocks_number = True
+        else:
+            year_blocks_number = False
+        nonresident = "NON" in _norm(raw.get("residency") or "").replace(" ", "")
+    else:
+        year_blocks_number = nonresident = False
+
+    for text in (str(raw.get("geographic_unit_name") or ""), str(raw.get("raw_text_transcription") or "")):
+        for rx in (COUNTY_NUM_RE, COUNTY_NUM_FIRST_RE):
+            for m in rx.finditer(text):
+                if rx is COUNTY_NUM_RE:
+                    named = _county_named_before(text, m.start(), cands)
+                    if named:
+                        return ("name", named)
+                if year_blocks_number or nonresident:
+                    continue
+                num = int(m.group(1))
+                if abbrev == "PA" and num not in PA_COUNTY_NUMBERS:
+                    continue
+                return ("number", str(num))
+    return None
 
 
 def resolve_geo(raw: dict, abbrev: str, ref: ReferenceData) -> dict:
@@ -322,10 +373,15 @@ def resolve_geo(raw: dict, abbrev: str, ref: ReferenceData) -> dict:
                 "score": 100, "conf": c, "tier": tier_for(c, 100), "inferred": False}
     if not abbrev:
         return _blank(geo_text, conf)
-    # 1. county number — from the geo field, else scan the raw transcription
-    m = COUNTY_NUM_RE.search(str(geo_text or "")) or COUNTY_NUM_RE.search(str(raw.get("raw_text_transcription") or ""))
-    if m:
-        num = m.group(1).lstrip("0") or "0"
+    cands = ref.geo_by_state.get(abbrev, [])
+    # 1. the printed county marking — from the geo field, else the raw transcription
+    marking = printed_county(raw, abbrev, cands)
+    if marking and marking[0] == "name":
+        rec = marking[1]
+        return {"value": rec["id"], "name": rec["name"], "source_text": geo_text or rec["name"],
+                "score": 100, "conf": conf, "tier": tier_for(conf, 100), "inferred": False}
+    if marking:
+        num = marking[1]
         rec = ref.geo_num.get(abbrev, {}).get(num)
         if rec:
             c = max(conf, 0.8)
@@ -334,7 +390,6 @@ def resolve_geo(raw: dict, abbrev: str, ref: ReferenceData) -> dict:
     # 2. name match
     if geo_text:
         cleaned = re.sub(r"\b(COUNTY|CO|PARISH|GMU|WMU|WMD|DPA)\b", " ", _norm(geo_text)).strip() or _norm(geo_text)
-        cands = ref.geo_by_state.get(abbrev, [])
         if cands:
             hit = process.extractOne(cleaned, [c["norm"] for c in cands], scorer=fuzz.WRatio)
             if hit and hit[1] >= GEO_NAME_FLOOR:
@@ -647,7 +702,7 @@ def resolve(raw: dict, ref: ReferenceData, client=None) -> dict:
     # (1913-1937 county-numbered tags) — resolves state even when no state name was read.
     if state is None:
         blob = f'{raw.get("geographic_unit_name") or ""} {raw.get("raw_text_transcription") or ""}'
-        if COUNTY_NUM_RE.search(blob):
+        if COUNTY_NUM_RE.search(blob) or COUNTY_NUM_FIRST_RE.search(blob):
             state = ref.states_by_key.get("PA")
             if state:
                 state_inferred = True
