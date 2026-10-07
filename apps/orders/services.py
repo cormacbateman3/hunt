@@ -21,13 +21,19 @@ def can_transition(order, target_status):
     return target_status in ORDER_TRANSITIONS.get(order.status, set())
 
 
+SHIPPING_STATUSES = {'label_created', 'in_transit', 'delivered'}
+
+
 def transition_order(order, target_status, *, actor=None):
     if not can_transition(order, target_status):
         return False, f'Cannot transition from {order.status} to {target_status}.'
 
-    if actor and target_status in {'label_created', 'in_transit', 'delivered'}:
-        if actor.id != order.seller_id:
-            return False, 'Only the seller can update shipping-related statuses.'
+    # Shipping statuses are facts about the parcel, so they come from the
+    # carrier's tracking (actor=None, via apps.shipping) or from staff — never
+    # from a member's say-so. A seller who could post "delivered" to their own
+    # order escaped the non-shipment strike and fed auto-complete.
+    if actor and target_status in SHIPPING_STATUSES and not actor.is_staff:
+        return False, "Shipping status comes from the carrier's tracking."
 
     if actor and target_status == 'completed':
         if actor.id not in {order.buyer_id, order.seller_id}:

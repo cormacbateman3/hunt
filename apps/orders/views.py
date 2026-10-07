@@ -188,34 +188,6 @@ def confirm_receipt(request, pk):
 
 @login_required
 @require_POST
-def update_status(request, pk):
-    order = _get_order_for_user(request, pk)
-    if not order:
-        return HttpResponseForbidden('You do not have access to this order.')
-
-    target = request.POST.get('target_status', '').strip()
-    allowed_targets = {'label_created', 'in_transit', 'delivered'}
-    if target not in allowed_targets:
-        messages.error(request, 'Invalid status transition request.')
-        return redirect('orders:detail', pk=order.pk)
-
-    ok, message = transition_order(order, target, actor=request.user)
-    if ok:
-        note_type = 'order_shipped' if target in {'label_created', 'in_transit'} else 'order_delivered'
-        create_notification(
-            user=order.buyer,
-            notification_type=note_type,
-            message=f'Order #{order.pk} status updated to {order.get_status_display()}.',
-            link_url=f'/orders/{order.pk}/',
-        )
-        messages.success(request, 'Order status updated.')
-    else:
-        messages.error(request, message)
-    return redirect('orders:detail', pk=order.pk)
-
-
-@login_required
-@require_POST
 def initiate_excuse(request, pk, strike_id):
     order = _get_order_for_user(request, pk)
     if not order:
