@@ -59,9 +59,14 @@ class ModerationEventAdmin(admin.ModelAdmin):
         if not event.conversation_id:
             return '—'
         conv = event.conversation
+        # Group rooms have no user_a / user_b; reading them was a 500 on the
+        # whole changelist the first time a room was flagged.
+        if conv.is_group:
+            label = f'Room: {conv.name or f"#{conv.pk}"}'
+        else:
+            label = f'{conv.user_a.username} ↔ {conv.user_b.username}'
         return format_html(
-            '<a href="/admin/messaging/conversation/{}/change/">{} ↔ {}</a>',
-            conv.pk, conv.user_a.username, conv.user_b.username,
+            '<a href="/admin/messaging/conversation/{}/change/">{}</a>', conv.pk, label,
         )
 
     @admin.display(description='Message')

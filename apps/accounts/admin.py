@@ -4,12 +4,19 @@ from django.contrib.auth.models import User
 from .models import UserProfile, Address
 
 
+# `county` is the pre-Pass-6 free-text field, now editable=False. Listing it
+# as an ordinary field made every User and UserProfile change page a 500, so
+# it is shown read-only next to the home_state / home_county FKs that replaced
+# it.
 class UserProfileInline(admin.StackedInline):
     model = UserProfile
     can_delete = False
     verbose_name_plural = 'Profile'
-    fields = ('display_name', 'bio', 'county', 'avatar', 'email_verified', 'phone_verified', 'stripe_customer_id', 'shipping_address', 'messaging_disabled', 'messaging_disabled_reason', 'messaging_disabled_at')
-    readonly_fields = ('email_verification_token', 'created_at', 'updated_at')
+    fields = ('display_name', 'bio', 'home_state', 'home_county', 'county', 'avatar',
+              'email_verified', 'phone_verified', 'stripe_customer_id', 'shipping_address',
+              'messaging_disabled', 'messaging_disabled_reason', 'messaging_disabled_at')
+    readonly_fields = ('county', 'email_verification_token', 'created_at', 'updated_at')
+    autocomplete_fields = ('home_state', 'home_county')
 
 
 class UserAdmin(BaseUserAdmin):
@@ -39,17 +46,18 @@ def enable_messaging(modeladmin, request, queryset):
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'display_name', 'county', 'email_verified', 'phone_verified', 'messaging_disabled', 'created_at')
-    list_filter = ('email_verified', 'phone_verified', 'messaging_disabled', 'county', 'created_at')
-    search_fields = ('user__username', 'user__email', 'display_name', 'county')
-    readonly_fields = ('email_verification_token', 'created_at', 'updated_at')
+    list_display = ('user', 'display_name', 'home_state', 'home_county', 'email_verified', 'phone_verified', 'messaging_disabled', 'created_at')
+    list_filter = ('email_verified', 'phone_verified', 'messaging_disabled', 'home_state', 'created_at')
+    search_fields = ('user__username', 'user__email', 'display_name', 'home_county__name')
+    readonly_fields = ('county', 'email_verification_token', 'created_at', 'updated_at')
+    autocomplete_fields = ('home_state', 'home_county')
     actions = [disable_messaging, enable_messaging]
     fieldsets = (
         ('User Info', {
             'fields': ('user', 'display_name', 'bio', 'avatar')
         }),
         ('Location', {
-            'fields': ('county', 'shipping_address')
+            'fields': ('home_state', 'home_county', 'county', 'shipping_address')
         }),
         ('Verification', {
             'fields': ('email_verified', 'email_verification_token', 'phone_verified')
