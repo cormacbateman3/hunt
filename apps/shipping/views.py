@@ -14,6 +14,7 @@ from .services import (
     handle_tracking_webhook,
     quote_order_shipping,
 )
+from .tracking import webhook_token_ok
 from apps.trades.services import handle_trade_tracking_webhook
 
 
@@ -102,6 +103,10 @@ def manual_tracking_view(request, pk):
 @csrf_exempt
 @require_POST
 def shippo_webhook(request):
+    # Shippo can't sign webhooks; the registered URL carries ?token=<secret>.
+    # Even an authentic post is only a nudge — status is re-fetched (W1.1).
+    if not webhook_token_ok(request):
+        return HttpResponseForbidden('Bad token.')
     try:
         payload = json.loads(request.body.decode('utf-8') or '{}')
     except json.JSONDecodeError:

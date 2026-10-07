@@ -161,6 +161,9 @@ SITE_URL = os.getenv('SITE_URL', 'http://localhost:8000')
 # Shippo configuration
 SHIPPO_API_KEY = os.getenv('SHIPPO_API_KEY', '')
 SHIPPO_API_BASE_URL = os.getenv('SHIPPO_API_BASE_URL', 'https://api.goshippo.com')
+# Secret carried in the registered webhook URL (…/shipping/webhooks/shippo/?token=…).
+# Empty = every webhook is refused; the shipment poll still keeps tracking current.
+SHIPPO_WEBHOOK_TOKEN = os.getenv('SHIPPO_WEBHOOK_TOKEN', '')
 SHIPPO_DEFAULT_WEIGHT_OZ = os.getenv('SHIPPO_DEFAULT_WEIGHT_OZ', '8.0')
 SHIPPO_DEFAULT_LENGTH_IN = os.getenv('SHIPPO_DEFAULT_LENGTH_IN', '10.0')
 SHIPPO_DEFAULT_WIDTH_IN = os.getenv('SHIPPO_DEFAULT_WIDTH_IN', '7.0')

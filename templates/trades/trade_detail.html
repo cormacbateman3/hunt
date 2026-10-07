@@ -105,7 +105,13 @@ the only thing this page is really for is finding out whose turn it is.
                             <form method="post" action="{% url 'trades:trade_shipment_manual_tracking' trade.pk shipment.pk %}" class="tb-ship-way">
                                 {% csrf_token %}
                                 <h3>I have posted it</h3>
-                                <input class="kb-input" name="carrier" placeholder="Carrier" required>
+                                <label class="kb-sr" for="tb-carrier-{{ shipment.pk }}">Carrier</label>
+                                <select class="kb-select" name="carrier" id="tb-carrier-{{ shipment.pk }}" required>
+                                    <option value="USPS">USPS</option>
+                                    <option value="UPS">UPS</option>
+                                    <option value="FedEx">FedEx</option>
+                                    <option value="DHL">DHL</option>
+                                </select>
                                 <input class="kb-input" name="tracking_number" placeholder="Tracking number" required>
                                 <button type="submit" class="tb-decide tb-decide--counter">Save tracking</button>
                             </form>

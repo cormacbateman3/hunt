@@ -10,6 +10,7 @@ from apps.notifications.services import create_notification
 from apps.enforcement.services import enforce_capability
 from apps.orders.models import AddressSnapshot
 from apps.shipping.providers.shippo import ShippoClient, ShippoError
+from apps.shipping.tracking import fetch_tracking, tracking_numbers_in, verify_member_tracking
 from .models import Trade, TradeOffer, TradeOfferItem, TradeShipment
 
 
@@ -80,7 +81,9 @@ def _parcel_to_shippo(parcel):
 
 
 def _normalize_tracking_state(code):
-    return TRADE_TRACKING_TO_SHIPMENT_STATUS.get((code or '').upper(), 'in_transit')
+    """None for anything the carrier didn't actually report (see
+    apps/shipping/tracking.py) — an unknown code used to read as in transit."""
+    return TRADE_TRACKING_TO_SHIPMENT_STATUS.get((code or '').upper())
 
 
 def _derive_trade_status(shipments):
@@ -222,13 +225,19 @@ def add_trade_manual_tracking(*, shipment, actor, carrier, tracking_number):
     tracking_number = (tracking_number or '').strip()
     if not carrier or not tracking_number:
         return None, 'Carrier and tracking number are required.'
+    # Checked with the carrier before it counts as shipped, so an invented
+    # number can't stop the trade's ship-by clock.
+    try:
+        code, _payload = verify_member_tracking(carrier, tracking_number)
+    except ShippoError as exc:
+        return None, str(exc)
 
     _ensure_trade_shipment_snapshots(shipment)
     shipment.provider = shipment.provider or 'manual'
     shipment.carrier = carrier
     shipment.tracking_number = tracking_number
     shipment.save(update_fields=['provider', 'carrier', 'tracking_number', 'updated_at'])
-    apply_trade_shipment_status(shipment, 'in_transit')
+    apply_trade_shipment_status(shipment, _normalize_tracking_state(code) or 'label_created')
     return shipment, ''
 
 
@@ -268,48 +277,32 @@ def buy_trade_label(*, shipment, actor, parcel):
     return shipment, ''
 
 
-def refresh_trade_tracking(shipment):
+def refresh_trade_tracking(shipment, *, notify=False):
+    """Ask the carrier (via Shippo) and apply what it says. Returns False
+    when there is nothing new to apply."""
     if not shipment.tracking_number or not shipment.carrier:
         return False
-    client = ShippoClient()
-    payload = client.get_tracking_status(carrier=shipment.carrier, tracking_number=shipment.tracking_number)
-    tracking_status = payload.get('tracking_status') or {}
-    status = _normalize_tracking_state(tracking_status.get('status'))
-    apply_trade_shipment_status(shipment, status, notify=False)
+    code, _payload = fetch_tracking(shipment.carrier, shipment.tracking_number)
+    status = _normalize_tracking_state(code)
+    if status is None or status == shipment.status:
+        return False
+    apply_trade_shipment_status(shipment, status, notify=notify)
     return True
 
 
 def handle_trade_tracking_webhook(payload):
-    data = payload.get('data') if isinstance(payload, dict) else None
-    if isinstance(data, list):
-        events = data
-    elif isinstance(data, dict):
-        events = [data]
-    else:
-        events = [payload] if isinstance(payload, dict) else []
-
+    """A webhook post only names parcels; their status is fetched from
+    Shippo, never read from the post."""
     processed = 0
-    for event in events:
-        tracking_number = event.get('tracking_number') or event.get('tracking')
-        carrier = event.get('carrier') or event.get('carrier_code')
-        if not tracking_number:
-            continue
+    for tracking_number, _carrier in tracking_numbers_in(payload):
         shipment = TradeShipment.objects.filter(tracking_number=tracking_number).first()
-        if not shipment and carrier:
-            shipment = TradeShipment.objects.filter(
-                tracking_number=tracking_number,
-                carrier=carrier,
-            ).first()
         if not shipment:
             continue
-        status_code = (
-            event.get('tracking_status', {}).get('status')
-            if isinstance(event.get('tracking_status'), dict)
-            else event.get('status')
-        )
-        status = _normalize_tracking_state(status_code)
-        apply_trade_shipment_status(shipment, status)
-        processed += 1
+        try:
+            if refresh_trade_tracking(shipment, notify=True):
+                processed += 1
+        except ShippoError:
+            continue  # the poll will catch up
     return processed
 
 

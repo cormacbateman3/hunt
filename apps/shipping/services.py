@@ -7,6 +7,7 @@ from apps.orders.models import AddressSnapshot
 from apps.orders.services import transition_order
 from .models import Shipment, ShipmentEvent
 from .providers.shippo import ShippoClient, ShippoError
+from .tracking import fetch_tracking, tracking_numbers_in, verify_member_tracking
 
 
 TERMINAL_SHIPMENT_STATUSES = {'delivered', 'failed', 'returned'}
@@ -221,8 +222,9 @@ def ensure_checkout_shipping_ready(order):
 
 
 def _normalize_tracking_state(code):
-    code = (code or '').upper()
-    return TRACKING_TO_SHIPMENT_STATUS.get(code, 'in_transit')
+    """None for anything the carrier didn't actually report. An unknown code
+    used to read as 'in_transit', which moved orders on no evidence."""
+    return TRACKING_TO_SHIPMENT_STATUS.get((code or '').upper())
 
 
 def _shipment_status_to_order_status(status):
@@ -295,6 +297,10 @@ def buy_label_for_order(order):
 
 
 def attach_manual_tracking(order, *, carrier, tracking_number):
+    """A seller's own postage. The number is checked with the carrier first,
+    and the order moves to whatever the carrier says — not to 'in transit'
+    on the seller's word."""
+    code, payload = verify_member_tracking(carrier, tracking_number)
     ensure_order_snapshots(order)
     shipment, _ = Shipment.objects.get_or_create(order=order, defaults={'provider': 'manual'})
     shipment.provider = shipment.provider or 'manual'
@@ -303,26 +309,31 @@ def attach_manual_tracking(order, *, carrier, tracking_number):
     shipment.save(update_fields=['provider', 'carrier', 'tracking_number', 'updated_at'])
     _apply_shipment_status(
         shipment,
-        'in_transit',
-        description='Seller entered manual tracking.',
-        raw_payload={'carrier': carrier, 'tracking_number': tracking_number},
+        _normalize_tracking_state(code),
+        description='Seller entered their own tracking; the carrier confirmed it.',
+        raw_payload=payload,
     )
     return shipment
 
 
-def refresh_tracking(shipment):
+def refresh_tracking(shipment, *, notify=False):
+    """Ask the carrier (via Shippo) and apply what it says. Returns False
+    when there is nothing new to apply."""
     if not shipment.tracking_number or not shipment.carrier:
         return False
-    client = ShippoClient()
-    payload = client.get_tracking_status(carrier=shipment.carrier, tracking_number=shipment.tracking_number)
+    code, payload = fetch_tracking(shipment.carrier, shipment.tracking_number)
+    status = _normalize_tracking_state(code)
+    if status is None or status == shipment.status:
+        return False
     tracking_status = payload.get('tracking_status') or {}
-    status = _normalize_tracking_state(tracking_status.get('status'))
     description = tracking_status.get('status_details') or 'Tracking status updated.'
-    _apply_shipment_status(shipment, status, description=description, raw_payload=payload, notify=False)
+    _apply_shipment_status(shipment, status, description=description, raw_payload=payload, notify=notify)
 
     history = payload.get('tracking_history') or []
     for item in history:
         code = _normalize_tracking_state(item.get('status'))
+        if code is None:
+            continue
         details = item.get('status_details', '') or ''
         event_time_raw = item.get('status_date') or item.get('object_created')
         if event_time_raw:
@@ -345,34 +356,16 @@ def refresh_tracking(shipment):
 
 
 def handle_tracking_webhook(payload):
-    data = payload.get('data') if isinstance(payload, dict) else None
-    if isinstance(data, list):
-        events = data
-    elif isinstance(data, dict):
-        events = [data]
-    else:
-        events = [payload] if isinstance(payload, dict) else []
-
+    """A webhook post only names parcels; their status is fetched from
+    Shippo, never read from the post (tracking.py, rule 1)."""
     processed = 0
-    for event in events:
-        tracking_number = event.get('tracking_number') or event.get('tracking')
-        carrier = event.get('carrier') or event.get('carrier_code')
-        if not tracking_number:
-            continue
+    for tracking_number, _carrier in tracking_numbers_in(payload):
         shipment = Shipment.objects.filter(tracking_number=tracking_number).first()
-        if not shipment and carrier:
-            shipment = Shipment.objects.filter(tracking_number=tracking_number, carrier=carrier).first()
         if not shipment:
             continue
-        status_code = (
-            event.get('tracking_status', {}).get('status')
-            if isinstance(event.get('tracking_status'), dict)
-            else event.get('status')
-        )
-        status = _normalize_tracking_state(status_code)
-        details = ''
-        if isinstance(event.get('tracking_status'), dict):
-            details = event['tracking_status'].get('status_details', '')
-        _apply_shipment_status(shipment, status, description=details or 'Tracking webhook update.', raw_payload=event)
-        processed += 1
+        try:
+            if refresh_tracking(shipment, notify=True):
+                processed += 1
+        except ShippoError:
+            continue  # the poll will catch up
     return processed
