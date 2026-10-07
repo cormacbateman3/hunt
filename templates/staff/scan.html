@@ -1,0 +1,178 @@
+{% extends 'staff/base_staff.html' %}
+
+{% block title %}Scan &middot; message #{{ message.pk }}{% endblock %}
+
+{% block content %}
+{% comment %}
+One message, everything the watcher knew (the user's ask, in 19b's
+clothes): the classifier's 0–1 category scores as bars against the
+house thresholds, Claude's in-context read in its own words, the watch
+terms that tripped, and the thread around it. The system only found —
+the buttons on this page are where a human decides.
+{% endcomment %}
+<div class="sd-roomhead">
+    <h1 class="sd-h1">The scan</h1>
+    <a class="sd-backlink" href="{% url 'staff:moderation' %}">&larr; The queue</a>
+</div>
+
+<div class="sd-scan-grid">
+    <div class="sd-col">
+
+        <section class="sd-card">
+            <header class="sd-card-head">
+                <span class="sd-eyebrow">The message</span>
+                <span class="sd-card-headnote">#{{ message.pk }} &middot; {{ message.created_at|date:"j M Y, g:i a" }}</span>
+            </header>
+            <div class="sd-message{% if message.moderation_state == 'hidden' %} sd-message--hidden{% endif %}">
+                <span class="sd-message-who"><strong>{{ message.sender.username }}</strong>
+                    {% if message.moderation_state == 'hidden' %}<span class="sd-tag sd-tag--rust">Hidden from the thread</span>{% endif %}
+                </span>
+                <p class="sd-message-body">{{ message.body }}</p>
+            </div>
+            <div class="sd-card-foot">
+                {% if message.moderation_state == 'hidden' %}
+                    <form method="post" action="{% url 'staff:message_action' message.pk %}">
+                        {% csrf_token %}
+                        <button class="sd-btn" name="action" value="restore">Put it back in the thread</button>
+                    </form>
+                {% else %}
+                    <form method="post" action="{% url 'staff:message_action' message.pk %}">
+                        {% csrf_token %}
+                        <button class="sd-btn sd-btn--rust" name="action" value="hide">Hide it from the thread</button>
+                    </form>
+                {% endif %}
+                <span class="sd-foot-note">Hiding is reversible and never deletes &mdash; the record stays.</span>
+            </div>
+        </section>
+
+        <section class="sd-card">
+            <header class="sd-card-head">
+                <span class="sd-eyebrow">What the classifier heard</span>
+                <span class="sd-card-headnote">
+                    {% if scan %}scanned {{ scan.scanned_at|timesince }} ago &middot; {{ scan.get_status_display|lower }}{% else %}not scanned yet{% endif %}
+                </span>
+            </header>
+            {% if score_rows %}
+                <div class="sd-scores">
+                    {% for row in score_rows %}
+                        <div class="sd-score{% if not row.watched %} sd-score--unwatched{% endif %}">
+                            <span class="sd-score-name">
+                                {{ row.category }}
+                                {% if row.urgent_category %}<span class="sd-score-flag" title="An urgent category — a high score here pages staff">urgent list</span>{% endif %}
+                                {% if not row.watched %}<span class="sd-score-flag sd-score-flag--quiet" title="Not on the watched list — scored but never acted on">not watched</span>{% endif %}
+                            </span>
+                            <span class="sd-score-track">
+                                <span class="sd-score-fill sd-score-fill--{{ row.tone }}" style="width: {{ row.pct }}%"></span>
+                                <span class="sd-score-tick" style="left: {{ flag_pct }}%" title="Flag threshold"></span>
+                                <span class="sd-score-tick sd-score-tick--urgent" style="left: {{ urgent_pct }}%" title="Urgent threshold"></span>
+                            </span>
+                            <span class="sd-score-val sd-score-val--{{ row.tone }}">{{ row.value|floatformat:2 }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="sd-card-foot sd-card-foot--legend">
+                    <span class="sd-legend"><span class="sd-legend-swatch sd-legend-swatch--flagged"></span> over the flag line ({{ flag_pct }}%)</span>
+                    <span class="sd-legend"><span class="sd-legend-swatch sd-legend-swatch--urgent"></span> urgent category over {{ urgent_pct }}%</span>
+                    <span class="sd-legend"><span class="sd-legend-swatch"></span> watched, under the line</span>
+                </div>
+            {% elif scan and scan.status == 'skipped' %}
+                <p class="sd-empty">Skipped &mdash; scanning was off or no classifier key was set when this came through.</p>
+            {% else %}
+                <p class="sd-empty">No classifier scores on record for this message.</p>
+            {% endif %}
+        </section>
+
+        <section class="sd-card">
+            <header class="sd-card-head">
+                <span class="sd-eyebrow">Claude&rsquo;s read of the thread</span>
+            </header>
+            {% if verdict %}
+                <div class="sd-verdict">
+                    <span class="sd-tag {% if verdict.concern %}sd-tag--rust{% else %}sd-tag--green{% endif %}">
+                        {% if verdict.concern %}Saw a real concern{% else %}Read it as banter&nbsp;&mdash; cleared{% endif %}
+                    </span>
+                    {% if verdict.category %}<span class="sd-tag sd-tag--quiet">{{ verdict.category }}</span>{% endif %}
+                    {% if verdict.severity %}<span class="sd-tag sd-tag--quiet">{{ verdict.severity }}</span>{% endif %}
+                    <blockquote class="sd-verdict-line">&ldquo;{{ verdict.rationale }}&rdquo;</blockquote>
+                </div>
+                <div class="sd-card-foot">
+                    <span class="sd-foot-note">Claude reads the surrounding thread and judges intent. It can clear low-severity noise; it can never veto an urgent hit.</span>
+                </div>
+            {% else %}
+                <p class="sd-empty">Claude wasn&rsquo;t asked &mdash; the flags never reached the escalation tier, or escalation is off.</p>
+            {% endif %}
+        </section>
+
+        {% if matched_terms %}
+        <section class="sd-card">
+            <header class="sd-card-head">
+                <span class="sd-eyebrow">Watch terms that tripped</span>
+            </header>
+            <div class="sd-terms">
+                {% for hit in matched_terms %}
+                    <span class="sd-term {% if hit.severity == 'urgent' %}sd-term--urgent{% endif %}">
+                        &ldquo;{{ hit.term }}&rdquo; <em>{{ hit.category }}</em>
+                    </span>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+    </div>
+
+    <div class="sd-col">
+
+        <section class="sd-card">
+            <header class="sd-card-head">
+                <span class="sd-eyebrow">Findings on this message</span>
+            </header>
+            {% for event in events %}
+                <div class="sd-row">
+                    <span class="sd-tag {% if event.severity == 'urgent' %}sd-tag--rust{% endif %}">{{ event.get_severity_display }}</span>
+                    <div class="sd-row-main">
+                        <span class="sd-row-line">{{ event.get_source_display }}{% if event.category %} &middot; {{ event.category }}{% endif %}</span>
+                        <span class="sd-row-sub">{{ event.summary|truncatechars:110 }}
+                            {% if event.status != 'open' %} &middot; {{ event.get_status_display|lower }} by {{ event.resolved_by.username|default:'?' }}{% endif %}
+                        </span>
+                    </div>
+                    {% if event.status == 'open' %}
+                        <div class="sd-row-acts">
+                            <form method="post" action="{% url 'staff:event_action' event.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button class="sd-btn" name="action" value="resolved">Resolve</button>
+                            </form>
+                            <form method="post" action="{% url 'staff:event_action' event.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button class="sd-btn sd-btn--ghost" name="action" value="dismissed">Dismiss</button>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+            {% empty %}
+                <p class="sd-empty">The watcher filed nothing on this one.</p>
+            {% endfor %}
+        </section>
+
+        <section class="sd-card">
+            <header class="sd-card-head">
+                <span class="sd-eyebrow">The thread around it</span>
+                <span class="sd-card-headnote">what Claude reads &mdash; context decides intent</span>
+            </header>
+            <div class="sd-thread">
+                {% for m in thread %}
+                    <div class="sd-thread-msg{% if m.pk == message.pk %} is-the-one{% endif %}">
+                        <span class="sd-thread-who">{{ m.sender.username }} <em>{{ m.created_at|date:"j M, g:i a" }}</em>
+                            {% if m.moderation_state == 'hidden' %}<span class="sd-hiddenword">hidden</span>{% endif %}</span>
+                        <span class="sd-thread-body">{{ m.body|truncatechars:220 }}</span>
+                    </div>
+                {% empty %}
+                    <p class="sd-empty">No surrounding thread.</p>
+                {% endfor %}
+            </div>
+        </section>
+
+    </div>
+</div>
+{% endblock %}

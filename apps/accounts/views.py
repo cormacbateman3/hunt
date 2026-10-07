@@ -29,6 +29,7 @@ from apps.collections.tracker import collection_groups, ground_covered
 from apps.collections.tradeability import is_open_to_trade, open_to_trade
 from apps.enforcement.models import Strike
 from apps.favorites.models import Favorite
+from apps.favorites.shortcuts import favorite_ids, with_favorite_counts
 from apps.messaging.models import Block
 from apps.reviews.models import Review
 from apps.trades.models import Trade
@@ -257,7 +258,9 @@ def profile_view(request, username):
         # catalogue keeps its history even when the shelf lets go.
         collection_qs = collection_qs.filter(is_public=True, disposition='held')
 
-    featured_items = list(collection_qs.filter(featured=True).order_by('-created_at')[:4])
+    featured_items = list(
+        with_favorite_counts(collection_qs.filter(featured=True))
+        .order_by('-created_at')[:4])
     # One query for the whole case rather than a lot lookup per piece.
     open_featured = set(
         open_to_trade(CollectionItem.objects.filter(
@@ -278,7 +281,7 @@ def profile_view(request, username):
         decade = int(group)
         collection_items = collection_items.filter(
             license_year__gte=decade, license_year__lte=decade + 9)
-    shown_items = list(collection_items[:10])
+    shown_items = list(with_favorite_counts(collection_items)[:10])
 
     # One item, told as one item: a piece whose lot is live wears a small
     # tag in the grid instead of reading as a second, unrelated thing —
@@ -299,7 +302,7 @@ def profile_view(request, username):
             item.grid_tag = market_labels.get(on_market.get(item.pk), '')
 
     # Active listings tab — auction house + general store only (not trade)
-    active_listings = (
+    active_listings = with_favorite_counts(
         Listing.objects.filter(
             seller=user,
             status='active',
@@ -410,6 +413,8 @@ def profile_view(request, username):
         'active_tab': tab,
     }
 
+    context['fav_listing_ids'], context['fav_item_ids'] = favorite_ids(request.user)
+
     return render(request, 'accounts/profile.html', context)
 
 
@@ -483,6 +488,7 @@ def bench(request):
         'wanted_matches': _wanted_matches(user),
         'progress': _collection_progress(user),
     }
+    context['fav_listing_ids'], context['fav_item_ids'] = favorite_ids(user)
     return render(request, 'accounts/bench.html', context)
 
 
@@ -597,7 +603,7 @@ def _closing_in_my_units(user, limit=3):
     ).exclude(seller=user).select_related('county_ref', 'state')
     if held:
         qs = qs.filter(county_ref_id__in=held)
-    return list(qs.order_by('auction_end')[:limit])
+    return list(with_favorite_counts(qs).order_by('auction_end')[:limit])
 
 
 def _wanted_matches(user, limit=2):

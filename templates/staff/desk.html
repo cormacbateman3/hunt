@@ -1,0 +1,43 @@
+{% extends 'staff/base_staff.html' %}
+
+{% block title %}Desk{% endblock %}
+
+{% block content %}
+{% comment %}
+17a: six true counts ordered by what breaks first, then the queue rows
+that page somebody. Every number is countable today — no tile promises
+a model that doesn't exist.
+{% endcomment %}
+<div class="sd-tiles">
+    {% for tile in tiles %}
+        <a class="sd-tile" href="{{ tile.url }}">
+            <span class="sd-tile-count sd-tile-count--{{ tile.tone }}{% if not tile.count %} is-zero{% endif %}">{{ tile.count }}</span>
+            <span class="sd-tile-label">{{ tile.label }}</span>
+        </a>
+    {% endfor %}
+</div>
+
+<section class="sd-card">
+    <header class="sd-card-head{% if preview %} sd-card-head--warm{% endif %}">
+        <span class="sd-eyebrow{% if preview %} sd-eyebrow--rust{% endif %}">The watcher found these</span>
+        <a class="sd-card-headlink" href="{% url 'staff:moderation' %}">The whole queue &rarr;</a>
+    </header>
+    {% for event in preview %}
+        <div class="sd-row">
+            <span class="sd-tag {% if event.severity == 'urgent' %}sd-tag--rust{% endif %}">{{ event.get_severity_display }}</span>
+            <div class="sd-row-main">
+                <span class="sd-row-line">
+                    {% if event.message %}<strong>{{ event.message.sender.username }}</strong> &mdash; &ldquo;{{ event.message.body|truncatechars:90 }}&rdquo;
+                    {% else %}Thread #{{ event.conversation_id }}{% endif %}
+                </span>
+                <span class="sd-row-sub">{{ event.get_source_display }}{% if event.category %} &middot; {{ event.category }}{% endif %} &middot; {{ event.created_at|timesince }} ago</span>
+            </div>
+            {% if event.message %}
+                <a class="sd-btn sd-btn--dark" href="{% url 'staff:scan' event.message_id %}">Read the scan</a>
+            {% endif %}
+        </div>
+    {% empty %}
+        <p class="sd-empty">Nothing open. The watcher is watching.</p>
+    {% endfor %}
+</section>
+{% endblock %}

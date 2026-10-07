@@ -1,0 +1,64 @@
+{% extends 'staff/base_staff.html' %}
+
+{% block title %}Moderation{% endblock %}
+
+{% block content %}
+{% comment %}
+The queue the watcher fills. Two plain verbs on every row (19b's rule):
+here they are Resolve and Dismiss — the row is a finding, and hiding
+the message itself happens on the scan page where the evidence is.
+{% endcomment %}
+<div class="sd-roomhead">
+    <h1 class="sd-h1">Moderation</h1>
+    <nav class="sd-tabs" aria-label="Queue views">
+        <a href="?show=open" {% if show == 'open' %}class="is-here"{% endif %}>Open <span class="sd-tab-count">{{ counts.open }}</span></a>
+        <a href="?show=urgent" {% if show == 'urgent' %}class="is-here"{% endif %}>Urgent <span class="sd-tab-count{% if counts.urgent %} sd-tab-count--rust{% endif %}">{{ counts.urgent }}</span></a>
+        <a href="?show=done" {% if show == 'done' %}class="is-here"{% endif %}>Decided</a>
+        <a href="?show=all" {% if show == 'all' %}class="is-here"{% endif %}>Everything</a>
+    </nav>
+</div>
+
+<section class="sd-card">
+    {% for event in rows %}
+        <div class="sd-row{% if event.severity == 'urgent' and event.status == 'open' %} sd-row--urgent{% endif %}">
+            <span class="sd-tag {% if event.severity == 'urgent' %}sd-tag--rust{% endif %}">{{ event.get_severity_display }}</span>
+            <span class="sd-tag sd-tag--quiet">{{ event.get_source_display }}</span>
+            <div class="sd-row-main">
+                <span class="sd-row-line">
+                    {% if event.message %}<strong>{{ event.message.sender.username }}</strong> &mdash;
+                        {% if event.message.moderation_state == 'hidden' %}<em class="sd-hiddenword">message hidden from the thread</em>
+                        {% else %}&ldquo;{{ event.message.body|truncatechars:110 }}&rdquo;{% endif %}
+                    {% elif event.conversation %}Thread between {% for p in event.conversation.participants.all %}{{ p.username }}{% if not forloop.last %} and {% endif %}{% endfor %}
+                    {% else %}(the message is gone){% endif %}
+                </span>
+                <span class="sd-row-sub">
+                    {% if event.category %}{{ event.category }} &middot; {% endif %}{{ event.summary|truncatechars:130 }}
+                    &middot; {{ event.created_at|timesince }} ago
+                    {% if event.status != 'open' %} &middot; {{ event.get_status_display|lower }} by {{ event.resolved_by.username|default:'?' }}{% endif %}
+                </span>
+            </div>
+            <div class="sd-row-acts">
+                {% if event.message %}
+                    <a class="sd-btn sd-btn--dark" href="{% url 'staff:scan' event.message_id %}">Read the scan</a>
+                {% endif %}
+                {% if event.status == 'open' %}
+                    <form method="post" action="{% url 'staff:event_action' event.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button class="sd-btn" name="action" value="resolved">Resolve</button>
+                    </form>
+                    <form method="post" action="{% url 'staff:event_action' event.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button class="sd-btn sd-btn--ghost" name="action" value="dismissed">Dismiss</button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    {% empty %}
+        <p class="sd-empty">
+            {% if show == 'urgent' %}Nothing urgent. Good.{% else %}Nothing here.{% endif %}
+        </p>
+    {% endfor %}
+</section>
+{% endblock %}

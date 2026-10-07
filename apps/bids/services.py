@@ -393,6 +393,10 @@ def relist_unsold(listing, now=None):
     new_listing.original_listing = original
     new_listing.auction_end = now + timedelta(days=duration_days)
     new_listing.status = 'active'
+    # The clone carries every column (see docstring) — these two must not
+    # ride along: a relist is freshly listed and nobody has seen it yet.
+    new_listing.published_at = now
+    new_listing.view_count = 0
     new_listing.save()
     new_listing.license_types.set(listing.license_types.all())
 

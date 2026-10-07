@@ -632,6 +632,11 @@ class ListingTermsForm(forms.ModelForm):
                 listing.auction_end = go_live + timedelta(days=int(self.cleaned_data['duration_days']))
             listing.scheduled_at = scheduled_at
             listing.status = 'scheduled' if scheduled_at else 'active'
+            if listing.status == 'active':
+                # The "Listed" date (10.25) — the moment it went public,
+                # not the draft's birthday. Scheduled lots get stamped by
+                # the activation job when their moment arrives.
+                listing.published_at = timezone.now()
 
         if commit:
             listing.save()

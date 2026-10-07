@@ -52,6 +52,7 @@
             <p class="cd-owner">
                 From the collection of
                 <a href="{% url 'accounts:profile' item.owner.username %}">{{ item.owner.username }}</a>
+                {% if favorite_count %} &middot; {{ favorite_count }} favorite{{ favorite_count|pluralize }}{% endif %}
             </p>
 
             <div class="cd-tags">

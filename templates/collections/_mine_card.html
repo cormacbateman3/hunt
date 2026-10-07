@@ -17,6 +17,13 @@ the details already recorded carry straight over into a listing.
             {% elif item.effective_era %} &middot; {{ item.effective_era }}{% endif %}
             {% if item.condition_grade %} &middot; {{ item.get_condition_grade_display }}{% endif %}
         </span>
+        {% comment %}
+        10.25 — your own card carries no heart (saving your own piece is
+        noise), but the count is yours to see: it says people noticed.
+        {% endcomment %}
+        {% if item.favorite_count %}
+            <span class="kb-card-favs">{{ item.favorite_count }} favorite{{ item.favorite_count|pluralize }}</span>
+        {% endif %}
     </div>
     <div class="mn-card-foot">
         <a href="{% url 'listings:sell_from' item.pk %}" class="mn-card-sell">Sell it</a>

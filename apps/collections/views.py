@@ -20,6 +20,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from apps.accounts.follows import following_ids
 from apps.core import defaults
 from apps.core.constants import FORM_TAXONOMY_FIELDS
+from apps.favorites.shortcuts import with_favorite_counts
 from apps.core.slot_plan import photo_slots
 from apps.core.upload_stash import (
     clear_stash,
@@ -117,7 +118,7 @@ def my_collection(request):
     else:
         filtered_qs = filtered_qs.order_by('-featured', '-created_at')
 
-    items = list(filtered_qs)
+    items = list(with_favorite_counts(filtered_qs))
 
     # Build grouped structure when group_by is active
     groups = None
@@ -433,6 +434,7 @@ def collection_item_detail(request, pk):
         'item': item,
         'is_owner': is_owner,
         'is_favorited': is_favorited,
+        'favorite_count': item.favorites.count(),
         # A sentence rather than a flag, so a visitor who cannot ask is told
         # why — and whether waiting would fix it.
         'trade_block': trade_block_reason(item),

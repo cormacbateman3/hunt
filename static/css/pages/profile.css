@@ -439,6 +439,8 @@
     overflow: hidden;
     text-decoration: none;
     display: block;
+    /* 10.25: article root with a stretched cover link and a corner heart. */
+    position: relative;
 }
 
 .pf-piece:hover {

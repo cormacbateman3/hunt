@@ -195,12 +195,15 @@ def applied_filters(params, groups):
 
 def page(params, user=None):
     """Everything the Everything-owned template needs, in one call."""
+    from apps.favorites.shortcuts import favorite_ids, with_favorite_counts
+
     items = (
         CollectionItem.objects.filter(is_public=True)
         .select_related('owner__profile', 'state', 'county')
         .prefetch_related('images', 'license_types')
     )
-    paginator = Paginator(apply_filters(items, params), PER_PAGE)
+    paginator = Paginator(
+        with_favorite_counts(apply_filters(items, params)), PER_PAGE)
     page_obj = paginator.get_page(params.get('page'))
 
     default_state, selected_state = resolve_state(params, user)
@@ -212,6 +215,7 @@ def page(params, user=None):
     return {
         'zone_tab': 'owned',
         'page_obj': page_obj,
+        'fav_item_ids': favorite_ids(user)[1],
         'result_total': paginator.count,
         'collector_total': (
             CollectionItem.objects.filter(is_public=True)

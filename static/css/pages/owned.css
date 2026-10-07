@@ -230,6 +230,8 @@
     display: flex;
     flex-direction: column;
     background: var(--kb-surface);
+    /* 10.25: anchors the corner heart over the photograph. */
+    position: relative;
 }
 
 .ow-item:hover {

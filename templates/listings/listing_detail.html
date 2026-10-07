@@ -45,9 +45,15 @@ Header. Format and state read first, then the title, then the object line.
                 <span class="kb-badge kb-badge--neutral">{{ listing.get_status_display }}</span>
             {% endif %}
 
+            {% comment %}
+            10.25 — the Listed date is published_at, the moment it went
+            live: never created_at (the draft's birthday, months earlier
+            for a piece catalogued first). Counts wear the plain words.
+            {% endcomment %}
             <span class="kb-faint lst-listed">
-                Listed {{ listing.created_at|date:"M j" }}
-                {% if listing_favorite_count %} &middot; {{ listing_favorite_count }} watching{% endif %}
+                Listed {{ listing.published_at|default:listing.created_at|date:"M j" }}
+                {% if listing.view_count %} &middot; {{ listing.view_count }} view{{ listing.view_count|pluralize }}{% endif %}
+                {% if listing_favorite_count %} &middot; {{ listing_favorite_count }} favorite{{ listing_favorite_count|pluralize }}{% endif %}
             </span>
         </div>
 
