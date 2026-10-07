@@ -6,7 +6,7 @@
 
 ### Draft answer (written 2026-08-26, matches the shipped banner copy)
 **Are my messages private?**
-Between members, yes — nobody else on the site can see a conversation or
+Between members, yes - nobody else on the site can see a conversation or
 a room. For safety, every exchange is screened automatically by machine.
 A person only reads a conversation if the screen flags something serious
 (threats, hate with real intent, anything involving a minor) or another

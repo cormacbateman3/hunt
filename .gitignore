@@ -77,3 +77,7 @@ claude.md
 sandbox/t8_raws.json
 docs/internal/backtag-logo-candidates/
 ~$*
+
+temp.txt
+# Stakeholder reference book: 595 MB (over GitHub limit) and not mine to publish
+docs/internal/research/*.pdf
