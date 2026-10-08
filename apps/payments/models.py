@@ -65,3 +65,25 @@ class PaymentTransaction(models.Model):
 
     def __str__(self):
         return f"Payment for Order #{self.order_id} ({self.status})"
+
+
+class StripeEvent(models.Model):
+    """Every Stripe webhook event we have acted on, by Stripe's own id (W1.16).
+
+    Stripe retries deliveries, and one payment fires several events. The
+    webhook records the id in the same transaction as its work, so a replay
+    is answered 200 and skipped, and a failure rolls the record back so
+    Stripe's retry runs the work again.
+    """
+
+    event_id = models.CharField(max_length=255, unique=True)
+    event_type = models.CharField(max_length=100)
+    received_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Stripe Event'
+        verbose_name_plural = 'Stripe Events'
+        ordering = ['-received_at']
+
+    def __str__(self):
+        return f'{self.event_type} {self.event_id}'

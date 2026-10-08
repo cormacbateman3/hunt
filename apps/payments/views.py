@@ -3,7 +3,7 @@ import logging
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db import transaction as db_transaction
+from django.db import IntegrityError, transaction as db_transaction
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -14,7 +14,7 @@ from apps.notifications.services import create_notification
 from apps.orders.models import Order
 from apps.orders.services import build_order_amounts
 from apps.shipping.services import ShippoError, ensure_checkout_shipping_ready
-from .models import PaymentTransaction, Transaction
+from .models import PaymentTransaction, StripeEvent, Transaction
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 logger = logging.getLogger(__name__)
@@ -154,10 +154,18 @@ def stripe_webhook(request):
     except stripe.error.SignatureVerificationError:
         return HttpResponse(status=400)
 
-    if event['type'] == 'checkout.session.completed':
-        handle_checkout_session_completed(event['data']['object'])
-    elif event['type'] == 'payment_intent.succeeded':
-        handle_payment_intent_succeeded(event['data']['object'])
+    # Exactly once per Stripe event (W1.16): the id is recorded in the same
+    # transaction as the work, so a replay hits the unique key and is skipped,
+    # and a failure rolls both back so Stripe's retry does the work again.
+    try:
+        with db_transaction.atomic():
+            StripeEvent.objects.create(event_id=event['id'], event_type=event['type'])
+            if event['type'] == 'checkout.session.completed':
+                handle_checkout_session_completed(event['data']['object'])
+            elif event['type'] == 'payment_intent.succeeded':
+                handle_payment_intent_succeeded(event['data']['object'])
+    except IntegrityError:
+        return HttpResponse(status=200)  # already handled
 
     return HttpResponse(status=200)
 

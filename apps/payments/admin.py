@@ -1,5 +1,20 @@
 from django.contrib import admin
-from .models import Transaction, PaymentTransaction
+from .models import PaymentTransaction, StripeEvent, Transaction
+
+
+@admin.register(StripeEvent)
+class StripeEventAdmin(admin.ModelAdmin):
+    """Read-only: what the webhook has acted on, for tracing a payment."""
+    list_display = ('event_type', 'event_id', 'received_at')
+    list_filter = ('event_type',)
+    search_fields = ('event_id',)
+    readonly_fields = ('event_id', 'event_type', 'received_at')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Transaction)
