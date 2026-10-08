@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Take it down &middot; Backtag{% endblock %}
+
+{% comment %}
+The no-JavaScript second step (W1.6) — with scripts on, the edit page asks
+the same question as a dialog and this page is never seen. Plain words on
+purpose: the next click must be understood by anyone.
+{% endcomment %}
+
+{% block content %}
+<section class="kb-confirm">
+    <span class="kb-eyebrow kb-eyebrow--brass">Take it down</span>
+    <h1 class="kb-confirm-title">Take &ldquo;{{ listing.title }}&rdquo; off the market?</h1>
+    <p class="kb-confirm-body">
+        Nobody will be able to buy it or bid on it, and any open offers are closed with a
+        note to whoever made them.
+        {% if listing.source_collection_item_id %}The piece stays in your collection, and you can list it again later.{% endif %}
+    </p>
+    <form method="post" class="kb-confirm-acts">
+        {% csrf_token %}
+        <a class="kb-btn kb-btn--secondary" href="{% url 'listings:edit' listing.pk %}">Keep it up</a>
+        <button type="submit" class="kb-btn kb-btn--primary">Take it down</button>
+    </form>
+</section>
+{% endblock %}

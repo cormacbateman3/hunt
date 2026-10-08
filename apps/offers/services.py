@@ -303,3 +303,21 @@ def expire_offers(limit=500):
                 dedupe_window_hours=24,
             )
     return len(stale_pending), lapsed
+
+
+def close_offers_for_withdrawn_listing(listing):
+    """The seller took the listing down (W1.6): every open offer closes, and
+    its sender is told why in plain words rather than a bare "declined"."""
+    closed = 0
+    for offer in active_offers(listing):
+        offer.status = 'declined'
+        offer.save(update_fields=['status', 'updated_at'])
+        create_notification(
+            user=offer.from_user,
+            notification_type='offer_declined',
+            message=(f'"{listing.title}" was taken off the market, so your '
+                     f'${offer.amount} offer has closed.'),
+            link_url=_offer_url(offer),
+        )
+        closed += 1
+    return closed

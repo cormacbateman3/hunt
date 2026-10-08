@@ -416,6 +416,32 @@
         {% endif %}
     </section>
 
+    {% comment %}
+    W1.6 — taking it down, behind a second click (custom.js picks up
+    data-kb-confirm; with JavaScript off the link walks to the same question
+    as a page). Its own form, outside the one above. A refusal is said in
+    words, with no control to press (the empty-state rule).
+    {% endcomment %}
+    <section class="if-panel if-move" id="take-it-down">
+        <div class="if-panel-head">
+            <span class="if-panel-eyebrow">Take it down</span>
+        </div>
+        {% if take_down_refusal %}
+            <p class="kb-hint">{{ take_down_refusal }}</p>
+        {% else %}
+            <p class="kb-hint">
+                Ends the listing. {% if listing.source_collection_item_id %}The piece stays in your collection.{% endif %}
+                {% if listing.listing_type == 'buy_now' %}Open offers are closed with a note to their senders.{% endif %}
+            </p>
+            <form method="post" action="{% url 'listings:take_down' listing.pk %}">
+                {% csrf_token %}
+                <a href="{% url 'listings:take_down' listing.pk %}" class="kb-btn kb-btn--secondary"
+                   data-kb-confirm="This takes “{{ listing.title }}” off the market. Nobody can buy it or bid on it any more, and any open offers are closed.{% if listing.source_collection_item_id %} The piece stays in your collection.{% endif %}"
+                   data-kb-confirm-ok="Take it down">Take it down</a>
+            </form>
+        {% endif %}
+    </section>
+
     <details class="if-more">
         <summary>Is a value missing?</summary>
         <div class="if-more-body">

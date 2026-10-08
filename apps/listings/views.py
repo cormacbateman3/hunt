@@ -1358,8 +1358,8 @@ def sell_from(request, pk):
         status__in=('active', 'scheduled', 'pending'),
     ).first()
     if blocking:
-        messages.error(request, 'This item already has a live listing. '
-                                'Close it before putting it up again.')
+        messages.error(request, 'This piece already has a live listing. Take that '
+                                'one down from its edit page before listing it again.')
         return redirect('listings:sell_start')
 
     destination = request.GET.get('to', '')
@@ -1580,6 +1580,27 @@ def listing_move(request, pk):
 
 
 @login_required
+def listing_take_down(request, pk):
+    """Take a listing off the market (W1.6). The second step is a dialog on
+    the edit page; with JavaScript off, GET is the same question as a page."""
+    from .services import take_down_listing, take_down_refusal
+
+    listing = get_object_or_404(Listing, pk=pk, seller=request.user)
+    refusal = take_down_refusal(listing, request.user)
+    if refusal:
+        messages.info(request, refusal)
+        return redirect('listings:edit', pk=pk)
+    if request.method == 'POST':
+        take_down_listing(listing, request.user)
+        if listing.source_collection_item_id:
+            messages.success(request, f'“{listing.title}” is off the market. The piece is back on your shelf.')
+        else:
+            messages.success(request, f'“{listing.title}” is off the market.')
+        return redirect('listings:my_listings')
+    return render(request, 'listings/listing_take_down.html', {'listing': listing})
+
+
+@login_required
 def listing_edit(request, pk):
     """Edit an existing listing (owner only)"""
     listing = get_object_or_404(Listing, pk=pk, seller=request.user)
@@ -1634,6 +1655,8 @@ def listing_edit(request, pk):
         ),
     }
 
+    from .services import take_down_refusal
+    context['take_down_refusal'] = take_down_refusal(listing, request.user)
     return render(request, 'listings/listing_edit.html', context)
 
 
