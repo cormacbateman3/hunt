@@ -30,7 +30,9 @@ def line_bank_json() -> str:
     """The bank, serialised once for a template's KBPrefill.init."""
     bank = {key: value for key, value in line_bank().items()
             if not key.startswith('_') and key != 'winks_held'}
-    return json.dumps(bank)
+    from apps.core.script_json import script_json
+
+    return script_json(bank)
 
 
 def era_fact(year) -> str:

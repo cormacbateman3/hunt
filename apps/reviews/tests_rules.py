@@ -290,3 +290,24 @@ class TradeReviewTests(ReviewRulesBase):
         resp = self._review_trade(self.buyer)
         self.assertRedirects(resp, reverse('trades:trade_detail', args=[self.trade.pk]),
                              fetch_redirect_response=False)
+
+
+class MessagesAreEscapedTests(ReviewRulesBase):
+    """W1.28: base.html rendered every flash message with |safe, so text a
+    member typed (echoed back in a form error) went onto the page as HTML."""
+
+    def test_member_text_in_a_message_is_escaped(self):
+        self.client.force_login(self.buyer)
+        resp = self.client.post(
+            reverse('reviews:submit_order', args=[self.order.pk]),
+            {'sentiment': '<i>boom</i>', 'line': ''}, follow=True)
+        html = resp.content.decode()
+        self.assertNotIn('<i>boom</i>', html)
+        self.assertIn('&lt;i&gt;boom&lt;/i&gt;', html)
+
+    def test_a_message_built_with_a_link_still_links(self):
+        from django.contrib.auth.models import User
+        newcomer = User.objects.create_user('esc_newcomer', password='pw')
+        self.client.force_login(newcomer)
+        resp = self.client.get(reverse('listings:create'), follow=True)
+        self.assertContains(resp, f'<a href="{reverse("accounts:address_add")}">Add address')

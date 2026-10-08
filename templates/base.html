@@ -126,7 +126,8 @@
     <div class="kb-messages">
         {% for message in messages %}
             <div role="alert" class="alert {% if message.tags == 'error' %}alert-error{% elif message.tags == 'success' %}alert-success{% elif message.tags == 'warning' %}alert-warning{% else %}alert-info{% endif %}">
-                {{ message|safe }}
+                {# Escaped (W1.28); link-carrying messages are built with format_html, which message storage keeps safe. #}
+                {{ message }}
             </div>
         {% endfor %}
     </div>

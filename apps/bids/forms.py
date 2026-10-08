@@ -1,5 +1,6 @@
 from django import forms
 from django.urls import reverse
+from django.utils.html import format_html
 from .models import Bid
 
 
@@ -52,8 +53,10 @@ class BidForm(forms.ModelForm):
         # Check if user's email is verified
         if self.bidder and not self.bidder.profile.email_verified:
             raise forms.ValidationError(
-                'To bid, your email must be verified. '
-                f'<a href="{reverse("accounts:resend_verification")}">Resend verification email &rarr;</a>'
+                format_html(
+                    'To bid, your email must be verified. '
+                    '<a href="{}">Resend verification email &rarr;</a>',
+                    reverse('accounts:resend_verification'))
             )
 
         # Check if listing is still active

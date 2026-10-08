@@ -2,6 +2,7 @@ from datetime import timedelta
 from decimal import Decimal
 from django.db import transaction
 from django.urls import reverse
+from django.utils.html import format_html
 from django.utils import timezone
 
 from apps.orders.clock import add_business_days, ship_by_days
@@ -52,15 +53,14 @@ def validate_trade_gate(user):
         return False, reason
     profile = user.profile
     if not profile.email_verified:
-        return False, (
+        return False, format_html(
             'To trade, your email must be verified. '
-            f'<a href="{reverse("accounts:resend_verification")}">Resend verification email &rarr;</a>'
-        )
+            '<a href="{}">Resend verification email &rarr;</a>',
+            reverse('accounts:resend_verification'))
     if not profile.shipping_address:
-        return False, (
+        return False, format_html(
             'To trade, you need a saved shipping address. '
-            f'<a href="{reverse("accounts:address_add")}">Add address &rarr;</a>'
-        )
+            '<a href="{}">Add address &rarr;</a>', reverse('accounts:address_add'))
     return True, ''
 
 

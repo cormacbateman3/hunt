@@ -238,4 +238,6 @@ def resume_state_json(request) -> str:
     job = PrefillJob.objects.filter(
         pk=int(job_id), user=request.user, status='complete',
     ).first()
-    return json.dumps(job_state(job)) if job else 'null'
+    from apps.core.script_json import script_json
+
+    return script_json(job_state(job)) if job else 'null'

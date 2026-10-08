@@ -8,6 +8,7 @@ from django.db import transaction
 from django.db.models import Count, F, Q
 from django.http import Http404
 from django.urls import reverse
+from django.utils.html import format_html
 from django.views.generic import ListView
 from django.utils import timezone
 from . import sell_flow, seller_desk
@@ -1145,8 +1146,9 @@ def listing_create(request):
     if not request.user.profile.shipping_address:
         messages.error(
             request,
-            'To create a listing, you need a saved shipping address. '
-            f'<a href="{reverse("accounts:address_add")}">Add address &rarr;</a>'
+            format_html(
+                'To create a listing, you need a saved shipping address. '
+                '<a href="{}">Add address &rarr;</a>', reverse('accounts:address_add'))
         )
         return redirect('accounts:dashboard')
 
@@ -1406,8 +1408,9 @@ def sell_from(request, pk):
         if not request.user.profile.shipping_address:
             messages.error(
                 request,
-                'To create a listing, you need a saved shipping address. '
-                f'<a href="{reverse("accounts:address_add")}">Add address &rarr;</a>'
+                format_html(
+                    'To create a listing, you need a saved shipping address. '
+                    '<a href="{}">Add address &rarr;</a>', reverse('accounts:address_add'))
             )
             return redirect('accounts:dashboard')
         # One draft per item and destination — coming back resumes it.

@@ -8,6 +8,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.db import transaction
 from django.urls import reverse
+from django.utils.html import format_html
 from django.utils import timezone
 
 from apps.listings.models import Listing
@@ -67,8 +68,10 @@ def place_bid(listing, bidder, amount):
         return False, "You cannot bid on your own listing", 'error'
     if not bidder.profile.email_verified:
         return False, (
+            format_html(
             'To bid, your email must be verified. '
-            f'<a href="{reverse("accounts:resend_verification")}">Resend verification email &rarr;</a>'
+            '<a href="{}">Resend verification email &rarr;</a>',
+            reverse('accounts:resend_verification'))
         ), 'error'
 
     # Serialize bid writes against the listing to avoid stale bid races.
