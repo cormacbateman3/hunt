@@ -106,7 +106,7 @@ class ReportFlowTests(ThreadUIBase):
         self.assertEqual(theirs.moderation_state, 'flagged')
         # You cannot point a report at your own words.
         self.assertEqual(mine.moderation_state, 'ok')
-        self.assertContains(resp, "We'll look at it")
+        self.assertContains(resp, 'look at it. Thank you')  # the apostrophe is escaped now (W1.28)
 
     def test_a_report_without_a_reason_is_refused_not_filed_as_other(self):
         conv, _ = services.start_conversation(self.walt, self.john)
