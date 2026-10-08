@@ -12,6 +12,7 @@ from apps.core.constants import FORM_LICENSE_TYPE_CATEGORIES
 from apps.core.daybook import day_book
 from apps.core.forms import ReferenceDataSuggestionForm
 from apps.core.models import GeographicUnit, LicenseType, State
+from apps.collections.tradeability import LISTING_OPEN_TO_TRADE
 from apps.listings.models import Listing
 
 
@@ -351,7 +352,7 @@ def home(request):
         {
             'name': 'The Trading Block',
             'url': f"{reverse('hunt')}?format=trade",
-            'count': live.filter(listing_type='trade').count(),
+            'count': live.filter(LISTING_OPEN_TO_TRADE).count(),
             'noun': 'open to trade',
         },
     ]

@@ -117,6 +117,18 @@ def open_to_trade(queryset):
     )
 
 
+# The same answer asked of a *listing*, for the Market's "Open to trade"
+# filter and the home page's count. A Store listing is open when its piece is
+# held and left open; an auction never is. Rows with the retired
+# listing_type='trade' still count until W6.27 migrates them away.
+LISTING_OPEN_TO_TRADE = (
+    Q(listing_type='buy_now',
+      source_collection_item__tradeability='open',
+      source_collection_item__disposition='held')
+    | Q(listing_type='trade')
+)
+
+
 def would_trade(queryset):
     """Narrow to pieces whose owner has left them open to trade.
 

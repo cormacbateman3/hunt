@@ -23,7 +23,7 @@ from apps.bids.services import (
     minimum_bid_for,
 )
 from apps.collections.models import CollectionItem, WantedItem
-from apps.collections.tradeability import is_open_to_trade
+from apps.collections.tradeability import LISTING_OPEN_TO_TRADE, is_open_to_trade
 from apps.core import defaults
 from apps.core.models import GeographicUnit, LicenseType, State
 from apps.core.constants import (
@@ -405,7 +405,13 @@ class HuntView(BaseListingListView):
         if include_format:
             formats = self._selected_formats()
             if formats:
-                queryset = queryset.filter(listing_type__in=formats)
+                # "Open to trade" is a property of the piece, not a listing
+                # type: it used to query the retired listing_type='trade' and
+                # missed every Store listing open to offers (W1.10).
+                wanted = Q()
+                for fmt in formats:
+                    wanted |= LISTING_OPEN_TO_TRADE if fmt == 'trade' else Q(listing_type=fmt)
+                queryset = queryset.filter(wanted)
         if self.request.GET.get('pickup'):
             queryset = queryset.filter(local_pickup_available=True)
         return queryset
@@ -474,6 +480,8 @@ class HuntView(BaseListingListView):
             .annotate(n=Count('id', distinct=True))
             .values_list('listing_type', 'n')
         )
+        # Open to trade overlaps the Store, so it is counted on its own rule.
+        by_type['trade'] = base.filter(LISTING_OPEN_TO_TRADE).distinct().count()
         selected = self._selected_formats()
         return [
             {
@@ -592,7 +600,7 @@ class HuntView(BaseListingListView):
         qs = self.get_queryset()
         context['result_total'] = context['paginator'].count if context.get('paginator') else qs.count()
         context['result_bidding'] = qs.filter(listing_type='auction').count()
-        context['result_trade'] = qs.filter(listing_type='trade').count()
+        context['result_trade'] = qs.filter(LISTING_OPEN_TO_TRADE).count()
 
         context['applied_filters'] = self._applied_filters(context)
         context['hunt_title'] = self._hunt_title(context)

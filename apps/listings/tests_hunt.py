@@ -91,6 +91,39 @@ class HuntCatalogTests(TestCase):
         self.assertNotIn('format=trade', trade_chip['url'])
         self.assertIn('format=auction', trade_chip['url'])
 
+    def test_open_to_trade_means_the_piece_not_the_listing_type(self):
+        """W1.10: the filter queried the retired listing_type='trade' and
+        missed every Store listing whose piece is open to offers."""
+        def piece(title, tradeability='open'):
+            return CollectionItem.objects.create(
+                owner=self.seller, title=title, state=self.pa, license_year=1934,
+                condition_grade='good', tradeability=tradeability)
+
+        common = {'seller': self.seller, 'description': 'd', 'state': self.pa,
+                  'condition_grade': 'good', 'status': 'active', 'license_year': 1934}
+        open_store = Listing.objects.create(
+            title='Store, open to trade', listing_type='buy_now', buy_now_price=Decimal('40'),
+            source_collection_item=piece('open piece'), **common)
+        closed_store = Listing.objects.create(
+            title='Store, closed to trade', listing_type='buy_now', buy_now_price=Decimal('40'),
+            source_collection_item=piece('closed piece', 'closed'), **common)
+        on_auction = Listing.objects.create(
+            title='At auction', listing_type='auction', starting_price=Decimal('10'),
+            auction_end=timezone.now() + timedelta(days=2),
+            source_collection_item=piece('auction piece'), **common)
+
+        resp = self.client.get(reverse('hunt'), {'format': 'trade'})
+        self.assertContains(resp, open_store.title)
+        self.assertNotContains(resp, closed_store.title)
+        self.assertNotContains(resp, on_auction.title)
+        counts = {f['key']: f['count'] for f in resp.context['hunt_formats']}
+        self.assertEqual(counts['trade'], 2)  # the open Store listing + the legacy swap
+        self.assertEqual(resp.context['result_trade'], 2)
+
+        home = self.client.get(reverse('home'))
+        block = next(m for m in home.context['marketplaces'] if m['name'] == 'The Trading Block')
+        self.assertEqual(block['count'], 2)
+
     def test_wants_tab_is_empty_for_a_collector_with_no_wants(self):
         buyer = User.objects.create_user('wants_buyer', password='pw')
         self.client.force_login(buyer)
