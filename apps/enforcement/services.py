@@ -9,7 +9,6 @@ from .models import AccountRestriction, Strike
 STRIKE_WINDOW_DAYS = 365
 EXCUSE_CONFIRM_WINDOW_HOURS = 72
 AUCTION_PAYMENT_GRACE_HOURS = 24
-ORDER_SHIP_GRACE_DAYS = 5
 CANCELLATION_PATTERN_WINDOW_DAYS = 90
 CANCELLATION_PATTERN_THRESHOLD = 3
 
@@ -233,9 +232,20 @@ def enforce_deterministic_policies(*, now=None):
         if was_created:
             created += 1
 
-    ship_due = current - timedelta(days=ORDER_SHIP_GRACE_DAYS)
-    overdue_paid_orders = Order.objects.filter(status='paid', updated_at__lte=ship_due).select_related('seller')
+    # The posting deadline is the one the seller was shown: business days
+    # from payment, from MarketplaceSettings (apps/orders/clock.py, W1.15).
+    # The query only narrows by calendar days; ship_by() decides.
+    from apps.orders.clock import ship_by, ship_by_days
+    earliest_possible = current - timedelta(days=ship_by_days())
+    overdue_paid_orders = (
+        Order.objects.filter(status='paid', delivery_method='shipping')
+        .filter(Q(paid_at__lte=earliest_possible)
+                | Q(paid_at__isnull=True, updated_at__lte=earliest_possible))
+        .select_related('seller')
+    )
     for order in overdue_paid_orders:
+        if ship_by(order) > current:
+            continue
         # A handshake the buyer confirmed is the two of them agreeing this
         # deadline no longer applies. Striking through it would make the
         # agreement worthless and the rule unfair.

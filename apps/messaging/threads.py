@@ -19,12 +19,8 @@ from datetime import timedelta
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.accounts.bench import (
-    AUCTION_PAY_GRACE_HOURS,
-    BUY_NOW_PAY_GRACE_MINUTES,
-    RECEIPT_GRACE_DAYS,
-    ship_by_days,
-)
+from apps.accounts.bench import AUCTION_PAY_GRACE_HOURS, BUY_NOW_PAY_GRACE_MINUTES
+from apps.orders.clock import receipt_due, ship_by
 from apps.enforcement.handshakes import active_for, open_for
 
 LIVE_ORDER_STATUSES = ('pending_payment', 'paid', 'label_created',
@@ -114,11 +110,11 @@ def _deadline(order, viewer):
             else timedelta(minutes=BUY_NOW_PAY_GRACE_MINUTES))
         return 'Pay by', due, viewer.id == order.buyer_id, 'shipping'
     if order.status == 'paid':
-        return ('Ship by', order.updated_at + timedelta(days=ship_by_days()),
+        return ('Ship by', ship_by(order),
                 viewer.id == order.seller_id, 'shipping')
     if order.status == 'delivered':
         return ('Say it arrived by',
-                order.updated_at + timedelta(days=RECEIPT_GRACE_DAYS),
+                receipt_due(order),
                 viewer.id == order.buyer_id, 'receipt')
     return None
 

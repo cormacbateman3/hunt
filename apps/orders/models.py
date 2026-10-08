@@ -70,6 +70,12 @@ class Order(models.Model):
         AddressSnapshot, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='orders_ship_to'
     )
+    # When each stage began (W1.15). Every deadline counts from these, not
+    # from updated_at, which moves on any save. See apps/orders/clock.py.
+    paid_at = models.DateTimeField(null=True, blank=True)
+    shipped_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

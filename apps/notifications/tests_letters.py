@@ -201,7 +201,7 @@ class TheShipByLetterTests(LetterBase):
                        user=self.seller))
         self.assertIn('wants posting', letter['headline'])
         self.assertIn('Ray Musser paid on', letter['lead'])
-        self.assertIn('Five days puts your date at', letter['lead'])
+        self.assertIn('Five working days puts your date at', letter['lead'])
 
     def test_the_three_ways_out_are_offered(self):
         order = self._order(status='paid')

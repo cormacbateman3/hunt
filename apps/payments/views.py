@@ -269,8 +269,10 @@ def handle_payment_intent_succeeded(payment_intent):
         payment.save(update_fields=['status', 'stripe_payment_intent_id', 'updated_at'])
 
         if order.status == 'pending_payment':
+            from apps.orders.clock import stamp
             order.status = 'paid'
-            order.save(update_fields=['status', 'updated_at'])
+            stamp(order, 'paid')
+            order.save(update_fields=['status', 'paid_at', 'updated_at'])
         # Both purchase types delist here and only here (10.9). Auctions used to
         # be marked sold at close, before any payment; now close_auctions leaves
         # them 'pending' and this is what completes the sale.

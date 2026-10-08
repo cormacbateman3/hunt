@@ -23,7 +23,7 @@ from apps.core.models import MarketplaceSettings, State
 from apps.enforcement import handshakes
 from apps.enforcement.models import OrderHandshake, Strike
 from apps.listings.models import Listing
-from apps.orders import ledger
+from apps.orders import clock, ledger
 from apps.orders.models import Order
 
 
@@ -101,7 +101,8 @@ class PlainEnglishTests(OrderLedgerBase):
     def test_the_ship_by_date_matches_the_marketplace_setting(self):
         MarketplaceSettings.objects.create(ship_by_days=9)
         order = self._order(status='paid')
-        expected = order.updated_at + timedelta(days=9)
+        # Business days from payment (apps/orders/clock.py, W1.15).
+        expected = clock.add_business_days(clock.paid_moment(order), 9)
         self.assertIn(ledger._on(expected), ledger.rows(self.seller)['rows'][0]['note'])
         self.assertEqual(ship_by_days(), 9)
 

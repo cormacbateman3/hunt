@@ -4,7 +4,7 @@ from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.accounts.bench import ship_by_days
+from apps.orders.clock import add_business_days, ship_by_days
 from apps.collections.tradeability import trade_block_reason
 from apps.notifications.services import create_notification
 from apps.enforcement.services import enforce_capability
@@ -581,7 +581,7 @@ def accept_trade_offer(offer, actor):
             initiator=locked_offer.from_user,
             counterparty=locked_offer.to_user,
             status='awaiting_shipments',
-            ship_by_deadline=timezone.now() + timedelta(days=ship_by_days()),
+            ship_by_deadline=add_business_days(timezone.now(), ship_by_days()),
         )
         _create_trade_shipments(trade)
 

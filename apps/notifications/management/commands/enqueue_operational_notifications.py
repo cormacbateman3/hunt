@@ -13,19 +13,20 @@ class Command(BaseCommand):
         now = timezone.now()
         created = 0
 
-        # Order ship-by reminders: paid orders approaching 5-day shipping deadline.
-        # Window: orders paid between 4 and 5 days ago (1-day reminder window before deadline).
-        four_days_ago = now - timedelta(days=4)
-        five_days_ago = now - timedelta(days=5)
+        # Order ship-by reminders: the last day before the posting deadline
+        # the seller was shown (apps/orders/clock.py, W1.15).
+        from django.db.models import Q
+
+        from apps.orders.clock import ship_by, ship_by_days
+        nearly = now - timedelta(days=max(ship_by_days() - 1, 0))
         orders_due = (
-            Order.objects.filter(
-                status='paid',
-                updated_at__lte=four_days_ago,
-                updated_at__gt=five_days_ago,
-            )
+            Order.objects.filter(status='paid', delivery_method='shipping')
+            .filter(Q(paid_at__lte=nearly) | Q(paid_at__isnull=True, updated_at__lte=nearly))
             .select_related('seller')
         )
         for order in orders_due:
+            if not (ship_by(order) - timedelta(days=1) <= now < ship_by(order)):
+                continue
             note = create_notification(
                 user=order.seller,
                 notification_type='order_ship_reminder',
@@ -89,7 +90,9 @@ class Command(BaseCommand):
 
         # Receipt confirmation reminders.
         delivered_orders = (
-            Order.objects.filter(status='delivered', updated_at__lte=now - timedelta(hours=24))
+            Order.objects.filter(status='delivered')
+            .filter(Q(delivered_at__lte=now - timedelta(hours=24))
+                    | Q(delivered_at__isnull=True, updated_at__lte=now - timedelta(hours=24)))
             .select_related('buyer')
         )
         for order in delivered_orders:

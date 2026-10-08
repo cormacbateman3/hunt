@@ -40,7 +40,12 @@ def transition_order(order, target_status, *, actor=None):
             return False, 'Only order participants can complete the order.'
 
     order.status = target_status
-    order.save(update_fields=['status', 'updated_at'])
+    from .clock import stamp
+    fields = ['status', 'updated_at']
+    stamped = stamp(order, target_status)
+    if stamped:
+        fields.append(stamped)
+    order.save(update_fields=fields)
 
     # The sale lifecycle keeps the collection record honest: paid writes
     # the departure, a refund or cancellation hands the piece back. (The
@@ -55,13 +60,19 @@ def transition_order(order, target_status, *, actor=None):
     return True, 'Order updated.'
 
 
-def auto_complete_delivered_orders(grace_days=3, limit=200):
-    threshold = timezone.now() - timedelta(days=grace_days)
-    # Keep queryset simple and explicit for command-level control.
+def auto_complete_delivered_orders(grace_days=None, limit=200):
+    from django.db.models import Q
+
     from apps.enforcement.handshakes import order_has_handshake
+    from .clock import RECEIPT_GRACE_DAYS
     from .models import Order
+
+    threshold = timezone.now() - timedelta(days=grace_days or RECEIPT_GRACE_DAYS)
+    # Counted from delivery (W1.15); older rows have no delivered_at yet.
     queryset = (
-        Order.objects.filter(status='delivered', updated_at__lte=threshold)
+        Order.objects.filter(status='delivered')
+        .filter(Q(delivered_at__lte=threshold)
+                | Q(delivered_at__isnull=True, updated_at__lte=threshold))
         .order_by('updated_at')[:limit]
     )
     completed_count = 0

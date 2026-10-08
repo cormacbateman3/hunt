@@ -277,10 +277,9 @@ class MarketplaceSettings(models.Model):
         default=5,
         validators=[MinValueValidator(1), MaxValueValidator(30)],
         help_text=(
-            'Days a seller has to dispatch after payment clears. Quoted to '
-            'buyers on the listing page and printed as a date on the order. '
-            'No background job enforces it yet, so it is a promise rather '
-            'than a constraint — do not shorten it without one.'
+            'Business days a seller has to dispatch after payment clears. '
+            'Quoted to buyers, printed as a date on the order, and enforced '
+            'by the non-shipment strike (apps/orders/clock.py).'
         ),
     )
     updated_at = models.DateTimeField(auto_now=True)

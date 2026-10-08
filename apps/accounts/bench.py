@@ -26,22 +26,15 @@ from apps.trades.models import Trade, TradeOffer
 # row at all.
 AUCTION_PAY_GRACE_HOURS = 24        # release_unpaid_auction_wins
 BUY_NOW_PAY_GRACE_MINUTES = 30      # release_stale_pending_buy_now_orders
-RECEIPT_GRACE_DAYS = 3              # auto_complete_delivered_orders
 
-
-
-def ship_by_days():
-    """The handling window quoted to buyers, from MarketplaceSettings.
-
-    Unlike the three constants above there is no job enforcing this one, so
-    it is a promise rather than a constraint. It is admin-tunable because the
-    promise is a business decision; do not shorten it without writing the job
-    that acts on it.
-    """
-    from apps.core.models import MarketplaceSettings
-
-    row = MarketplaceSettings.objects.order_by('id').first()
-    return row.ship_by_days if row else 5
+# The ship-by and receipt clocks live in apps/orders/clock.py (W1.15), read by
+# the jobs that enforce them as well as here. Re-exported for older imports.
+from apps.orders.clock import (  # noqa: E402,F401
+    RECEIPT_GRACE_DAYS,
+    receipt_due,
+    ship_by,
+    ship_by_days,
+)
 
 
 def _urgency(due_at, now):
@@ -143,7 +136,7 @@ def needs_you(user):
         .select_related('listing', 'buyer', 'ship_to_snapshot')
     )
     for order in to_ship:
-        due = order.updated_at + timedelta(days=ship_by_days())
+        due = ship_by(order)
         destination = ''
         if order.ship_to_snapshot:
             snap = order.ship_to_snapshot
@@ -166,7 +159,7 @@ def needs_you(user):
         .select_related('listing', 'seller')
     )
     for order in to_confirm:
-        due = order.updated_at + timedelta(days=RECEIPT_GRACE_DAYS)
+        due = receipt_due(order)
         rows.append(_row(
             kind='receipt', due_at=due, now=now,
             label='Confirm it arrived',

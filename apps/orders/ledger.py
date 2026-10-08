@@ -23,13 +23,10 @@ from django.db.models import Q
 from django.urls import reverse
 from django.utils import timezone
 
-from apps.accounts.bench import (
-    AUCTION_PAY_GRACE_HOURS,
-    BUY_NOW_PAY_GRACE_MINUTES,
-    RECEIPT_GRACE_DAYS,
-    ship_by_days,
-)
+from apps.accounts.bench import AUCTION_PAY_GRACE_HOURS, BUY_NOW_PAY_GRACE_MINUTES
 
+from . import clock
+from .clock import RECEIPT_GRACE_DAYS, ship_by_days  # noqa: F401  (re-exported for tests)
 from .models import Order
 
 OPEN_STATUSES = ('pending_payment', 'paid', 'label_created', 'in_transit', 'delivered')
@@ -110,7 +107,7 @@ def _stands(order, now, *, buying):
                 _look(order), WAIT)
 
     if status == 'paid':
-        due = order.updated_at + timedelta(days=ship_by_days())
+        due = clock.ship_by(order)
         if buying:
             return ('Paid — waiting on them to ship',
                     f'Should be posted by {_on(due)}', 'plain',
@@ -138,9 +135,9 @@ def _stands(order, now, *, buying):
         return (where, carrier, 'plain', _track(order), WAIT)
 
     if status == 'delivered':
-        due = order.updated_at + timedelta(days=RECEIPT_GRACE_DAYS)
+        due = clock.receipt_due(order)
         if buying:
-            return (f'Delivered {_on(order.updated_at)}',
+            return (f'Delivered {_on(clock.delivered_moment(order))}',
                     f'Say it arrived, or we’ll assume so on {_on(due)}', 'live',
                     {'label': 'It arrived', 'style': 'secondary',
                      'url': reverse('orders:detail', args=[order.pk])}, ACT)
@@ -292,8 +289,7 @@ def stops(order):
     """The five-stop rail. Done, here, or not yet — nothing else."""
     done = set(_REACHED.get(order.status, ()))
     here = _HERE.get(order.status)
-    ship_due = (order.updated_at + timedelta(days=ship_by_days())
-                if order.status == 'paid' else None)
+    ship_due = clock.ship_by(order) if order.status == 'paid' else None
 
     out = []
     for key, label in STOPS:
@@ -312,13 +308,13 @@ def stops(order):
 def _deadline_for(order, buying):
     """The clock this person is actually running against, if any."""
     if order.status == 'paid' and not buying:
-        return order.updated_at + timedelta(days=ship_by_days())
+        return clock.ship_by(order)
     if order.status == 'pending_payment' and buying:
         if order.order_type == 'auction':
             return order.created_at + timedelta(hours=AUCTION_PAY_GRACE_HOURS)
         return order.created_at + timedelta(minutes=BUY_NOW_PAY_GRACE_MINUTES)
     if order.status == 'delivered' and buying:
-        return order.updated_at + timedelta(days=RECEIPT_GRACE_DAYS)
+        return clock.receipt_due(order)
     return None
 
 
@@ -394,9 +390,9 @@ def record(order):
         })
 
     if order.status == 'paid':
-        due = order.updated_at + timedelta(days=ship_by_days())
+        due = clock.ship_by(order)
         lines.append({
-            'at': order.updated_at,
+            'at': clock.paid_moment(order),
             'text': f'The seller was told to ship by {_on(due)}.',
         })
 

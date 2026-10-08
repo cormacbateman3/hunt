@@ -306,7 +306,7 @@ def _auction_won(notification):
 
 
 def _ship_by(notification):
-    from apps.accounts.bench import ship_by_days
+    from apps.orders.clock import paid_moment, ship_by, ship_by_days
 
     order = _order_of(notification)
     if order is None:
@@ -314,7 +314,7 @@ def _ship_by(notification):
 
     listing = order.listing
     days = ship_by_days()
-    due = order.updated_at + timedelta(days=days)
+    due = ship_by(order)
     due_word = 'tomorrow' if timezone.localtime(due).date() == (
         timezone.localdate() + timedelta(days=1)) else day(due)
 
@@ -322,8 +322,8 @@ def _ship_by(notification):
         'subject': f'The {listing.title if listing else "order"} wants posting',
         'headline': f'The {listing.title if listing else "order"} wants posting {due_word}.',
         'lead': (
-            f'{name_of(order.buyer)} paid on {day(order.updated_at)}. '
-            f'{_word(days).capitalize()} days puts your date at {day(due)}'
+            f'{name_of(order.buyer)} paid on {day(paid_moment(order))}. '
+            f'{_word(days).capitalize()} working days puts your date at {day(due)}'
             f'{" — that\'s tomorrow" if due_word == "tomorrow" else ""}.'),
         'options': [
             ('Buying the label here',
@@ -386,9 +386,9 @@ def _payment_confirmed(notification):
     if order is None:
         return None
     listing = order.listing
-    from apps.accounts.bench import ship_by_days
+    from apps.orders.clock import ship_by
 
-    due = order.updated_at + timedelta(days=ship_by_days())
+    due = ship_by(order)
     return {
         'subject': f'Your payment for {listing.title if listing else "the order"} went through',
         'headline': (f'Your payment for {listing.title if listing else "the order"} '
@@ -440,14 +440,14 @@ def _order_paid(notification):
     notification; it went out as the plain letter. (``payment_received`` is
     a declared type nothing creates; this is the letter it was meant for.)
     """
-    from apps.accounts.bench import ship_by_days
+    from apps.orders.clock import ship_by
 
     order = _order_of(notification)
     if order is None:
         return None
     listing = order.listing
     title = listing.title if listing else 'the order'
-    due = order.updated_at + timedelta(days=ship_by_days())
+    due = ship_by(order)
 
     return {
         'subject': f'{title} is paid for. Post it by {day(due)}',
