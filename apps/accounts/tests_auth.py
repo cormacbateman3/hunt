@@ -163,8 +163,9 @@ class AuthPageTests(TermsBase):
     def test_a_real_address_and_a_promise_of_a_real_reply(self):
         """Auth is where older users get stranded, and a dead end here costs
         the member entirely."""
-        html = self.client.get(reverse('accounts:login')).content.decode()
-        self.assertIn('help@keystonebid.com', html)
+        with self.settings(SUPPORT_EMAIL='help@backtag.example'):
+            html = self.client.get(reverse('accounts:login')).content.decode()
+        self.assertIn('mailto:help@backtag.example', html)
         self.assertIn('a person will answer', html)
 
     def test_the_password_rules_are_a_checklist_not_a_paragraph(self):
@@ -176,7 +177,8 @@ class AuthPageTests(TermsBase):
         """Discovering the rules at the moment you try to list something is
         what makes them feel arbitrary."""
         html = self.client.get(reverse('accounts:register')).content.decode()
-        self.assertIn('An address to sell, a phone number to trade', html)
+        self.assertIn('An address to sell or trade', html)
+        self.assertNotIn('phone number to trade', html)  # nothing checks a phone yet (W1.8)
 
     def test_the_figures_are_counted_not_invented(self):
         resp = self.client.get(reverse('accounts:register'))

@@ -157,6 +157,9 @@ STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', '')
 STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
 SITE_URL = os.getenv('SITE_URL', 'http://localhost:8000')
+# Where members write for help; shown on sign-in pages and in settings.
+# Set it once the support mailbox exists (roadmap WO.7).
+SUPPORT_EMAIL = os.getenv('SUPPORT_EMAIL', 'help@keystonebid.com')
 
 # Shippo configuration
 SHIPPO_API_KEY = os.getenv('SHIPPO_API_KEY', '')

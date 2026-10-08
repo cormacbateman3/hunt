@@ -315,6 +315,14 @@ class TheSentMailTests(LetterBase):
         self.assertIn('Pay $220.40:', sent.body)
         self.assertNotIn('<', sent.body)
 
+    def test_the_footer_names_the_site_it_came_from_not_the_old_brand(self):
+        note = self._note('new_message', '/messages/3/')
+        with self.settings(SITE_URL='https://backtag.example'):
+            send_notification_email(note)
+        html = mail.outbox[0].alternatives[0][0]
+        self.assertIn('>backtag.example</a>', html)
+        self.assertNotIn('keystonebid', html.lower())
+
     def test_the_letter_is_marked_sent(self):
         note = self._note('new_message', '/messages/3/')
         send_notification_email(note)

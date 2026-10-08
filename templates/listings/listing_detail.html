@@ -8,7 +8,7 @@
 {% block context_band %}
 <nav class="kb-crumbs" aria-label="Breadcrumb">
     <div class="kb-band-inner">
-        <a href="{% url 'hunt' %}">Hunt</a>
+        <a href="{% url 'hunt' %}">The Market</a>
         {% if listing.state %}
             <span class="kb-crumb-sep" aria-hidden="true">/</span>
             <a href="{% url 'hunt' %}?state_id={{ listing.state.id }}">{{ listing.state.name }}</a>

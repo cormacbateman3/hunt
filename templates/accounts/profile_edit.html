@@ -103,8 +103,9 @@ Nothing is in two groups.
                 {% endfor %}
             </ul>
             <p class="st-note">
-                A verified email lets you bid. An address lets you sell, and a phone
-                number lets you trade &mdash; each one only when you need it.
+                A verified email lets you bid. An address lets you sell and trade
+                &mdash; each one only when you need it. Phone verification is on its way.
+                {# Honest until W8.24 ships phone verification and gates trading on it. #}
             </p>
 
         {% elif room == 'addresses' %}
@@ -206,13 +207,15 @@ Nothing is in two groups.
             </form>
 
         {% elif room == 'payouts' %}
+            {# Honest until seller payouts exist (roadmap W1.7 → W4.6). #}
             <p class="st-note">
-                Buyers pay through Stripe and payouts follow Stripe&rsquo;s normal
-                schedule. Backtag never holds your money &mdash; there is no escrow
-                here, which is why the handshake and the strike ladder exist.
+                Payouts aren&rsquo;t switched on yet. When they are, this is where
+                you&rsquo;ll tell us where your money should go, and each sale&rsquo;s
+                share will be paid to your bank on a regular schedule. Until then,
+                your share of every sale is recorded on its order.
             </p>
             <ul class="st-checks">
-                <li class="is-yes"><span>No fee to join, browse, or trade</span></li>
+                <li class="is-yes"><span>No fee to join or browse</span></li>
                 <li class="is-yes"><span>Commission is charged only when something sells</span></li>
                 <li class="is-yes"><span>Shipping goes straight to the carrier when you buy a label</span></li>
             </ul>
@@ -260,7 +263,7 @@ Nothing is in two groups.
             <p class="st-help">
                 A downloadable copy &mdash; including what you paid, which nobody else
                 ever sees &mdash; is coming. Ask us and we will send you one in the
-                meantime: <a href="mailto:help@keystonebid.com">help@keystonebid.com</a>.
+                meantime: <a href="mailto:{{ support_email }}">{{ support_email }}</a>.
             </p>
 
         {% elif room == 'policies' %}

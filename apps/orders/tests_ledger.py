@@ -173,6 +173,17 @@ class OrderPageTests(OrderLedgerBase):
         self.assertEqual(buying['total_label'], 'You paid')
         self.assertEqual(buying['deductions'], [])
 
+    def test_both_views_add_up_when_checkout_put_the_fee_on_the_buyer(self):
+        """W1.7: checkout adds the fee to the buyer's total (D12 is open). The
+        seller view deducted it again, and the buyer's rows didn't add up."""
+        order = self._order(status='paid', total_amount=Decimal('224.40'))  # 200 + 8.40 + 16
+        selling = ledger.money(order, selling=True)
+        self.assertEqual(selling['total'], Decimal('200.00'))
+        self.assertNotIn('Stripe', selling['footnote'])
+
+        buying = ledger.money(order, selling=False)
+        self.assertEqual(sum(r['amount'] for r in buying['rows']), buying['total'])
+
     def test_the_record_reads_as_sentences(self):
         order = self._order(status='paid')
         texts = [line['text'] for line in ledger.record(order)]

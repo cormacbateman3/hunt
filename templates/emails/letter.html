@@ -139,7 +139,7 @@ Context: letter (from notifications.letters.build), site_url.
                                 {% if letter.can_opt_out %}
                                     <a href="{{ site_url }}{{ settings_path }}" style="color: #a07a26;">Change what we send you</a> &middot;
                                 {% endif %}
-                                <a href="{{ site_url }}/" style="color: #a07a26;">keystonebid.com</a>
+                                <a href="{{ site_url }}/" style="color: #a07a26;">{{ site_host }}</a>
                             </p>
                             <p style="margin: 5px 0 0; font-family: Georgia, 'Times New Roman', serif; font-size: 12px; line-height: 1.55; color: #8c8f80;">
                                 {{ letter.sign_off }}

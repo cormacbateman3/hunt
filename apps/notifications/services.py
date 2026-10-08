@@ -2,6 +2,7 @@
 Notification services for sending emails
 """
 import logging
+from urllib.parse import urlparse
 from datetime import timedelta
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
@@ -42,6 +43,7 @@ def send_notification_email(notification):
         'user': notification.user,
         'settings_path': letters.settings_url(),
         'site_url': site_url,
+        'site_host': urlparse(site_url).netloc or site_url,
     })
 
     try:

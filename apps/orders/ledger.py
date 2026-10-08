@@ -436,24 +436,27 @@ def money(order, *, selling):
     The seller's view subtracts; the buyer's view only adds up. A buyer has
     no business seeing the seller's commission and no use for it.
     """
+    fee = order.platform_fee_amount or Decimal('0')
     rows = [
         {'label': 'The item', 'amount': order.item_amount},
         {'label': 'Shipping', 'amount': order.shipping_amount},
     ]
+    # Who carries the fee is still open (roadmap D12): checkout adds it to the
+    # buyer's total, the design deducts it from the seller. Read it off the
+    # order so both views add up whichever way it went.
+    fee_on_buyer = fee > 0 and order.total_amount == order.item_amount + order.shipping_amount + fee
 
     if not selling:
+        if fee_on_buyer:
+            rows.append({'label': 'Backtag’s fee', 'amount': fee})
         return {
             'rows': rows,
             'total_label': 'You paid',
             'total': order.total_amount,
             'deductions': [],
-            'footnote': (
-                'Shipping goes to the carrier, not to the seller. Nothing is '
-                'held in escrow.'
-            ),
+            'footnote': 'Shipping goes to the carrier, not to the seller.',
         }
 
-    fee = order.platform_fee_amount or Decimal('0')
     return {
         'rows': rows,
         'paid_label': 'They paid',
@@ -463,9 +466,11 @@ def money(order, *, selling):
             {'label': 'Commission', 'amount': fee},
         ],
         'total_label': 'You keep',
-        'total': order.item_amount - fee,
+        'total': order.total_amount - order.shipping_amount - fee,
+        # Honest until seller payouts exist (roadmap W1.7 → W4.6).
         'footnote': (
-            'Paid out on Stripe’s normal schedule. Nothing is held back — '
-            'shipping goes to the carrier when you buy the label.'
+            'Seller payouts aren’t switched on yet. Your share of this sale is '
+            'recorded here and will be paid out once they are. Shipping goes to '
+            'the carrier when you buy the label.'
         ),
     }

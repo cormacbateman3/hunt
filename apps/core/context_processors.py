@@ -60,9 +60,12 @@ def _zone_for(view_name, namespace):
 
 def shell(request):
     """Expose ``kb_zone`` so the topbar can mark the current destination."""
+    from django.conf import settings
+
+    support = {'support_email': settings.SUPPORT_EMAIL}
     match = getattr(request, 'resolver_match', None)
     if match is None:
-        return {'kb_zone': None, 'bench_needs_count': 0}
+        return {'kb_zone': None, 'bench_needs_count': 0, **support}
 
     zone = _zone_for(match.view_name or '', match.namespace or '')
 
@@ -73,4 +76,4 @@ def shell(request):
         from apps.accounts.bench import needs_you_count
         count = needs_you_count(request.user)
 
-    return {'kb_zone': zone, 'bench_needs_count': count}
+    return {'kb_zone': zone, 'bench_needs_count': count, **support}
