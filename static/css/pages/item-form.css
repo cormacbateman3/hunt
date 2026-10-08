@@ -1339,3 +1339,11 @@
 .if-strike-trigger:hover {
     border-bottom-style: solid;
 }
+
+/* W1.11 — Google's PlaceAutocompleteElement draws its own search box (a web
+   component); make it span the field like the inputs around it. */
+.kb-address-search {
+    display: block;
+    width: 100%;
+    color-scheme: light;
+}
