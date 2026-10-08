@@ -54,13 +54,13 @@ def submit_trade_review(request, trade_id):
         return HttpResponseForbidden()
     if trade.status != 'completed':
         messages.error(request, 'Reviews are only available for completed trades.')
-        return redirect('trades:trade_detail', pk=trade_id)
+        return redirect('trades:trade_detail', trade_id=trade_id)
 
     reviewed_user = trade.counterparty if request.user.id == trade.initiator_id else trade.initiator
 
     if Review.objects.filter(reviewer=request.user, trade=trade).exists():
         messages.info(request, 'You have already left a review for this trade.')
-        return redirect('trades:trade_detail', pk=trade_id)
+        return redirect('trades:trade_detail', trade_id=trade_id)
 
     form = ReviewForm(request.POST)
     if form.is_valid():
@@ -74,4 +74,4 @@ def submit_trade_review(request, trade_id):
         for field_errors in form.errors.values():
             for err in field_errors:
                 messages.error(request, err)
-    return redirect('trades:trade_detail', pk=trade_id)
+    return redirect('trades:trade_detail', trade_id=trade_id)

@@ -632,7 +632,6 @@ class NonShipmentSweepTests(EnforcementBase):
         enforce_deterministic_policies()
         self.assertFalse(Strike.objects.exists())
 
-    @expectedFailure  # Bug: an excused strike is re-issued by the next nightly sweep.
     def test_an_excused_strike_is_not_issued_again_by_the_next_sweep(self):
         order = self._paid()
         enforce_deterministic_policies()

@@ -286,7 +286,6 @@ class TradeReviewTests(ReviewRulesBase):
         self._review_trade(self.buyer, body='a' * 256)
         self.assertFalse(Review.objects.filter(trade=self.trade).exists())
 
-    @expectedFailure  # Bug: apps/reviews/views.py redirects with pk= but the URL takes trade_id.
     def test_after_reviewing_a_trade_you_land_back_on_the_trade(self):
         resp = self._review_trade(self.buyer)
         self.assertRedirects(resp, reverse('trades:trade_detail', args=[self.trade.pk]),

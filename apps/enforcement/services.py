@@ -81,11 +81,16 @@ def _has_open_matching_strike(*, user=None, user_id=None, reason, related_order=
     if not strike_user_id:
         return False
 
-    queryset = Strike.objects.filter(user_id=strike_user_id, reason=reason, is_excused=False)
+    queryset = Strike.objects.filter(user_id=strike_user_id, reason=reason)
     if related_order:
         queryset = queryset.filter(related_order=related_order)
     if related_trade:
         queryset = queryset.filter(related_trade=related_trade)
+    if not (related_order or related_trade):
+        queryset = queryset.filter(is_excused=False)
+    # For a specific order or trade, an excused strike still settles it: the
+    # two of them agreed, and the next nightly sweep must not strike the same
+    # thing again (it did, W1.26).
     return queryset.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=_now())).exists()
 
 
