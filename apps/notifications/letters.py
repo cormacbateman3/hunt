@@ -45,7 +45,7 @@ from .centre import ACTIONS
 ALWAYS_SENT = {
     'auction_won', 'auction_sold', 'order_ship_reminder', 'payment_confirmed',
     'order_created', 'order_paid', 'order_shipped', 'order_delivered',
-    'strike_issued', 'account_restricted',
+    'strike_issued', 'account_restricted', 'payment_due',
 }
 
 
@@ -405,6 +405,34 @@ def _payment_confirmed(notification):
     }
 
 
+def _payment_due(notification):
+    """Halfway through an auction win's pay window (W1.14). The winner used to
+    hear nothing between "it's yours" and a strike 24 hours later."""
+    from apps.accounts.bench import AUCTION_PAY_GRACE_HOURS
+
+    order = _order_of(notification)
+    if order is None:
+        return None
+    listing = order.listing
+    title = listing.title if listing else 'your lot'
+    due = order.created_at + timedelta(hours=AUCTION_PAY_GRACE_HOURS)
+
+    return {
+        'subject': f'Still to pay: {title}',
+        'headline': f'{title} is still waiting on your payment.',
+        'item': _item(listing, [
+            f'{money(order.total_amount)} with shipping.',
+            f'Due by {clock(due)} on {day(due)}, about {remaining(due)} from now.',
+        ]),
+        'action': {'label': f'Pay {money(order.total_amount)}',
+                   'url': notification.link_url, 'tone': 'brass'},
+        'closing': ('If it isn\'t paid by then, the sale is cancelled and it '
+                    'counts against your standing.'),
+        'reason': 'Letters about a deal in progress always come.',
+        'sign_off': 'Trouble paying? Reply and a person will answer.',
+    }
+
+
 def _order_paid(notification):
     """The seller's "it's paid for" letter, where the posting clock starts.
 
@@ -451,6 +479,7 @@ BUILDERS = {
     'order_ship_reminder': _ship_by,
     'payment_confirmed': _payment_confirmed,
     'order_paid': _order_paid,
+    'payment_due': _payment_due,
 }
 
 # DEFERRED — the wanted-match letter, which turn 9a calls the best one we

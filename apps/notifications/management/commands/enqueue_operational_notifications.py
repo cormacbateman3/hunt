@@ -36,6 +36,33 @@ class Command(BaseCommand):
             if note:
                 created += 1
 
+        # Payment-due reminders (W1.14). An auction win lapses, with a strike,
+        # at the end of its pay window; halfway through, the winner hears again.
+        # The message is fixed per order so the dedupe holds across runs.
+        from apps.accounts.bench import AUCTION_PAY_GRACE_HOURS
+        window = timedelta(hours=AUCTION_PAY_GRACE_HOURS)
+        unpaid_wins = (
+            Order.objects.filter(
+                status='pending_payment',
+                order_type='auction',
+                created_at__lte=now - window / 2,
+                created_at__gt=now - window,
+            )
+            .select_related('buyer', 'listing')
+        )
+        for order in unpaid_wins:
+            note = create_notification(
+                user=order.buyer,
+                notification_type='payment_due',
+                message=(f'Payment for {order.listing.title} (order #{order.pk}) is still due. '
+                         f'An unpaid win lapses {AUCTION_PAY_GRACE_HOURS} hours after the close.'),
+                link_url=f'/orders/{order.pk}/',
+                queue_email=True,
+                dedupe_window_hours=AUCTION_PAY_GRACE_HOURS,
+            )
+            if note:
+                created += 1
+
         # Trade ship-by reminders for pending outgoing side.
         trade_due = (
             TradeShipment.objects.filter(

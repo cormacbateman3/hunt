@@ -13,6 +13,8 @@ class Notification(models.Model):
         ('auction_expired', 'Auction Expired'),
         ('payment_received', 'Payment Received'),
         ('payment_confirmed', 'Payment Confirmed'),
+        # Halfway through an auction win's pay window (W1.14).
+        ('payment_due', 'Payment Due'),
         # A payment that landed after its order was released (W1.5): the
         # payer is told it will be refunded; staff are asked to refund it.
         ('payment_after_cancel', 'Payment After Cancellation'),
