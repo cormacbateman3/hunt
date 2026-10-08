@@ -23,9 +23,9 @@ class WantsNavTests(TestCase):
         self.client.force_login(self.me)
 
     def test_the_tab_goes_to_the_wants_and_is_marked_current_there(self):
-        resp = self.client.get(WANTS)
-        self.assertContains(resp, f'href="{WANTS}" class="kb-tab"\n           aria-current="page"')
-        self.assertNotContains(resp, '#wanted')
+        html = self.client.get(WANTS).content.decode()
+        self.assertRegex(html, r'href="[^"]*\?view=wants" class="kb-tab"\s+aria-current="page"')
+        self.assertNotIn('#wanted', html)
 
     def test_removing_a_want_returns_to_the_wants(self):
         want = WantedItem.objects.create(user=self.me, notes='a 1931 Clinton')
