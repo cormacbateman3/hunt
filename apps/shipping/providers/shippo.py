@@ -8,9 +8,12 @@ class ShippoError(Exception):
 
 
 class ShippoClient:
-    def __init__(self):
+    DEFAULT_TIMEOUT = 30  # seconds; label purchases and checkout can wait this long
+
+    def __init__(self, timeout=None):
         self.api_key = settings.SHIPPO_API_KEY
         self.base_url = settings.SHIPPO_API_BASE_URL.rstrip('/')
+        self.timeout = timeout or self.DEFAULT_TIMEOUT
 
     def _headers(self):
         return {
@@ -29,7 +32,7 @@ class ShippoClient:
 
         req = request.Request(url, data=body, method=method, headers=self._headers())
         try:
-            with request.urlopen(req, timeout=30) as response:
+            with request.urlopen(req, timeout=self.timeout) as response:
                 return json.loads(response.read().decode('utf-8'))
         except error.HTTPError as exc:
             try:
@@ -39,6 +42,8 @@ class ShippoClient:
             raise ShippoError(f'Shippo request failed ({exc.code}): {details}') from exc
         except error.URLError as exc:
             raise ShippoError(f'Shippo network error: {exc}') from exc
+        except TimeoutError as exc:  # a read that outlived self.timeout
+            raise ShippoError('Shippo took too long to answer.') from exc
 
     def create_shipment(self, *, address_from, address_to, parcel):
         payload = {

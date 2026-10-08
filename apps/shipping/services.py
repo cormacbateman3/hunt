@@ -1,6 +1,7 @@
 from decimal import Decimal, ROUND_HALF_UP
 from datetime import datetime
 from django.conf import settings
+from django.core.cache import cache
 from django.utils import timezone
 from apps.notifications.services import create_notification
 from apps.orders.models import AddressSnapshot
@@ -11,6 +12,9 @@ from .tracking import fetch_tracking, tracking_numbers_in, verify_member_trackin
 
 
 TERMINAL_SHIPMENT_STATUSES = {'delivered', 'failed', 'returned'}
+# The pre-payment estimate on the review pages (W1.20).
+ESTIMATE_TIMEOUT_SECONDS = 6
+ESTIMATE_CACHE_SECONDS = 30 * 60
 TRACKING_TO_SHIPMENT_STATUS = {
     'PRE_TRANSIT': 'label_created',
     'TRANSIT': 'in_transit',
@@ -196,18 +200,33 @@ def estimate_listing_shipping(listing, buyer):
     buyer_address = getattr(getattr(buyer, 'profile', None), 'shipping_address', None)
     if not seller_address or not buyer_address:
         return None, 'Calculated at payment'
+
+    # A page view must never hang on Shippo (W1.20): a short timeout, and the
+    # answer kept for half an hour per route and parcel so a refresh is free.
+    # On any failure the page says "Calculated at payment" and checkout quotes
+    # properly.
+    parcel = listing_parcel(listing)
+    cache_key = 'ship-est:' + ':'.join(str(part) for part in (
+        listing.pk, seller_address.pk, buyer_address.pk,
+        getattr(listing, 'shipping_service', 'cheapest'), sorted(parcel.items()),
+    ))
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return Decimal(cached), 'Estimated'
     try:
-        client = ShippoClient()
+        client = ShippoClient(timeout=ESTIMATE_TIMEOUT_SECONDS)
         payload = client.create_shipment(
             address_from=_address_to_shippo_payload(seller_address),
             address_to=_address_to_shippo_payload(buyer_address),
-            parcel=_parcel_to_shippo(listing_parcel(listing)),
+            parcel=_parcel_to_shippo(parcel),
         )
         rates = payload.get('rates') or []
         if not rates:
             return None, 'Calculated at payment'
         selected = select_rate(rates, getattr(listing, 'shipping_service', 'cheapest'))
-        return _to_decimal(selected['amount']), 'Estimated'
+        amount = _to_decimal(selected['amount'])
+        cache.set(cache_key, str(amount), ESTIMATE_CACHE_SECONDS)
+        return amount, 'Estimated'
     except ShippoError:
         return None, 'Calculated at payment'
 
