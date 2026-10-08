@@ -39,6 +39,17 @@
         addon_type: 'Add-on', shape: 'Shape', colors: 'Colours', serial_number: 'Serial',
     };
 
+    // Where a "Suggest it" lands. Only the licence-type categories can turn
+    // into new rows when staff accept; a state or place miss is for a person
+    // to look at. (Everything used to be filed as license_type, so accepting
+    // "Statewide" would have created an add-on type.)
+    const SUGGEST_TARGETS = {
+        state: 'state', geographic_unit: 'geographic_unit',
+        residency: 'license_type', holder_eligibility: 'license_type',
+        activity_scope: 'license_type', duration: 'license_type', addon_type: 'license_type',
+        material: 'license_type', issue_class: 'license_type',
+    };
+
     // Fields the read may fill but must wait for lookup-built options.
     const DEFERRED = ['geographic_unit', 'residency', 'holder_eligibility',
                       'activity_scope', 'duration', 'material', 'addon_type'];
@@ -959,8 +970,8 @@
                     const h = this.missHints[Number(btn.dataset.suggest)];
                     const body = new URLSearchParams({
                         suggestion_type: 'new_value',
-                        target_model: 'license_type',
-                        field_name: h.field === 'addon_type' ? 'addon_type' : h.field,
+                        target_model: SUGGEST_TARGETS[h.field] || 'other',
+                        field_name: h.field,
                         proposed_value: h.source,
                         source_or_evidence: 'Extracted by image prefill (job #' + (this.jobId || '?') + ')',
                         next: window.location.pathname,

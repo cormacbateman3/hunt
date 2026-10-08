@@ -109,7 +109,7 @@ utilities/        # ref_data/ (hand-edited CSVs) → clean_reference_data.py →
                   # sales_api/, seasons_api/ = standalone research prototypes, not imported by apps/
 sandbox/          # prefill evaluation notebooks
 docs/             # internal/ (plans incl. the roadmap, design, research, context);
-                  # tech_docs/; user_docs.md/ (member-facing FAQs + How-Tos drafts)
+                  # tech_docs/; user_docs/ (member-facing FAQs + How-Tos drafts)
 media/            # dev uploads only
 requirements/{base,development,production}.txt
 ```
@@ -190,8 +190,9 @@ requirements/{base,development,production}.txt
 ## Conventions
 
 - Prefer Django ORM relationships over free text (e.g. `home_county` is an FK, not a string).
-- **Webhooks (Stripe, shipping) must be idempotent and authenticated.** The Shippo webhook
-  isn't authenticated yet (W1.1).
+- **Webhooks (Stripe, shipping) must be idempotent and authenticated.** Shippo can't sign
+  webhooks, so its URL carries `?token=<SHIPPO_WEBHOOK_TOKEN>`. Even then a post is only a
+  nudge: tracking status is always re-fetched from Shippo (`apps/shipping/tracking.py`).
 - **LLM prompts, tool schemas and knobs live in config files** (`prefill/config/`,
   `apps/moderation/config/`), never inline in `.py`. Each exposes a prompt-version hash.
 - Secrets live in `.env` (never committed). Read via python-dotenv. There's an `.env.example`.
@@ -235,7 +236,6 @@ python manage.py seed_geographic_units
 python manage.py seed_license_types
 
 python manage.py seed_demo            # demo listings/items; remove_demo --yes clears them
-python manage.py run_jobs [--loop N]  # every periodic job once — dev stand-in for cron
-                                      # (doesn't run poll_shipments / poll_trade_shipments)
-python manage.py test                 # ~860 tests, ~95 s
+python manage.py run_jobs [--loop N]  # every periodic job once (incl. tracking polls) — dev stand-in for cron
+python manage.py test                 # ~900 tests, ~95 s
 ```

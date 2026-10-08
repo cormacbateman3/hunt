@@ -124,20 +124,22 @@ def accept_and_apply(modeladmin, request, queryset):
     applied = 0
     created = 0
     accepted = 0
+    left_for_a_person = 0
     for suggestion in queryset:
         # New taxonomy values push a real row into the data model
-        # (the Filter Cleanliness Rule's back half).
+        # (the Filter Cleanliness Rule's back half) — but only for a real
+        # licence-type category. An unknown field_name used to fall back to
+        # 'addon_type', so accepting a mis-filed "Statewide" made an add-on.
         if (
             suggestion.target_model == 'license_type'
             and suggestion.suggestion_type == 'new_value'
             and suggestion.proposed_value.strip()
         ):
+            if suggestion.field_name not in FORM_LICENSE_TYPE_CATEGORIES:
+                left_for_a_person += 1
+                continue
             name = suggestion.proposed_value.strip()
-            category = (
-                suggestion.field_name
-                if suggestion.field_name in FORM_LICENSE_TYPE_CATEGORIES
-                else 'addon_type'
-            )
+            category = suggestion.field_name
             _, was_created = LicenseType.objects.get_or_create(
                 state=None,
                 name=name,
@@ -162,6 +164,11 @@ def accept_and_apply(modeladmin, request, queryset):
                 setattr(target, suggestion.field_name, suggestion.proposed_value)
                 target.save(update_fields=[suggestion.field_name])
                 applied += 1
+            else:
+                # Nothing to apply it to (a new place, a shape, a free note):
+                # it stays pending rather than being marked accepted unapplied.
+                left_for_a_person += 1
+                continue
 
         suggestion.status = 'accepted'
         suggestion.reviewed_at = timezone.now()
@@ -172,7 +179,9 @@ def accept_and_apply(modeladmin, request, queryset):
     modeladmin.message_user(
         request,
         f'Accepted {accepted} suggestion(s); applied {applied} correction(s); '
-        f'created {created} new license type(s) (universal — set state/facets in the License Type admin).',
+        f'created {created} new license type(s) (universal — set state/facets in the License Type admin).'
+        + (f' Left {left_for_a_person} pending: they need a person (not a licence-type '
+           f'category, or nothing to apply them to).' if left_for_a_person else ''),
         level=messages.SUCCESS,
     )
 
