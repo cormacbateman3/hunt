@@ -294,6 +294,19 @@ def unblock_user_view(request, user_id):
     return redirect(request.POST.get('next') or 'accounts:profile_edit')
 
 
+def _report_reason(request):
+    """(reason, notes, error). A missing reason used to be filed as "other",
+    which told the reviewer nothing; "Something else" needs its note."""
+    valid = {value for value, _ in MessageReport.REASON_CHOICES}
+    reason = (request.POST.get('reason') or '').strip()
+    notes = (request.POST.get('notes') or '').strip()[:500]
+    if reason not in valid:
+        return reason, notes, 'Choose a reason for the report.'
+    if reason == 'other' and not notes:
+        return reason, notes, 'Tell us briefly what happened, so we know what to look for.'
+    return reason, notes, ''
+
+
 @login_required
 def report_message_view(request, pk, message_id):
     """POST-only: report a specific message as inappropriate."""
@@ -304,8 +317,10 @@ def report_message_view(request, pk, message_id):
         raise Http404
     msg = get_object_or_404(Message, pk=message_id, conversation=conv)
 
-    reason = request.POST.get('reason', 'other')
-    notes = (request.POST.get('notes') or '').strip()[:500]
+    reason, notes, error = _report_reason(request)
+    if error:
+        messages.error(request, error)
+        return redirect('messaging:conversation_detail', pk=pk)
     _, status = services.file_report(
         reporter=request.user,
         reason=reason,
@@ -329,8 +344,10 @@ def report_conversation_view(request, pk):
     if not conv.is_participant(request.user):
         raise Http404
 
-    reason = request.POST.get('reason', 'other')
-    notes = (request.POST.get('notes') or '').strip()[:500]
+    reason, notes, error = _report_reason(request)
+    if error:
+        messages.error(request, error)
+        return redirect('messaging:conversation_detail', pk=pk)
     # Pointing at specific messages is optional — the picks travel on the
     # same form (form= attribute) and flag those messages for the reviewer.
     picked_ids = request.POST.getlist('message_ids')[:20]

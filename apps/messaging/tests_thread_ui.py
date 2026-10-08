@@ -108,6 +108,29 @@ class ReportFlowTests(ThreadUIBase):
         self.assertEqual(mine.moderation_state, 'ok')
         self.assertContains(resp, "We'll look at it")
 
+    def test_a_report_without_a_reason_is_refused_not_filed_as_other(self):
+        conv, _ = services.start_conversation(self.walt, self.john)
+        services.send_message(conv, self.john, 'hello')
+        self.client.force_login(self.walt)
+        resp = self.client.post(
+            reverse('messaging:report_conversation', args=[conv.pk]), {'notes': 'x'}, follow=True)
+        self.assertFalse(MessageReport.objects.exists())
+        self.assertContains(resp, 'Choose a reason for the report.')
+
+    def test_something_else_needs_its_note(self):
+        conv, _ = services.start_conversation(self.walt, self.john)
+        msg, _ = services.send_message(conv, self.john, 'hello')
+        self.client.force_login(self.walt)
+        for url in (reverse('messaging:report_conversation', args=[conv.pk]),
+                    reverse('messaging:report_message', args=[conv.pk, msg.pk])):
+            with self.subTest(url=url):
+                resp = self.client.post(url, {'reason': 'other', 'notes': ' '}, follow=True)
+                self.assertContains(resp, 'Tell us briefly what happened')
+        self.assertFalse(MessageReport.objects.exists())
+        self.client.post(reverse('messaging:report_conversation', args=[conv.pk]),
+                         {'reason': 'other', 'notes': 'Asked me to pay by gift card'})
+        self.assertEqual(MessageReport.objects.get().reason, 'other')
+
     def test_the_new_reasons_are_offered(self):
         conv, _ = services.start_conversation(self.walt, self.john)
         self.client.force_login(self.walt)
