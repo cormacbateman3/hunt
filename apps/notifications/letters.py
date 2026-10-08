@@ -405,6 +405,44 @@ def _payment_confirmed(notification):
     }
 
 
+def _order_paid(notification):
+    """The seller's "it's paid for" letter, where the posting clock starts.
+
+    The payments webhook has always sent the seller an ``order_paid``
+    notification; it went out as the plain letter. (``payment_received`` is
+    a declared type nothing creates; this is the letter it was meant for.)
+    """
+    from apps.accounts.bench import ship_by_days
+
+    order = _order_of(notification)
+    if order is None:
+        return None
+    listing = order.listing
+    title = listing.title if listing else 'the order'
+    due = order.updated_at + timedelta(days=ship_by_days())
+
+    return {
+        'subject': f'{title} is paid for. Post it by {day(due)}',
+        'headline': f'{name_of(order.buyer)} has paid for {title}.',
+        'item': _item(listing, [
+            f'{money(order.total_amount)} paid.',
+            f'Post it by {day(due)}.',
+        ]),
+        'options': [
+            ('Buying the label here',
+             'takes a minute, and tracking then looks after itself.'),
+            ('Using your own postage',
+             'is fine — put the tracking number on the order.'),
+        ],
+        'action': {'label': 'Open the order', 'url': notification.link_url,
+                   'tone': 'dark'},
+        # Honest until seller payouts exist (roadmap W1.7 → W4.6).
+        'closing': ('Your share is recorded on the order. Seller payouts '
+                    'aren\'t switched on yet; it will be paid out once they are.'),
+        'reason': 'Letters about a deal in progress always come.',
+    }
+
+
 BUILDERS = {
     'outbid': _outbid,
     'auction_won': _auction_won,
@@ -412,6 +450,7 @@ BUILDERS = {
     'auction_expired': _auction_expired,
     'order_ship_reminder': _ship_by,
     'payment_confirmed': _payment_confirmed,
+    'order_paid': _order_paid,
 }
 
 # DEFERRED — the wanted-match letter, which turn 9a calls the best one we
@@ -419,14 +458,7 @@ BUILDERS = {
 # Blocked on: no `wanted_match` notification type, no pass over WantedItem
 # when a listing goes live, and no job to run it. The shell and the builder
 # contract are ready; this is one function plus a trigger.
-# Register: docs/internal/plan_design.md
-#
-# DEFERRED — the seller's "your money has arrived" letter. `payment_received`
-# is a declared notification type that nothing anywhere creates, so there is
-# no notification to build a letter from; the buyer's `payment_confirmed`
-# has a live trigger and does have one.
-# Blocked on: a create_notification call in the payments service.
-# Register: docs/internal/plan_design.md
+# Register: docs/internal/plans/plan_design.md
 
 
 def _plain(notification):

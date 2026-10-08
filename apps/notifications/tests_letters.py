@@ -397,3 +397,22 @@ class TheCountedGapTests(LetterBase):
             letters.build(self._note('outbid', f'/listings/{pseudo.pk}/')))
         self.assertNotIn('your first', text)
         self.assertNotIn('one of the', text)
+
+
+class TheSellersPaidLetterTests(LetterBase):
+    """W1.13: the seller's "it's paid for" letter. The webhook always sent
+    ``order_paid``; it went out as the plain letter."""
+
+    def test_it_names_the_buyer_the_money_and_the_posting_date(self):
+        order = self._order(status='paid')
+        letter = letters.build(self._note('order_paid', f'/orders/{order.pk}/', user=self.seller))
+        self.assertIn('is paid for', letter['subject'])
+        self.assertIn('Post it by', letter['subject'])
+        self.assertIn('Ray Musser', letter['headline'])
+        self.assertTrue(letter['options'])
+
+    def test_it_promises_no_payout_schedule_that_doesnt_exist(self):
+        order = self._order(status='paid')
+        letter = letters.build(self._note('order_paid', f'/orders/{order.pk}/', user=self.seller))
+        self.assertIn('switched on yet', letter['closing'])
+        self.assertNotIn('Stripe', letter['closing'])

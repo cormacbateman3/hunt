@@ -337,7 +337,7 @@ The stakeholder's (or the business's) card goes on live accounts.
 
 | ID | Task | From | Size | Depends | Status |
 |---|---|---|---|---|---|
-| W1.13 | **Seller's `payment_received` letter.** The type is declared but nothing creates it. | design L2168 | S | — | ⬜ |
+| W1.13 | **Seller's `payment_received` letter.** The type is declared but nothing creates it. | design L2168 | S | — | ✅ 2026-10-08 — the webhook always sent the seller `order_paid`; it now has its own letter (who paid, how much, the posting date, the two ways to ship, an honest payout line) instead of the plain one; 2 tests |
 | W1.14 | **Payment-due reminder** to auction winners before the 24-hour non-payment strike (dev L2446). | xcheck | S | — | ⬜ |
 | W1.15 | **The ship clock:** <br>• Add `paid_at`, `shipped_at`, `delivered_at` and `completed_at` to Order (CLAUDE.md: explicit status fields). <br>• **One deadline source** (`MarketplaceSettings.ship_by_days`) for both the strike and the Bench. Today the strike uses a hard-coded 5 calendar days counted from `updated_at`, which resets on any save. <br>• Business days (§3c). <br>• `auto_complete_orders` keys off `delivered_at`. <br>• This starts the deadline sweeps in §5 rule 1 (continued in W4.8). <br>• Absorbs the old "ship_by_days has no job" item. | xcheck, design L2163 | S–M | — | ⬜ |
 | W1.16 | **Stripe webhook idempotency and tests.** Store processed event IDs. Test `checkout.session.completed`, `payment_intent.succeeded`, a bad signature and a replay. | audit | M | — | 🔄 2026-10-07 — payments' first tests landed with W1.5; event-ID storage and the remaining webhook tests remain |
