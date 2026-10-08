@@ -1,3 +1,4 @@
+import hashlib
 from decimal import Decimal, ROUND_HALF_UP
 from datetime import datetime
 from django.conf import settings
@@ -212,10 +213,12 @@ def estimate_listing_shipping(listing, buyer):
     # On any failure the page says "Calculated at payment" and checkout quotes
     # properly.
     parcel = listing_parcel(listing)
-    cache_key = 'ship-est:' + ':'.join(str(part) for part in (
+    # Hashed so the key is memcached-safe (no spaces or brackets, W1.29).
+    route = ':'.join(str(part) for part in (
         listing.pk, seller_address.pk, buyer_address.pk,
         getattr(listing, 'shipping_service', 'cheapest'), sorted(parcel.items()),
     ))
+    cache_key = 'ship-est:' + hashlib.sha1(route.encode()).hexdigest()
     cached = cache.get(cache_key)
     if cached is not None:
         return Decimal(cached), 'Estimated'
