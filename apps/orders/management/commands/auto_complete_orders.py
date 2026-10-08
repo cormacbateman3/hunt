@@ -3,7 +3,7 @@ from apps.orders.services import auto_complete_delivered_orders
 
 
 class Command(BaseCommand):
-    help = 'Auto-complete delivered orders after a grace window (stub automation for Alpha PR4).'
+    help = 'Auto-complete delivered orders once the buyer has had the grace window to raise a problem.'
 
     def add_arguments(self, parser):
         parser.add_argument(

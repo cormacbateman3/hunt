@@ -19,6 +19,10 @@ JOBS = (
     'release_stale_buy_now',
     'expire_offers',
     'expire_trade_offers',
+    # Tracking first, so a parcel that was delivered since the last sweep is
+    # seen before the auto-complete jobs look for delivered orders.
+    'poll_shipments',
+    'poll_trade_shipments',
     'auto_complete_orders',
     'auto_complete_trades',
     'enforce_policies',
