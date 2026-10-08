@@ -2078,6 +2078,41 @@ tests, all green.
   notifications 0008, choices only).
 - Refunds are still manual (W4.3 automates them).
 
+## Workable-product batch 2 — the rest of Phase 1 ✅ 2026-10-08
+
+Branch `feature/alpha-p4-3`. The rest of the roadmap's Phase 1, plus the five bugs
+the test backfill turned up. 895 → 1,050 tests, all green (3 expected failures
+pinning the W5.1 enforcement bugs on purpose).
+
+**What shipped**
+
+| Roadmap | Fix |
+|---|---|
+| W1.6 | Sellers can take a listing down: auctions until the first bid, never while someone is paying; open offers close with a note; the piece stays on the shelf. A "Take it down" panel on the edit page behind the shared confirm, with a plain page without JS |
+| W1.7–W1.9 | Honest copy: no payout or Stripe-schedule promises; "You keep" correct under either fee model; no phone gate claimed; the old brand gone (support address from `SUPPORT_EMAIL`, letter footer from `SITE_URL`) |
+| W1.10 | "Open to trade" means the piece is open, not `listing_type='trade'` (Market filter, counts, home) |
+| W1.12 | The Bench's Wanted list tab opens the wants |
+| W1.13, W1.14 | The seller's "it's paid for" letter; a payment-due reminder halfway through an auction win |
+| W1.15 | One order clock (`apps/orders/clock.py`): stage timestamps, business days from payment, read by every screen, letter and job |
+| W1.16 | Stripe events acted on exactly once (`StripeEvent`); webhook tests |
+| W1.17, W1.18 | Message reports need a real reason; prefill suggestions filed correctly and accept never guesses |
+| W1.19–W1.21 | `run_jobs` polls tracking; the estimate never hangs a page; config hygiene |
+| W1.22 | The Market's sort and filter: state rail and results agree, price sorts by what a buyer faces, nulls last everywhere, "newly listed" by listed date, bad years ignored |
+| W1.23 | Test backfill: enforcement (its first), reviews, shipping labels |
+| W1.25–W1.29 | Found by the backfill: trade reviews 500'd; an excused strike came back; label purchase crashed after paying and could pay twice; messages and inline JSON unescaped; a memcached-unsafe cache key |
+
+**Deviations / notes**
+
+- **W1.11 (address search)** is rewritten on Google's `PlaceAutocompleteElement` but
+  not yet seen working: it needs a key with Places API (New) and a browser check.
+- **Behaviour change (W1.22):** the Market now opens filtered to the member's home
+  state, else Pennsylvania, per 10.21, with "Every state" one click away (§3c of
+  the roadmap; the owner can reverse it).
+- **The posting deadline is now business days** from payment; the strike, the
+  screens and the letters all agree.
+- **Owner actions:** `SUPPORT_EMAIL` (WO.7); a Google key with Places API (New) (WO.4).
+- Registered for later: W5.38 (excusing an issued strike from the order page).
+
 ---
 
 # Blocked on new models

@@ -844,6 +844,7 @@ Registered here so it isn't lost. It is not part of "workable".
 
 ## Change log
 
+- **2026-10-08** — Batch 2: the rest of Phase 1 (W1.6–W1.10, W1.12–W1.23) plus W1.25–W1.29 found by the test backfill. W1.11 waits on a browser check with a new key. 1,050 tests green. Pass log in `plan_design.md`.
 - **2026-10-07** — Batch 1 shipped on `feature/alpha-p4-3`: W1.1, W1.2, W1.3, W1.4, W1.5, W1.24 (W1.16, W1.21, W3.10 partly). 895 tests green. Pass log in `plan_design.md`.
 - **2026-10-06 (rev 3)** — Added: the stakeholder's book review (W1.24, W2.19–W2.23, W3.18–W3.21, WO.10, D20, book content for the Field Guide); the utilities, personalization and usage review (§5 running-itself rules and alert budget, W5.36–W5.37, W6.32, W8.28, D19, ★S4); the trade-fee rule (D3 ✅); and the D2 rework (option B, after correcting the "$0.20 a sale" payout advice and reviewing the owner's September cost conversation).
 - **2026-10-06 (rev 2)** — Second full pass. Every source doc was cross-checked line by line, plus
