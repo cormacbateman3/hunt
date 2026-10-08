@@ -10,7 +10,13 @@ from apps.notifications.services import create_notification
 from apps.enforcement.services import enforce_capability
 from apps.orders.models import AddressSnapshot
 from apps.shipping.providers.shippo import ShippoClient, ShippoError
-from apps.shipping.tracking import fetch_tracking, tracking_numbers_in, verify_member_tracking
+from apps.shipping.tracking import (
+    LABEL_NOT_READY,
+    fetch_tracking,
+    label_outcome,
+    tracking_numbers_in,
+    verify_member_tracking,
+)
 from .models import Trade, TradeOffer, TradeOfferItem, TradeShipment
 
 
@@ -20,6 +26,8 @@ TRADE_TRACKING_TO_SHIPMENT_STATUS = {
     'OUT_FOR_DELIVERY': 'in_transit',
     'DELIVERED': 'delivered',
 }
+# A label Shippo accepted but hasn't produced yet (W1.27); blocks a second purchase.
+QUEUED_PROVIDER = 'shippo-queued'
 TRADE_SHIPPED_STATES = {'label_created', 'in_transit', 'delivered', 'confirmed'}
 TRADE_DELIVERED_STATES = {'delivered', 'confirmed'}
 TRADE_TERMINAL_TRACKING_STATES = {'delivered', 'confirmed'}
@@ -244,6 +252,11 @@ def add_trade_manual_tracking(*, shipment, actor, carrier, tracking_number):
 def buy_trade_label(*, shipment, actor, parcel):
     if actor.id != shipment.sender_id:
         return None, 'Only the sending trader can buy labels.'
+    # One label per side (W1.27): a double click used to pay twice.
+    if shipment.label_url or shipment.tracking_number:
+        return None, 'A label has already been bought for this side.'
+    if shipment.provider == QUEUED_PROVIDER:
+        return None, LABEL_NOT_READY
     _ensure_trade_shipment_snapshots(shipment)
 
     client = ShippoClient()
@@ -263,15 +276,17 @@ def buy_trade_label(*, shipment, actor, parcel):
     transaction_payload = client.create_transaction(rate_id=rate_id)
     if (transaction_payload.get('status') or '').upper() not in {'SUCCESS', 'QUEUED'}:
         return None, 'Shippo label purchase failed.'
+    ready, carrier = label_outcome(transaction_payload, selected.get('provider') or shipment.carrier)
+    if not ready:
+        # Paid for but not printable yet: mark it so nobody buys again.
+        shipment.provider = QUEUED_PROVIDER
+        shipment.save(update_fields=['provider', 'updated_at'])
+        return None, LABEL_NOT_READY
 
     shipment.provider = 'shippo'
-    shipment.carrier = (
-        transaction_payload.get('tracking_status', {}).get('carrier')
-        or selected.get('provider')
-        or shipment.carrier
-    )
-    shipment.tracking_number = transaction_payload.get('tracking_number', '') or ''
-    shipment.label_url = transaction_payload.get('label_url', '') or ''
+    shipment.carrier = carrier
+    shipment.tracking_number = transaction_payload['tracking_number']
+    shipment.label_url = transaction_payload['label_url']
     shipment.save(update_fields=['provider', 'carrier', 'tracking_number', 'label_url', 'updated_at'])
     apply_trade_shipment_status(shipment, 'label_created')
     return shipment, ''

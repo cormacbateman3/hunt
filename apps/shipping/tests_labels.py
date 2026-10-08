@@ -11,7 +11,7 @@ on their own; these go through ``quote_order_shipping`` and
 """
 
 from decimal import Decimal
-from unittest import expectedFailure, mock
+from unittest import mock
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -185,7 +185,6 @@ class BuyLabelTests(LabelBase):
         client.assert_not_called()
         self.assertNothingChanged()
 
-    @expectedFailure  # Bug: Shippo's transaction gives tracking_status as a word, not a dict.
     def test_a_label_shippo_reports_as_unknown_to_tracking_is_still_recorded(self):
         # A real Shippo transaction carries "tracking_status": "UNKNOWN" until
         # the carrier first scans the parcel; the code calls .get() on it.
@@ -193,6 +192,30 @@ class BuyLabelTests(LabelBase):
             buy_label_for_order(self.order)
         self.shipment.refresh_from_db()
         self.assertEqual(self.shipment.tracking_number, '9400111')
+
+
+    # W1.27: a double click paid twice, and a QUEUED purchase moved the order
+    # with nothing to print.
+
+    def test_a_second_purchase_is_refused_before_shippo_is_called(self):
+        with mock.patch(CLIENT, self._shippo_transaction(self._success())):
+            buy_label_for_order(self.order)
+        with mock.patch(CLIENT) as client:
+            with self.assertRaisesMessage(ShippoError, 'already been bought'):
+                buy_label_for_order(self.order)
+        client.return_value.create_transaction.assert_not_called()
+
+    def test_a_queued_label_moves_nothing_and_blocks_a_repeat(self):
+        queued = {'status': 'QUEUED', 'object_id': 'tx_1'}
+        with mock.patch(CLIENT, self._shippo_transaction(queued)):
+            with self.assertRaisesMessage(ShippoError, "Please don't buy another"):
+                buy_label_for_order(self.order)
+        self.order.refresh_from_db()
+        self.assertEqual(self.order.status, 'paid')
+        with mock.patch(CLIENT) as client:
+            with self.assertRaises(ShippoError):
+                buy_label_for_order(self.order)
+        client.return_value.create_transaction.assert_not_called()
 
 
 # ── quote_order_shipping ─────────────────────────────────────────────────
@@ -304,3 +327,4 @@ class QuoteTests(LabelBase):
             shipment = ensure_checkout_shipping_ready(order)
         client.return_value.create_shipment.assert_called_once()
         self.assertEqual(shipment.rate_id, 'rate_ground')
+

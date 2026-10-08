@@ -8,7 +8,13 @@ from apps.orders.models import AddressSnapshot
 from apps.orders.services import transition_order
 from .models import Shipment, ShipmentEvent
 from .providers.shippo import ShippoClient, ShippoError
-from .tracking import fetch_tracking, tracking_numbers_in, verify_member_tracking
+from .tracking import (
+    LABEL_NOT_READY,
+    fetch_tracking,
+    label_outcome,
+    tracking_numbers_in,
+    verify_member_tracking,
+)
 
 
 TERMINAL_SHIPMENT_STATUSES = {'delivered', 'failed', 'returned'}
@@ -295,16 +301,28 @@ def buy_label_for_order(order):
     shipment = Shipment.objects.filter(order=order).first()
     if not shipment or not shipment.rate_id:
         raise ShippoError('No quoted shipping rate found. Quote shipping before buying label.')
+    # One label per order (W1.27): a double click used to pay twice.
+    if shipment.label_url or shipment.tracking_number:
+        raise ShippoError('A label has already been bought for this order.')
+    if shipment.events.filter(status='label_queued').exists():
+        raise ShippoError(LABEL_NOT_READY)
     ensure_order_snapshots(order)
     client = ShippoClient()
     transaction_payload = client.create_transaction(rate_id=shipment.rate_id)
-    if (transaction_payload.get('status') or '').upper() not in {'SUCCESS', 'QUEUED'}:
+    status = (transaction_payload.get('status') or '').upper()
+    if status not in {'SUCCESS', 'QUEUED'}:
         raise ShippoError(f'Label purchase failed: {transaction_payload}')
+    ready, carrier = label_outcome(transaction_payload, shipment.carrier)
+    if not ready:
+        # Paid for but not printable yet: keep the record so nobody buys again.
+        _record_event(shipment, status='label_queued',
+                      description='Label bought; Shippo still preparing it.',
+                      event_time=timezone.now(), raw_payload=transaction_payload)
+        raise ShippoError(LABEL_NOT_READY)
 
-    tracking = transaction_payload.get('tracking_number', '') or ''
-    shipment.tracking_number = tracking
-    shipment.label_url = transaction_payload.get('label_url', '') or ''
-    shipment.carrier = transaction_payload.get('tracking_status', {}).get('carrier', shipment.carrier) or shipment.carrier
+    shipment.tracking_number = transaction_payload['tracking_number']
+    shipment.label_url = transaction_payload['label_url']
+    shipment.carrier = carrier
     shipment.save(update_fields=['tracking_number', 'label_url', 'carrier', 'updated_at'])
     _apply_shipment_status(
         shipment,

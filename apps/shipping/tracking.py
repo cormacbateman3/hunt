@@ -77,6 +77,29 @@ def verify_member_tracking(carrier, tracking_number):
     return code, payload
 
 
+def label_outcome(payload, fallback_carrier=''):
+    """Read a Shippo label transaction (W1.27). Returns (ready, carrier).
+
+    ``tracking_status`` on a transaction is a word ("UNKNOWN" until the first
+    scan), not an object; reading it as a dict crashed *after* the label had
+    been paid for, and the retry paid again. A label is only ready when Shippo
+    says SUCCESS and hands back both a tracking number and a label to print —
+    a QUEUED purchase is not a label yet.
+    """
+    status = payload.get('tracking_status')
+    carrier = status.get('carrier') if isinstance(status, dict) else ''
+    ready = (
+        (payload.get('status') or '').upper() == 'SUCCESS'
+        and bool(payload.get('tracking_number'))
+        and bool(payload.get('label_url'))
+    )
+    return ready, (carrier or fallback_carrier)
+
+
+LABEL_NOT_READY = ("Shippo is still preparing the label. Please don't buy another; "
+                   "refresh the page in a few minutes, and if it still isn't here, write to us.")
+
+
 def webhook_token_ok(request):
     """Shippo can't sign webhooks, so the registered URL carries a secret
     (?token=...). Fails closed when no token is configured."""
