@@ -39,16 +39,20 @@ SORTS = {
 }
 
 
-def apply_filters(queryset, params):
-    """Narrow the public item queryset by everything the bar can set."""
+def apply_filters(queryset, params, state=None):
+    """Narrow the public item queryset by everything the bar can set.
+
+    ``state`` is the one ``resolve_state`` chose, so the results match what
+    the bar shows (W1.22: the bar opened on the 10.21 default while the
+    results ignored it).
+    """
     search = params.get('search', '').strip()
     if search:
         queryset = queryset.filter(
             Q(title__icontains=search) | Q(description__icontains=search))
 
-    state_id = params.get('state_id', '')
-    if state_id.isdigit():
-        queryset = queryset.filter(state_id=state_id)
+    if state is not None:
+        queryset = queryset.filter(state=state)
 
     county_id = params.get('county_id', '')
     if county_id.isdigit():
@@ -202,11 +206,10 @@ def page(params, user=None):
         .select_related('owner__profile', 'state', 'county')
         .prefetch_related('images', 'license_types')
     )
-    paginator = Paginator(
-        with_favorite_counts(apply_filters(items, params)), PER_PAGE)
-    page_obj = paginator.get_page(params.get('page'))
-
     default_state, selected_state = resolve_state(params, user)
+    paginator = Paginator(
+        with_favorite_counts(apply_filters(items, params, selected_state)), PER_PAGE)
+    page_obj = paginator.get_page(params.get('page'))
     groups = license_type_groups(params, selected_state)
 
     query = params.copy()
@@ -233,8 +236,7 @@ def page(params, user=None):
         'era_choices': ERA_LABEL_CHOICES,
         'filters': {
             'search': params.get('search', '').strip(),
-            'state_id': params.get(
-                'state_id', str(default_state.id) if default_state else ''),
+            'state_id': str(selected_state.id) if selected_state else '',
             'county_id': params.get('county_id', ''),
             'year_min': params.get('year_min', ''),
             'year_max': params.get('year_max', ''),

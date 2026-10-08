@@ -55,6 +55,7 @@
             <section class="hunt-facet">
                 <h2 class="hunt-facet-title">Where it was issued</h2>
                 <select name="state_id" class="kb-select" onchange="this.form.submit()">
+                    <option value="" {% if not selected_state %}selected{% endif %}>Every state</option>
                     {% for state in states %}
                         <option value="{{ state.id }}" {% if selected_state.id == state.id %}selected{% endif %}>{{ state.option_label }}</option>
                     {% endfor %}

@@ -216,16 +216,19 @@ class BaseListingListView(ListView):
         if self.listing_type:
             queryset = queryset.filter(listing_type=self.listing_type)
 
-        state_id = self.request.GET.get('state_id')
         county_id = self.request.GET.get('county_id')
-        year_min = self.request.GET.get('year_min')
-        year_max = self.request.GET.get('year_max')
+        # A typed year that isn't a number used to crash the page (W1.22).
+        year_min = (self.request.GET.get('year_min') or '').strip()
+        year_max = (self.request.GET.get('year_max') or '').strip()
+        year_min = year_min if year_min.isdigit() else ''
+        year_max = year_max if year_max.isdigit() else ''
         # `q` is the global search in the topbar; `search` is the in-page
         # filter field. Either can drive the same query.
         search = self.request.GET.get('search') or self.request.GET.get('q')
 
-        if state_id and state_id.isdigit():
-            queryset = queryset.filter(state_id=state_id)
+        state = self._state_filter()
+        if state:
+            queryset = queryset.filter(state=state)
         if county_id and county_id.isdigit():
             queryset = queryset.filter(county_ref_id=county_id)
         for cat in FORM_LICENSE_TYPE_CATEGORIES:
@@ -262,16 +265,20 @@ class BaseListingListView(ListView):
 
         return with_favorite_counts(queryset.distinct())
 
+    def _state_filter(self):
+        """The state the results are filtered by, or None for every state —
+        and the rail shows exactly this (W1.22: it used to open on a state the
+        results weren't filtered by). An explicit ?state_id= wins, blank
+        meaning every state; otherwise the 10.21 default — the member's home
+        state, else the site default."""
+        if 'state_id' in self.request.GET:
+            value = self.request.GET.get('state_id') or ''
+            return State.objects.filter(pk=value).first() if value.isdigit() else None
+        return defaults.default_state(self.request.user)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        selected_state_id = self.request.GET.get('state_id')
-        # 10.21: the filter bar opens on the viewer's own state; the site
-        # default (PA) is only for strangers and the undeclared.
-        default_state = defaults.default_state(self.request.user)
-        if 'state_id' in self.request.GET:
-            selected_state = State.objects.filter(pk=selected_state_id).first() if selected_state_id and selected_state_id.isdigit() else None
-        else:
-            selected_state = default_state
+        selected_state = self._state_filter()
         context['states'] = State.objects.order_by('-is_primary_default', 'name')
         context['selected_state'] = selected_state
         context['counties'] = GeographicUnit.objects.filter(state=selected_state).order_by('sort_order', 'name') if selected_state else GeographicUnit.objects.none()
@@ -305,7 +312,7 @@ class BaseListingListView(ListView):
         context['current_route_name'] = self.request.resolver_match.view_name
         context['fav_listing_ids'], context['fav_item_ids'] = favorite_ids(self.request.user)
         filters = {
-            'state_id': self.request.GET.get('state_id', str(default_state.id) if default_state else ''),
+            'state_id': str(selected_state.id) if selected_state else '',
             'county_id': self.request.GET.get('county_id', ''),
             'year_min': self.request.GET.get('year_min', ''),
             'year_max': self.request.GET.get('year_max', ''),
@@ -374,12 +381,33 @@ HUNT_FORMATS = [
     ('trade', 'Open to trade'),
 ]
 
+# W1.22: "price" sorted on starting_price alone, so every Store listing (which
+# has none) landed at one end; NULLs sorted first on SQLite and last on
+# Postgres; and "newly listed" used created_at rather than the listed date.
+NEWEST_FIRST = [F('published_at').desc(nulls_last=True), '-created_at']
 HUNT_SORTS = {
-    'ending': ('Ending soonest', ['auction_end', '-created_at']),
-    'new': ('Newly listed', ['-created_at']),
-    'price_asc': ('Price, lowest first', ['starting_price']),
-    'price_desc': ('Price, highest first', ['-starting_price']),
+    'ending': ('Ending soonest', [F('auction_end').asc(nulls_last=True), *NEWEST_FIRST]),
+    'new': ('Newly listed', NEWEST_FIRST),
+    'price_asc': ('Price, lowest first', [F('sort_price').asc(nulls_last=True), *NEWEST_FIRST]),
+    'price_desc': ('Price, highest first', [F('sort_price').desc(nulls_last=True), *NEWEST_FIRST]),
 }
+
+
+def with_sort_price(queryset):
+    """The price a buyer faces now: the top bid (else the start) on a lot,
+    the asking price in the Store."""
+    from django.db.models import Case, DecimalField, OuterRef, Subquery, When
+    from django.db.models.functions import Coalesce
+
+    from apps.bids.models import Bid
+
+    top_bid = Subquery(
+        Bid.objects.filter(listing=OuterRef('pk')).order_by('-amount').values('amount')[:1])
+    return queryset.annotate(sort_price=Case(
+        When(listing_type='auction', then=Coalesce(top_bid, F('starting_price'))),
+        default=F('buy_now_price'),
+        output_field=DecimalField(max_digits=10, decimal_places=2),
+    ))
 
 # The named sub-tabs above the rail. Each is a saved position in the same
 # catalog rather than a separate page.
@@ -428,15 +456,17 @@ class HuntView(BaseListingListView):
                 listing_type='auction', auction_end__gt=now
             ).order_by('auction_end')
         elif tab == 'new':
-            queryset = queryset.order_by('-created_at')
+            queryset = queryset.order_by(*NEWEST_FIRST)
         elif tab == 'wants' and self.request.user.is_authenticated:
             queryset = self._match_wanted(queryset)
 
         sort = self.request.GET.get('sort')
         if sort in HUNT_SORTS:
+            if sort.startswith('price'):
+                queryset = with_sort_price(queryset)
             queryset = queryset.order_by(*HUNT_SORTS[sort][1])
         elif tab == 'all':
-            queryset = queryset.order_by('-created_at')
+            queryset = queryset.order_by(*NEWEST_FIRST)
 
         return queryset
 
@@ -670,9 +700,14 @@ class HuntView(BaseListingListView):
             chips.append({'label': labels[fmt], 'url': self._query_without(format=fmt)})
 
         selected_state = context.get('selected_state')
-        if self.request.GET.get('state_id') and selected_state:
-            chips.append({'label': selected_state.name,
-                          'url': self._query_without(state_id=None)})
+        if selected_state:
+            # Blank state_id means every state; dropping the param would fall
+            # back to the member's home state again.
+            params = self.request.GET.copy()
+            params.pop('page', None)
+            params.pop('county_id', None)
+            params['state_id'] = ''
+            chips.append({'label': selected_state.name, 'url': f'?{params.urlencode()}'})
 
         unit_id = self.request.GET.get('county_id')
         if unit_id and unit_id.isdigit():
