@@ -20,8 +20,10 @@ and the one that can be waiting on you carries its count.
         <a href="{% url 'listings:my_listings' %}" class="kb-tab"
            {% if view == 'listings:my_listings' %}aria-current="page"{% endif %}>My listings</a>
         <a href="{% url 'collections:my_collection' %}" class="kb-tab"
-           {% if view == 'collections:my_collection' %}aria-current="page"{% endif %}>My collection</a>
-        <a href="{% url 'collections:my_collection' %}#wanted" class="kb-tab">Wanted list</a>
+           {% if view == 'collections:my_collection' and request.GET.view != 'wants' %}aria-current="page"{% endif %}>My collection</a>
+        {# The wants live on My collection's ?view=wants; there is no #wanted anchor (W1.12). #}
+        <a href="{% url 'collections:my_collection' %}?view=wants" class="kb-tab"
+           {% if view == 'collections:my_collection' and request.GET.view == 'wants' %}aria-current="page"{% endif %}>Wanted list</a>
         <a href="{% url 'favorites:list' %}" class="kb-tab"
            {% if view == 'favorites:list' %}aria-current="page"{% endif %}>Saved</a>
         <a href="{% url 'messaging:inbox' %}" class="kb-tab"

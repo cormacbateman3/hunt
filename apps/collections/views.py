@@ -16,6 +16,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 
 from apps.accounts.follows import following_ids
 from apps.core import defaults
@@ -548,6 +549,11 @@ def _wanted_initial_from_query(params):
     return initial
 
 
+def _back_to_wants():
+    """Wants live on My collection's wants view, not the items view (W1.12)."""
+    return redirect(reverse('collections:my_collection') + '?view=wants')
+
+
 @login_required
 def wanted_item_create(request):
     if request.method == 'POST':
@@ -557,7 +563,7 @@ def wanted_item_create(request):
             wanted_item.user = request.user
             wanted_item.save()
             messages.success(request, 'Wanted item added.')
-            return redirect('collections:my_collection')
+            return _back_to_wants()
     else:
         form = WantedItemForm(initial=_wanted_initial_from_query(request.GET),
                               user=request.user)
@@ -578,7 +584,7 @@ def wanted_item_edit(request, pk):
         if form.is_valid():
             form.save()
             messages.success(request, 'Wanted item updated.')
-            return redirect('collections:my_collection')
+            return _back_to_wants()
     else:
         form = WantedItemForm(instance=wanted_item, user=request.user)
     return render(request, 'collections/wanted_item_form.html', {
@@ -597,7 +603,7 @@ def wanted_item_delete(request, pk):
     if request.method == 'POST':
         wanted_item.delete()
         messages.success(request, 'Wanted item removed.')
-        return redirect('collections:my_collection')
+        return _back_to_wants()
     return render(request, 'collections/wanted_item_delete.html', {'wanted_item': wanted_item})
 
 
